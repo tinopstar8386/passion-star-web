@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root { --bg-color: #f8fafc; --card-bg: #ffffff; --border-color: #cbd5e1; --text-main: #0f172a; --off-bg: #ef4444; --pending-bg: #d97706; --table-header: #f1f5f9; --row-hover: #e2e8f0; --cell-off: #fee2e2; --cell-pend: #fef3c7; --teacher-color: #d97706;}
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0;}
+    button { transition: transform 0.1s ease, filter 0.2s ease, background-color 0.2s ease !important; outline: none; }
+    button:active { transform: scale(0.92) !important; filter: brightness(0.85) !important; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;}
+    .toolbar h2 { margin: 0; font-size: 1.25rem; font-weight: 700; color: #3b82f6; }
+    
+    table { border: 2px solid var(--border-color); border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.85rem; text-align: center; background: white;}
+    th, td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); height: 46px; padding: 2px; vertical-align: middle; }
+    .table-container { max-height: 85vh; overflow-y: auto; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); margin: 0 30px 100px 30px;}
+    thead th { position: sticky; top: 0; z-index: 10; background-color: var(--table-header); }
+    
+    .group-cell { font-weight: 800; text-transform: uppercase; width: 85px; min-width: 85px; max-width: 85px; font-size: 0.7rem; white-space: normal; word-wrap: break-word; line-height: 1.2; padding-left: 4px;}
+    .name-cell { text-align: left; padding-left: 7px; width: 170px; min-width: 170px; max-width: 170px; font-weight: 600; cursor: pointer; font-size: 0.75rem; white-space: normal; word-wrap: break-word; line-height: 1.2;}
+    th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { width: 42px; min-width: 42px; max-width: 42px; }
+    
+    .teacher-highlight { color: var(--teacher-color) !important; font-weight: 800; }
+    .dept-divider { font-weight: 800; text-align: center; background: #334155; color: #ffffff; }
+    .day-cell { cursor: pointer; transition: all 0.2s;}
+    .day-cell:hover:not(.cell-selected) { background-color: var(--row-hover); }
+    
+    /* STYLE KHI CLICK VÀO Ô TRỐNG (MÔ PHỎNG BADGE OFF) */
+    .cell-selected { background-color: #fef2f2 !important; position: relative;}
+    .cell-selected::after { content: "OFF"; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);}
+    
+    .day-cell.drag-over { background-color: rgba(59, 130, 246, 0.2); border: 2px dashed #3b82f6; }
+    .cell-off { background-color: var(--cell-off); }
+    .cell-pending { background-color: var(--cell-pend); }
+    
+    .badge { display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); pointer-events: none;}
+    .badge-off { background-color: var(--off-bg); }
+    .badge-pending { background-color: var(--pending-bg); animation: flash 2s infinite;}
+    @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+    
+    .vip-badge { position: relative; color: #ffffff; padding: 3px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 800; margin: 0; border: 1px solid rgba(255,255,255,0.3); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); display: inline-flex; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; vertical-align: middle; box-shadow: 0 2px 5px rgba(0,0,0,0.2); white-space: nowrap;}
+    .vip-badge::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); animation: shine-badge 3s infinite; }
+    @keyframes shine-badge { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+    
+    #actionBar { position: fixed; bottom: -100px; left: 0; width: 100%; background: #ffffff; padding: 15px 30px; box-shadow: 0 -10px 15px -3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; transition: bottom 0.3s ease; z-index: 1000; box-sizing: border-box; border-top: 2px solid #3b82f6;}
+    #actionBar.show { bottom: 0; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1001; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s ease;}
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal-box { background: var(--card-bg); width: 400px; padding: 25px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); text-align: left;}
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;}
+    .modal-actions button, #actionBar button { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;}
+    .btn-cancel { background: #e2e8f0; color: #475569; }
+    .btn-ok { background: #3b82f6; color: white; }
+    #toast { position: fixed; top: 20px; left: 50%; transform: translate(-50%, -20px) scale(0.9); background: #10b981; color: white; padding: 15px 30px; border-radius: 12px; font-weight: 800; font-size: 1.1rem; opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; min-width: 320px; text-transform: uppercase; letter-spacing: 0.5px;}
+    #toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0) scale(1); }
+    #toast.error { background: #ef4444; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4); }
+    #toast.success-boom { background: #059669; box-shadow: 0 0 50px rgba(16, 185, 129, 0.9); transform: translate(-50%, 0) scale(1.15); }
+
+    /* CSS ĐỒNG BỘ LỊCH TƯƠNG TÁC VỚI ẢNH XUẤT */
+    .mc-calendar-view { table-layout: fixed; width: 100%; min-width: 600px; max-width: 680px; margin: 0 auto; border-collapse: separate; border-spacing: 0; border: 2px solid #cbd5e1; border-radius: 16px; overflow: hidden; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);}
+    .mc-calendar-view th, .mc-calendar-view td { border: none; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h2>📅 Lịch Đăng Ký OFF <span id="groupTitleDisplay" style="color: #ef4444;"></span></h2>
+    <div style="display: flex; align-items: center; gap: 15px; font-weight: 700; font-size: 1.2rem;">
+      <button style="padding: 5px 12px; cursor: pointer; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #0f172a;" onclick="changeMonth(-1)">◀</button>
+      <span id="monthLabel"></span>
+      <button style="padding: 5px 12px; cursor: pointer; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #0f172a;" onclick="changeMonth(1)">▶</button>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="btnExportMc" style="display: none; padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="exportPersonalCalendar()">📸 Xuất Ảnh</button>
+      <button style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="refreshData()">🔄 Làm mới</button>
+    </div>
+  </div>
+
+  <div class="table-container" style="border:none; box-shadow:none; background:transparent;">
+    <table id="scheduleTable">
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  
+  <div id="actionBar">
+    <div>Đã chọn <span id="selectedCount" style="font-weight: 800; color: #3b82f6; font-size: 1.4rem; margin: 0 5px;">0</span> ngày nghỉ</div>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn-cancel" onclick="clearSelection()">Hủy bỏ</button>
+      <button class="btn-ok" onclick="showConfirmModal()">Gửi Đơn Xin Nghỉ</button>
+    </div>
+  </div>
+
+  <div id="toast">Đang đồng bộ...</div>
+
+  <div class="modal-overlay" id="customModal">
+    <div class="modal-box">
+      <h3 id="modalTitle" style="margin-top:0;">Xác nhận</h3>
+      <p id="modalMsg"></p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Đóng</button>
+        <button class="btn-ok" id="modalOkBtn">Đồng ý</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- THAY LINK API CỦA BẠN VÀO ĐÂY ---
+    const API_URL = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec";
+
+    function runScript(action, payload = {}) {
+      return fetch(API_URL, {
+        method: 'POST',
+        redirect: 'follow', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, payload: payload })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === 'error') throw new Error(res.message);
+        return res.data;
+      });
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const TARGET_GROUP = urlParams.get('target') || ""; 
+    
+    let employeesData = [], leavesData = [], badgesData = {};
+    let isSyncing = false; 
+    let selectedCells = []; 
+    let today = new Date();
+    let displayMonth = today.getMonth();
+    let displayYear = today.getFullYear();
+    if (displayMonth > 11) { displayMonth = 0; displayYear++; }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`;
+      if (TARGET_GROUP) {
+        let displayTitle = TARGET_GROUP.replace("PERSON:", "").replace("GROUP:", "");
+        document.getElementById('groupTitleDisplay').innerText = "- " + displayTitle.toUpperCase();
+        if (TARGET_GROUP.startsWith("PERSON:")) document.getElementById('btnExportMc').style.display = 'inline-block';
+      }
+      refreshData();
+    });
+
+    function generateBadgeHTML(emp) {
+      if (emp.customBadge && badgesData[emp.customBadge]) {
+         return `<span class="vip-badge" style="background: ${badgesData[emp.customBadge]}; border: 1px solid rgba(255,255,255,0.4);">${emp.customBadge}</span>`;
+      }
+      let nUp = String(emp.name).toUpperCase(), rUp = String(emp.role).toUpperCase(), gUp = String(emp.group).toUpperCase();
+      let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
+      
+      if (gUp.includes("HR") || rUp.includes("HR")) return `<span class="vip-badge badge-hr">HR</span>`;
+      if (gUp.includes("TECH") || rUp.includes("TECH")) return `<span class="vip-badge badge-tech">TECH</span>`;
+      if (gUp.includes("OPERATION") || gUp.includes("OPS") || rUp.includes("OPERATION")) return `<span class="vip-badge badge-operation">OPS</span>`;
+      if (gUp.includes("TRANS") || gUp.includes("TRANSLATION") || rUp.includes("TRANS")) return `<span class="vip-badge badge-translation">TRANS</span>`;
+      if (gUp.includes("MANAGER") || rUp.includes("MANAGER")) return `<span class="vip-badge badge-manager">MANAGER</span>`;
+      if (gUp.includes("ACCOUNTANT") || rUp.includes("ACCOUNTANT")) return `<span class="vip-badge badge-accountant">ACC</span>`;
+      if (isTeacher) return `<span class="vip-badge badge-teacher">TEACHER</span>`;
+      if (nUp.includes("BNART")) return `<span class="vip-badge badge-bnart">BNART</span>`;
+      if (nUp.includes("BETERNAL")) return `<span class="vip-badge badge-beternal">BETERNAL</span>`;
+      if (nUp.includes("ASTRA")) return `<span class="vip-badge badge-astrax">ASTRAX</span>`;
+      if (nUp.includes("FASHION")) return `<span class="vip-badge badge-fashion">FASHION</span>`;
+      if (nUp.includes("ANGELIK")) return `<span class="vip-badge badge-angelik">ANGELIK</span>`;
+      if (nUp.includes("BEE")) return `<span class="vip-badge badge-bee">BEE</span>`;
+      return "";
+    }
+
+    function refreshData() {
+      if(isSyncing) return showToast("Đang đồng bộ...", false, true);
+      isSyncing = true; clearSelection(); showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
+      runScript('getInitialData')
+        .then(data => { 
+          if(data && data.employees) { employeesData = data.employees; leavesData = data.leaves || []; badgesData = data.badges || {}; renderTable(); }
+          isSyncing = false; showToast("✅ Đã làm mới xong!");
+        })
+        .catch(err => { showToast("Lỗi lấy dữ liệu!", false, true); isSyncing = false; });
+    }
+
+    function renderTable() {
+      try {
+        if (TARGET_GROUP && TARGET_GROUP.startsWith("PERSON:")) {
+            renderInteractiveCalendar(TARGET_GROUP.replace("PERSON:", "").trim());
+            return;
+        }
+
+        document.getElementById("scheduleTable").classList.remove("mc-calendar-view");
+        document.querySelector(".table-container").style.border = "1px solid var(--border-color)";
+        const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+        const thead = document.getElementById("tableHead");
+        const tbody = document.getElementById("tableBody");
+        thead.innerHTML = ""; tbody.innerHTML = "";
+
+        let headerRow = '<tr><th class="group-cell">NHÓM</th><th class="name-cell">TÊN</th>';
+        for (let i = 1; i <= daysInMonth; i++) {
+          let d = new Date(displayYear, displayMonth, i), dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+          headerRow += `<th style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">${(i<10?'0'+i:i)}/${(displayMonth+1<10?'0'+(displayMonth+1):displayMonth+1)}<br><span style="font-weight:400; font-size:0.65rem">${dayNames[d.getDay()]}</span></th>`;
+        }
+        thead.innerHTML = headerRow + "</tr>";
+
+        let depts = {};
+        employeesData.forEach(emp => {
+          let roleUpper = String(emp.role).trim().toUpperCase(); let empName = String(emp.name).trim(); let empGroup = String(emp.group).trim();
+          let keep = false;
+          if (!TARGET_GROUP) keep = true;
+          else if (TARGET_GROUP.startsWith("GROUP:")) { let targetGrp = TARGET_GROUP.replace("GROUP:", "").trim().toUpperCase(); if (empGroup.toUpperCase() === targetGrp || roleUpper === targetGrp) keep = true; } 
+          else { let target = TARGET_GROUP.toUpperCase().replace(/\s+/g, ''); if (empName.toUpperCase().replace(/\s+/g, '').includes(target) || empGroup.toUpperCase().replace(/\s+/g, '').includes(target)) keep = true; }
+          
+          if (!keep) return;
+          let roleStr = emp.role ? String(emp.role).trim() : "KHÁC"; let groupStr = emp.group ? String(emp.group).trim() : "KHÁC";
+          if (!depts[roleStr]) depts[roleStr] = {}; if (!depts[roleStr][groupStr]) depts[roleStr][groupStr] = [];
+
+          let nUp = String(emp.name).toUpperCase(); let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
+          if (isTeacher) depts[roleStr][groupStr].unshift(emp); else depts[roleStr][groupStr].push(emp);
+        });
+
+        let tbodyHTML = "";
+        for (let deptKey in depts) {
+          let displayRole = String(deptKey).toUpperCase();
+          if (displayRole === "TEACHER DANCE" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+          else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+          tbodyHTML += `<tr><td colspan="${daysInMonth + 2}" class="dept-divider" style="border-bottom: 1px solid var(--border-color);">${displayRole}</td></tr>`;
+
+          for (let group in depts[deptKey]) {
+             depts[deptKey][group].forEach((emp, idx) => {
+                let name = emp.name; let userBadge = generateBadgeHTML(emp);
+                let tr = `<tr>`;
+                if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" class="group-cell" style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">${group}</td>`;
+                tr += `<td class="name-cell" style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">
+                         <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 100%; padding: 4px 0;">
+                           <span style="font-size: 0.75rem; line-height: 1.2;">${name}</span>
+                           <div style="display: flex; align-items: center;">${userBadge}</div>
+                         </div>
+                       </td>`;
+
+                for (let i = 1; i <= daysInMonth; i++) {
+                  let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+                  let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`;
+                  let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate);
+                  let baseStyle = "border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);";
+                  
+                  if (leave) {
+                    if (leave.status === "Pending") {
+                       tr += `<td class="day-cell cell-pending" style="${baseStyle}" onclick="confirmCancelPending('${name}', '${checkDate}')"><div class="badge badge-pending" title="Đang chờ duyệt (Nhấn vào để hủy)">⏳</div></td>`;
+                    } else {
+                       tr += `<td class="day-cell cell-off" style="${baseStyle}"><div class="badge badge-off">OFF</div></td>`;
+                    }
+                  } else { tr += `<td class="day-cell" style="${baseStyle}" onclick="toggleCellSelection(this, '${deptKey}', '${name}', '${checkDate}')"></td>`; }
+                }
+                tbodyHTML += tr + `</tr>`;
+             });
+          }
+        }
+        
+        if (tbodyHTML === "") {
+          let displayTitle = TARGET_GROUP.replace("PERSON:", "").replace("GROUP:", "");
+          tbody.innerHTML = `<tr><td colspan="${daysInMonth + 2}" style="text-align: center; color: #ef4444; padding: 40px; font-weight: 600;">⚠️ Không tìm thấy thông tin đăng nhập của bạn trong hệ thống.</td></tr>`;
+        } else { tbody.innerHTML = tbodyHTML; }
+      } catch (err) { showToast("Lỗi vẽ bảng: " + err, false, true); }
+    }
+
+    function renderInteractiveCalendar(empName) {
+      const thead = document.getElementById("tableHead");
+      const tbody = document.getElementById("tableBody");
+      document.getElementById("scheduleTable").classList.add("mc-calendar-view");
+      document.querySelector(".table-container").style.border = "none";
+      thead.innerHTML = ""; tbody.innerHTML = "";
+
+      let emp = employeesData.find(e => e.name.toUpperCase() === empName.toUpperCase());
+      if (!emp) { tbody.innerHTML = `<tr><td style="padding: 40px; color: #ef4444; text-align: center; font-weight: bold;">⚠️ Không tìm thấy thông tin của ${empName}.</td></tr>`; return; }
+
+      let startDate = new Date(displayYear, displayMonth, 1);
+      let endDate = new Date(displayYear, displayMonth + 1, 0);
+      let startGrid = new Date(startDate); startGrid.setDate(startDate.getDate() - startDate.getDay());
+      let endGrid = new Date(endDate); endGrid.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+      let sdStr = `${startDate.getDate()}/${startDate.getMonth() + 1}`;
+      let edStr = `${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`;
+
+      let role = emp.role;
+      let userBadgeHTML = generateBadgeHTML(emp);
+
+      let html = `
+        <tr>
+          <td colspan="7" style="padding: 25px 20px 20px 20px; text-align: center; background: #ffffff; border-bottom: 2px solid #cbd5e1 !important; cursor: default; border-radius: 12px 12px 0 0;">
+             <div style="font-size: 0.85rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Lịch Nghỉ Cá Nhân</div>
+             <div style="font-size: 2.2rem; font-weight: 800; color: #3b82f6; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
+               ${emp.name} ${userBadgeHTML}
+             </div>
+             <div style="font-size: 1.05rem; color: #475569; margin-top: 5px; font-weight: 600;">Bộ phận: ${emp.group || "Khác"}</div>
+             <div style="font-size: 0.95rem; color: #ef4444; margin-top: 15px; background: #fee2e2; display: inline-block; padding: 6px 18px; border-radius: 20px; font-weight: 700;">Từ ${sdStr} đến ${edStr}</div>
+             <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 12px; font-style: italic;">* Nhấn vào một ngày trống bất kỳ để chọn ngày muốn nghỉ</div>
+          </td>
+        </tr>
+        <tr style="background: #ffffff;">
+          <td style="width: 14.28%; color: #ef4444; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">CN</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T2</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T3</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T4</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T5</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T6</td>
+          <td style="width: 14.28%; color: #3b82f6; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0;">T7</td>
+        </tr>
+      `;
+
+      let loopDate = new Date(startGrid);
+      let tr = "<tr>";
+      let cellCount = 0;
+
+      while (loopDate <= endGrid) {
+        let dNum = loopDate.getDate(); let mNum = loopDate.getMonth() + 1;
+        let checkDate = loopDate.getFullYear() + '-' + mNum.toString().padStart(2, '0') + '-' + dNum.toString().padStart(2, '0');
+        let isOutOfRange = (loopDate.getMonth() !== displayMonth);
+
+        let leave = leavesData.find(l => String(l.name).trim() === String(emp.name).trim() && l.date === checkDate);
+        let isSelected = selectedCells.some(c => c.name === emp.name && c.date === checkDate);
+
+        let rightBorder = (cellCount % 7 === 6) ? "" : "border-right: 1px solid #e2e8f0;";
+        let bottomBorder = "border-bottom: 1px solid #e2e8f0;";
+        let cellStyle = `height: 85px; vertical-align: top; text-align: left; padding: 10px; position: relative; transition: background 0.2s; box-sizing: border-box; ${bottomBorder} ${rightBorder}`;
+
+        if (isOutOfRange) {
+             cellStyle += ` background-color: #f8fafc;`;
+        } else if (leave || isSelected) {
+             cellStyle += ` background-color: #fef2f2;`;
+        } else {
+             cellStyle += ` background-color: #ffffff;`;
+        }
+
+        let dColor = isOutOfRange ? '#cbd5e1' : '#0f172a';
+        let mColor = isOutOfRange ? '#e2e8f0' : '#94a3b8';
+
+        let cellContent = `<div style="font-weight: 800; font-size: 1.15rem; margin-bottom: 8px; color: ${dColor}; pointer-events: none;">${dNum} <span style="font-size: 0.75rem; font-weight: 600; color: ${mColor};">Thg${mNum}</span></div>`;
+        let tdAttrs = `style="${cellStyle}"`;
+
+        if (!isOutOfRange) {
+          if (leave) {
+            if (leave.status === "Pending") {
+               cellContent += `<div class="badge badge-pending" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; pointer-events: none; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">⏳ PEND</div>`;
+               tdAttrs += ` class="day-cell cell-pending" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="confirmCancelPending('${emp.name}', '${checkDate}'); event.stopPropagation();" title="Kéo thả ĐỂ ĐỔI NGÀY, Nhấn ĐỂ HỦY"`;
+            } else {
+               cellContent += `<div class="badge badge-off" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">OFF</div>`;
+               tdAttrs += ` class="day-cell cell-off" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" title="Kéo thả sang ô trống để đổi"`;
+            }
+          } else {
+            let sClass = isSelected ? 'cell-selected' : '';
+            tdAttrs += ` class="day-cell ${sClass}" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="toggleCellSelection(this, '${role}', '${emp.name}', '${checkDate}')"`;
+          }
+        }
+
+        tr += `<td ${tdAttrs}>${cellContent}</td>`;
+        cellCount++;
+        if (cellCount % 7 === 0) { tr += "</tr>"; if (loopDate < endGrid) tr += "<tr>"; }
+        loopDate.setDate(loopDate.getDate() + 1);
+      }
+      tbody.innerHTML = html + tr;
+    }
+
+    function toggleCellSelection(tdElement, role, name, checkDate) {
+      if(isSyncing) return showToast("Hệ thống đang lưu, vui lòng đợi giây lát...", false, true);
+      let idx = selectedCells.findIndex(c => c.name === name && c.date === checkDate);
+      if(idx > -1) { selectedCells.splice(idx, 1); tdElement.classList.remove('cell-selected'); } 
+      else {
+         let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+         let existingLeaves = leavesData.filter(l => String(l.name).trim() === String(name).trim() && l.date.startsWith(monthPrefix) && (l.status === "Approved" || l.status === "Pending")).length;
+         let currentlySelected = selectedCells.filter(c => c.name === name).length;
+         if (existingLeaves + currentlySelected >= 5) return showToast(`⚠️ Lỗi: ${name} đã hết Quota (5 ngày/tháng)!`, false, true);
+         selectedCells.push({role: role, name: name, date: checkDate, td: tdElement}); tdElement.classList.add('cell-selected');
+      }
+      updateActionBar();
+    }
+
+    function updateActionBar() {
+      const bar = document.getElementById('actionBar'); document.getElementById('selectedCount').innerText = selectedCells.length;
+      if(selectedCells.length > 0) bar.classList.add('show'); else bar.classList.remove('show');
+    }
+    function clearSelection() { selectedCells.forEach(c => c.td.classList.remove('cell-selected')); selectedCells = []; updateActionBar(); }
+
+    function showConfirmModal() {
+      document.getElementById('modalTitle').innerHTML = "Xác nhận Đăng ký OFF"; let grouped = {};
+      selectedCells.forEach(c => { if(!grouped[c.name]) grouped[c.name] = []; grouped[c.name].push(c.date.slice(-2) + "/" + c.date.slice(5,7)); });
+      let msgHtml = "Gửi đơn xin nghỉ cho:<br><ul style='text-align:left; margin-top:10px; padding-left: 20px;'>";
+      for(let name in grouped) { grouped[name].sort((a,b) => parseInt(a.split('/')[0]) - parseInt(b.split('/')[0])); msgHtml += `<li><b>${name}</b>: Ngày ${grouped[name].join(", ")}</li>`; }
+      document.getElementById('modalMsg').innerHTML = msgHtml + "</ul>";
+      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng ý Gửi"; btn.style = ""; btn.onclick = executeMultipleLeaves; document.getElementById('customModal').classList.add('active');
+    }
+
+    function executeMultipleLeaves() {
+      closeModal(); if(isSyncing) return; isSyncing = true;
+      let payload = selectedCells.map(c => ({ role: c.role, name: c.name, dateStr: c.date }));
+      payload.forEach(req => { leavesData.push({ name: req.name, date: req.dateStr, status: "Pending", swapFrom: "", reason: "Đăng ký nghỉ tháng" }); });
+      clearSelection(); renderTable(); showToast("⏳ Đang lưu dữ liệu ngầm...", true);
+      
+      runScript('registerMultipleMCLeaves', { leaveRequests: payload })
+        .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("🎉 ĐÃ LƯU THÀNH CÔNG!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } })
+        .catch(err => { isSyncing = false; refreshData(); });
+    }
+
+    function drag(ev, name, date) { ev.dataTransfer.setData("dragName", name); ev.dataTransfer.setData("oldDate", date); }
+    function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add("drag-over"); }
+    function dragLeave(ev) { ev.currentTarget.classList.remove("drag-over"); }
+    
+    function drop(ev, targetName, newDate) {
+      ev.preventDefault(); ev.currentTarget.classList.remove("drag-over"); ev.stopPropagation(); 
+      if(isSyncing) return showToast("Hệ thống đang lưu, đợi chút nhé!", false, true);
+      let dragName = ev.dataTransfer.getData("dragName"); let oldDate = ev.dataTransfer.getData("oldDate");
+      if (!dragName || dragName !== targetName || oldDate === newDate) return;
+      let existingTarget = leavesData.find(l => String(l.name).trim() === String(targetName).trim() && l.date === newDate);
+      if(existingTarget) return showToast("⚠️ Ngày này đã có lịch!", false, true);
+      document.getElementById('modalTitle').innerHTML = "Xác nhận Đổi Ngày";
+      document.getElementById('modalMsg').innerHTML = `Di chuyển ngày nghỉ của <b>${dragName}</b> sang <b style="color:#10b981;">${newDate}</b>?`;
+      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng Ý"; btn.style = "";
+      btn.onclick = () => { 
+        closeModal(); isSyncing = true;
+        let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(dragName).trim() && l.date === oldDate);
+        if(lIndex > -1) { leavesData[lIndex].date = newDate; leavesData[lIndex].status = "Pending"; leavesData[lIndex].swapFrom = oldDate; } 
+        else { leavesData.push({name: dragName, date: newDate, status: "Pending", swapFrom: oldDate}); }
+        renderTable(); showToast("⏳ Đang dời ngày ngầm...", true);
+        
+        runScript('processMCDragDrop', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
+          .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã dời ngày!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } })
+          .catch(err => { isSyncing = false; refreshData(); });
+      }; document.getElementById('customModal').classList.add('active');
+    }
+
+    function confirmCancelPending(name, date) {
+      if(isSyncing) return showToast("Đang lưu, vui lòng đợi...", false, true);
+      document.getElementById('modalTitle').innerHTML = "Hủy Đơn"; document.getElementById('modalMsg').innerHTML = `Hủy đơn xin nghỉ ngày <b style="color:#ef4444;">${date}</b> của <b>${name}</b>?`;
+      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-cancel"; btn.innerText = "Đồng ý Hủy"; btn.style.background = "#ef4444"; btn.style.color = "white"; 
+      btn.onclick = () => { 
+        closeModal(); isSyncing = true;
+        let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === date && l.status === "Pending");
+        if(lIndex > -1) leavesData.splice(lIndex, 1);
+        renderTable(); showToast("⏳ Đang hủy đơn ngầm...", true);
+        
+        runScript('cancelPendingMC', { name: name, dateStr: date })
+          .then(res => { isSyncing = false; btn.style = ""; if(res === "SUCCESS") showToast("🗑️ Đã hủy đơn!", false, false, true); else { showToast("❌ Lỗi!", false, true); refreshData(); } })
+          .catch(err => { isSyncing = false; refreshData(); });
+      }; document.getElementById('customModal').classList.add('active');
+    }
+
+    function closeModal() { document.getElementById('customModal').classList.remove('active'); }
+    let toastTimer; function showToast(msg, keep = false, isError = false, isBoom = false) { const toast = document.getElementById('toast'); toast.innerHTML = msg; toast.className = ''; if (isError) toast.classList.add('error'); if (isBoom) toast.classList.add('success-boom'); void toast.offsetWidth; toast.classList.add('show'); clearTimeout(toastTimer); if(!keep) toastTimer = setTimeout(() => toast.classList.remove('show', 'success-boom', 'error'), 3500); }
+    function changeMonth(offset) { if(isSyncing) return showToast("Hệ thống đang đồng bộ, vui lòng đợi...", false, true); displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`; clearSelection(); renderTable(); }
+
+    function exportPersonalCalendar() {
+      if(isSyncing) return showToast("Đang đồng bộ dữ liệu, vui lòng đợi...", false, true);
+      let empName = TARGET_GROUP.replace("PERSON:", "").trim();
+      let emp = employeesData.find(e => e.name === empName); let groupStr = emp ? (emp.group || "Khác") : "Khác";
+      
+      showToast("⏳ Đang tạo ảnh lịch...", true);
+      
+      let container = document.createElement("div");
+      container.style.position = "absolute"; container.style.top = "-9999px"; container.style.left = "-9999px"; 
+      container.style.width = "680px"; container.style.background = "#ffffff"; container.style.padding = "20px";
+      document.body.appendChild(container);
+      
+      let startDate = new Date(displayYear, displayMonth, 1), endDate = new Date(displayYear, displayMonth + 1, 0);
+      let startGrid = new Date(startDate); startGrid.setDate(startDate.getDate() - startDate.getDay()); 
+      let endGrid = new Date(endDate); endGrid.setDate(endDate.getDate() + (6 - endDate.getDay()));
+      
+      let sdStr = `${startDate.getDate()}/${startDate.getMonth() + 1}`;
+      let edStr = `${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`;
+      
+      let html = `
+        <div style="background: #e2e8f0; width: 100%; border-radius: 16px; border: 2px solid #cbd5e1; overflow: hidden; font-family: 'Inter', sans-serif;">
+          <div style="background: #f8fafc; padding: 25px 20px 20px 20px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+             <div style="font-size: 0.85rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Lịch Nghỉ Cá Nhân / 个人休假表</div>
+             <div style="font-size: 2.2rem; font-weight: 800; color: #3b82f6;">${empName}</div>
+             <div style="font-size: 1.05rem; color: #475569; margin-top: 5px; font-weight: 600;">Bộ phận / 部门: ${groupStr}</div>
+             <div style="font-size: 0.95rem; color: #ef4444; margin-top: 15px; background: #fee2e2; display: inline-block; padding: 6px 18px; border-radius: 20px; font-weight: 700;">Từ / 从 ${sdStr} đến / 到 ${edStr}</div>
+          </div>
+          <table style="width: 100%; border-collapse: separate; border-spacing: 1px; text-align: center; table-layout: fixed; background: #e2e8f0;">
+            <tr>
+              <td style="width: 14.28%; color: #ef4444; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">CN / 日</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T2 / 一</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T3 / 二</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T4 / 三</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T5 / 四</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T6 / 五</td>
+              <td style="width: 14.28%; color: #3b82f6; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T7 / 六</td>
+            </tr>
+      `;
+
+      let loopDate = new Date(startGrid), cellCount = 0, tr = "<tr>";
+      
+      while (loopDate <= endGrid) {
+          let dNum = loopDate.getDate(); let mNum = loopDate.getMonth() + 1;
+          let dateStr = loopDate.getFullYear() + '-' + mNum.toString().padStart(2, '0') + '-' + dNum.toString().padStart(2, '0');
+          let isOutOfRange = (loopDate < startDate || loopDate > endDate);
+          
+          let dColor = isOutOfRange ? '#cbd5e1' : '#0f172a';
+          let mColor = isOutOfRange ? '#e2e8f0' : '#94a3b8';
+          
+          let leave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.date === dateStr);
+          let movedToLeave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.swapFrom === dateStr);
+          let isSelected = selectedCells.some(c => c.date === dateStr);
+          let isPendingSwapOut = leavesData.some(l => String(l.name).trim() === String(empName).trim() && l.status === "Pending" && l.swapFrom === dateStr);
+
+          let bgColor = "#ffffff";
+          if (!isOutOfRange) {
+              if (leave || isSelected) bgColor = (leave && leave.swapFrom) ? "#f3e8ff" : "#fef2f2";
+              else if (movedToLeave || isPendingSwapOut) bgColor = "#f8fafc";
+          }
+          
+          let cellStyle = `height: 90px; vertical-align: top; text-align: left; padding: 10px; background-color: ${bgColor};`;
+          let cellContent = `<div style="font-weight: 800; font-size: 1.15rem; margin-bottom: 10px; color: ${dColor};">${dNum} <span style="font-size: 0.75rem; font-weight: 600; color: ${mColor};">Thg${mNum}</span></div>`;
+
+          if (!isOutOfRange) {
+              if (leave || isSelected) {
+                  if (leave && leave.swapFrom) {
+                      let oldD = new Date(leave.swapFrom); let oldDStr = oldD.getDate() + "/" + (oldD.getMonth()+1);
+                      cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #9333ea; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(147, 51, 234, 0.3); line-height: 1.2;">DỜI TỪ<br>${oldDStr}</div>`;
+                  } else if (leave && leave.status === "Pending") {
+                      cellContent += `<div style="width: 60px; height: 28px; font-size: 0.75rem; border-radius: 6px; background-color: #f59e0b; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; margin: 0 auto; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">PEND</div>`;
+                  } else {
+                      cellContent += `<div style="width: 60px; height: 28px; font-size: 0.75rem; border-radius: 6px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; margin: 0 auto; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">OFF</div>`;
+                  }
+              } else if (isPendingSwapOut) {
+                  cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #475569; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1.2;">NGÀY<br>THAY ĐỔI</div>`;
+              } else if (movedToLeave && movedToLeave.status === "Approved") {
+                  let newD = new Date(movedToLeave.date); let newDStr = newD.getDate() + "/" + (newD.getMonth()+1);
+                  cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #94a3b8; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-decoration: line-through; line-height: 1.2;">ĐÃ DỜI<br>RA ${newDStr}</div>`;
+              }
+          }
+
+          tr += `<td style="${cellStyle}">${cellContent}</td>`; cellCount++;
+          if (cellCount % 7 === 0) { tr += "</tr>"; if (loopDate < endGrid) tr += "<tr>"; }
+          loopDate.setDate(loopDate.getDate() + 1);
+      }
+      
+      let legendHtml = `<div style="margin-top: 15px; padding: 12px 15px; border-radius: 12px; background: #f8fafc; border: 2px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; font-size: 0.85rem; font-weight: 600; color: #475569;">
+          <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #ef4444; border-radius: 4px;"></div> OFF bình thường</div>
+          <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #9333ea; border-radius: 4px;"></div> Ngày cũ muốn DỜI</div>
+          <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #94a3b8; border-radius: 4px;"></div> Ngày MỚI ĐÃ DỜI</div>
+      </div>`;
+      
+      html += tr + "</table>" + legendHtml + "</div>"; container.innerHTML = html;
+      
+      // Khóa cứng màu nền trắng khi render
+      setTimeout(() => { 
+          html2canvas(container, { scale: 3, useCORS: true, backgroundColor: "#ffffff" }).then(canvas => { 
+              let link = document.createElement('a'); link.download = `LichNghi_${empName}_Thang${displayMonth+1}.png`; 
+              link.href = canvas.toDataURL("image/png"); link.click(); document.body.removeChild(container); showToast("📸 Đã tải ảnh xuống thành công!"); 
+          }); 
+      }, 600);
+    }
+  </script>
+</body>
+</html>

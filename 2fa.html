@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tra cứu Tài khoản & 2FA System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .password-text { transition: opacity 0.12s ease-in-out; opacity: 1; }
+        .password-text.fade-out { opacity: 0; }
+        .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        aside.collapsed { width: 76px !important; min-width: 76px !important; }
+        aside.collapsed .collapse-text, aside.collapsed .section-title, aside.collapsed .user-info-text { display: none !important; }
+        aside.collapsed .menu-item { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+        aside.collapsed .menu-item:hover { transform: none !important; }
+        aside.collapsed nav { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        aside.collapsed .logo-box { margin: 0 auto; }
+        
+        @keyframes custom-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .animate-custom-spin { animation: custom-spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+        
+        .floating-tooltip { position: fixed; background-color: #4f46e5; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; pointer-events: none; z-index: 9999; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); animation: floatUp 1s ease-out forwards; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(0.9); } 10% { opacity: 1; transform: translateY(-5px) scale(1); } 100% { opacity: 0; transform: translateY(-25px) scale(1); } }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        html.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+        
+        th { position: relative; }
+        .resizer { position: absolute; top: 0; right: -3px; width: 8px; cursor: col-resize; user-select: none; height: 100%; z-index: 10; transition: background-color 0.2s; }
+        .resizer:hover, .resizer.resizing { background-color: #6366f1; opacity: 0.5; }
+
+        .peek-container { position: relative; display: inline-block; cursor: none; --x: -100px; --y: -100px; }
+        .peek-obfuscated { color: #cbd5e1; font-family: monospace; font-weight: 600; letter-spacing: 0.1em; transition: opacity 0.15s ease; }
+        .peek-container:hover .peek-obfuscated { -webkit-mask-image: radial-gradient(circle 22px at var(--x) var(--y), transparent 40%, black 100%); mask-image: radial-gradient(circle 22px at var(--x) var(--y), transparent 40%, black 100%); }
+        .peek-real { position: absolute; top: 0; left: 0; color: #4f46e5; font-family: monospace; font-weight: 800; letter-spacing: 0.1em; white-space: nowrap; -webkit-mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); opacity: 0; transition: opacity 0.15s ease; pointer-events: none; text-shadow: 0 0 2px rgba(79, 70, 229, 0.4); }
+        .peek-container:hover .peek-real { opacity: 1; }
+
+        html.dark body, html.dark main, html.dark .bg-slate-100 { background-color: #0f172a !important; color: #f1f5f9 !important; }
+        html.dark .bg-white { background-color: #1e293b !important; border-color: #334155 !important; }
+        html.dark .border-slate-200, html.dark .border-slate-100, html.dark .border-slate-300 { border-color: #334155 !important; }
+        html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: #334155 !important; }
+        html.dark .text-slate-900, html.dark .text-slate-800, html.dark .text-slate-700 { color: #f8fafc !important; }
+        html.dark .text-slate-600, html.dark .text-slate-500, html.dark .text-slate-400 { color: #94a3b8 !important; }
+        html.dark .bg-slate-50, html.dark input { background-color: #0f172a !important; border-color: #334155 !important; color: #f8fafc !important; }
+        html.dark .bg-slate-200 { background-color: #334155 !important; color: #f8fafc !important; border-color: #475569 !important; }
+        html.dark th.bg-indigo-100 { background-color: #312e81 !important; border-color: #4338ca !important; color: #c7d2fe !important; }
+        html.dark .bg-indigo-50 { background-color: #1e1b4b !important; border-color: #312e81 !important; color: #c7d2fe !important; }
+        html.dark .bg-slate-50\/50, html.dark .bg-slate-50\/30 { background-color: rgba(30, 41, 59, 0.5) !important; }
+        html.dark .bg-indigo-50\/10 { background-color: rgba(49, 46, 129, 0.3) !important; }
+        html.dark .hover\:bg-indigo-50\/40:hover { background-color: rgba(49, 46, 129, 0.5) !important; }
+        html.dark .hover\:bg-indigo-50\/50:hover { background-color: rgba(49, 46, 129, 0.6) !important; color: #818cf8 !important; }
+        html.dark .text-indigo-600, html.dark .text-indigo-700 { color: #818cf8 !important; }
+        html.dark .bg-indigo-600 { background-color: #4f46e5 !important; color: white !important; }
+        html.dark .bg-emerald-50 { background-color: #064e3b !important; border-color: #065f46 !important; color: #34d399 !important; }
+        html.dark .text-emerald-700 { color: #34d399 !important; }
+        html.dark .bg-rose-50 { background-color: #4c0519 !important; border-color: #881337 !important; color: #fb7185 !important; }
+        html.dark .text-rose-600, html.dark .text-rose-500 { color: #fb7185 !important; }
+        html.dark .shadow-sm, html.dark .shadow-md, html.dark .shadow-xl, html.dark .shadow-2xl { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important; }
+        html.dark .peek-obfuscated { color: #475569 !important; }
+        html.dark .peek-real { color: #818cf8 !important; text-shadow: 0 0 4px rgba(129, 140, 248, 0.4); }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        .input-error { border-color: #f43f5e !important; color: #f43f5e !important; background-color: #fff1f2 !important; }
+
+        .menu-item { transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1); will-change: transform, filter, opacity; position: relative; overflow: hidden; }
+        #sidebar:not(.collapsed) nav:has(.menu-item:hover) .menu-item:not(:hover) { filter: blur(3px); opacity: 0.35; transform: scale(0.95); }
+        #sidebar:not(.collapsed) nav .menu-item:hover { filter: blur(0px) !important; opacity: 1 !important; transform: scale(1.03) translateX(6px) !important; box-shadow: 0 4px 20px -2px rgba(79, 70, 229, 0.25); z-index: 10; position: relative; }
+        html.dark #sidebar:not(.collapsed) nav .menu-item:hover { box-shadow: 0 4px 20px -2px rgba(129, 140, 248, 0.2); }
+        .menu-item::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle 55px at var(--mouse-x, 0) var(--mouse-y, 0), rgba(79, 70, 229, 0.18), transparent 100%); opacity: 0; transition: opacity 0.3s ease; pointer-events: none; z-index: 0; }
+        html.dark .menu-item::before { background: radial-gradient(circle 55px at var(--mouse-x, 0) var(--mouse-y, 0), rgba(129, 140, 248, 0.25), transparent 100%); }
+        .menu-item:hover::before { opacity: 1; }
+        .menu-item > * { position: relative; z-index: 1; }
+
+        @keyframes staggerFadeIn { 0% { opacity: 0; transform: translateY(15px); } 100% { opacity: 1; transform: translateY(0); } }
+        .stagger-row { opacity: 0; animation: staggerFadeIn 0.35s ease-out forwards; }
+
+        @keyframes vaultEnter { 0% { transform: scale(0.85) translateY(40px); opacity: 0; filter: blur(12px); } 100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); } }
+        .animate-vault-enter { animation: vaultEnter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .cyber-toast { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 12px 16px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2); font-family: 'Inter', monospace; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 12px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; backdrop-filter: blur(8px); }
+        .cyber-toast.show { transform: translateX(0) scale(1); opacity: 1; }
+        .cyber-toast.success { border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.2); }
+        .cyber-toast.error { border-color: rgba(244, 63, 94, 0.5); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(244, 63, 94, 0.2); }
+        .toast-progress { position: absolute; bottom: 0; left: 0; height: 2px; background: #6366f1; width: 100%; animation: toastProgress linear forwards; }
+        .cyber-toast.success .toast-progress { background: #10b981; }
+        .cyber-toast.error .toast-progress { background: #f43f5e; }
+        @keyframes toastProgress { 0% { width: 100%; } 100% { width: 0%; } }
+    
+        .checkbox-cell { width: 40px; text-align: center; }
+        .cyber-checkbox { appearance: none; width: 18px; height: 18px; border: 2px solid rgba(99, 102, 241, 0.5); border-radius: 4px; background: rgba(0,0,0,0.2); cursor: pointer; position: relative; transition: all 0.2s; outline: none;}
+        .cyber-checkbox:checked { background: #6366f1; border-color: #6366f1; box-shadow: 0 0 10px rgba(99,102,241,0.5);}
+        .cyber-checkbox:checked::after { content: '✓'; position: absolute; color: white; font-size: 12px; font-weight: bold; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+        #batchActionBar { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); z-index: 9000; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(99, 102, 241, 0.5); padding: 12px 24px; border-radius: 100px; box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 20px rgba(99,102,241,0.2); display: flex; align-items: center; gap: 16px; transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #batchActionBar.visible { bottom: 30px; }
+
+        .btn-ripple { position: relative; overflow: hidden; cursor: pointer; }
+        .ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: ripple-animation 0.6s linear; background-color: rgba(255, 255, 255, 0.4); pointer-events: none; }
+        html.dark .ripple { background-color: rgba(255, 255, 255, 0.2); }
+        @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
+
+        /* Dropdown Active/Highlight State */
+        .dropdown-item-active { background-color: #e0e7ff !important; color: #4f46e5 !important; }
+        html.dark .dropdown-item-active { background-color: #334155 !important; color: #818cf8 !important; }
+
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex overflow-hidden">
+
+    <!-- TOAST NOTIFICATION -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- MULTI-SELECT BATCH ACTION BAR -->
+    <div id="batchActionBar">
+        <div class="text-white font-medium text-sm"><span id="batchCount" class="text-indigo-400 font-bold">0</span> Tài khoản đã chọn</div>
+        <div class="h-6 w-px bg-white/20"></div>
+        <button onclick="batchExport()" class="btn-ripple bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg transition flex items-center gap-2">
+            <i class="fa-solid fa-copy"></i> Import Clipboard
+        </button>
+        <button onclick="clearBatchSelection()" class="btn-ripple text-slate-400 hover:text-white transition" title="Bỏ chọn">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <!-- MÀN HÌNH ĐĂNG NHẬP -->
+    <div id="loginScreen" class="fixed inset-0 z-[100] bg-[#050505] flex items-center justify-center transition-all duration-500" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background-color: #050505;">
+        <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#4f46e5 1px, transparent 1px); background-size: 30px 30px;"></div>
+        
+        <div class="w-[400px] max-w-[90%] bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/10 p-10 rounded-3xl shadow-[0_0_50px_rgba(79,70,229,0.15)] relative overflow-hidden animate-vault-enter">
+            <div class="absolute top-0 left-0 w-full h-[2px] bg-indigo-500/80 shadow-[0_0_15px_#6366f1] animate-[shimmer_2.5s_infinite]"></div>
+            
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 shadow-inner">
+                    <i class="fa-solid fa-fingerprint text-indigo-400 text-3xl"></i>
+                </div>
+                <h2 class="text-white text-2xl font-bold tracking-tight">2FA Account System</h2>
+                <p class="text-slate-500 text-sm mt-1">Hệ thống bảo mật 2FA</p>
+            </div>
+
+            <div class="relative group">
+                <input type="password" id="passcodeInput" 
+                       placeholder="Nhập mã bảo mật..." 
+                       class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-5 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300 font-mono tracking-widest text-center shadow-inner relative z-10"
+                       onkeypress="if(event.key === 'Enter') checkLogin()">
+                <div class="absolute -inset-[1px] bg-gradient-to-r from-indigo-500/0 via-indigo-500/30 to-indigo-500/0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none z-0"></div>
+            </div>
+
+            <button onclick="checkLogin()" class="btn-ripple w-full mt-6 py-4 bg-white/5 hover:bg-indigo-600/20 border border-white/10 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.1)] hover:shadow-[0_0_25px_rgba(79,70,229,0.4)] flex items-center justify-center gap-2" id="loginBtn">
+                <i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>
+            </button>
+            <p id="loginError" class="text-rose-500 text-xs text-center mt-4 font-semibold hidden">Từ chối truy cập: Sai mật khẩu</p>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH MÃ PIN -->
+    <div id="pinModal" class="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white p-6 rounded-2xl shadow-xl w-[320px] border border-slate-200 text-center transform scale-95 transition-transform duration-300" id="pinModalContent">
+            <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-1">Xác thực mã PIN</h3>
+            <p class="text-xs text-slate-500 mb-4">Nhập mã PIN 4 số để thao tác</p>
+            
+            <input type="password" id="pinInput" maxlength="4" placeholder="••••" class="w-full text-center tracking-[1em] text-2xl font-bold px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2 transition-all" oninput="checkPinAuto()">
+            <p id="pinError" class="text-rose-500 text-xs font-bold mb-3 hidden">Mã PIN không đúng!</p>
+            
+            <div class="mt-2">
+                <button onclick="closePinModal()" class="btn-ripple w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition text-sm cursor-pointer">Hủy thao tác (Esc)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH QUẢN LÝ THIẾT BỊ (DEVICE MODAL) -->
+    <div id="deviceModal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl w-[500px] max-w-[95%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="deviceModalContent">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-white">Quản lý Thiết bị</h3>
+                    <p id="editDeviceTarget" class="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-1">Tài khoản: ...</p>
+                </div>
+                <button onclick="closeDeviceEditor()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div id="deviceListContainer" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 mb-4 pr-1">
+                <!-- Javascript sẽ tự động thêm các input thiết bị vào đây -->
+            </div>
+            
+            <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700 mt-auto">
+                <button onclick="addDeviceRow('', '')" class="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium rounded-xl text-sm transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Thêm máy
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="closeDeviceEditor()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-medium rounded-xl text-sm transition-colors">
+                        Hủy bỏ
+                    </button>
+                    <button id="btnSaveDevice" onclick="saveDeviceData()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors shadow-md flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Lưu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH QUÉT TRÙNG LẶP (SCAN MODAL) -->
+    <div id="scanModal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl w-[600px] max-w-[95%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="scanModalContent">
+            <div class="flex items-center gap-4 mb-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+                <div id="scanModalIcon" class="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-xl shrink-0 border border-slate-100 dark:border-slate-700">
+                    <i class="fa-solid fa-clone"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 id="scanModalTitle" class="text-lg font-bold text-slate-800 dark:text-white">Quét Dữ Liệu</h3>
+                    <p id="scanModalSubtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Đang phân tích...</p>
+                </div>
+                <button onclick="closeScanModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="scanModalBody" class="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-[200px]"></div>
+            <div class="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700 mt-4">
+                <button onclick="closeScanModal()" class="px-6 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-sm transition-colors">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 min-h-screen sidebar-transition relative z-20 shadow-sm">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <div class="logo-box w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200 shrink-0">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <div class="collapse-text whitespace-nowrap">
+                    <h2 class="font-bold text-slate-900 leading-tight">2FA SECURITY</h2>
+                    <p class="text-[11px] text-slate-400 font-medium">Hệ thống tra cứu account</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3 overflow-hidden">
+            <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-sm border border-indigo-200 shrink-0">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div class="user-info-text whitespace-nowrap">
+                <p class="text-xs text-slate-400 font-medium">Xin chào,</p>
+                <p class="text-xs font-bold text-slate-800">Tino</p>
+            </div>
+        </div>
+
+        <nav class="p-3 flex-1 space-y-1.5 overflow-y-auto custom-scrollbar overflow-x-hidden">
+            <div class="section-title px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Bảng Dữ Liệu</div>
+            <button onclick="switchTab('Idol Team', this)" title="Idol Team" class="btn-ripple menu-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-100/60 shadow-sm">
+                <i class="fa-solid fa-users text-indigo-600 w-5 shrink-0 text-center"></i>
+                <span class="collapse-text whitespace-nowrap">Idol Team</span>
+            </button>
+            <button onclick="switchTab('Prime Radiant', this)" title="Prime Radiant" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600 hover:shadow-sm">
+                <i class="fa-solid fa-layer-group text-slate-400 w-5 shrink-0 text-center"></i>
+                <span class="collapse-text whitespace-nowrap">Prime Radiant</span>
+            </button>
+            <button onclick="switchTab('Velion Technologies', this)" title="Velion Technologies" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600 hover:shadow-sm">
+                <i class="fa-solid fa-microchip text-slate-400 w-5 shrink-0 text-center"></i>
+                <span class="collapse-text whitespace-nowrap">Velion Technologies</span>
+            </button>
+            <button onclick="switchTab('Passion Star', this)" title="Passion Star" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600 hover:shadow-sm">
+                <i class="fa-solid fa-star text-slate-400 w-5 shrink-0 text-center"></i>
+                <span class="collapse-text whitespace-nowrap">Passion Star</span>
+            </button>
+
+            <div class="section-title px-3 pt-4 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Trạng Thái Idol</div>
+            <button onclick="switchTab('Acc Idol mới', this)" title="Acc Idol mới" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600 hover:shadow-sm">
+                <i class="fa-solid fa-user-plus text-slate-400 w-5 shrink-0 text-center"></i>
+                <span class="collapse-text whitespace-nowrap">Acc Idol mới</span>
+            </button>
+            <button onclick="switchTab('Acc Idol Retire', this)" title="Acc Idol Retire" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600 hover:shadow-sm">
+                <i class="fa-solid fa-user-minus text-slate-400 w-5 shrink-0 text-center"></i>
+                <span class="collapse-text whitespace-nowrap">Acc Idol Retire</span>
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-100 text-[11px] text-slate-400 text-center collapse-text whitespace-nowrap">
+            Idol Account developed by Tino
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 h-screen bg-slate-100 relative">
+        <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm z-10 shrink-0">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSidebar()" class="btn-ripple p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition cursor-pointer" title="Thu gọn/Mở rộng Menu">
+                    <i class="fa-solid fa-bars-staggered text-lg"></i>
+                </button>
+                <div>
+                    <h1 id="currentTabTitle" class="text-xl font-bold text-slate-900">Idol Team</h1>
+                    <p class="text-xs text-slate-500">Hệ thống đang được bảo mật</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="toggleTheme()" id="themeToggleBtn" class="btn-ripple w-9 h-9 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition shadow-sm cursor-pointer" title="Đổi Giao Diện Sáng/Tối">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                
+                <button onclick="forceRefreshData()" class="btn-ripple px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer">
+                    <i class="fa-solid fa-rotate"></i> Làm mới
+                </button>
+                
+                <button onclick="lockApp()" class="btn-ripple px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer" title="Khóa màn hình ngay lập tức">
+                    <i class="fa-solid fa-lock"></i> Khóa
+                </button>
+                
+                <button onclick="scanDuplicates()" class="btn-ripple px-4 py-2 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer" title="Tìm dữ liệu trùng lặp">
+                    <i class="fa-solid fa-clone"></i> Quét Trùng Lặp
+                </button>
+            </div>
+        </header>
+
+        <div class="p-6 w-full flex-1 flex flex-col min-h-0">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-col sm:flex-row gap-4 shrink-0">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Tìm kiếm theo Team, Email, Tên Idol, TikTok ID, Thiết bị..." class="w-full pl-11 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                </div>
+                <div class="flex items-center gap-2 text-sm text-slate-500 px-2">
+                    <span id="recordCount" class="font-semibold text-slate-700">0</span> kết quả
+                </div>
+            </div>
+
+            <div id="tableContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 hidden flex-1 min-h-0 flex flex-col relative overflow-hidden">
+                <div class="overflow-x-auto overflow-y-auto custom-scrollbar h-full rounded-2xl relative" style="padding-bottom: 200px;">
+                    <table class="w-full text-left border-collapse relative" id="mainTable">
+                        <thead class="sticky top-0 z-30 backdrop-blur-md">
+                            <tr class="text-sm font-bold text-slate-800 uppercase tracking-widest shadow-md">
+                                <th class="py-4 px-2 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 checkbox-cell"><input type="checkbox" id="selectAllCheckbox" class="cyber-checkbox" onclick="toggleSelectAll()"></th>
+                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[100px]">Team</th>
+                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[260px]">Thông tin Email & Lấy Code</th>
+                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[250px]">Pass Tiktok</th>
+                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[180px]">Idol / TikTok ID</th>
+                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[180px]">Thiết bị</th>
+                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[120px]">Đại lí</th>
+                                <th class="py-4 px-4 bg-indigo-100/85 dark:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-center align-middle whitespace-nowrap min-w-[220px]">Mã 2FA (Live OTP)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody" class="divide-y divide-slate-200 text-sm">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- KỊCH BẢN JAVASCRIPT -->
+    <script>
+        // --- THAY LINK API CỦA BẠN VÀO ĐÂY ---
+        const API_URL = "https://script.google.com/macros/s/AKfycbyMWpxXaL_0pRV37K6njr1sGS4RsJXgAw0hiawmN1Z27upALrhovKwdscE9BV8vWXqM/exec";
+
+        function runScript(action, payload = {}) {
+            return fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: action, payload: payload })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'error') throw new Error(res.message);
+                return res.data;
+            });
+        }
+
+        const REVEAL_PIN = "0908"; 
+
+        let allData = [];
+        let currentSheetName = 'Idol Team';
+        let sessionPass = "";
+        let inactivityTimer;
+        let pinUnlockExpiry = 0; 
+        let pendingRevealAction = null;
+        let configDevices = [];
+
+        function fetchConfigDevices() {
+            if (!sessionPass) return;
+            runScript('getConfigDevices', { pass: sessionPass })
+                .then(devs => { configDevices = devs; })
+                .catch(err => console.error(err));
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (!document.getElementById('deviceModal').classList.contains('hidden')) closeDeviceEditor();
+                if (!document.getElementById('scanModal').classList.contains('hidden')) closeScanModal();
+                if (!document.getElementById('pinModal').classList.contains('hidden')) closePinModal();
+                const activeInlineInputs = document.querySelectorAll('input[id^="inline-edit-"]');
+                if(activeInlineInputs.length > 0) renderTable(allData); 
+                document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden'));
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.device-input') && !e.target.closest('.custom-dropdown') && !e.target.closest('#globalDeviceDropdown')) {
+                document.querySelectorAll('.custom-dropdown').forEach(d => {
+                    d.classList.add('hidden');
+                    delete d.dataset.activeIndex;
+                });
+                const globalDrop = document.getElementById('globalDeviceDropdown');
+                if(globalDrop) {
+                    globalDrop.classList.add('hidden');
+                    delete globalDrop.dataset.activeIndex;
+                }
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            let target = e.target.closest('.btn-ripple');
+            if (!target) return;
+            const circle = document.createElement('span');
+            const diameter = Math.max(target.clientWidth, target.clientHeight);
+            const radius = diameter / 2;
+            circle.style.width = circle.style.height = `${diameter}px`;
+            circle.style.left = `${e.clientX - target.getBoundingClientRect().left - radius}px`;
+            circle.style.top = `${e.clientY - target.getBoundingClientRect().top - radius}px`;
+            circle.classList.add('ripple');
+            const existingRipple = target.querySelector('.ripple');
+            if (existingRipple) existingRipple.remove();
+            target.appendChild(circle);
+        });
+
+        function showToast(message, type = 'success', duration = 3000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `cyber-toast ${type}`;
+            let icon = type === 'success' ? '<i class="fa-solid fa-circle-check text-emerald-400"></i>' : '<i class="fa-solid fa-triangle-exclamation text-rose-400"></i>';
+            toast.innerHTML = `${icon}<span>${message}</span><div class="toast-progress" style="animation-duration: ${duration}ms"></div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, duration);
+        }
+
+        function resetTimer() {
+            clearTimeout(inactivityTimer);
+            if (sessionPass !== "") inactivityTimer = setTimeout(lockApp, 300000); 
+        }
+
+        ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(evt => 
+            document.addEventListener(evt, resetTimer, true)
+        );
+
+        window.onload = function() {
+            setInterval(updateTOTPs, 1000);
+            initResizableColumns(); 
+            runScript('getColumnWidths')
+                .then(applySavedWidths)
+                .catch(e => console.log('Không lấy được saved widths'));
+            
+            const menuItems = document.querySelectorAll('.menu-item');
+            menuItems.forEach(item => {
+                item.addEventListener('mousemove', (e) => {
+                    const rect = item.getBoundingClientRect();
+                    item.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                    item.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+                });
+            });
+        };
+        
+        function generateSkeletonHTML() {
+            let html = '';
+            for(let i=0; i<6; i++) {
+                html += `<tr class="animate-pulse">
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16"></div></td>
+                            <td class="py-4 px-4"><div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-[240px] mb-2"></div><div class="h-7 bg-slate-200 dark:bg-slate-700 rounded-lg w-[240px]"></div></td>
+                            <td class="py-4 px-4"><div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-[230px]"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24 mb-2"></div><div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20 mb-2"></div><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-12"></div></td>
+                            <td class="py-4 px-4"><div class="h-6 bg-slate-200 dark:bg-slate-700 rounded w-20"></div></td>
+                        </tr>`;
+            }
+            return html;
+        }
+
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function checkLogin() {
+            const rawInput = document.getElementById('passcodeInput').value;
+            if(!rawInput) return;
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('loginError');
+            
+            btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang giải mã...</span>';
+            btn.disabled = true; 
+            err.classList.add('hidden');
+            
+            const input = await sha256(rawInput);
+
+            runScript('getSheetData', { sheetName: currentSheetName, pass: input })
+                .then(data => {
+                    sessionPass = input;
+                    document.getElementById('passcodeInput').value = '';
+                    document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
+                    setTimeout(() => document.getElementById('loginScreen').classList.add('hidden'), 500);
+                    
+                    btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
+                    btn.disabled = false; 
+                    allData = data;
+                    document.getElementById('tableContainer').classList.remove('hidden');
+                    
+                    renderTable(allData); 
+                    resetTimer(); 
+                    fetchConfigDevices();
+                    showToast('Đăng nhập thành công', 'success');
+                })
+                .catch(error => {
+                    btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>'; 
+                    btn.disabled = false;
+                    err.classList.remove('hidden');
+                    document.getElementById('passcodeInput').classList.add('animate-shake');
+                    setTimeout(() => document.getElementById('passcodeInput').classList.remove('animate-shake'), 400);
+                    
+                    if (error.message === "AUTH_FAILED") { 
+                        err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
+                        showToast('Từ chối: Sai mật khẩu', 'error'); 
+                    } else {
+                        err.innerText = "Lỗi kết nối máy chủ!";
+                    }
+                });
+        }
+
+        function lockApp() {
+            sessionPass = ""; 
+            pinUnlockExpiry = 0; 
+            document.getElementById('loginScreen').classList.remove('hidden');
+            setTimeout(() => document.getElementById('loginScreen').classList.remove('opacity-0', 'pointer-events-none'), 10);
+            document.getElementById('tableContainer').classList.add('hidden');
+            document.getElementById('dataTableBody').innerHTML = '';
+            allData = []; 
+            clearTimeout(inactivityTimer);
+        }
+
+        function checkPinRequired(actionCallback) {
+            if (Date.now() < pinUnlockExpiry) {
+                actionCallback();
+            } else { 
+                pendingRevealAction = actionCallback; 
+                showPinModal(); 
+            }
+        }
+
+        function showPinModal() {
+            const modal = document.getElementById('pinModal');
+            const content = document.getElementById('pinModalContent');
+            const input = document.getElementById('pinInput');
+            
+            document.getElementById('pinError').classList.add('hidden');
+            input.classList.remove('animate-shake', 'input-error'); 
+            input.value = '';
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); input.focus(); }, 10);
+        }
+
+        function closePinModal(isSuccess = false) {
+            const modal = document.getElementById('pinModal');
+            const content = document.getElementById('pinModalContent');
+            modal.classList.add('opacity-0'); 
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); if (!isSuccess) pendingRevealAction = null; }, 300);
+        }
+
+        function checkPinAuto() {
+            const input = document.getElementById('pinInput');
+            const val = input.value;
+            input.classList.remove('animate-shake', 'input-error'); 
+            document.getElementById('pinError').classList.add('hidden');
+            
+            if (val.length === 4) {
+                if (val === REVEAL_PIN) {
+                    pinUnlockExpiry = Date.now() + 15 * 60 * 1000; 
+                    closePinModal(true); 
+                    showToast('Xác thực thành công. Đã mở khoá các chức năng!', 'success');
+                    
+                    if (pendingRevealAction) { 
+                        pendingRevealAction(); 
+                        pendingRevealAction = null; 
+                    }
+                } else {
+                    document.getElementById('pinError').classList.remove('hidden'); 
+                    input.classList.add('animate-shake', 'input-error');
+                    setTimeout(() => { input.value = ''; input.focus(); }, 400); 
+                }
+            }
+        }
+
+        function loadData() {
+            if (!sessionPass) return;
+            document.getElementById('tableContainer').classList.remove('hidden');
+            document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
+            document.getElementById('recordCount').innerText = '...';
+            
+            const cachedData = localStorage.getItem('vault_cache_' + currentSheetName);
+            if (cachedData) {
+                try { allData = JSON.parse(cachedData); renderTable(allData); } catch(e) {}
+            }
+            
+            runScript('getSheetData', { sheetName: currentSheetName, pass: sessionPass })
+                .then(data => {
+                    allData = data; 
+                    renderTable(allData); 
+                    resetTimer();
+                    localStorage.setItem('vault_cache_' + currentSheetName, JSON.stringify(data));
+                })
+                .catch(error => { 
+                    if(error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); 
+                });
+        }
+        
+        function forceRefreshData() {
+            if (!sessionPass) return;
+            document.getElementById('tableContainer').classList.remove('hidden');
+            document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
+            document.getElementById('recordCount').innerText = '...';
+            
+            runScript('getSheetData', { sheetName: currentSheetName, pass: sessionPass })
+                .then(data => {
+                    setTimeout(() => {
+                        allData = data; 
+                        renderTable(allData); 
+                        resetTimer();
+                        localStorage.setItem('vault_cache_' + currentSheetName, JSON.stringify(data));
+                        showToast('Dữ liệu đã được cập nhật', 'success');
+                    }, 1500); 
+                })
+                .catch(error => { 
+                    if(error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); 
+                });
+                
+            fetchConfigDevices();
+        }
+
+        function applySavedWidths(savedWidths) {
+            if (!savedWidths || savedWidths.length === 0) return;
+            const headers = document.querySelectorAll('#mainTable th');
+            headers.forEach((th, index) => {
+                if (savedWidths[index]) { th.style.width = savedWidths[index] + 'px'; th.style.minWidth = savedWidths[index] + 'px'; }
+            });
+        }
+
+        function initResizableColumns() {
+            const headers = document.querySelectorAll('#mainTable th');
+            headers.forEach(th => {
+                const resizer = document.createElement('div'); resizer.classList.add('resizer'); th.appendChild(resizer);
+                let x = 0; let w = 0;
+                const mouseDownHandler = function(e) {
+                    x = e.clientX; 
+                    const styles = window.getComputedStyle(th); 
+                    w = parseInt(styles.width, 10);
+                    document.addEventListener('mousemove', mouseMoveHandler); 
+                    document.addEventListener('mouseup', mouseUpHandler); 
+                    resizer.classList.add('resizing');
+                };
+                const mouseMoveHandler = function(e) { 
+                    th.style.width = `${w + (e.clientX - x)}px`; 
+                    th.style.minWidth = `${w + (e.clientX - x)}px`; 
+                };
+                const mouseUpHandler = function() {
+                    resizer.classList.remove('resizing'); 
+                    document.removeEventListener('mousemove', mouseMoveHandler); 
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                    const widthsArray = []; 
+                    document.querySelectorAll('#mainTable th').forEach(h => widthsArray.push(parseInt(window.getComputedStyle(h).width, 10)));
+                    runScript('saveColumnWidths', { widths: widthsArray }).catch(e=>console.log(e));
+                };
+                resizer.addEventListener('mousedown', mouseDownHandler);
+            });
+        }
+
+        function switchTab(sheetName, element) {
+            currentSheetName = sheetName; 
+            document.getElementById('currentTabTitle').innerText = sheetName;
+            document.querySelectorAll('.menu-item').forEach(btn => {
+                btn.className = "btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600 hover:shadow-sm";
+                const icon = btn.querySelector('i'); 
+                if(icon) icon.className = icon.className.replace('text-indigo-600', 'text-slate-400');
+            });
+            element.className = "btn-ripple menu-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-100/60 shadow-sm";
+            const activeIcon = element.querySelector('i'); 
+            if(activeIcon) activeIcon.className = activeIcon.className.replace('text-slate-400', 'text-indigo-600');
+            loadData();
+        }
+
+        function toggleSidebar() { 
+            document.getElementById('sidebar').classList.toggle('collapsed'); 
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('dataTableBody');
+            document.getElementById('recordCount').innerText = data.length;
+            
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400">Không có dữ liệu trong trang tính <b>${currentSheetName}</b>.</td></tr>`; 
+                return;
+            }
+
+            let html = '';
+            data.forEach((item, loopIndex) => {
+                const index = allData.indexOf(item);
+                
+                let otpHtml = '';
+                if (item.key2fa && String(item.key2fa).trim() !== '') {
+                    otpHtml = `
+                        <div class="flex items-center justify-between gap-2">
+                            <span id="otp-${index}" class="font-mono font-bold text-slate-400 text-lg tracking-[0.1em] transition-colors whitespace-nowrap">******</span>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button onclick="let btn = this; copyOTP('${escapeHtml(item.key2fa)}', btn)" title="Sao chép mã live" class="text-slate-400 hover:text-indigo-600 p-1.5 transition cursor-pointer bg-white border border-slate-200 rounded-md shadow-sm"><i class="fa-regular fa-copy"></i></button>
+                                <button onclick="let btn = this; toggleOTP('${index}', btn)" title="Hiện/Ẩn 2FA" class="text-slate-400 hover:text-indigo-600 p-1.5 transition cursor-pointer bg-white border border-slate-200 rounded-md shadow-sm"><i class="fa-solid fa-eye-slash"></i></button>
+                            </div>
+                        </div>
+                        <div id="timer-container-${index}" class="hidden mt-2.5">
+                            <div class="flex items-center justify-between bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 shadow-sm">
+                                <div class="flex items-center gap-2">
+                                    <div class="relative w-7 h-7 flex items-center justify-center">
+                                        <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" class="stroke-slate-200 dark:stroke-slate-600" stroke-width="3"></circle><circle id="timer-ring-${index}" cx="18" cy="18" r="15" fill="none" class="stroke-indigo-500 transition-all duration-1000 ease-linear" stroke-width="3" stroke-dasharray="94.24" stroke-dashoffset="0"></circle></svg>
+                                        <span id="timer-badge-${index}" class="absolute text-[9px] font-bold text-indigo-600 dark:text-indigo-400">30</span>
+                                    </div>
+                                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Làm mới</span>
+                                </div>
+                            </div>
+                        </div>`;
+                } else { 
+                    otpHtml = `<span class="text-slate-400 italic text-xs whitespace-nowrap">Không có Key</span>`; 
+                }
+
+                let tiktokIdHtml = item.tiktokId && item.tiktokId.trim() !== '' ? `<div onclick="copyTiktokId(event, '${escapeHtml(item.tiktokId).replace(/'/g, "\\'")}')" title="Click để sao chép" class="text-[13px] text-indigo-600 font-bold cursor-pointer hover:underline inline-block mt-1 break-words sensitive-data">@${escapeHtml(item.tiktokId)}</div>` : '';
+                
+                let thietBiHtml = '';
+                let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim()).filter(Boolean);
+
+                thietBiHtml = `<div class="flex items-start justify-between gap-2 w-full"><div class="flex flex-wrap items-center gap-2">`;
+                
+                if (mangThietBi.length > 0) {
+                    let displayLimit = 2; 
+                    let visibleDevices = mangThietBi.slice(0, displayLimit);
+                    let hiddenCount = mangThietBi.length - displayLimit;
+
+                    visibleDevices.forEach((text, tbIndex) => {
+                        let formattedText = escapeHtml(text);
+                        let roleHtml = '';
+                        if (text.includes(':')) { 
+                            let parts = text.split(':'); 
+                            roleHtml = `<span class="font-bold text-slate-800 dark:text-slate-100 mr-1">${escapeHtml(parts[0])}:</span>`; 
+                            formattedText = escapeHtml(parts.slice(1).join(':')).trim(); 
+                        } else if (text.includes('-')) { 
+                            let parts = text.split('-'); 
+                            roleHtml = `<span class="font-bold text-slate-800 dark:text-slate-100 mr-1">${escapeHtml(parts[0])} -</span>`; 
+                            formattedText = escapeHtml(parts.slice(1).join('-')).trim(); 
+                        }
+
+                        thietBiHtml += `
+                        <div class="device-tag-item group inline-flex items-center pl-3 pr-3 py-1.5 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-full shadow-sm relative overflow-hidden transition-all duration-300 ease-out hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500 cursor-default min-h-[32px]">
+                            <div class="flex items-center gap-1.5 whitespace-nowrap">
+                                <div class="w-5 h-5 rounded-full bg-indigo-50 dark:bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-mobile-screen-button text-indigo-500 text-[10px]"></i>
+                                </div>
+                                <span class="text-[12px] text-slate-600 dark:text-slate-300 leading-none mt-px">${roleHtml}${formattedText}</span>
+                            </div>
+                            
+                            <div class="absolute right-0 top-0 bottom-0 pr-1 pl-5 flex items-center gap-0.5 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 bg-gradient-to-r from-transparent via-white to-white dark:via-[#1e293b] dark:to-[#1e293b] rounded-r-full">
+                                <button onclick="let btn = this; checkPinRequired(() => editDeviceInline(${index}, ${tbIndex}, btn))" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-slate-500 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors shadow-sm" title="Sửa nhanh">
+                                    <i class="fa-solid fa-pen text-[10px]"></i>
+                                </button>
+                                <button onclick="let btn = this; checkPinRequired(() => deleteDeviceInline(${index}, ${tbIndex}, btn))" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-slate-500 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 rounded-full transition-colors shadow-sm" title="Xóa">
+                                    <i class="fa-solid fa-xmark text-[11px]"></i>
+                                </button>
+                            </div>
+                        </div>`;
+                    });
+                    
+                    if (hiddenCount > 0) {
+                        thietBiHtml += `
+                        <div onclick="checkPinRequired(() => openDeviceEditor(${index}))" class="inline-flex items-center justify-center px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full text-[11px] font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 cursor-pointer transition-colors min-h-[32px] shrink-0 shadow-sm" title="Nhấn để xem toàn bộ ${mangThietBi.length} thiết bị">
+                            +${hiddenCount}
+                        </div>`;
+                    }
+                } else {
+                    thietBiHtml += `
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-slate-700 rounded-full cursor-default">
+                            <div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></div>
+                            <span class="text-[12px] text-slate-400 dark:text-slate-500 italic whitespace-nowrap leading-none mt-px">Chưa gắn thiết bị</span>
+                        </div>`;
+                }
+
+                thietBiHtml += `</div>
+                    <button onclick="checkPinRequired(() => openDeviceEditor(${index}))" 
+                            class="w-8 h-8 flex items-center justify-center shrink-0 rounded-full text-slate-400 hover:text-indigo-600 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 transition-all shadow-sm focus:outline-none" 
+                            title="Mở bảng Quản lý chi tiết">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                    </button>
+                </div>`;
+
+                html += `
+                    <tr class="hover:bg-indigo-50/40 transition stagger-row" data-index="${index}" style="animation-delay: ${loopIndex * 0.04}s">
+                        <td class="py-4 px-2 border border-slate-300 dark:border-slate-700 checkbox-cell align-middle bg-slate-50/30 dark:bg-slate-800/30"><input type="checkbox" class="cyber-checkbox row-checkbox" value="${index}" onclick="updateBatchSelection()"></td>
+                        <td class="py-4 px-4 font-bold text-indigo-700 bg-slate-50/30 whitespace-nowrap">${escapeHtml(item.team)}</td>
+                        <td class="py-4 px-4 align-top">
+                            <div class="font-medium text-slate-900 flex items-center justify-between gap-2 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 shadow-sm w-[250px] mb-2">
+                                <span class="select-all font-mono font-medium whitespace-nowrap flex items-center w-[140px] overflow-hidden relative"><span id="email-text-${index}" class="password-text inline-block w-full truncate text-slate-500 dark:text-slate-400 sensitive-data">******</span></span>
+                                <div class="flex items-center gap-1.5 shrink-0 border-l border-slate-200 dark:border-slate-700 pl-1.5">
+                                    <button onclick="let btn = this; copySecureText('${escapeHtml(item.email).replace(/'/g, "\\'")}', 'Email')" title="Sao chép email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
+                                    <button onclick="let btn = this; togglePlainText('email-text-${index}', '${escapeHtml(item.email).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
+                                    <button onclick="let btn = this; fetchEmailCodeUI('${escapeHtml(item.email)}', ${index}, btn)" title="Quét hộp thư lấy mã" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 transition cursor-pointer px-1.5 py-0.5 rounded shadow-sm"><i class="fa-solid fa-envelope-open-text text-xs"></i></button>
+                                </div>
+                            </div>
+                            <div class="text-[13px] text-slate-500 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 w-[250px]">
+                                <span class="font-mono text-slate-700 dark:text-slate-300 select-all font-medium whitespace-nowrap flex items-center gap-1 w-[180px] overflow-hidden relative">Pass: <span id="pass-email-${index}" class="password-text inline-block w-full truncate sensitive-data">******</span></span>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <button onclick="let btn = this; copySecureText('${escapeHtml(item.passEmail).replace(/'/g, "\\'")}', 'Password')" title="Sao chép mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
+                                    <button onclick="let btn = this; togglePassword('pass-email-${index}', '${escapeHtml(item.passEmail).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
+                                </div>
+                            </div>
+                            <div id="code-box-${index}" class="hidden w-[250px] mt-2 overflow-hidden transition-all duration-300 opacity-0 transform -translate-y-2">
+                                <div class="bg-slate-900 border border-indigo-500/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between shadow-[0_0_12px_rgba(99,102,241,0.4)] relative overflow-hidden group">
+                                    <div class="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-indigo-400/10 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]"></div>
+                                    <div class="flex items-center gap-1.5 relative z-10"><div class="w-5 h-5 rounded bg-indigo-900/50 flex items-center justify-center"><i class="fa-solid fa-shield-halved text-indigo-400 text-[9px]"></i></div><span class="text-[9px] font-bold text-indigo-300 uppercase tracking-widest">OTP</span></div>
+                                    <div class="flex items-center gap-2 relative z-10"><span id="code-val-${index}" class="font-mono text-[14px] font-bold text-white tracking-[0.1em] drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]">------</span><button onclick="copyRawText(document.getElementById('code-val-${index}').innerText, 'OTP Mail')" class="text-slate-400 hover:text-white transition cursor-pointer p-0.5 rounded" title="Sao chép mã"><i class="fa-regular fa-copy text-[11px]"></i></button></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-4 px-4">
+                            <div class="text-[13px] text-slate-700 flex items-center justify-between gap-2 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 w-[230px]">
+                                <span class="font-mono select-all font-medium whitespace-nowrap flex items-center w-full relative"><span id="pass-tiktok-${index}" class="password-text inline-block w-full sensitive-data">******</span></span>
+                                <div class="flex items-center gap-1 shrink-0">
+                                    <button onclick="let btn = this; copySecureText('${escapeHtml(item.passTiktok).replace(/'/g, "\\'")}', 'Pass Tiktok')" title="Sao chép mật khẩu" class="text-slate-400 hover:text-indigo-600 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
+                                    <button onclick="let btn = this; togglePassword('pass-tiktok-${index}', '${escapeHtml(item.passTiktok).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn mật khẩu" class="text-slate-400 hover:text-indigo-600 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-4 px-4 align-top"><div class="font-medium text-slate-900 break-words">${escapeHtml(item.tenIdol)}</div>${tiktokIdHtml}</td>
+                        <td class="py-4 px-4 text-[13px] align-top w-[350px] min-w-[350px]">${thietBiHtml}</td>
+                        <td class="py-4 px-4 text-[13px] font-medium text-slate-600 align-top break-words sensitive-data">${escapeHtml(item.daiLi)}</td>
+                        <td class="py-4 px-4 bg-indigo-50/10 align-top" data-key="${escapeHtml(item.key2fa)}" data-index="${index}" data-otp-active="false">${otpHtml}</td>
+                    </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function handlePeekMove(e, container) { 
+            container.style.setProperty('--x', (e.clientX - container.getBoundingClientRect().left) + 'px'); 
+            container.style.setProperty('--y', (e.clientY - container.getBoundingClientRect().top) + 'px'); 
+        }
+        
+        function generateRandomString(length) { 
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*'; 
+            let result = ''; 
+            for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length)); 
+            return result; 
+        }
+        
+        function togglePlainText(elementId, realValue, btn) {
+            const el = document.getElementById(elementId); 
+            if (!el) return;
+            const isHidden = el.innerText === '******';
+            if (!isHidden) {
+                executeTogglePlainText(elementId, realValue, btn, isHidden); 
+            } else {
+                checkPinRequired(() => executeTogglePlainText(elementId, realValue, btn, isHidden));
+            }
+        }
+        
+        function executeTogglePlainText(elementId, realValue, btn, isHidden) {
+            const el = document.getElementById(elementId); 
+            const icon = btn.querySelector('i');
+            if (isHidden) { 
+                el.innerText = realValue; 
+                el.classList.remove('text-slate-500', 'dark:text-slate-400'); 
+                el.classList.add('text-indigo-700', 'dark:text-indigo-400'); 
+                icon.className = 'fa-solid fa-eye text-xs'; 
+                btn.classList.add('text-indigo-600', 'dark:text-indigo-400'); 
+            } else { 
+                el.innerText = '******'; 
+                el.classList.add('text-slate-500', 'dark:text-slate-400'); 
+                el.classList.remove('text-indigo-700', 'dark:text-indigo-400'); 
+                icon.className = 'fa-solid fa-eye-slash text-xs'; 
+                btn.classList.remove('text-indigo-600', 'dark:text-indigo-400'); 
+            }
+        }
+
+        function togglePassword(elementId, realValue, btn) {
+            const el = document.getElementById(elementId); 
+            if (!el) return;
+            const isPeekMode = el.querySelector('.peek-container') !== null;
+            if (isPeekMode || el.innerText !== '******') {
+                executeTogglePassword(elementId, realValue, btn, isPeekMode); 
+            } else {
+                checkPinRequired(() => executeTogglePassword(elementId, realValue, btn, isPeekMode));
+            }
+        }
+        
+        function executeTogglePassword(elementId, realValue, btn, isPeekMode) {
+            const el = document.getElementById(elementId); 
+            const icon = btn.querySelector('i');
+            if (!isPeekMode && el.innerText === '******') {
+                icon.className = 'fa-solid fa-eye text-xs'; 
+                btn.classList.add('text-indigo-600', 'dark:text-indigo-400');
+                el.innerHTML = `<div class="peek-container" onmousemove="handlePeekMove(event, this)"><div class="peek-obfuscated">${generateRandomString(realValue.length)}</div><div class="peek-real">${escapeHtml(realValue)}</div></div>`;
+            } else {
+                el.classList.add('fade-out'); 
+                setTimeout(() => { 
+                    el.innerText = '******'; 
+                    el.classList.add('text-slate-500', 'dark:text-slate-400'); 
+                    el.classList.remove('text-indigo-700', 'dark:text-indigo-400'); 
+                    icon.className = 'fa-solid fa-eye-slash text-xs'; 
+                    btn.classList.remove('text-indigo-600', 'dark:text-indigo-400'); 
+                    el.classList.remove('fade-out'); 
+                }, 100);
+            }
+        }
+
+        function updateTimerUI(index, remaining) {
+            const timerBadge = document.getElementById(`timer-badge-${index}`);
+            const timerRing = document.getElementById(`timer-ring-${index}`);
+            if (!timerBadge) return; 
+            timerBadge.innerText = remaining;
+            
+            if (timerRing) timerRing.style.strokeDashoffset = 94.24 - (remaining / 30) * 94.24;
+            
+            if (remaining <= 5) { 
+                timerBadge.className = "absolute text-[9px] font-bold text-rose-600 dark:text-rose-500 animate-pulse"; 
+                if (timerRing) timerRing.className = "stroke-rose-500 transition-all duration-1000 ease-linear animate-pulse"; 
+            } else { 
+                timerBadge.className = "absolute text-[9px] font-bold text-indigo-600 dark:text-indigo-400"; 
+                if (timerRing) timerRing.className = "stroke-indigo-500 transition-all duration-1000 ease-linear"; 
+            }
+        }
+
+        async function toggleOTP(index, btn) {
+            const cell = document.querySelector(`td[data-index="${index}"]`); 
+            if (!cell) return;
+            const isActive = cell.getAttribute('data-otp-active') === 'true';
+            if (isActive) {
+                executeToggleOTP(index, btn, cell, isActive); 
+            } else {
+                checkPinRequired(() => executeToggleOTP(index, btn, cell, isActive));
+            }
+        }
+        
+        async function executeToggleOTP(index, btn, cell, isActive) {
+            const icon = btn.querySelector('i');
+            const otpSpan = document.getElementById(`otp-${index}`);
+            const timerContainer = document.getElementById(`timer-container-${index}`);
+            
+            if (isActive) {
+                cell.setAttribute('data-otp-active', 'false'); 
+                icon.className = 'fa-solid fa-eye-slash'; 
+                btn.classList.remove('text-indigo-600'); 
+                otpSpan.innerText = '******'; 
+                otpSpan.classList.remove('text-indigo-600'); 
+                otpSpan.classList.add('text-slate-400'); 
+                timerContainer.classList.add('hidden'); 
+            } else {
+                cell.setAttribute('data-otp-active', 'true'); 
+                icon.className = 'fa-solid fa-eye'; 
+                btn.classList.add('text-indigo-600'); 
+                otpSpan.classList.remove('text-slate-400'); 
+                otpSpan.classList.add('text-indigo-600'); 
+                timerContainer.classList.remove('hidden'); 
+                
+                const epoch = Math.floor(Date.now() / 1000);
+                const remaining = 30 - (epoch % 30);
+                const code = await generateTOTP(cell.getAttribute('data-key'));
+                
+                if (code) { 
+                    otpSpan.innerText = code.slice(0, 3) + ' ' + code.slice(3); 
+                    updateTimerUI(index, remaining); 
+                } else {
+                    otpSpan.innerText = 'Key lỗi';
+                }
+            }
+        }
+        
+        async function updateTOTPs() {
+            const activeCells = document.querySelectorAll('#dataTableBody td[data-key][data-otp-active="true"]'); 
+            if (activeCells.length === 0) return;
+            
+            const remaining = 30 - (Math.floor(Date.now() / 1000) % 30);
+            for (const cell of activeCells) {
+                let code = await generateTOTP(cell.getAttribute('data-key'));
+                let index = cell.getAttribute('data-index');
+                if (code) { 
+                    document.getElementById(`otp-${index}`).innerText = code.slice(0, 3) + ' ' + code.slice(3); 
+                    updateTimerUI(index, remaining); 
+                }
+            }
+        }
+
+        async function copyOTP(key, btn) { 
+            if(!key) return; 
+            checkPinRequired(async () => { 
+                const code = await generateTOTP(key); 
+                if(code) { 
+                    navigator.clipboard.writeText(code).then(()=>showToast('Đã copy mã Live OTP','success')); 
+                } else {
+                    showToast('Key 2FA Lỗi','error'); 
+                }
+            }); 
+        }
+        
+        function copySecureText(text, label="Dữ liệu") { 
+            if(!text) return; 
+            checkPinRequired(() => { 
+                navigator.clipboard.writeText(text).then(()=>showToast(`Đã copy ${label}`,'success')); 
+            }); 
+        }
+        
+        function fetchEmailCodeUI(email, index, btn) {
+            const box = document.getElementById(`code-box-${index}`);
+            const valSpan = document.getElementById(`code-val-${index}`);
+            if (!email || email === "") { showToast('Không có Email', 'error'); return; }
+            
+            checkPinRequired(() => {
+                const originalHTML = btn.innerHTML; 
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>'; 
+                btn.disabled = true; 
+                box.classList.remove('hidden'); 
+                setTimeout(()=>box.classList.remove('opacity-0', '-translate-y-2'), 10);
+                
+                valSpan.innerHTML = '<i class="fa-solid fa-ellipsis fa-fade"></i>'; 
+                valSpan.classList.remove('text-rose-500'); 
+                
+                runScript('getEmailVerificationCode', { targetEmail: email, pass: sessionPass })
+                    .then(code => {
+                        btn.innerHTML = originalHTML; 
+                        btn.disabled = false;
+                        if(code.includes("Không tìm thấy") || code.includes("Không có") || code.includes("Lỗi")) { 
+                            valSpan.innerText = "KHÔNG CÓ MÃ"; 
+                            valSpan.classList.add('text-rose-500'); 
+                            showToast('Không có mã', 'error'); 
+                        } else { 
+                            valSpan.innerText = code; 
+                            showToast('Lấy mã thành công', 'success'); 
+                        }
+                    })
+                    .catch(err => {
+                        btn.innerHTML = originalHTML; 
+                        btn.disabled = false; 
+                        valSpan.innerText = "LỖI QUÉT"; 
+                        valSpan.classList.add('text-rose-500'); 
+                        showToast('Lỗi máy chủ', 'error'); 
+                    });
+            });
+        }
+
+        function copyRawText(text, label="Dữ liệu") { 
+            if (!text || text==="------" || text==="KHÔNG CÓ MÃ" || text==="LỖI QUÉT") return; 
+            navigator.clipboard.writeText(text).then(()=>showToast(`Đã copy ${label}`,'success')); 
+        }
+        
+        function copyTiktokId(e, text) { 
+            if(!text) return; 
+            navigator.clipboard.writeText(text).then(()=>showToast('Đã copy TikTok ID','success')); 
+        }
+
+        let searchTimeout = null;
+        function filterData() {
+            clearTimeout(searchTimeout); 
+            searchTimeout = setTimeout(() => {
+                const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+                if (!keyword) { renderTable(allData); return; }
+                const filtered = allData.filter(item => { 
+                    return (item.team && item.team.toLowerCase().includes(keyword)) || 
+                           (item.email && item.email.toLowerCase().includes(keyword)) || 
+                           (item.tenIdol && item.tenIdol.toLowerCase().includes(keyword)) || 
+                           (item.tiktokId && item.tiktokId.toLowerCase().includes(keyword)) || 
+                           (item.daiLi && String(item.daiLi).toLowerCase().includes(keyword)) || 
+                           (item.thietBiIdol && item.thietBiIdol.toLowerCase().includes(keyword)) || 
+                           (item.thietBiTroLi && item.thietBiTroLi.toLowerCase().includes(keyword)); 
+                });
+                renderTable(filtered);
+            }, 300); 
+        }
+
+        function base32ToBytes(base32) {
+            let base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"; 
+            let cleaned = String(base32).replace(/=+$/, "").toUpperCase().replace(/[\s\-]+/g, ""); 
+            let bits = "";
+            for (let i=0; i<cleaned.length; i++) { 
+                let val = base32chars.indexOf(cleaned.charAt(i)); 
+                if (val === -1) throw new Error("Invalid base32"); 
+                bits += val.toString(2).padStart(5, '0'); 
+            }
+            let bytes = new Uint8Array(Math.floor(bits.length / 8)); 
+            for (let i=0; i<bytes.length; i++) bytes[i] = parseInt(bits.substr(i*8, 8), 2);
+            return bytes;
+        }
+
+        async function generateTOTP(secret) {
+            try {
+                let keyBytes = base32ToBytes(secret); 
+                let time = Math.floor(Math.floor(Date.now()/1000) / 30); 
+                let timeBytes = new Uint8Array(8);
+                
+                for (let i=7; i>=0; i--) { 
+                    timeBytes[i] = time & 0xff; 
+                    time = Math.floor(time / 256); 
+                }
+                
+                const cryptoKey = await window.crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: { name: "SHA-1" } }, false, ["sign"]);
+                const signature = await window.crypto.subtle.sign("HMAC", cryptoKey, timeBytes); 
+                let hmacResult = new Uint8Array(signature);
+                let offset = hmacResult[hmacResult.length-1] & 0x0f;
+                let binary = ((hmacResult[offset] & 0x7f) << 24) | ((hmacResult[offset+1] & 0xff) << 16) | ((hmacResult[offset+2] & 0xff) << 8) | (hmacResult[offset+3] & 0xff);
+                
+                return (binary % 1000000).toString().padStart(6, '0');
+            } catch (e) { return null; }
+        }
+
+        function escapeHtml(text) { 
+            return text ? String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : ''; 
+        }
+
+        function initTheme() {
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark'); 
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            updateThemeIcon(document.documentElement.classList.contains('dark'));
+        }
+        
+        function toggleTheme() { 
+            const isDark = document.documentElement.classList.toggle('dark'); 
+            localStorage.setItem('theme', isDark ? 'dark' : 'light'); 
+            updateThemeIcon(isDark); 
+        }
+        
+        function updateThemeIcon(isDark) {
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) { 
+                if (isDark) { 
+                    btn.innerHTML='<i class="fa-solid fa-sun text-amber-400"></i>'; 
+                    btn.classList.replace('bg-slate-100', 'bg-slate-800'); 
+                    btn.classList.replace('text-slate-700', 'text-slate-100'); 
+                    btn.classList.replace('border-slate-200', 'border-slate-700'); 
+                    btn.classList.replace('hover:bg-slate-200', 'hover:bg-slate-700'); 
+                } else { 
+                    btn.innerHTML='<i class="fa-solid fa-moon"></i>'; 
+                    btn.classList.replace('bg-slate-800', 'bg-slate-100'); 
+                    btn.classList.replace('text-slate-100', 'text-slate-700'); 
+                    btn.classList.replace('border-slate-700', 'border-slate-200'); 
+                    btn.classList.replace('hover:bg-slate-700', 'hover:bg-slate-200'); 
+                } 
+            }
+        }
+        
+        initTheme();
+
+        function toggleSelectAll() {
+            const selectAllBox = document.getElementById('selectAllCheckbox');
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = selectAllBox.checked); 
+            updateBatchSelection();
+        }
+        
+        function updateBatchSelection() {
+            const checkedBoxes = document.querySelectorAll('.row-checkbox:checked'); 
+            const actionBar = document.getElementById('batchActionBar');
+            document.getElementById('batchCount').innerText = checkedBoxes.length;
+            
+            if (checkedBoxes.length > 0) {
+                actionBar.classList.add('visible'); 
+            } else { 
+                actionBar.classList.remove('visible'); 
+                document.getElementById('selectAllCheckbox').checked = false; 
+            }
+        }
+        
+        function clearBatchSelection() { 
+            document.querySelectorAll('.cyber-checkbox').forEach(cb => cb.checked = false); 
+            updateBatchSelection(); 
+        }
+        
+        function batchExport() {
+            checkPinRequired(() => {
+                let exportText = "";
+                document.querySelectorAll('.row-checkbox:checked').forEach(cb => { 
+                    const item = allData[parseInt(cb.value)]; 
+                    if(item) exportText += `[${item.team}] Idol: ${item.tenIdol} | Tiktok: ${item.tiktokId} | Email: ${item.email} | Pass Email: ${item.passEmail} | Pass Tiktok: ${item.passTiktok}\n`; 
+                });
+                navigator.clipboard.writeText(exportText).then(() => { 
+                    showToast(`Đã Import Clipboard ${document.querySelectorAll('.row-checkbox:checked').length} Tài khoản`, 'success'); 
+                    clearBatchSelection(); 
+                });
+            });
+        }
+        
+        function scanDuplicates() {
+            if (!allData || allData.length === 0) { showToast('Chưa có dữ liệu để quét. Vui lòng tải lại trang!', 'error'); return; }
+            checkPinRequired(() => {
+                openScanModal('Quét Trùng Lặp Dữ Liệu', 'Đang phân tích các trường Email, TikTok ID và Key 2FA...', '<div class="text-center py-8"><i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-600"></i></div>', 'fa-clone text-amber-500');
+                setTimeout(() => {
+                    let emailMap = {}, tiktokMap = {}, duplicatesFound = [];
+                    allData.forEach((item, index) => {
+                        if (item.email && item.email.trim() !== '') { 
+                            let em = item.email.toLowerCase().trim(); 
+                            if (!emailMap[em]) emailMap[em] = []; 
+                            emailMap[em].push({ index: index+1, team: item.team, name: item.tenIdol, type: 'Email' }); 
+                        }
+                        if (item.tiktokId && item.tiktokId.trim() !== '') { 
+                            let tk = item.tiktokId.toLowerCase().trim(); 
+                            if (!tiktokMap[tk]) tiktokMap[tk] = []; 
+                            tiktokMap[tk].push({ index: index+1, team: item.team, name: item.tenIdol, type: 'TikTok ID' }); 
+                        }
+                    });
+                    
+                    for (let em in emailMap) { if (emailMap[em].length > 1) duplicatesFound.push({ value: em, category: 'Email', items: emailMap[em] }); }
+                    for (let tk in tiktokMap) { if (tiktokMap[tk].length > 1) duplicatesFound.push({ value: '@'+tk, category: 'TikTok ID', items: tiktokMap[tk] }); }
+                    
+                    renderDuplicatesResult(duplicatesFound);
+                }, 600);
+            });
+        }
+
+        function renderDuplicatesResult(duplicates) {
+            const body = document.getElementById('scanModalBody'); 
+            document.getElementById('scanModalSubtitle').innerText = `Đã quét xong ${allData.length} bản ghi`;
+            if (duplicates.length === 0) {
+                body.innerHTML = `<div class="text-center py-10"><div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl"><i class="fa-solid fa-check"></i></div><h4 class="font-bold text-slate-800 dark:text-white text-base">Không tìm thấy dữ liệu trùng lặp!</h4><p class="text-xs text-slate-500 mt-1">Tất cả Email và TikTok ID trong bảng đều là duy nhất.</p></div>`; return;
+            }
+            let html = `<div class="mb-3 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 p-3 rounded-xl border border-amber-200 dark:border-amber-500/20 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-base"></i> Phát hiện ${duplicates.length} trường hợp bị trùng lặp trong hệ thống:</div>`;
+            duplicates.forEach(dup => {
+                html += `<div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 mb-2.5"><div class="flex items-center justify-between mb-2"><span class="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">${escapeHtml(dup.value)}</span><span class="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">${dup.category} trùng</span></div><div class="space-y-1">`;
+                dup.items.forEach(sub => { 
+                    html += `<div class="text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between bg-white dark:bg-slate-800 px-2.5 py-1 rounded border border-slate-100 dark:border-slate-700"><span><b>Team:</b> ${escapeHtml(sub.team)} | <b>Idol:</b> ${escapeHtml(sub.name || 'Chưa rõ')}</span><span class="font-mono text-slate-400">Dòng ${sub.index}</span></div>`; 
+                });
+                html += `</div></div>`;
+            });
+            body.innerHTML = html;
+        }
+
+        function openScanModal(title, subtitle, htmlContent, iconClass) {
+            const modal = document.getElementById('scanModal'); 
+            const content = document.getElementById('scanModalContent');
+            document.getElementById('scanModalTitle').innerText = title; 
+            document.getElementById('scanModalSubtitle').innerText = subtitle; 
+            document.getElementById('scanModalBody').innerHTML = htmlContent; 
+            document.getElementById('scanModalIcon').innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+            
+            modal.classList.remove('hidden'); 
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+        }
+
+        function closeScanModal() {
+            const modal = document.getElementById('scanModal'); 
+            const content = document.getElementById('scanModalContent');
+            modal.classList.add('opacity-0'); 
+            content.classList.add('scale-95'); 
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // ================= XỬ LÝ SỬA THIẾT BỊ TRỰC TIẾP INLINE (NGAY TRÊN BẢNG) =================
+        function editDeviceInline(rowIndex, tbIndex, btnElem) {
+            const item = allData[rowIndex];
+            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
+            let currentText = mangThietBi[tbIndex];
+            
+            const tagElem = btnElem.closest('.device-tag-item');
+            
+            tagElem.outerHTML = `
+            <div class="inline-flex items-center gap-1.5 px-1 py-1 bg-white dark:bg-[#1e293b] border-2 border-indigo-400 dark:border-indigo-500 rounded-full shadow-md z-10 transition-all">
+                <input type="text" id="inline-edit-${rowIndex}-${tbIndex}" value="${escapeHtml(currentText)}" 
+                       class="w-40 px-2 text-[12px] bg-transparent outline-none text-slate-700 dark:text-slate-200 font-medium" 
+                       onkeypress="if(event.key==='Enter') saveInlineEdit(${rowIndex}, ${tbIndex})">
+                <div class="flex items-center gap-0.5 pr-1">
+                    <button onclick="saveInlineEdit(${rowIndex}, ${tbIndex})" class="w-6 h-6 flex items-center justify-center bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors" title="Lưu (Enter)">
+                        <i class="fa-solid fa-check text-[10px]"></i>
+                    </button>
+                    <button onclick="renderTable(allData)" class="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-full hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors" title="Hủy (Esc)">
+                        <i class="fa-solid fa-xmark text-[10px]"></i>
+                    </button>
+                </div>
+            </div>`;
+            
+            const input = document.getElementById(`inline-edit-${rowIndex}-${tbIndex}`);
+            input.focus(); 
+            input.setSelectionRange(input.value.length, input.value.length); 
+        }
+
+        function saveInlineEdit(rowIndex, tbIndex) {
+            const input = document.getElementById(`inline-edit-${rowIndex}-${tbIndex}`);
+            const newVal = input.value.trim(); 
+            const item = allData[rowIndex];
+            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
+            
+            if (!newVal) {
+                mangThietBi.splice(tbIndex, 1); 
+            } else {
+                mangThietBi[tbIndex] = newVal;
+            }
+            
+            const finalString = mangThietBi.join(', ');
+            input.parentElement.innerHTML = `<div class="px-3 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-[10px]"></i><span class="text-[11px] text-slate-500">Đang lưu...</span></div>`;
+            
+            runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
+                .then(() => { 
+                    allData[rowIndex].thietBiIdol = finalString; 
+                    allData[rowIndex].thietBiTroLi = ""; 
+                    renderTable(allData); 
+                    showToast(newVal ? 'Đã cập nhật thiết bị' : 'Đã xóa thiết bị', 'success'); 
+                })
+                .catch(err => { 
+                    showToast('Lỗi: ' + err.message, 'error'); 
+                    renderTable(allData); 
+                });
+        }
+
+        function deleteDeviceInline(rowIndex, tbIndex, btnElem) {
+            const item = allData[rowIndex];
+            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
+            mangThietBi.splice(tbIndex, 1);
+            const finalString = mangThietBi.join(', ');
+            
+            const tagElem = btnElem.closest('.device-tag-item');
+            tagElem.innerHTML = `<div class="px-3 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin text-rose-500 text-[10px]"></i><span class="text-[11px] text-rose-500 font-medium">Đang xóa...</span></div>`;
+            
+            runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
+                .then(() => { 
+                    allData[rowIndex].thietBiIdol = finalString; 
+                    allData[rowIndex].thietBiTroLi = ""; 
+                    renderTable(allData); 
+                    showToast('Đã xóa thiết bị', 'success'); 
+                })
+                .catch(err => { 
+                    showToast('Lỗi: ' + err.message, 'error'); 
+                    renderTable(allData); 
+                });
+        }
+
+        // ================= XỬ LÝ SỬA THIẾT BỊ BẰNG MODAL TỔNG =================
+        let currentEditIndex = -1;
+
+        function openDeviceEditor(index) {
+            currentEditIndex = index; 
+            const item = allData[index];
+            document.getElementById('editDeviceTarget').innerText = `Tài khoản: ${item.tenIdol || item.email}`;
+            document.getElementById('deviceListContainer').innerHTML = '';
+            
+            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').filter(tb => tb.trim() !== '');
+            if (mangThietBi.length === 0) {
+                addDeviceRow('', ''); 
+            } else {
+                mangThietBi.forEach(tb => {
+                    let text = tb.trim(), role = "", device = text;
+                    if (text.includes(':')) { 
+                        let parts = text.split(':'); 
+                        role = parts[0].trim(); 
+                        device = parts.slice(1).join(':').trim(); 
+                    } else if (text.includes('-')) { 
+                        let parts = text.split('-'); 
+                        role = parts[0].trim(); 
+                        device = parts.slice(1).join('-').trim(); 
+                    }
+                    addDeviceRow(role, device);
+                });
+            }
+            
+            const modal = document.getElementById('deviceModal');
+            modal.classList.remove('hidden', 'opacity-0'); 
+            modal.classList.add('flex');
+            document.getElementById('deviceModalContent').classList.remove('scale-95');
+        }
+
+        function closeDeviceEditor() {
+            const modal = document.getElementById('deviceModal');
+            modal.classList.add('opacity-0'); 
+            document.getElementById('deviceModalContent').classList.add('scale-95');
+            setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
+        }
+
+        let activeDeviceInput = null;
+
+        function initGlobalDropdown() {
+            let drop = document.getElementById('globalDeviceDropdown');
+            if (!drop) {
+                drop = document.createElement('div');
+                drop.id = 'globalDeviceDropdown';
+                drop.className = 'fixed bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg shadow-2xl z-[999999] max-h-[200px] overflow-y-auto hidden custom-scrollbar py-1';
+                document.body.appendChild(drop);
+                
+                window.addEventListener('scroll', (e) => {
+                    if (e.target === drop) return;
+                    drop.classList.add('hidden');
+                }, true);
+            }
+            return drop;
+        }
+
+        function showCustomDropdown(inputElem) {
+            activeDeviceInput = inputElem;
+            const drop = initGlobalDropdown();
+            
+            if (configDevices.length > 0) {
+                drop.innerHTML = configDevices.map(d => 
+                    `<div class="dropdown-item px-3 py-2 text-[13px] hover:bg-indigo-50 dark:hover:bg-slate-700 cursor-pointer text-slate-700 dark:text-slate-300 transition-colors" onclick="selectDeviceOption('${escapeHtml(d).replace(/'/g, "\\'")}')">${escapeHtml(d)}</div>`
+                ).join('');
+            } else {
+                drop.innerHTML = `<div class="px-3 py-2 text-[13px] text-slate-400 italic no-data-msg">Đang tải cấu hình...</div>`;
+            }
+
+            const rect = inputElem.getBoundingClientRect();
+            drop.style.top = (rect.bottom + 4) + 'px';
+            drop.style.left = rect.left + 'px';
+            drop.style.width = rect.width + 'px';
+            
+            drop.classList.remove('hidden');
+            filterCustomDropdown(inputElem);
+        }
+
+        function filterCustomDropdown(inputElem) {
+            const drop = document.getElementById('globalDeviceDropdown');
+            if (!drop || drop.classList.contains('hidden')) return;
+
+            const val = inputElem.value.toLowerCase().trim();
+            const items = drop.querySelectorAll('.dropdown-item');
+            let hasVisible = false;
+
+            delete drop.dataset.activeIndex; 
+            
+            items.forEach(item => {
+                item.classList.remove('dropdown-item-active');
+                if (item.innerText.toLowerCase().includes(val)) {
+                    item.style.display = 'block';
+                    hasVisible = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            if (hasVisible) {
+                drop.classList.remove('hidden');
+                const rect = inputElem.getBoundingClientRect();
+                drop.style.top = (rect.bottom + 4) + 'px';
+                drop.style.left = rect.left + 'px';
+            } else {
+                drop.classList.add('hidden');
+            }
+        }
+
+        function handleDropdownKey(e, inputElem) {
+            const drop = document.getElementById('globalDeviceDropdown');
+            if (!drop || drop.classList.contains('hidden')) return;
+
+            const items = Array.from(drop.querySelectorAll('.dropdown-item')).filter(item => item.style.display !== 'none');
+            if (items.length === 0) return;
+
+            let currentIndex = drop.dataset.activeIndex ? parseInt(drop.dataset.activeIndex) : -1;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                currentIndex = currentIndex + 1 >= items.length ? 0 : currentIndex + 1;
+                updateDropdownActive(drop, items, currentIndex);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                currentIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+                updateDropdownActive(drop, items, currentIndex);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (currentIndex >= 0 && items[currentIndex]) items[currentIndex].click();
+            }
+        }
+
+        function updateDropdownActive(dropContainer, itemsArray, index) {
+            itemsArray.forEach(item => item.classList.remove('dropdown-item-active'));
+            if (index >= 0 && itemsArray[index]) {
+                itemsArray[index].classList.add('dropdown-item-active');
+                dropContainer.dataset.activeIndex = index;
+                itemsArray[index].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        function selectDeviceOption(val) {
+            if (activeDeviceInput) {
+                activeDeviceInput.value = val;
+                activeDeviceInput.focus();
+            }
+            const drop = document.getElementById('globalDeviceDropdown');
+            if(drop) drop.classList.add('hidden');
+        }
+
+        function addDeviceRow(role, device) {
+            const container = document.getElementById('deviceListContainer');
+            const rowId = 'dev_row_' + Date.now() + Math.floor(Math.random()*1000);
+            
+            let html = `
+            <div id="${rowId}" class="flex gap-2 items-center bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                <input type="text" class="role-input w-28 px-3 py-2 text-[13px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md outline-none focus:border-indigo-500 transition-colors" value="${escapeHtml(role)}" placeholder="Vai trò (VD: MC)">
+                <span class="font-bold text-slate-400">:</span>
+                
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                    </div>
+                    <input type="text" class="device-input w-full pl-3 pr-8 py-2 text-[13px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md outline-none focus:border-indigo-500 transition-colors" 
+                           value="${escapeHtml(device)}" placeholder="Chọn hoặc gõ tên thiết bị..." 
+                           onfocus="showCustomDropdown(this)" oninput="filterCustomDropdown(this)" onkeydown="handleDropdownKey(event, this)">
+                </div>
+                
+                <button onclick="document.getElementById('${rowId}').remove()" class="w-9 h-9 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-rose-400 hover:text-white hover:bg-rose-500 hover:border-rose-500 rounded-md transition-colors shadow-sm"><i class="fa-solid fa-trash text-xs"></i></button>
+            </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function saveDeviceData() {
+            const btn = document.getElementById('btnSaveDevice');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...'; 
+            btn.disabled = true;
+
+            let resultArr = [];
+            for(let row of document.getElementById('deviceListContainer').children) {
+                let role = row.querySelector('.role-input').value.trim();
+                let device = row.querySelector('.device-input').value.trim();
+                if(device) resultArr.push(role ? `${role}: ${device}` : device);
+            }
+            
+            const finalString = resultArr.join(', ');
+            const item = allData[currentEditIndex]; 
+
+            runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
+                .then(res => {
+                    allData[currentEditIndex].thietBiIdol = finalString; 
+                    allData[currentEditIndex].thietBiTroLi = ""; 
+                    renderTable(allData); 
+                    closeDeviceEditor();
+                    showToast('Đã lưu thiết bị thành công', 'success'); 
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu'; 
+                    btn.disabled = false;
+                })
+                .catch(err => {
+                    showToast(err.message, 'error'); 
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu'; 
+                    btn.disabled = false;
+                });
+        }
+    </script>
+</body>
+</html>

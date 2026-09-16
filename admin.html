@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/airbnb.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script>
+
+  <style>
+    .today-col { background-color: rgba(59, 130, 246, 0.05) !important; }
+    body.dark-mode .today-col { background-color: rgba(59, 130, 246, 0.1) !important; }
+    .today-header { color: #3b82f6 !important; font-weight: 800 !important; }
+    .crosshair-highlight { background-color: rgba(148, 163, 184, 0.15) !important; }
+    body.dark-mode .crosshair-highlight { background-color: rgba(255, 255, 255, 0.05) !important; }
+
+    :root { --bg-color: #f8fafc; --card-bg: #ffffff; --border-color: #cbd5e1; --text-main: #0f172a; --off-bg: #ef4444; --pending-bg: #d97706; --table-header: #f1f5f9; --row-hover: #e2e8f0; --cell-off: #fee2e2; --cell-pend: #fef3c7; --teacher-color: #d97706;}
+    body.dark-mode { --bg-color: #0f172a; --card-bg: #1e293b; --border-color: #334155; --text-main: #f8fafc; --table-header: #1e293b; --row-hover: #334155; --cell-off: transparent; --cell-pend: transparent; --teacher-color: #fbbf24;}
+    
+    body { font-family: 'Inter', sans-serif; padding: 0; background-color: var(--bg-color); color: var(--text-main); margin: 0; transition: background 0.3s, color 0.3s;}
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; border: 3px solid var(--bg-color); }
+    body.dark-mode ::-webkit-scrollbar-thumb { background-color: #475569; border-color: var(--bg-color); }
+    
+    .table-container { max-height: 80vh; overflow-y: auto; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 2px solid var(--border-color); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); width: max-content; max-width: 100%; margin: 0 auto; transition: all 0.3s ease; }
+    .table-container::-webkit-scrollbar { width: 14px; height: 14px; }
+    .table-container::-webkit-scrollbar-thumb { border-width: 4px; border-color: var(--card-bg); }
+
+    table { border-collapse: separate; border-spacing: 0; width: max-content; font-size: 0.85rem; text-align: center; border: none; }
+    th, td { border-bottom: 2px solid var(--border-color) !important; border-right: 2px solid var(--border-color) !important; height: 46px; padding: 2px; vertical-align: middle; }
+    th:last-child, td:last-child { border-right: none !important; }
+    tbody tr:last-child td { border-bottom: none !important; }
+
+    button { transition: transform 0.1s ease, filter 0.2s ease, opacity 0.2s ease !important; outline: none; }
+    button:active { transform: scale(0.92) !important; filter: brightness(0.85) !important; opacity: 0.9 !important; }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;}
+    .toolbar h2 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+    
+    .month-picker { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
+    .month-picker button { background: var(--table-header); border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s;}
+    .custom-month-selector { padding: 6px 14px; cursor: pointer; border-radius: 8px; border: 1px solid transparent; min-width: 150px; text-align: center;}
+    .custom-month-selector:hover { background: var(--table-header); }
+    .month-dropdown { position: absolute; top: 115%; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); border-radius: 12px; padding: 15px; width: 260px; z-index: 100; opacity: 0; visibility: hidden; transition: all 0.2s; }
+    .month-dropdown.active { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+    .year-selector { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); font-weight: 800; }
+    .year-selector button { background: var(--row-hover); border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; color: var(--text-main); }
+    .month-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .month-btn { background: transparent; border: 1px solid transparent; color: var(--text-main); padding: 8px 0; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;}
+    .month-btn:hover { background: var(--row-hover); }
+    .month-btn.active { background: #3b82f6; color: white; }
+
+    .tool-btns button { background: var(--border-color); border: none; padding: 8px 14px; margin-left: 10px; border-radius: 6px; cursor: pointer; font-family: 'Inter'; font-weight: 600; color: var(--text-main);}
+    
+    .main-content { padding: 0 30px; width: 100%; box-sizing: border-box;}
+    thead th { position: sticky; top: 0; z-index: 10; background-color: var(--card-bg); }
+    
+    .group-cell { font-weight: 800; text-transform: uppercase; width: 85px; min-width: 85px; max-width: 85px; font-size: 0.7rem; line-height: 1.2; white-space: normal; word-wrap: break-word; padding: 0 4px; text-align: center;}
+    .name-cell { text-align: left; padding-left: 7px; width: 170px; min-width: 170px; max-width: 170px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 0.75rem; white-space: normal; word-wrap: break-word; line-height: 1.2;}
+    .name-cell:hover { background-color: rgba(168, 85, 247, 0.15) !important; }
+    
+    th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { width: 42px; min-width: 42px; max-width: 42px; }
+    
+    .teacher-highlight { color: var(--teacher-color) !important; font-weight: 800; }
+    .dept-divider { font-weight: 800; text-align: center; background: #334155 !important; color: #ffffff;}
+    .quota-text { font-size: 0.75rem; color: #64748b; font-weight: 500; margin-left: 6px; white-space: nowrap; }
+
+    .day-cell { cursor: pointer; transition: background 0.2s;}
+    .day-cell:hover { background-color: var(--row-hover) !important; }
+    .cell-off { background-color: var(--cell-off); }
+    .cell-pending { background-color: var(--cell-pend); }
+    
+    .badge { display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; cursor: grab;}
+    .badge-off { background-color: var(--off-bg); }
+    .badge-pending { background-color: var(--pending-bg); animation: flash 2s infinite;}
+    .badge-swap { background: repeating-linear-gradient(45deg, #475569, #475569 5px, #1e293b 5px, #1e293b 10px); border: 1px solid #475569; animation: flash 1.5s infinite; }
+    @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+    
+    .badge-draft-add { background-color: #3b82f6; animation: pulse-draft 1.5s infinite; }
+    .badge-draft-remove { background-color: #ef4444; opacity: 0.6; text-decoration: line-through; animation: pulse-draft 1.5s infinite; }
+    .cell-draft { background-color: rgba(59, 130, 246, 0.1) !important; }
+    @keyframes pulse-draft { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+    .context-menu { position: absolute; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 8px; padding: 8px 0; min-width: 180px; z-index: 10000; font-size: 0.9rem; font-family: 'Inter', sans-serif; display: none; }
+    .context-menu-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; color: var(--text-main); transition: background 0.2s; font-weight: 500;}
+    .context-menu-item:hover { background: var(--row-hover); }
+    .context-menu-divider { height: 1px; background: var(--border-color); margin: 6px 0; }
+    .text-danger { color: #ef4444 !important; font-weight: 700 !important; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s ease;}
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal-box { background: var(--card-bg); width: 400px; padding: 25px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);}
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;}
+    .modal-actions button { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;}
+    .btn-cancel { background: #e2e8f0; color: #475569; }
+    .btn-ok { background: #3b82f6; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+
+    #toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; font-weight: 600; opacity: 0; transform: translateY(20px); transition: all 0.3s; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);}
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    .flatpickr-calendar { width: 330px !important; padding: 15px 10px !important; font-family: 'Inter', sans-serif !important; border-radius: 12px !important; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04) !important; border: 1px solid var(--border-color) !important; box-sizing: border-box !important; overflow: hidden !important; }
+    .flatpickr-innerContainer, .flatpickr-rContainer, .dayContainer, .flatpickr-days { width: 100% !important; max-width: 100% !important; min-width: 100% !important; }
+    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #3b82f6 !important; border-color: #3b82f6 !important; font-weight: 800 !important; }
+    .flatpickr-day.inRange { background: #eff6ff !important; border-color: #eff6ff !important; box-shadow: -5px 0 0 #eff6ff, 5px 0 0 #eff6ff !important; }
+    .flatpickr-month { font-weight: 700; color: #1e293b !important; }
+    #exportDateRange { transition: all 0.2s ease; }
+    #exportDateRange:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+
+    .vip-badge { position: relative; color: #ffffff; padding: 3px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 800; margin: 0; border: 1px solid rgba(255,255,255,0.3); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); display: inline-flex; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; vertical-align: middle; box-shadow: 0 2px 5px rgba(0,0,0,0.2); white-space: nowrap;}
+    .vip-badge::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); animation: shine-badge 2s infinite; }
+    @keyframes shine-badge { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+  </style>
+</head>
+<body>
+  <div id="badgeContextMenu" class="context-menu"></div>
+  <input type="hidden" id="contextMenuEmpName">
+
+  <div class="toolbar">
+    <h2>Trang Quản Trị (Admin)</h2>
+    <div class="month-picker" style="position: relative;">
+      <button onclick="changeMonth(-1)">◀</button>
+      <div class="custom-month-selector" onclick="toggleMonthPicker(event)">
+        <span id="monthLabel">Tháng / Năm</span>
+      </div>
+      <button onclick="changeMonth(1)">▶</button>
+      <div id="monthDropdown" class="month-dropdown">
+        <div class="year-selector">
+          <button onclick="changeTempYear(-1, event)">◀</button>
+          <span id="pickerYearLabel">2026</span>
+          <button onclick="changeTempYear(1, event)">▶</button>
+        </div>
+        <div class="month-grid" id="monthGrid"></div>
+      </div>
+    </div>
+    
+    <div class="tool-btns" style="display: flex; gap: 8px; align-items: center;">
+      <select id="personSelect" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); font-weight: 600; font-family: 'Inter'; outline: none; width: 170px;">
+        <option value="">- Chọn Người/Nhóm -</option>
+      </select>
+      <button style="background: #8b5cf6 !important; color: white !important; margin-left: 0;" onclick="copyPersonLink()">📋 Link Đăng Ký</button>
+      <button style="background: #a855f7 !important; color: white !important;" onclick="openBadgeLibraryModal()">🎨 Thư Viện Badge</button>
+      <button style="background: #2563eb !important; color: white !important;" onclick="openAddEmployeeModal()">➕ Thêm NS</button>
+      <button style="background: #3b82f6 !important; color: white !important;" onclick="approveAll()">✅ Duyệt Tất Cả</button>
+      <button style="background: #10b981 !important; color: white !important;" onclick="exportImage()">📸 Xuất Ảnh</button>
+      <button id="btnSaveChanges" style="background: #f59e0b !important; color: white !important; display: none; font-size: 1rem; font-weight: 800; padding: 8px 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" onclick="saveBulkChanges()">💾 Lưu (0)</button>
+      <button onclick="refreshData()">🔄 Mới</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="table-container" id="captureArea">
+      <table id="scheduleTable">
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+  
+  <div id="toast">Đang đồng bộ...</div>
+
+  <div class="modal-overlay" id="badgeLibraryModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0; color: #a855f7;">🎨 Tạo Badge Mới</h3>
+      <p style="font-size: 0.85rem; color: #475569; margin-bottom: 15px;">Nhập tên Badge bạn muốn. Hệ thống sẽ tự tạo một màu siêu đẹp ngẫu nhiên và lưu vào kho để gán sau.</p>
+      <input type="text" id="newCustomBadgeName" placeholder="Ví dụ: VIP, TỔ TRƯỞNG..." style="width:100%; padding:10px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;">
+      <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+         <label style="font-weight: 600; font-size: 0.85rem; display:block; margin-bottom:10px; color: #334155;">Thư viện Badge hiện tại:</label>
+         <div id="existingBadgesLibrary" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeBadgeLibraryModal()">Đóng</button>
+        <button class="btn-ok" style="background:#a855f7;" onclick="submitCreateBadge()">✨ Tạo Màu Random</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="customModal">
+    <div class="modal-box">
+      <h3 id="modalTitle">Xác nhận</h3>
+      <p id="modalMsg">Thông báo...</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Hủy</button>
+        <button class="btn-danger" id="modalRejectBtn" style="display:none;">Từ chối (Xóa)</button>
+        <button class="btn-ok" id="modalOkBtn">Đồng ý</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="addEmployeeModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0; color: #3b82f6;">➕ Thêm Nhân Sự Mới</h3>
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Tên nhân sự (Nhập tên):</label>
+        <input type="text" id="newEmpName" placeholder="Ví dụ: Nguyễn Văn A..." style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Bộ phận (Department):</label>
+        <select id="newEmpRole" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;" onchange="updateGroupDropdown()">
+          <option value="LIVESTEAM">LIVESTREAM</option>
+          <option value="MANAGER">MANAGER</option>
+          <option value="ACCOUNTANT">ACCOUNTANT</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Chức vụ / Nhóm (Role/Group):</label>
+        <select id="newEmpGroup" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;" onchange="checkCustomGroup()"></select>
+        <input type="text" id="newEmpGroupCustom" placeholder="Nhập tên nhóm mới..." style="width:100%; padding:10px; margin-top:8px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box; display:none;">
+      </div>
+      <div class="modal-actions" style="justify-content: flex-end;">
+        <button class="btn-cancel" onclick="closeAddEmployeeModal()">Hủy</button>
+        <button class="btn-ok" onclick="submitNewEmployee()" style="background:#10b981;">✅ Thêm Mới</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="exportModal">
+    <div class="modal-box" style="width: 450px;">
+      <h3 style="margin-top:0; color: #3b82f6; text-align: center;">📸 Tùy Chỉnh Bảng Chụp</h3>
+      <div style="margin-bottom: 15px;">
+        <label style="font-size: 0.85rem; font-weight: 700; color: #475569;">🗓️ Chọn khoảng ngày (Nhấp & Kéo):</label><br>
+        <input type="text" id="exportDateRange" placeholder="Đang tải lịch..." style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Inter'; font-weight: 700; outline: none; margin-top: 5px; cursor: pointer; text-align: center; color: #3b82f6; font-size: 1rem; box-sizing: border-box; background: var(--table-header);">
+      </div>
+      <div style="margin-bottom: 25px;">
+        <label style="font-size: 0.85rem; font-weight: 700; color: #475569;">Lọc dữ liệu theo:</label><br>
+        <div style="display: flex; gap: 15px; margin-top: 8px; margin-bottom: 10px;">
+          <label style="cursor: pointer; font-weight: 600;"><input type="radio" name="exportMode" value="group" checked onchange="toggleExportMode()"> Bộ phận / Nhóm</label>
+          <label style="cursor: pointer; font-weight: 600;"><input type="radio" name="exportMode" value="custom" onchange="toggleExportMode()"> Chọn người cụ thể</label>
+        </div>
+        <div id="groupSelectContainer">
+          <select id="exportGroupFilter" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid var(--border-color); font-family: 'Inter'; font-weight: 600; outline: none; box-sizing: border-box; background: var(--table-header); color: #0f172a; cursor: pointer;"></select>
+        </div>
+        <div id="customPeopleContainer" style="display: none;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 0.75rem; font-weight: bold; color: #64748b;">DANH SÁCH NHÂN SỰ:</span>
+            <div>
+              <span style="font-size: 0.75rem; color: #3b82f6; cursor: pointer; margin-right: 10px; font-weight: 600;" onclick="selectAllExport(true)">Chọn tất cả</span>
+              <span style="font-size: 0.75rem; color: #ef4444; cursor: pointer; font-weight: 600;" onclick="selectAllExport(false)">Bỏ chọn</span>
+            </div>
+          </div>
+          <div id="exportPeopleList" style="max-height: 180px; overflow-y: auto; border: 2px solid var(--border-color); border-radius: 8px; padding: 10px; background: var(--table-header); box-sizing: border-box; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions" style="justify-content: center;">
+        <button class="btn-cancel" onclick="closeExportModal()">Hủy bỏ</button>
+        <button class="btn-ok" onclick="executeCustomExport()" style="background:#10b981; padding: 10px 25px;">📸 Xuất Ảnh</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- THAY LINK API CỦA BẠN VÀO ĐÂY ---
+    const API_URL = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec";
+
+    function runScript(action, payload = {}) {
+      return fetch(API_URL, {
+        method: 'POST',
+        redirect: 'follow', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, payload: payload })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === 'error') throw new Error(res.message);
+        return res.data;
+      });
+    }
+  
+    let employeesData = [], leavesData = [], badgesData = {};
+    let isSyncing = false; 
+    let today = new Date();
+    let displayYear = today.getFullYear();
+    let displayMonth = today.getMonth();
+    let tempPickerYear = today.getFullYear();
+    const MAX_QUOTA = 5; 
+    let fpInstance = null; 
+    let draftQueue = []; 
+
+    document.addEventListener("DOMContentLoaded", () => { updateMonthLabel(); refreshData(); });
+
+    function openBadgeContextMenu(event, empName) {
+        event.preventDefault(); event.stopPropagation();
+        let menu = document.getElementById('badgeContextMenu'); document.getElementById('contextMenuEmpName').value = empName;
+        let html = `<div class="context-menu-item text-danger" onclick="submitContextBadge('')">🗑️ Hủy / Xóa Badge</div><div class="context-menu-divider"></div>`;
+        for (let key in badgesData) { html += `<div class="context-menu-item" onclick="submitContextBadge('${key}')"><span class="vip-badge" style="background: ${badgesData[key]}; border:none; margin-left:0;">${key}</span></div>`; }
+        menu.innerHTML = html; menu.style.display = 'block';
+        let x = event.pageX; let y = event.pageY;
+        if (x + menu.offsetWidth > window.innerWidth) x = window.innerWidth - menu.offsetWidth - 10;
+        if (y + menu.offsetHeight > window.innerHeight) y = window.innerHeight - menu.offsetHeight - 10;
+        menu.style.left = x + 'px'; menu.style.top = y + 'px';
+    }
+
+    document.addEventListener("click", () => { let menu = document.getElementById('badgeContextMenu'); if(menu) menu.style.display = 'none'; });
+
+    function submitContextBadge(badgeName) {
+      let empName = document.getElementById('contextMenuEmpName').value; let emp = employeesData.find(e => e.name === empName);
+      if(emp) emp.customBadge = badgeName; renderTable();
+      let existingIdx = draftQueue.findIndex(d => d.type === 'BADGE' && d.name === empName);
+      if (existingIdx > -1) draftQueue[existingIdx].badgeName = badgeName; else draftQueue.push({ type: 'BADGE', name: empName, badgeName: badgeName });
+      const btnSave = document.getElementById('btnSaveChanges'); btnSave.style.display = 'inline-block'; btnSave.innerText = `💾 Lưu (${draftQueue.length})`;
+    }
+
+    function generateBadgeHTML(emp) {
+      if (emp.customBadge && badgesData[emp.customBadge]) { return `<span class="vip-badge" style="background: ${badgesData[emp.customBadge]}; border: 1px solid rgba(255,255,255,0.4);">${emp.customBadge}</span>`; }
+      return "";
+    }
+
+    function changeMonth(offset) { displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } updateMonthLabel(); renderTable(); }
+    function updateMonthLabel() { document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`; }
+    function toggleMonthPicker(event) { document.getElementById('monthDropdown').classList.toggle('active'); tempPickerYear = displayYear; renderPickerGrid(); if(event) event.stopPropagation(); }
+    function changeTempYear(offset, event) { if(event) event.stopPropagation(); tempPickerYear += offset; renderPickerGrid(); }
+    function renderPickerGrid() { document.getElementById('pickerYearLabel').innerText = tempPickerYear; const grid = document.getElementById('monthGrid'); grid.innerHTML = ''; const months = ["Thg 1", "Thg 2", "Thg 3", "Thg 4", "Thg 5", "Thg 6", "Thg 7", "Thg 8", "Thg 9", "Thg 10", "Thg 11", "Thg 12"]; months.forEach((m, idx) => { let isCurrent = (idx === displayMonth && tempPickerYear === displayYear); grid.innerHTML += `<button type="button" class="month-btn ${isCurrent ? 'active' : ''}" onclick="selectSpecificMonth(${idx})">${m}</button>`; }); }
+    function selectSpecificMonth(mIdx) { displayMonth = mIdx; displayYear = tempPickerYear; updateMonthLabel(); renderTable(); document.getElementById('monthDropdown').classList.remove('active'); }
+
+    function refreshData() {
+      if(isSyncing) return showToast("Hệ thống đang đồng bộ...", false, true);
+      isSyncing = true; draftQueue = []; 
+      if(document.getElementById('btnSaveChanges')) document.getElementById('btnSaveChanges').style.display = 'none'; 
+      showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
+      
+      runScript('getInitialData')
+        .then(data => { 
+          try {
+             if (data && data.error) throw new Error(data.error);
+             if (!data) throw new Error("Dữ liệu rỗng");
+             employeesData = data.employees || []; leavesData = data.leaves || []; badgesData = data.badges || {}; 
+             isSyncing = false; renderTable(); populatePersonSelect(); showToast("✅ Đã cập nhật xong!"); 
+          } catch(e) {
+             showToast("Lỗi Data: " + e.message, false, true); isSyncing = false;
+          }
+        })
+        .catch(err => { showToast("Lỗi Script: " + err.message, false, true); isSyncing = false; });
+    }
+
+    function openBadgeLibraryModal() {
+      document.getElementById("newCustomBadgeName").value = ""; let libDiv = document.getElementById("existingBadgesLibrary"); libDiv.innerHTML = ""; let count = 0;
+      for (let key in badgesData) { libDiv.innerHTML += `<span class="vip-badge" style="background: ${badgesData[key]}; border:none;">${key}</span>`; count++; }
+      if(count === 0) libDiv.innerHTML = `<span style="font-size:0.8rem; color:#94a3b8;">Chưa có Badge nào, hãy tạo mới!</span>`;
+      document.getElementById("badgeLibraryModal").classList.add("active");
+    }
+    function closeBadgeLibraryModal() { document.getElementById("badgeLibraryModal").classList.remove("active"); }
+
+    function submitCreateBadge() {
+      let badgeName = document.getElementById("newCustomBadgeName").value.trim();
+      if (!badgeName) return showToast("Vui lòng nhập tên Badge!", false, true);
+      closeBadgeLibraryModal(); showToast("⏳ Đang tạo Badge ngẫu nhiên...", true);
+      
+      runScript('createNewBadge', { badgeName: badgeName })
+        .then(res => { if (res === "SUCCESS") { showToast("✅ Tạo Badge thành công!"); refreshData(); } else showToast(res, false, true); })
+        .catch(err => { showToast("Lỗi kết nối", false, true); });
+    }
+
+    function populatePersonSelect() {
+      const select = document.getElementById("personSelect"); select.innerHTML = '<option value="">- Chọn Người/Nhóm -</option>';
+      let optgroupPerson = document.createElement('optgroup'); optgroupPerson.label = "👤 CÁ NHÂN (1 link 1 người)";
+      let sortedEmps = [...employeesData].sort((a,b) => a.name.localeCompare(b.name)); sortedEmps.forEach(emp => { let opt = document.createElement('option'); opt.value = "PERSON:" + emp.name; opt.innerText = emp.name + " (" + (emp.group || emp.role) + ")"; optgroupPerson.appendChild(opt); }); select.appendChild(optgroupPerson);
+      let optgroupDept = document.createElement('optgroup'); optgroupDept.label = "👥 THEO BỘ PHẬN / NHÓM";
+      let uniqueGroups = [...new Set(employeesData.map(e => e.group))].filter(g => g && g.trim() !== ""); uniqueGroups.forEach(g => { let opt = document.createElement('option'); opt.value = "GROUP:" + g; opt.innerText = "Nhóm: " + g; optgroupDept.appendChild(opt); }); select.appendChild(optgroupDept);
+    }
+
+    function renderTable() {
+      const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+      const thead = document.getElementById("tableHead"), tbody = document.getElementById("tableBody"); 
+      thead.innerHTML = ""; tbody.innerHTML = "";
+      
+      let headerRow = '<tr><th class="group-cell">NHÓM/群组</th><th class="name-cell" style="text-align: center;">TÊN/姓名</th>';
+      for (let i = 1; i <= daysInMonth; i++) {
+        let d = new Date(displayYear, displayMonth, i), dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; 
+        let isToday = (i === today.getDate() && displayMonth === today.getMonth() && displayYear === today.getFullYear()); 
+        let todayClassH = isToday ? 'today-col today-header' : '';
+        headerRow += `<th data-col="${i}" class="${todayClassH}">${(i<10?'0'+i:i)}/${(displayMonth+1<10?'0'+(displayMonth+1):displayMonth+1)}<br><span style="font-weight:400; font-size:0.65rem">${dayNames[d.getDay()]}</span></th>`;
+      }
+      thead.innerHTML = headerRow + "</tr>";
+
+      let depts = {};
+      if(employeesData && employeesData.length > 0) {
+         employeesData.forEach(emp => {
+             let roleStr = emp.role ? String(emp.role).trim() : "KHÁC"; let groupStr = emp.group ? String(emp.group).trim() : "KHÁC";
+             if (!depts[roleStr]) depts[roleStr] = {}; if (!depts[roleStr][groupStr]) depts[roleStr][groupStr] = [];
+             let nUp = emp.name ? String(emp.name).toUpperCase() : ""; let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
+             if (isTeacher) depts[roleStr][groupStr].unshift(emp); else depts[roleStr][groupStr].push(emp);
+         });
+      }
+
+      let swappingDates = leavesData.filter(l => l.status === "Pending" && l.swapFrom).map(l => l.name + "_" + l.swapFrom);
+
+      for (let deptKey in depts) {
+          let displayRole = String(deptKey).toUpperCase();
+          if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+          else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+          tbody.innerHTML += `<tr><td colspan="${daysInMonth + 2}" class="dept-divider">${displayRole}</td></tr>`;
+
+          for (let group in depts[deptKey]) {
+             depts[deptKey][group].forEach((emp, idx) => {
+                let name = emp.name; let role = emp.role; let nUp = String(emp.name).toUpperCase(); let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+                let userLeavesThisMonth = leavesData.filter(l => String(l.name).trim() === String(name).trim() && l.date.startsWith(monthPrefix) && (l.status === "Approved" || l.status === "Pending") && !swappingDates.includes(name + "_" + l.date)).length;
+                let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER")); let userBadge = generateBadgeHTML(emp);
+                
+                let tr = `<tr>`; if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" class="group-cell">${group}</td>`;
+                tr += `<td class="name-cell ${isTeacher ? 'teacher-highlight' : ''}" onclick="openBadgeContextMenu(event, '${name}')" title="${name}">
+                         <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 100%; padding: 4px 0;">
+                           <span style="font-size: 0.75rem; line-height: 1.2;">${name}</span>
+                           <div style="display: flex; align-items: center; gap: 6px;">
+                             ${userBadge}
+                             <span class="quota-text" style="font-size: 0.65rem; margin-left: 0;">(${userLeavesThisMonth}/5)</span>
+                           </div>
+                         </div>
+                       </td>`;
+
+                for (let i = 1; i <= daysInMonth; i++) {
+                  let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`; let isToday = (i === today.getDate() && displayMonth === today.getMonth() && displayYear === today.getFullYear()); let tdClass = `day-cell ${isToday ? 'today-col' : ''}`;
+                  let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate); let isSwappingOut = swappingDates.includes(name + "_" + checkDate); let inDraft = draftQueue.find(d => d.type !== 'BADGE' && d.name === name && d.date === checkDate);
+
+                  if (leave) {
+                    let tooltip = `Lý do: ${leave.reason || 'Không có'}`; if (leave.swapFrom) tooltip += `\n(Sẽ hủy ngày ${leave.swapFrom} nếu duyệt)`;
+                    if (leave.status === "Pending") tr += `<td data-col="${i}" class="${tdClass} cell-pending" onclick="requestAction('${role}', '${name}', '${checkDate}', 'XỬ LÝ PENDING')"><div class="badge badge-pending" title="${tooltip}">PEND</div></td>`;
+                    else if (isSwappingOut) tr += `<td data-col="${i}" class="${tdClass} cell-off" onclick="requestAction('${role}', '${name}', '${checkDate}', 'TỪ CHỐI ĐỔI')"><div class="badge badge-swap" title="Ngày này đang chờ đổi">ĐỔI</div></td>`;
+                    else {
+                        if (inDraft && inDraft.action === 'XÓA') tr += `<td data-col="${i}" class="${tdClass} cell-off cell-draft" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')"><div class="badge badge-draft-remove" title="Sẽ xóa lịch này">XÓA</div></td>`;
+                        else tr += `<td data-col="${i}" class="${tdClass} cell-off" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')"><div class="badge badge-off" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')">OFF</div></td>`;
+                    }
+                  } else {
+                     if (inDraft && inDraft.action === 'THÊM') tr += `<td data-col="${i}" class="${tdClass} cell-draft" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')"><div class="badge badge-draft-add" title="Sẽ thêm lịch này">THÊM</div></td>`;
+                     else tr += `<td data-col="${i}" class="${tdClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')"></td>`;
+                  }
+                }
+                tbody.innerHTML += tr + `</tr>`;
+             });
+          }
+      }
+    }
+
+    function handleCellClick(element, role, name, checkDate, action) {
+      if (isSyncing) return showToast("Hệ thống đang lưu, vui lòng đợi...", false, true);
+      let draftIdx = draftQueue.findIndex(d => d.type !== 'BADGE' && d.name === name && d.date === checkDate);
+      if (draftIdx > -1) {
+        draftQueue.splice(draftIdx, 1); element.classList.remove('cell-draft');
+        if (action === 'XÓA') element.innerHTML = `<div class="badge badge-off">OFF</div>`; else if (action === 'THÊM') element.innerHTML = ``;
+      } else {
+        draftQueue.push({ role: role, name: name, date: checkDate, action: action }); element.classList.add('cell-draft');
+        if (action === 'XÓA') element.innerHTML = `<div class="badge badge-draft-remove" title="Sẽ xóa lịch này">XÓA</div>`; else if (action === 'THÊM') element.innerHTML = `<div class="badge badge-draft-add" title="Sẽ thêm lịch này">THÊM</div>`;
+      }
+      const btnSave = document.getElementById('btnSaveChanges');
+      if (draftQueue.length > 0) { btnSave.style.display = 'inline-block'; btnSave.innerText = `💾 Lưu (${draftQueue.length})`; } else { btnSave.style.display = 'none'; }
+    }
+
+    function saveBulkChanges() {
+      if (draftQueue.length === 0) return;
+      isSyncing = true; showToast("⏳ Đang đẩy dữ liệu lên Google Sheet...", true);
+      
+      runScript('processBatchChanges', { payloadStr: JSON.stringify(draftQueue) })
+        .then(res => {
+          isSyncing = false;
+          if (res === "SUCCESS") { showToast("✅ Đã lưu thành công!"); draftQueue = []; document.getElementById('btnSaveChanges').style.display = 'none'; refreshData(); } 
+          else { showToast("Lỗi Data: " + res, false, true); refreshData(); }
+        })
+        .catch(err => { isSyncing = false; showToast("LỖI KẾT NỐI", false, true); });
+    }
+
+    function drag(ev, name, date) { ev.dataTransfer.setData("dragName", name); ev.dataTransfer.setData("oldDate", date); }
+    function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add("drag-over"); }
+    function dragLeave(ev) { ev.currentTarget.classList.remove("drag-over"); }
+    
+    function drop(ev, targetName, newDate) {
+      ev.preventDefault(); ev.currentTarget.classList.remove("drag-over"); ev.stopPropagation(); 
+      if(isSyncing) return showToast("Hệ thống đang lưu, đợi chút...", false, true);
+      let dragName = ev.dataTransfer.getData("dragName"); let oldDate = ev.dataTransfer.getData("oldDate");
+      if (!dragName || dragName !== targetName || oldDate === newDate) return;
+
+      document.getElementById('modalTitle').innerHTML = "Xác nhận kéo thả đổi ngày";
+      document.getElementById('modalMsg').innerHTML = `Chuyển lịch OFF của <b>${dragName}</b> từ ngày <span style="color:#ef4444;">${oldDate}</span> sang bù vào <span style="color:#10b981;">${newDate}</span>?`;
+      document.getElementById('modalRejectBtn').style.display = 'none';
+      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng ý";
+      btn.onclick = () => { 
+        closeModal(); isSyncing = true;
+        let lIdx = leavesData.findIndex(l => l.name === dragName && l.date === oldDate);
+        if (lIdx > -1) leavesData[lIdx].date = newDate;
+        renderTable(); showToast("⏳ Đang đổi ngày ngầm...", true);
+        
+        runScript('adminMoveLeave', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
+          .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã đổi ngày thành công!"); else refreshData(); })
+          .catch(err => { refreshData(); });
+      }; document.getElementById('customModal').classList.add('active');
+    }
+
+    function requestAction(role, name, checkDate, action) {
+      if(isSyncing) return showToast("Hệ thống đang lưu, vui lòng đợi...", false, true);
+      let btn = document.getElementById('modalOkBtn'), rejectBtn = document.getElementById('modalRejectBtn'); rejectBtn.style.display = 'none';
+      if(action === "XỬ LÝ PENDING") { 
+          document.getElementById('modalTitle').innerHTML = "Duyệt Đơn Pending"; document.getElementById('modalMsg').innerHTML = `Bạn muốn <b>DUYỆT</b> hay <b>TỪ CHỐI</b> đơn xin nghỉ của <b>${name}</b> vào ngày ${checkDate}?`; 
+          rejectBtn.style.display = 'inline-block'; rejectBtn.onclick = () => { closeModal(); adminExecute(role, name, checkDate, "TỪ CHỐI"); };
+          btn.className = "btn-ok"; btn.innerText = "Duyệt Ngay"; btn.onclick = () => { closeModal(); adminExecute(role, name, checkDate, "DUYỆT"); };
+      } else if(action === "TỪ CHỐI ĐỔI") { 
+          document.getElementById('modalTitle').innerHTML = "Từ Chối Đổi Ngày"; document.getElementById('modalMsg').innerHTML = `Từ chối yêu cầu đổi lịch và giữ nguyên ngày OFF này cho <b>${name}</b>?`; 
+          btn.className = "btn-danger"; btn.innerText = "Từ chối yêu cầu đổi"; btn.onclick = () => { closeModal(); adminExecute(role, name, checkDate, "TỪ CHỐI ĐỔI"); };
+      } document.getElementById('customModal').classList.add('active');
+    }
+
+    function approveAll() {
+      if(isSyncing) return showToast("Hệ thống đang lưu, vui lòng đợi...", false, true);
+      document.getElementById('modalTitle').innerHTML = "✅ Duyệt Tất Cả"; document.getElementById('modalMsg').innerHTML = "Hành động này sẽ <b>DUYỆT TẤT CẢ</b> các đơn đang Pending. Chắc chắn chứ?";
+      document.getElementById('modalRejectBtn').style.display = 'none'; const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Duyệt Ngay";
+      btn.onclick = () => { 
+        closeModal(); isSyncing = true; leavesData.forEach(l => { if(l.status === "Pending") { l.status = "Approved"; l.swapFrom = ""; } }); renderTable(); showToast("⏳ Đang duyệt toàn bộ ngầm...", true);
+        
+        runScript('approveAllPendingLeaves')
+          .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã duyệt tất cả!"); else refreshData(); })
+          .catch(err => { refreshData(); });
+      }; document.getElementById('customModal').classList.add('active');
+    }
+
+    function adminExecute(role, name, dateStr, action) {
+      isSyncing = true;
+      if (action === "TỪ CHỐI") { let idx = leavesData.findIndex(l => l.name === name && l.date === dateStr); if (idx > -1) leavesData.splice(idx, 1); } 
+      else if (action === "DUYỆT") { let idx = leavesData.findIndex(l => l.name === name && l.date === dateStr); if (idx > -1) { leavesData[idx].status = "Approved"; leavesData[idx].swapFrom = ""; } } 
+      else if (action === "TỪ CHỐI ĐỔI") { let idx = leavesData.findIndex(l => l.name === name && l.swapFrom === dateStr && l.status === "Pending"); if(idx > -1) leavesData.splice(idx, 1); }
+      renderTable(); showToast("⏳ Đang xử lý ngầm...", true);
+      
+      runScript('toggleLeaveAdmin', { role: role, name: name, dateStr: dateStr, actionName: action })
+        .then(res => { isSyncing = false; if (res === "SUCCESS") showToast("✅ Thành công!"); else refreshData(); })
+        .catch(err => { refreshData(); });
+    }
+
+    function closeModal() { document.getElementById('customModal').classList.remove('active'); }
+    let toastTimer; function showToast(msg, keep = false, isError = false) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.style.background = isError ? '#ef4444' : '#10b981'; toast.classList.add('show'); clearTimeout(toastTimer); if(!keep) toastTimer = setTimeout(() => toast.classList.remove('show'), 4000); }
+    function hideToast() { document.getElementById('toast').classList.remove('show'); }
+
+    function copyPersonLink() {
+      const val = document.getElementById("personSelect").value;
+      if (!val) return showToast("⚠️ Vui lòng chọn cá nhân/nhóm trước khi tạo link!", false, true);
+      showToast("⏳ Đang tạo link...", true); 
+      
+      const fullUrl = window.location.origin + window.location.pathname.replace('admin.html', '') + "mcform.html?target=" + encodeURIComponent(val); 
+      navigator.clipboard.writeText(fullUrl).then(() => { showToast("🔗 Đã copy link đăng ký thành công!"); }); 
+    }
+    
+    function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); document.getElementById('newEmpName').value = ''; document.getElementById('newEmpRole').value = 'LIVESTEAM'; updateGroupDropdown(); }
+    function closeAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.remove('active'); }
+    function updateGroupDropdown() {
+      const role = document.getElementById('newEmpRole').value, groupSelect = document.getElementById('newEmpGroup'); let options = "";
+      if (role === "LIVESTEAM") options = '<option value="Team Dino">Team Dino</option><option value="Team Ken">Team Ken</option><option value="Team U">Team U</option>';
+      else if (role === "MANAGER") options = '<option value="Manager Team">Manager Team</option><option value="Operation">Operation</option><option value="Translation">Translation</option><option value="Tech">Tech</option><option value="HR">HR</option>';
+      else if (role === "ACCOUNTANT") options = '<option value="Accountant Team">Accountant Team</option>';
+      options += '<option value="CUSTOM">➕ Khác (Thêm nhóm mới)...</option>'; groupSelect.innerHTML = options; checkCustomGroup();
+    }
+    function checkCustomGroup() { let val = document.getElementById('newEmpGroup').value; document.getElementById('newEmpGroupCustom').style.display = (val === 'CUSTOM') ? 'block' : 'none'; }
+    
+    function submitNewEmployee() {
+      let name = document.getElementById('newEmpName').value.trim(), role = document.getElementById('newEmpRole').value, group = document.getElementById('newEmpGroup').value;
+      if (group === 'CUSTOM') group = document.getElementById('newEmpGroupCustom').value.trim();
+      if (!name || !group) return showToast("Vui lòng điền đủ Tên và Nhóm!", false, true);
+      closeAddEmployeeModal(); showToast("⏳ Đang lưu nhân sự...", true);
+      
+      runScript('addEmployee', { role: role, group: group, name: name })
+        .then(res => { if (res === "SUCCESS") { showToast("✅ Đã thêm nhân sự thành công!"); refreshData(); } else { showToast(res, false, true); } })
+        .catch(err => { showToast("Lỗi kết nối", false, true); });
+    }
+
+    function toggleExportMode() {
+      let mode = document.querySelector('input[name="exportMode"]:checked').value;
+      if (mode === 'group') { document.getElementById('groupSelectContainer').style.display = 'block'; document.getElementById('customPeopleContainer').style.display = 'none'; } 
+      else { document.getElementById('groupSelectContainer').style.display = 'none'; document.getElementById('customPeopleContainer').style.display = 'block'; }
+    }
+    
+    function populateExportPeople() {
+      let container = document.getElementById('exportPeopleList'); container.innerHTML = '';
+      let sortedEmps = [...employeesData].sort((a, b) => a.name.localeCompare(b.name));
+      sortedEmps.forEach(emp => { let groupLabel = emp.group ? emp.group : 'Khác'; container.innerHTML += `<label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><input type="checkbox" class="export-person-cb" value="${emp.name}"> <span title="${emp.name} (${groupLabel})"><b>${emp.name}</b> <span style="color:#64748b; font-size:0.7rem">(${groupLabel})</span></span></label>`; });
+      
+      const exportFilter = document.getElementById('exportGroupFilter');
+      let optHTML = `<option value="ALL">🌟 Tất cả các bộ phận</option>`;
+      let roleMap = {};
+      employeesData.forEach(emp => {
+          let r = emp.role ? String(emp.role).trim() : "KHÁC"; let g = emp.group ? String(emp.group).trim() : "KHÁC";
+          if (!roleMap[r]) roleMap[r] = new Set();
+          if (g && g !== "KHÁC") roleMap[r].add(g);
+      });
+
+      for (let r in roleMap) {
+          let displayR = r.toUpperCase();
+          if (displayR === "LIVESTEAM" || displayR === "LIVESTREAM") displayR = "BỘ PHẬN LIVESTREAM";
+          else if (displayR === "MANAGER") displayR = "BỘ PHẬN MANAGER"; else if (displayR === "ACCOUNTANT") displayR = "BỘ PHẬN ACCOUNTANT";
+          else displayR = "BỘ PHẬN " + displayR;
+          
+          optHTML += `<option value="ROLE:${r}">🏢 ${displayR}</option>`;
+          let groups = Array.from(roleMap[r]).sort();
+          groups.forEach(g => { optHTML += `<option value="GROUP:${g}">-- Nhóm: ${g}</option>`; });
+      }
+      exportFilter.innerHTML = optHTML;
+    }
+
+    function selectAllExport(selectAll) { document.querySelectorAll('.export-person-cb').forEach(cb => cb.checked = selectAll); }
+    function exportImage() {
+      document.getElementById('exportModal').classList.add('active');
+      let defaultStart = new Date(displayYear, displayMonth, 1), defaultEnd = new Date(displayYear, displayMonth + 1, 0);
+      document.querySelector('input[name="exportMode"][value="group"]').checked = true; toggleExportMode(); populateExportPeople(); 
+      if (fpInstance) fpInstance.destroy(); 
+      fpInstance = flatpickr("#exportDateRange", { mode: "range", dateFormat: "d/m/Y", locale: "vn", defaultDate: [defaultStart, defaultEnd], monthSelectorType: "static" });
+    }
+    function closeExportModal() { document.getElementById('exportModal').classList.remove('active'); }
+    
+    function executeCustomExport() {
+      let dates = fpInstance.selectedDates;
+      if (dates.length < 2) return showToast("⚠️ Vui lòng nhấp kéo chọn cả ngày bắt đầu & ngày kết thúc!", false, true);
+      let mode = document.querySelector('input[name="exportMode"]:checked').value, groupFilter = "ALL", customNames = [];
+      if (mode === 'group') { groupFilter = document.getElementById('exportGroupFilter').value; } 
+      else { document.querySelectorAll('.export-person-cb:checked').forEach(cb => customNames.push(cb.value)); if(customNames.length === 0) return showToast("⚠️ Vui lòng chọn ít nhất 1 người!", false, true); groupFilter = "CUSTOM"; }
+      closeExportModal();
+      
+      let startDate = dates[0], endDate = dates[1]; if (startDate > endDate) { let temp = startDate; startDate = endDate; endDate = temp; }
+      showToast("⏳ Đang chuẩn bị bảng để chụp...", true); 
+      
+      let exportContainer = document.createElement("div");
+      exportContainer.style.position = "absolute";
+      exportContainer.style.top = "-9999px";
+      exportContainer.style.left = "-9999px";
+      exportContainer.style.zIndex = "-9999";
+      exportContainer.style.width = "max-content";
+      document.body.appendChild(exportContainer);
+
+      if (groupFilter === "CUSTOM" && customNames.length === 1) {
+          exportContainer.innerHTML = buildCalendarExportHTML(startDate, endDate, customNames[0]);
+      } else {
+          exportContainer.innerHTML = buildTableExportHTML(startDate, endDate, groupFilter, customNames);
+      }
+
+      setTimeout(() => {
+        html2canvas(exportContainer, { backgroundColor: "#ffffff", scale: window.devicePixelRatio > 1 ? window.devicePixelRatio * 2 : 3, useCORS: true, logging: false }).then(canvas => {
+          let sdStr = `${startDate.getDate()}_${startDate.getMonth()+1}`, edStr = `${endDate.getDate()}_${endDate.getMonth()+1}`;
+          let fileNameGroup = (groupFilter === "CUSTOM") ? "TuyChinh" : groupFilter.replace("ROLE:","").replace("GROUP:","");
+          let link = document.createElement('a'); link.download = `LichNghi_${fileNameGroup}_${sdStr}_den_${edStr}.png`; link.href = canvas.toDataURL("image/png", 1.0); link.click();
+          document.body.removeChild(exportContainer); hideToast(); showToast("📸 Đã tải ảnh xuống thành công!");
+        }).catch(err => { document.body.removeChild(exportContainer); showToast("Lỗi khi tạo ảnh!", false, true); });
+      }, 800);
+    }
+
+    function buildTableExportHTML(startDate, endDate, targetGroup, customNames) {
+      let dayCount = 0; let dateArray = [];
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          dateArray.push(new Date(d)); dayCount++;
+      }
+      
+      let totalWidth = 85 + 170 + (dayCount * 44);
+      let headerRow = '<tr><th style="font-weight: 800; text-transform: uppercase; width: 85px; min-width: 85px; max-width: 85px; font-size: 0.7rem; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 8px 4px; background: #f8fafc; color: #0f172a; white-space: normal; word-wrap: break-word; line-height: 1.2;">NHÓM</th><th style="text-align: left; padding-left: 6px; width: 170px; min-width: 170px; max-width: 170px; font-weight: 600; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 8px 4px; background: #f8fafc; color: #0f172a; white-space: normal; word-wrap: break-word; line-height: 1.2;">TÊN / 姓名</th>';
+      
+      dateArray.forEach(d => {
+          let dayNames = ["CN/日", "T2/一", "T3/二", "T4/三", "T5/四", "T6/五", "T7/六"]; let dNum = d.getDate(); let mNum = d.getMonth() + 1;
+          let color = d.getDay() === 0 ? '#ef4444' : '#0f172a';
+          headerRow += `<th style="width: 44px; min-width: 44px; max-width: 44px; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 4px; background: #f8fafc; color: ${color};">${(dNum<10?'0'+dNum:dNum)}/${(mNum<10?'0'+mNum:mNum)}<br><span style="font-weight:400; font-size:0.65rem">${dayNames[d.getDay()]}</span></th>`;
+      });
+      headerRow += "</tr>";
+      
+      let depts = {}; let matchCount = 0;
+      employeesData.forEach(emp => {
+          let keep = false; let empRole = String(emp.role).trim().toUpperCase(); let empGroup = String(emp.group).trim().toUpperCase();
+          if (targetGroup === "CUSTOM") { if (customNames.includes(emp.name)) keep = true; } 
+          else if (targetGroup === "ALL") { keep = true; } 
+          else if (targetGroup.startsWith("ROLE:")) { if (empRole === targetGroup.replace("ROLE:", "").trim().toUpperCase()) keep = true; } 
+          else if (targetGroup.startsWith("GROUP:")) { if (empGroup === targetGroup.replace("GROUP:", "").trim().toUpperCase()) keep = true; }
+          if (!keep) return; matchCount++;
+          let roleStr = emp.role ? String(emp.role).trim() : "KHÁC"; let groupStr = emp.group ? String(emp.group).trim() : "KHÁC";
+          if (!depts[roleStr]) depts[roleStr] = {}; if (!depts[roleStr][groupStr]) depts[roleStr][groupStr] = [];
+          let nUp = String(emp.name).toUpperCase(); let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
+          if (isTeacher) depts[roleStr][groupStr].unshift(emp); else depts[roleStr][groupStr].push(emp);
+      });
+      let swappingDates = leavesData.filter(l => l.status === "Pending" && l.swapFrom).map(l => l.name + "_" + l.swapFrom);
+      
+      let tbodyHtml = "";
+      for (let deptKey in depts) {
+          let displayRole = String(deptKey).toUpperCase();
+          if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM / 直播部";
+          else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER / 管理部"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT / 财务部";
+          tbodyHtml += `<tr><td colspan="${dayCount + 2}" style="font-weight: 800; text-align: center; background: #334155; color: #ffffff; border-bottom: 2px solid #cbd5e1; padding: 12px 0;">${displayRole}</td></tr>`;
+          
+          for (let group in depts[deptKey]) {
+              depts[deptKey][group].forEach((emp, idx) => {
+                  let name = emp.name; let userBadge = generateBadgeHTML(emp);
+                  let tr = `<tr>`; if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" style="font-weight: 800; text-transform: uppercase; font-size: 0.7rem; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 0 4px; color: #0f172a; width: 85px; max-width: 85px; white-space: normal; word-wrap: break-word; line-height: 1.2;">${group}</td>`;
+                  tr += `<td style="text-align: left; padding: 6px; font-weight: 600; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; width: 170px; max-width: 170px; font-size: 0.75rem; white-space: normal; word-wrap: break-word; line-height: 1.2;">
+                           <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 100%;">
+                             <span>${name}</span> 
+                             <div style="display: flex; align-items: center;">${userBadge}</div>
+                           </div>
+                         </td>`;
+                  
+                  dateArray.forEach(d => {
+                      let checkDate = d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2,'0') + '-' + d.getDate().toString().padStart(2,'0');
+                      let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate); let isSwappingOut = swappingDates.includes(name + "_" + checkDate);
+                      let tdStyle = "border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 2px; height: 46px;";
+                      
+                      if (leave) { 
+                          if (leave.status === "Pending") {
+                              tr += `<td style="${tdStyle} background-color: #fef3c7;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #f59e0b;">PEND</div></td>`; 
+                          } else if (isSwappingOut) {
+                              tr += `<td style="${tdStyle} background-color: #e2e8f0;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #475569;">ĐỔI</div></td>`; 
+                          } else {
+                              tr += `<td style="${tdStyle} background-color: #fee2e2;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #ef4444;">OFF</div></td>`; 
+                          }
+                      } 
+                      else { tr += `<td style="${tdStyle}"></td>`; }
+                  });
+                  tbodyHtml += tr + `</tr>`;
+              });
+          }
+      }
+      
+      let html = `<div style="background: #ffffff; padding: 20px; width: max-content; font-family: 'Inter', sans-serif; box-sizing: border-box;">`;
+      
+      if(matchCount === 0) {
+          html += `<div style="padding: 40px; color: #ef4444; text-align: center; font-weight: 700; font-size: 1.1rem;">⚠️ Không có dữ liệu nào khớp với người bạn chọn!</div>`;
+      } else {
+          html += `<table style="border-collapse: separate; border-spacing: 0; text-align: center; background: white; font-size: 0.85rem; border: 2px solid #cbd5e1; border-radius: 12px; overflow: hidden; width: 100%;"><thead><tr>${headerRow}</tr></thead><tbody>${tbodyHtml}</tbody></table>`;
+      }
+      return html + `</div>`;
+    }
+
+    function buildCalendarExportHTML(startDate, endDate, empName) {
+      let sdStr = `${startDate.getDate()}/${startDate.getMonth() + 1}`, edStr = `${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`;
+      let startGridDate = new Date(startDate); startGridDate.setDate(startDate.getDate() - startDate.getDay());
+      let endGridDate = new Date(endDate); endGridDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+      let emp = employeesData.find(e => e.name === empName); let groupStr = emp ? (emp.group || "Khác") : "Khác";
+      
+      let html = `<div style="width: 680px; background: #ffffff; padding: 20px; font-family: 'Inter', sans-serif; box-sizing: border-box;">
+            <div style="background: #e2e8f0; width: 100%; border-radius: 16px; border: 2px solid #cbd5e1; overflow: hidden; box-sizing: border-box;">
+                <div style="background: #f8fafc; padding: 25px 20px 20px 20px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                   <div style="font-size: 0.85rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Lịch Nghỉ Cá Nhân / 个人休假表</div>
+                   <div style="font-size: 2.2rem; font-weight: 800; color: #3b82f6;">${empName}</div>
+                   <div style="font-size: 1.05rem; color: #475569; margin-top: 5px; font-weight: 600;">Bộ phận / 部门: ${groupStr}</div>
+                   <div style="font-size: 0.95rem; color: #ef4444; margin-top: 15px; background: #fee2e2; display: inline-block; padding: 6px 16px; border-radius: 20px; font-weight: 700;">Từ / 从 ${sdStr} đến / 到 ${edStr}</div>
+                </div>
+                <table style="width: 100%; border-collapse: separate; border-spacing: 1px; text-align: center; table-layout: fixed; background: #e2e8f0; margin: 0;">
+                  <tr>
+                    <td style="width: 14.28%; color: #ef4444; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">CN / 日</td>
+                    <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T2 / 一</td>
+                    <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T3 / 二</td>
+                    <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T4 / 三</td>
+                    <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T5 / 四</td>
+                    <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T6 / 五</td>
+                    <td style="width: 14.28%; color: #3b82f6; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T7 / 六</td>
+                  </tr>`;
+          
+      let tr = "<tr>", loopDate = new Date(startGridDate), cellCount = 0;
+      while (loopDate <= endGridDate) {
+          let dNum = loopDate.getDate(), mNum = loopDate.getMonth() + 1;
+          let dateStr = loopDate.getFullYear() + '-' + mNum.toString().padStart(2, '0') + '-' + dNum.toString().padStart(2, '0');
+          let isOutOfRange = (loopDate < startDate || loopDate > endDate);
+          
+          let dColor = isOutOfRange ? '#cbd5e1' : '#0f172a';
+          let mColor = isOutOfRange ? '#e2e8f0' : '#94a3b8';
+          
+          let leave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.date === dateStr);
+          let movedToLeave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.swapFrom === dateStr);
+          let draft = draftQueue.find(d => d.type !== 'BADGE' && d.name === empName && d.date === dateStr);
+          let isPendingSwapOut = leavesData.some(l => String(l.name).trim() === String(empName).trim() && l.status === "Pending" && l.swapFrom === dateStr);
+          
+          let isSelected = false;
+          if (leave && (!draft || draft.action !== 'XÓA')) isSelected = true; 
+          else if (!leave && draft && draft.action === 'THÊM') isSelected = true; 
+
+          let bgColor = "#ffffff";
+          if (!isOutOfRange) {
+              if (isSelected) bgColor = (leave && leave.swapFrom) ? "#f3e8ff" : "#fef2f2";
+              else if (movedToLeave || isPendingSwapOut) bgColor = "#f8fafc";
+          }
+
+          let cellStyle = `height: 90px; vertical-align: top; text-align: left; padding: 10px; background-color: ${bgColor};`;
+          let cellContent = `<div style="font-weight: 800; font-size: 1.15rem; margin-bottom: 8px; color: ${dColor};">${dNum} <span style="font-size: 0.75rem; font-weight: 600; color: ${mColor};">Thg${mNum}</span></div>`;
+
+          if (!isOutOfRange) {
+              if (isSelected) {
+                  if (leave && leave.swapFrom) {
+                      let oldD = new Date(leave.swapFrom); let oldDStr = oldD.getDate() + "/" + (oldD.getMonth()+1);
+                      cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #9333ea; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(147, 51, 234, 0.3); line-height: 1.2;">BÙ TỪ<br>${oldDStr}</div>`;
+                  } else if (leave && leave.status === "Pending") {
+                      cellContent += `<div style="width: 60px; height: 28px; font-size: 0.75rem; border-radius: 6px; background-color: #f59e0b; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; margin: 0 auto; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">PEND</div>`;
+                  } else {
+                      cellContent += `<div style="width: 60px; height: 28px; font-size: 0.75rem; border-radius: 6px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; margin: 0 auto; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">OFF</div>`;
+                  }
+              } else if (isPendingSwapOut) {
+                  cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #475569; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1.2;">CHỜ DỜI<br>ĐI</div>`;
+              } else if (movedToLeave && movedToLeave.status === "Approved") {
+                  let newD = new Date(movedToLeave.date); let newDStr = newD.getDate() + "/" + (newD.getMonth()+1);
+                  cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #94a3b8; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); line-height: 1.2;">ĐÃ DỜI<br>RA ${newDStr}</div>`;
+              }
+          }
+
+          tr += `<td style="${cellStyle}">${cellContent}</td>`; cellCount++;
+          if (cellCount % 7 === 0) { tr += "</tr>"; if (loopDate < endGridDate) { tr += "<tr>"; } }
+          loopDate.setDate(loopDate.getDate() + 1);
+      }
+      
+      let legendHtml = `<div style="margin-top: 15px; padding: 12px 15px; border-radius: 12px; background: #f8fafc; border: 2px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; font-size: 0.85rem; font-weight: 600; color: #475569;">
+          <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #ef4444; border-radius: 4px;"></div> OFF bình thường</div>
+          <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #9333ea; border-radius: 4px;"></div> Nghỉ BÙ (Dời tới)</div>
+          <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #94a3b8; border-radius: 4px;"></div> Ngày cũ ĐÃ DỜI</div>
+      </div>`;
+      
+      return html + tr + `</table>${legendHtml}</div></div>`;
+    }
+  </script>
+</body>
+</html>
