@@ -263,61 +263,72 @@
     </div>
 
     <script>
-// DÁN WEB APP URL BẠN VỪA COPY Ở BƯỚC 1 VÀO ĐÂY:
+        // DÁN WEB APP URL CỦA BẠN VÀO ĐÂY:
         const API_URL = "https://script.google.com/macros/s/AKfycbxghvpqGIh2e6XlQeNO-OTqW8ILjJaY_g8esiD3gFIUPqyEBw5HLE8xj_74pBAwIu32/exec"; 
 
-        // Cầu nối biến google.script.run thành Fetch API
+        // 1. CẦU NỐI API ĐÃ FIX LỖI BẤT ĐỒNG BỘ
         const google = {
             script: {
-                run: {
-                    withSuccessHandler: function(callback) {
-                        this.callback = callback;
-                        return this;
-                    },
-                    _call: async function(action, ...args) {
+                run: (function() {
+                    const makeApiCall = async (action, args, callback) => {
                         try {
-                            // Dùng text/plain để vượt qua rào cản CORS của Google
                             const res = await fetch(API_URL, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                                 body: JSON.stringify({ action: action, args: args })
                             });
-                            const result = await res.json();
-                            if (result.success && this.callback) {
-                                this.callback(result.data);
-                            } else if (!result.success) {
-                                showToast("Lỗi Hệ thống: " + result.error, "error");
+                            
+                            const textRes = await res.text();
+                            let result;
+                            try {
+                                result = JSON.parse(textRes);
+                            } catch(e) {
+                                console.error("Lỗi parse JSON. Server trả về HTML/Error thay vì JSON:", textRes);
+                                if(typeof showToast === 'function') showToast("Lỗi kết nối từ Server Google", "error");
+                                return;
+                            }
+
+                            if (result.success) {
+                                if (callback) callback(result.data);
+                            } else {
+                                console.error(result.error);
+                                if(typeof showToast === 'function') showToast("Lỗi Hệ thống: " + result.error, "error");
                             }
                         } catch(e) { 
-                            showToast("Lỗi kết nối Server", "error"); 
+                            console.error(e);
+                            if(typeof showToast === 'function') showToast("Lỗi kết nối mạng/CORS", "error"); 
                         }
-                    },
-                    // Mapping toàn bộ các hàm cũ sang Request mới
-                    getSopData: function() { return this._call('getSopData'); },
-                    getRulesData: function() { return this._call('getRulesData'); },
-                    getNoticesData: function() { return this._call('getNoticesData'); },
-                    createNewSOP: function(d, s) { return this._call('createNewSOP', d, s); },
-                    addNotice: function(t, c, z, d) { return this._call('addNotice', t, c, z, d); },
-                    editNotice: function(id, t, c, z, d) { return this._call('editNotice', id, t, c, z, d); },
-                    deleteNotice: function(id) { return this._call('deleteNotice', id); },
-                    addRule: function(t, c, z, d) { return this._call('addRule', t, c, z, d); },
-                    editRule: function(id, t, c, z, d) { return this._call('editRule', id, t, c, z, d); },
-                    deleteRule: function(id) { return this._call('deleteRule', id); },
-                    renameTemplateStep: function(d, s, o, n) { return this._call('renameTemplateStep', d, s, o, n); },
-                    editTemplateRow: function(id, ns, nt, nr, nf) { return this._call('editTemplateRow', id, ns, nt, nr, nf); },
-                    reorderTemplates: function(o) { return this._call('reorderTemplates', o); },
-                    addTemplateRow: function(d, s, sn, cn, r, f) { return this._call('addTemplateRow', d, s, sn, cn, r, f); },
-                    deleteTemplateRow: function(id) { return this._call('deleteTemplateRow', id); },
-                    updateChecklist: function(id, st, i, d, s) { return this._call('updateChecklist', id, st, i, d, s); },
-                    deleteIdol: function(d, s, i) { return this._call('deleteIdol', d, s, i); },
-                    assignToIdol: function(d, s, i) { return this._call('assignToIdol', d, s, i); }
-                }
+                    };
+
+                    const handlerObj = (callback) => ({
+                        getSopData: () => makeApiCall('getSopData', [], callback),
+                        getRulesData: () => makeApiCall('getRulesData', [], callback),
+                        getNoticesData: () => makeApiCall('getNoticesData', [], callback),
+                        createNewSOP: (d, s) => makeApiCall('createNewSOP', [d, s], callback),
+                        addNotice: (t, c, z, d) => makeApiCall('addNotice', [t, c, z, d], callback),
+                        editNotice: (id, t, c, z, d) => makeApiCall('editNotice', [id, t, c, z, d], callback),
+                        deleteNotice: (id) => makeApiCall('deleteNotice', [id], callback),
+                        addRule: (t, c, z, d) => makeApiCall('addRule', [t, c, z, d], callback),
+                        editRule: (id, t, c, z, d) => makeApiCall('editRule', [id, t, c, z, d], callback),
+                        deleteRule: (id) => makeApiCall('deleteRule', [id], callback),
+                        renameTemplateStep: (d, s, o, n) => makeApiCall('renameTemplateStep', [d, s, o, n], callback),
+                        editTemplateRow: (id, ns, nt, nr, nf) => makeApiCall('editTemplateRow', [id, ns, nt, nr, nf], callback),
+                        reorderTemplates: (o) => makeApiCall('reorderTemplates', [o], callback),
+                        addTemplateRow: (d, s, sn, cn, r, f) => makeApiCall('addTemplateRow', [d, s, sn, cn, r, f], callback),
+                        deleteTemplateRow: (id) => makeApiCall('deleteTemplateRow', [id], callback),
+                        updateChecklist: (id, st, i, d, s) => makeApiCall('updateChecklist', [id, st, i, d, s], callback),
+                        deleteIdol: (d, s, i) => makeApiCall('deleteIdol', [d, s, i], callback),
+                        assignToIdol: (d, s, i) => makeApiCall('assignToIdol', [d, s, i], callback)
+                    });
+
+                    const baseObj = handlerObj(null);
+                    baseObj.withSuccessHandler = (cb) => handlerObj(cb);
+                    return baseObj;
+                })()
             }
         };
         
-        // --- GIỮ NGUYÊN TOÀN BỘ CODE CŨ BÊN DƯỚI DÒNG NÀY ---
-        let db = {};
-        // ... let rulesData = [];
+        // 2. KHAI BÁO BIẾN
         let db = {};
         let rulesData = [];
         let noticesData = []; 
@@ -326,14 +337,12 @@
         let currentEditStepName = null;
         let currentEditCheckId = null;
 
-        // BẮT SỰ KIỆN PHÍM ESC ĐỂ ĐÓNG MỌI POPUP CỬA SỔ
         document.addEventListener('keydown', function(event) {
             if (event.key === "Escape" || event.key === "Esc") {
                 closeNewSopModal(); closeConfirm(); closeEditStepModal(); closeEditCheckModal(); closeEditRuleModal(); closeEditNoticeModal(); closeModal(); closeRuleModal();
             }
         });
 
-        // HÀM KHỞI TẠO LỊCH CHUYÊN NGHIỆP CÓ KHÓA INPUT CHỐNG NHẬP BẬY
         function initFlatpickr() {
             document.querySelectorAll(".date-picker-input").forEach(el => { if (el._flatpickr) el._flatpickr.destroy(); });
             flatpickr(".date-picker-input", {
@@ -415,9 +424,6 @@
         function toggleDept(dept) { state.dept = state.dept === dept ? null : dept; renderSidebar(); }
         function selectSop(dept, sop) { if(hasUnsavedChanges) return showToast("Bạn có thay đổi Kéo thả chưa được Lưu!", 'error'); state.dept = dept; state.sop = sop; changeView('dashboard'); }
 
-        // ==========================================
-        // TẠO QUY TRÌNH (SOP) MỚI
-        // ==========================================
         function openNewSopModal() {
             let deptOptions = `<option value="" disabled selected>-- Chọn Bộ phận có sẵn --</option>`;
             Object.keys(db).forEach(d => { deptOptions += `<option value="${d}">${d}</option>`; });
@@ -432,9 +438,6 @@
             showLoader('Đang tạo quy trình mới...'); google.script.run.withSuccessHandler(data => { hideLoader(); closeNewSopModal(); db = JSON.parse(data); state.dept = deptName; state.sop = sopName; showToast("Đã tạo Quy trình thành công!"); changeView('admin'); }).createNewSOP(deptName, sopName);
         }
 
-        // ==========================================
-        // THÔNG BÁO CÔNG TY & NỘI QUY (LƯỢC BỚT TRONG CHÚ THÍCH NHƯNG VẪN ĐẦY ĐỦ LOGIC DƯỚI ĐÂY)
-        // ==========================================
         function renderNotices() {
             let html = `<div class="p-6 w-full max-w-4xl mx-auto overflow-y-auto h-full"><h2 class="text-xl font-bold text-white mb-5">Thông báo công ty</h2>
                 <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mb-6 shadow-sm"><h3 class="font-bold text-white mb-3 text-[13px]">+ Tạo thông báo mới</h3><div class="space-y-3"><input type="text" id="notice-title" placeholder="Tiêu đề thông báo..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500"><textarea id="notice-content" rows="3" placeholder="Nội dung thông báo..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500"></textarea><div class="flex flex-col sm:flex-row gap-2"><input type="text" id="notice-zalo" placeholder="Tên Group Zalo..." class="flex-1 px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500"><input type="text" id="notice-date" class="date-picker-input sm:w-[130px] px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500"><button onclick="submitNotice()" class="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-[12px] rounded-lg whitespace-nowrap focus:ring-2 focus:ring-sky-400 outline-none">Đăng thông báo</button></div></div></div><div class="space-y-4">`;
@@ -469,10 +472,6 @@
         function fallbackCopy(text) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast('Đã copy nội dung!'); } catch (err) {} document.body.removeChild(ta); }
         function downloadWord(title, content, date, zalo) { const htmlString = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>${title}</title></head><body style="font-family: Arial, sans-serif; line-height: 1.6;"><h1 style="color: #4f46e5; text-align: center;">${title}</h1><p style="text-align: right; color: #555;"><i>Ngày ban hành: ${date}</i></p><p style="text-align: right; color: #555;"><i>Phổ biến tại Group: ${zalo}</i></p><hr style="border:1px solid #ccc; margin-bottom: 20px;" /><div>${content}</div></body></html>`; const blob = new Blob(['\ufeff', htmlString], { type: 'application/msword' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `NoiQuy_${title.replace(/\s+/g, '_')}.doc`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast('Đang tải file Word về máy...'); }
 
-
-        // ==========================================
-        // ADMIN (SỬA CHECKLIST SOP)
-        // ==========================================
         function renderAdmin() {
             const templateStepsObj = db[state.dept]?.sops[state.sop]?.idols['TEMPLATE']?.steps || {};
             let html = `<div class="p-6 w-full max-w-5xl mx-auto overflow-y-auto h-full relative"><div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 mb-5 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md"><div><h2 class="text-base font-bold text-white mb-0.5">Chỉnh sửa Template: ${state.sop}</h2><p class="text-[12px] text-slate-400">Kéo thả tự do các biểu tượng ⋮⋮. Nhớ ấn "Lưu thay đổi" sau khi xếp xong.</p></div><button id="save-order-btn" onclick="saveOrderToServer()" class="hidden px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-bold rounded-lg shadow-md transition-colors flex items-center whitespace-nowrap focus:ring-2 focus:ring-emerald-500 outline-none"><svg class="w-4 h-4 mr-1.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg> Lưu thay đổi</button></div><div id="admin-steps-wrapper" class="space-y-4">`;
@@ -520,9 +519,6 @@
         function adminAddStep() { if(hasUnsavedChanges) return showToast('Vui lòng click "Lưu thay đổi" trước!', 'error'); const selectVal = document.getElementById('add-step-select').value; const stepName = selectVal === '__NEW__' ? document.getElementById('add-step-name').value.trim() : selectVal; const checkName = document.getElementById('add-check-name').value.trim(); if(!stepName || !checkName) return showToast('Vui lòng điền đủ thông tin!', 'error'); showLoader('Đang thêm...'); google.script.run.withSuccessHandler(() => { hideLoader(); showToast('Thêm thành công!'); init(); }).addTemplateRow(state.dept, state.sop, stepName, checkName, document.getElementById('add-check-rule').value, document.getElementById('add-check-file').value.trim()); }
         function adminDeleteStep(rowId) { if(hasUnsavedChanges) return showToast('Vui lòng click "Lưu thay đổi" trước!', 'error'); showConfirm('Xóa khỏi Template?', 'Xóa vĩnh viễn?', () => { showLoader('Đang xóa...'); google.script.run.withSuccessHandler(() => { hideLoader(); showToast('Đã xóa!'); init(); }).deleteTemplateRow(rowId); }); }
 
-        // ==========================================
-        // DASHBOARD IDOL
-        // ==========================================
         function getIdolSteps(dept, sop, idol) {
             const stepsObj = db[dept].sops[sop].idols[idol].steps;
             const steps = Object.keys(stepsObj).map(title => ({ title, ...stepsObj[title] }));
@@ -530,7 +526,6 @@
             steps.forEach(s => {
                 const sT = s.checklists.length; const doneChecklists = s.checklists.filter(c => c.isDone); const sD = doneChecklists.length;
                 totalChk += sT; doneChk += sD;
-                // LOGIC KHÓA TUẦN TỰ (XONG BƯỚC 1 MỚI MỞ BƯỚC 2 CHO TỪNG IDOL)
                 if (sD === sT && sT > 0) s.status = 'completed'; 
                 else if (!hasFoundActive) { s.status = 'active'; hasFoundActive = true; } 
                 else s.status = 'locked'; 
@@ -564,9 +559,6 @@
             document.getElementById('main-content').innerHTML = html + `</div>`;
         }
 
-        // ==========================================
-        // EXECUTION (LÀM TASK)
-        // ==========================================
         function renderExecution() {
             const { steps, progress } = getIdolSteps(state.dept, state.sop, state.idol);
             const activeStepObj = steps.find(s => s.status === 'active') || steps.find(s => s.status === 'completed');
@@ -587,7 +579,6 @@
             const isLastStep = steps.findIndex(s => s.title === state.step) === steps.length - 1;
             
             if(currentStepData) {
-                // FIX LOCK: Cho phép chỉnh sửa ngay cả khi bước này đã "completed" (tránh kẹt undo nếu lỡ bấm nhầm)
                 const isStepActive = currentStepData.status === 'active' || currentStepData.status === 'completed';
                 const totalC = currentStepData.checklists.length;
                 const doneC = currentStepData.checklists.filter(c => c.isDone).length;
@@ -621,7 +612,6 @@
 
         function toggleChecklist(id, canInteract) {
             if(!canInteract) return; 
-            // FIX ID NUMERIC BUGS: Bọc String() tránh lỗi so sánh chữ và số gây kẹt dữ liệu
             const chk = db[state.dept].sops[state.sop].idols[state.idol].steps[state.step].checklists.find(c => String(c.id) === String(id));
             if (!chk) return;
             chk.isDone = !chk.isDone;
