@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg-gradient: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); --card-bg: rgba(255, 255, 255, 0.95); --text-main: #2c3e50; --text-muted: #6c757d; --input-bg: #f8f9fa; --input-border: #e9ecef; --card-shadow: 0 15px 35px rgba(50, 50, 93, 0.1); }
+    [data-theme="dark"] { --bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); --card-bg: rgba(30, 32, 42, 0.95); --text-main: #f8f9fa; --text-muted: #a0aab2; --input-bg: #222431; --input-border: #3f4254; --card-shadow: 0 15px 35px rgba(0, 0, 0, 0.5); }
+    body { background: var(--bg-gradient); color: var(--text-main); font-family: 'Poppins', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 20px; transition: background 0.5s ease; overflow-x: hidden; }
+    
+    @keyframes smoothFadeUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
+    .fade-up-element { animation: smoothFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    
+    .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .cyber-toast { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 12px 16px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2); font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 12px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; backdrop-filter: blur(8px); }
+    .cyber-toast.show { transform: translateX(0) scale(1); opacity: 1; }
+    .cyber-toast.success { border-color: rgba(16, 185, 129, 0.5); }
+    .cyber-toast.error { border-color: rgba(244, 63, 94, 0.5); }
+    .toast-progress { position: absolute; bottom: 0; left: 0; height: 2px; background: #6366f1; width: 100%; animation: toastProgress linear forwards; }
+    .cyber-toast.success .toast-progress { background: #10b981; }
+    .cyber-toast.error .toast-progress { background: #f43f5e; }
+    @keyframes toastProgress { 0% { width: 100%; } 100% { width: 0%; } }
+
+    .theme-toggle { position: fixed; top: 20px; right: 20px; background: var(--card-bg); color: var(--text-main); border: 1px solid var(--input-border); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; z-index: 9999; }
+    .main-card { background-color: var(--card-bg); border-radius: 20px; box-shadow: var(--card-shadow); border: none; position: relative; overflow: hidden; width: 100%; max-width: 500px; }
+    .main-card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); }
+    .form-control, .form-select { border-radius: 12px; padding: 12px 15px; border: 1.5px solid var(--input-border); background-color: var(--input-bg); color: var(--text-main); transition: all 0.3s; box-shadow: none !important; }
+    .form-control:focus, .form-select:focus { border-color: #4facfe; box-shadow: 0 0 0 4px rgba(79, 172, 254, 0.15) !important; background-color: var(--input-bg); color: var(--text-main); }
+    
+    .btn-submit { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border-radius: 12px; padding: 14px; font-weight: 600; font-size: 1.05rem; transition: all 0.3s; border: none; }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 242, 254, 0.4); color: white; }
+    .btn-outline-custom { border: 2px solid #4facfe; color: #4facfe; border-radius: 12px; padding: 10px 20px; font-weight: 600; transition: all 0.3s; background: transparent; }
+    .btn-outline-custom:hover { background: #4facfe; color: white; }
+    
+    .custom-input-box { background: rgba(79, 172, 254, 0.08); border: 1.5px dashed #4facfe; border-radius: 12px; padding: 15px; animation: smoothFadeUp 0.3s ease; }
+    
+    .loader { display: none; width: 12px; height: 12px; margin: 30px auto; border-radius: 50%; color: #4facfe; box-shadow: -22px 0 0 0, 0 0 0 0, 22px 0 0 0; animation: typingPulse 1.2s infinite linear; }
+    @keyframes typingPulse { 0%, 100% { box-shadow: -22px 0 0 -3px, 0 0 0 -3px, 22px 0 0 -3px; } 25% { box-shadow: -22px 0 0 3px, 0 0 0 -3px, 22px 0 0 -3px; } 50% { box-shadow: -22px 0 0 -3px, 0 0 0 3px, 22px 0 0 -3px; } 75% { box-shadow: -22px 0 0 -3px, 0 0 0 -3px, 22px 0 0 3px; } }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+<button class="theme-toggle fade-up-element" onclick="toggleTheme()"><i class="bi bi-moon-stars-fill" id="themeIcon"></i></button>
+
+<div class="main-card p-4 p-md-5 fade-up-element" id="logCard">
+  <div class="text-center mb-4">
+    <div class="d-inline-block p-3 rounded-circle mb-3" style="background: rgba(79, 172, 254, 0.1);"><i class="bi bi-clipboard-data-fill fs-1" style="color: #4facfe;"></i></div>
+    <h4 class="fw-bold mb-1" style="color: var(--text-main);">BÁO CÁO IN/OUT TRỢ LÝ</h4>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">Ghi nhận trạng thái Account</p>
+  </div>
+  
+  <form id="logForm" style="display: none;" onsubmit="submitLog(event)">
+    <div class="mb-3">
+      <label class="fw-bold mb-1" style="color: var(--text-main);"><i class="bi bi-person-badge-fill text-primary me-2"></i>Tên Trợ Lý</label>
+      <input type="text" class="form-control" id="assistantName" required placeholder="Nhập họ và tên trợ lý...">
+    </div>
+    <div class="mb-3">
+      <label class="fw-bold mb-1" style="color: var(--text-main);"><i class="bi bi-diagram-3-fill text-info me-2"></i>Phụ trách Team</label>
+      <select class="form-select" id="teamSelect" required onchange="handleTeamChange()">
+        <option value="" disabled selected>-- Chọn Team --</option>
+      </select>
+    </div>
+    <div class="mb-3" id="idolSelectGroup">
+      <label class="fw-bold mb-1" style="color: var(--text-main);"><i class="bi bi-star-fill text-warning me-2"></i>Idol tương ứng</label>
+      <select class="form-select" id="idolSelect" disabled onchange="handleIdolChange()">
+        <option value="" disabled selected>-- Chọn Team trước --</option>
+      </select>
+    </div>
+    <div class="mb-3 custom-input-box" id="customIdolGroup" style="display: none;">
+      <label class="fw-bold mb-1 text-primary"><i class="bi bi-pencil-square me-2"></i>Tự điền tên Idol mới</label>
+      <input type="text" class="form-control border-primary" id="customIdolInput" placeholder="Gõ chính xác tên Idol...">
+    </div>
+    <div class="mb-4">
+      <label class="fw-bold mb-1" style="color: var(--text-main);"><i class="bi bi-toggle-on text-danger me-2"></i>Trạng thái Account</label>
+      <select class="form-select" id="actionSelect" required>
+        <option value="" disabled selected>-- In hay Out? --</option>
+        <option value="Đăng Nhập Acc (In)">🟢 Bắt đầu làm việc (Nhận Acc)</option>
+        <option value="Đăng Xuất Acc (Out)">🔴 Kết thúc làm việc (Trả Acc)</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-submit w-100 mt-2"><i class="bi bi-send-check-fill me-2"></i> XÁC NHẬN BÁO CÁO</button>
+  </form>
+  <div id="loader" class="loader mt-4"></div>
+</div>
+
+<div class="main-card p-5 text-center fade-up-element" id="resultCard" style="display: none;">
+  <div id="resultIcon"></div>
+  <div id="resultMsg" class="mt-3 mb-4"></div>
+  <button class="btn btn-outline-custom" onclick="resetForm()"><i class="bi bi-arrow-repeat me-1"></i> Báo cáo trợ lý khác</button>
+</div>
+
+<script>
+  // DÁN LINK API WEB APP (GAS) CỦA BẠN VÀO ĐÂY
+  const API_URL = "https://script.google.com/macros/s/AKfycby5PT2c_U03Zc442ukfa0VCQgKCRMl64k3PMi8zbFY4QkH9m-CWTcupGn19X801g2ry/exec";
+
+  const google = {
+    script: {
+      run: (function() {
+        const makeApiCall = async (action, args, callback, failCallback) => {
+          try {
+            const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: action, args: args }) });
+            const textRes = await res.text();
+            let result;
+            try { result = JSON.parse(textRes); } catch(e) { if(failCallback) failCallback(new Error("Lỗi parse JSON")); return; }
+            if (result.success) { if (callback) callback(result.data); } 
+            else { if(failCallback) failCallback(new Error(result.error)); else showToast("Lỗi: " + result.error, "error"); }
+          } catch(e) { if(failCallback) failCallback(e); else showToast("Lỗi kết nối", "error"); }
+        };
+        const handlerObj = (callback, failCallback) => ({
+          withSuccessHandler: (cb) => handlerObj(cb, failCallback),
+          withFailureHandler: (fcb) => handlerObj(callback, fcb),
+          getGroupsData: () => makeApiCall('getGroupsData', [], callback, failCallback),
+          webSubmitLog: (p) => makeApiCall('webSubmitLog', [p], callback, failCallback)
+        });
+        return handlerObj(null, null);
+      })()
+    }
+  };
+
+  let groupsData = {};
+
+  function showToast(message, type = 'success', duration = 3000) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `cyber-toast ${type}`;
+    let icon = type === 'success' ? '<i class="bi bi-check-circle-fill" style="color: #34d399; font-size: 1.1rem;"></i>' : '<i class="bi bi-exclamation-triangle-fill" style="color: #fb7185; font-size: 1.1rem;"></i>';
+    toast.innerHTML = `${icon} <span style="margin-bottom: 2px;">${message}</span> <div class="toast-progress" style="animation-duration: ${duration}ms"></div>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, duration);
+  }
+
+  function toggleTheme() {
+    const body = document.body;
+    const newTheme = (body.getAttribute('data-theme') || 'light') === 'dark' ? 'light' : 'dark';
+    body.setAttribute('data-theme', newTheme);
+    localStorage.setItem('formTheme', newTheme);
+    document.getElementById('themeIcon').className = newTheme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi bi-moon-stars-fill text-primary';
+  }
+
+  window.onload = function() {
+    const savedTheme = localStorage.getItem('formTheme') || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi bi-moon-stars-fill text-primary';
+    
+    document.getElementById('loader').style.display = 'block';
+    
+    google.script.run.withSuccessHandler(function(data) {
+      groupsData = data;
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('logForm').style.display = 'block';
+      
+      const teamSelect = document.getElementById('teamSelect');
+      for (const key in groupsData) {
+        let option = document.createElement('option');
+        option.value = key; option.text = groupsData[key].name; teamSelect.appendChild(option);
+      }
+      let optionNoTeam = document.createElement('option');
+      optionNoTeam.value = "__NO_TEAM__"; optionNoTeam.text = "⚡ [Idol Mới] Chưa có Team / Chưa phân Team"; teamSelect.appendChild(optionNoTeam);
+    }).withFailureHandler(function() {
+      document.getElementById('loader').style.display = 'none';
+      showToast("Không thể tải danh sách Team", "error");
+    }).getGroupsData();
+  };
+
+  function handleTeamChange() {
+    const teamSelect = document.getElementById('teamSelect');
+    const idolSelectGroup = document.getElementById('idolSelectGroup');
+    const idolSelect = document.getElementById('idolSelect');
+    const customIdolGroup = document.getElementById('customIdolGroup');
+    const customIdolInput = document.getElementById('customIdolInput');
+    const selectedTeam = teamSelect.value;
+    
+    if (selectedTeam === "__NO_TEAM__") {
+      idolSelectGroup.style.display = 'none'; idolSelect.disabled = true;
+      customIdolGroup.style.display = 'block'; customIdolInput.value = ""; customIdolInput.placeholder = "Nhập tên Idol mới..."; customIdolInput.focus();
+    } else {
+      idolSelectGroup.style.display = 'block'; idolSelect.disabled = false;
+      idolSelect.innerHTML = '<option value="" disabled selected>-- Chọn Idol --</option>';
+      if (groupsData[selectedTeam] && groupsData[selectedTeam].idols) {
+        groupsData[selectedTeam].idols.forEach(idol => {
+          if (idol) { let opt = document.createElement('option'); opt.value = idol; opt.text = idol; idolSelect.appendChild(opt); }
+        });
+      }
+      let optCustom = document.createElement('option'); optCustom.value = "__CUSTOM_IDOL__"; optCustom.text = "➕ [Idol Mới] Tự nhập tên Idol khác..."; idolSelect.appendChild(optCustom);
+      customIdolGroup.style.display = 'none'; customIdolInput.value = "";
+    }
+  }
+
+  function handleIdolChange() {
+    if (document.getElementById('idolSelect').value === "__CUSTOM_IDOL__") {
+      document.getElementById('customIdolGroup').style.display = 'block'; document.getElementById('customIdolInput').focus();
+    } else { document.getElementById('customIdolGroup').style.display = 'none'; }
+  }
+
+  function submitLog(event) {
+    event.preventDefault();
+    const assistantName = document.getElementById('assistantName').value.trim();
+    const teamSelect = document.getElementById('teamSelect');
+    const idolSelect = document.getElementById('idolSelect');
+    const customIdolInput = document.getElementById('customIdolInput');
+    const actionSelect = document.getElementById('actionSelect').value;
+    
+    let teamName = "", idolName = "";
+    if (teamSelect.value === "__NO_TEAM__") { teamName = "Chưa có Team (Idol Mới)"; idolName = customIdolInput.value.trim(); } 
+    else {
+      teamName = groupsData[teamSelect.value] ? groupsData[teamSelect.value].name : teamSelect.value;
+      idolName = (idolSelect.value === "__CUSTOM_IDOL__") ? customIdolInput.value.trim() : idolSelect.value;
+    }
+    
+    if (!idolName) return showToast("Vui lòng điền hoặc chọn tên Idol!", "error");
+    
+    const payload = { name: assistantName, teamName: teamName, idol: idolName, action: actionSelect };
+    const form = document.getElementById('logForm');
+    form.querySelector('button[type="submit"]').style.display = 'none';
+    document.getElementById('loader').style.display = 'block';
+    
+    google.script.run.withSuccessHandler(function(res) {
+      document.getElementById('logCard').style.display = 'none';
+      document.getElementById('resultCard').style.display = 'block';
+      if (res.success) {
+        showToast("Đã gửi báo cáo!", "success");
+        document.getElementById('resultIcon').innerHTML = '<i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>';
+        document.getElementById('resultMsg').innerHTML = `<h4 class="fw-bold text-success mb-2">Đã ghi nhận!</h4><p style="color: var(--text-muted);">Trợ lý: <b>${payload.name}</b><br>Team: <b>${payload.teamName}</b> | Idol: <b>${payload.idol}</b></p>`;
+      } else {
+        showToast(res.message, "error");
+        document.getElementById('resultIcon').innerHTML = '<i class="bi bi-x-circle-fill text-danger" style="font-size: 4rem;"></i>';
+        document.getElementById('resultMsg').innerHTML = `<h4 class="fw-bold text-danger mb-2">Đã xảy ra lỗi</h4><p style="color: var(--text-muted);">${res.message}</p>`;
+      }
+      document.getElementById('loader').style.display = 'none';
+    }).withFailureHandler(function(error) {
+      showToast("Lỗi hệ thống: " + error.message, "error");
+      form.querySelector('button[type="submit"]').style.display = 'block';
+      document.getElementById('loader').style.display = 'none';
+    }).webSubmitLog(payload);
+  }
+
+  function resetForm() {
+    document.getElementById('resultCard').style.display = 'none';
+    document.getElementById('logCard').style.display = 'block';
+    document.getElementById('logForm').reset();
+    document.getElementById('idolSelectGroup').style.display = 'block';
+    document.getElementById('idolSelect').innerHTML = '<option value="" disabled selected>-- Chọn Team trước --</option>';
+    document.getElementById('idolSelect').disabled = true;
+    document.getElementById('customIdolGroup').style.display = 'none';
+    document.querySelector('#logForm button[type="submit"]').style.display = 'block';
+  }
+</script>
+</body>
+</html>

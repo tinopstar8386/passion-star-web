@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    :root { --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); --card-bg: rgba(255, 255, 255, 0.95); --text-main: #2c3e50; --text-muted: #6c757d; --input-bg: #f8f9fa; --input-border: #e9ecef; --tab-active: #764ba2; --card-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+    [data-theme="dark"] { --bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); --card-bg: rgba(30, 32, 42, 0.95); --text-main: #f8f9fa; --text-muted: #a0aab2; --input-bg: #222431; --input-border: #3f4254; --tab-active: #a87ffb; --card-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+    body { background: var(--bg-gradient); color: var(--text-main); font-family: 'Poppins', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 20px 0; transition: background 0.5s ease; overflow-x: hidden;}
+    @keyframes smoothFadeUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
+    .fade-up-element { animation: smoothFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes tabTransition { 0% { opacity: 0; transform: translateY(12px) scale(0.99); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    .tab-pane-animated { animation: tabTransition 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+    .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .cyber-toast { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 12px 16px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 12px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.4s; position: relative; overflow: hidden; backdrop-filter: blur(8px); }
+    .cyber-toast.show { transform: translateX(0) scale(1); opacity: 1; }
+    .cyber-toast.success { border-color: rgba(16, 185, 129, 0.5); }
+    .cyber-toast.error { border-color: rgba(244, 63, 94, 0.5); }
+    .theme-toggle { position: fixed; top: 20px; right: 20px; background: var(--card-bg); color: var(--text-main); border: 1px solid var(--input-border); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--card-shadow); transition: all 0.3s; z-index: 9999; }
+    
+    .glass-card { background: var(--card-bg); border-radius: 24px; box-shadow: var(--card-shadow); padding: 40px; width: 100%; max-width: 600px; margin: 0 auto; text-align: center; transition: all 0.3s ease; }
+    .avatar-box { width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; color: white; font-size: 2rem; box-shadow: 0 8px 20px rgba(118, 75, 162, 0.4); }
+    .main-container { display: none; width: 100%; max-width: 600px; margin: 0 auto; }
+    
+    .form-control, .form-select { border-radius: 12px; padding: 12px; border: 1.5px solid var(--input-border); background: var(--input-bg); color: var(--text-main); transition: 0.3s; }
+    .form-control:focus, .form-select:focus { border-color: #4facfe; box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2); }
+    
+    .btn-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; padding: 12px; font-weight: 600; border: none; transition: 0.3s; }
+    .btn-gradient-alt { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border-radius: 12px; padding: 12px; font-weight: 600; border: none; transition: 0.3s; }
+    .btn-danger-custom { background: linear-gradient(135deg, #ff0844 0%, #ffb199 100%); color: white; border-radius: 12px; padding: 12px; font-weight: 600; border: none; transition: 0.3s;}
+    .btn-danger-custom:disabled { background: #d1d5db; opacity: 0.7; cursor: not-allowed; }
+    
+    .nav-tabs-wrapper { position: relative; width: 100%; overflow-x: auto; margin-bottom: 1.5rem; -ms-overflow-style: none; scrollbar-width: none; }
+    .nav-tabs-wrapper::-webkit-scrollbar { display: none; }
+    .nav-tabs { position: relative; border: none; display: flex; flex-wrap: nowrap; padding-bottom: 5px; }
+    .nav-tabs .nav-link { font-weight: 600; color: var(--text-muted); border-radius: 12px; transition: color 0.3s; border: none; background: transparent; white-space: nowrap; padding: 10px 15px; position: relative; z-index: 1;}
+    .nav-tabs .nav-link.active { color: var(--tab-active); }
+    .tab-slider { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--tab-active); border-radius: 3px; transition: all 0.3s; z-index: 0; }
+    
+    .loader { display: none; width: 12px; height: 12px; margin: 30px auto; border-radius: 50%; color: #4facfe; box-shadow: -22px 0 0 0, 0 0 0 0, 22px 0 0 0; animation: typingPulse 1.2s infinite linear; }
+    @keyframes typingPulse { 0%, 100% { box-shadow: -22px 0 0 -3px, 0 0 0 -3px, 22px 0 0 -3px; } 25% { box-shadow: -22px 0 0 3px, 0 0 0 -3px, 22px 0 0 -3px; } 50% { box-shadow: -22px 0 0 -3px, 0 0 0 3px, 22px 0 0 -3px; } 75% { box-shadow: -22px 0 0 -3px, 0 0 0 -3px, 22px 0 0 3px; } }
+    #adminLoader { position: absolute !important; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0 !important; z-index: 99; }
+    
+    .admin-card { min-height: 640px; height: auto; display: flex; flex-direction: column; position: relative; }
+    .tab-inner-flex { display: flex; flex-direction: column; justify-content: flex-start; max-height: 500px; overflow-y: auto; overflow-x: hidden; width: 100%; padding-right: 5px; }
+    .tab-inner-flex::-webkit-scrollbar { width: 6px; }
+    .tab-inner-flex::-webkit-scrollbar-thumb { background: var(--input-border); border-radius: 10px; }
+
+    .output-animator { max-height: 0; opacity: 0; overflow: hidden; margin-top: 0 !important; padding: 0 1.5rem !important; border: 1px solid transparent; transition: all 0.5s; }
+    .output-animator.show { max-height: 500px; opacity: 1; margin-top: 1.5rem !important; padding: 1.5rem !important; border-color: var(--input-border); }
+  </style>
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+<button class="theme-toggle fade-up-element" onclick="toggleTheme()"><i class="bi bi-moon-stars-fill" id="themeIcon"></i></button>
+
+<!-- LOGIN -->
+<div class="glass-card fade-up-element" id="loginScreen">
+  <div class="avatar-box"><i class="bi bi-person-bounding-box"></i></div>
+  <h4 class="fw-bold mb-1" style="color: var(--text-main);">Welcome Back</h4>
+  <p class="mb-4" style="color: var(--text-muted); font-size: 0.9rem;">Vui lòng đăng nhập hệ thống quản trị</p>
+  
+  <div class="position-relative mb-4 shadow-sm" style="border-radius: 12px;">
+    <i class="bi bi-lock-fill position-absolute" style="left: 18px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1.2rem; z-index: 5;"></i>
+    <input type="password" id="pinInput" class="form-control text-center fw-bold fs-4 py-3 position-relative" style="padding-left: 50px; padding-right: 50px;" placeholder="Nhập mã PIN..." onkeypress="if(event.key === 'Enter') login()">
+  </div>
+  
+  <button class="btn-gradient w-100 fs-6 rounded-pill shadow-sm py-3 mt-2" onclick="login()">Đăng Nhập <i class="bi bi-arrow-right-short fs-5 align-middle"></i></button>
+  <div id="loginLoader" class="loader mt-3"></div>
+  <div id="loginError" class="text-danger fw-bold mt-3" style="display:none; font-size: 0.9rem;">❌ Mã PIN không chính xác!</div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div class="main-container" id="adminDashboard">
+  <div class="glass-card admin-card text-start p-4 p-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="fw-bold mb-0" style="color: var(--text-main);"><i class="bi bi-speedometer2 me-2"></i>TRUNG TÂM</h4>
+      <span class="badge bg-success py-2 px-3 rounded-pill shadow-sm">Admin Tino</span>
+    </div>
+
+    <div class="nav-tabs-wrapper">
+      <ul class="nav nav-tabs flex-shrink-0" id="adminTabs" role="tablist">
+        <li class="nav-item"><button class="nav-link active" onclick="switchTab(event, 'tabCode')"><i class="bi bi-key-fill me-1"></i> Cấp Mã</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="switchTab(event, 'tabRemove')"><i class="bi bi-trash3-fill me-1"></i> Hủy Quyền</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="switchTab(event, 'tabConfig')"><i class="bi bi-gear-fill me-1"></i> THÊM/XOÁ</button></li>
+        <div class="tab-slider" id="tabSlider"></div>
+      </ul>
+    </div>
+
+    <div id="adminLoader" class="loader mt-0" style="display: none;"></div>
+
+    <!-- TAB CẤP MÃ -->
+    <div id="tabCode" class="tab-pane-animated w-100">
+      <div class="tab-inner-flex">
+        <div class="w-100">
+          <label class="form-label fw-bold" style="color: var(--text-main);">Chọn Team Cần Thao Tác:</label>
+          <select id="groupSelect" class="form-select mb-4"></select>
+          <div class="row g-3">
+            <div class="col-12 col-md-6"><button class="btn-gradient w-100" onclick="generateCode()"><i class="bi bi-magic me-1"></i> Cấp Mã Mới</button></div>
+            <div class="col-12 col-md-6"><button class="btn-gradient-alt w-100" onclick="getLinks()"><i class="bi bi-link-45deg me-1"></i> Lấy Link Bảng</button></div>
+          </div>
+        </div>
+        <div id="outputAreaCode" class="output-animator border rounded" style="background: var(--input-bg); word-break: break-all;"></div>
+      </div>
+    </div>
+
+    <!-- TAB HỦY QUYỀN -->
+    <div id="tabRemove" class="tab-pane-animated w-100" style="display:none;">
+      <div class="tab-inner-flex">
+        <div class="w-100">
+          <label class="form-label fw-bold" style="color: var(--text-main);">Chọn Team:</label>
+          <select id="removeGroupSelect" class="form-select mb-3"></select>
+          <label class="form-label fw-bold" style="color: var(--text-main);">Dán danh sách Email cần thu hồi:</label>
+          <textarea id="emailInput" class="form-control mb-2" rows="3" placeholder="troly1@gmail.com, troly2@gmail.com..." oninput="validateEmails()"></textarea>
+          <button id="btnRemove" class="btn-danger-custom w-100 py-3" onclick="removeEmail()" disabled><i class="bi bi-person-x-fill me-1"></i> Xác Nhận Hủy Quyền</button>
+        </div>
+        <div id="outputAreaRemove" class="output-animator border rounded" style="background: var(--input-bg); word-break: break-all;"></div>
+      </div>
+    </div>
+          
+    <!-- TAB THÊM/XOÁ -->
+    <div id="tabConfig" class="tab-pane-animated w-100" style="display:none;">
+      <div class="tab-inner-flex text-start">
+        <h6 class="fw-bold mb-3" style="color: var(--tab-active);"><i class="bi bi-building-add"></i> Tạo Team Mới</h6>
+        <div class="p-3 border rounded mb-4" style="background: var(--input-bg); border-color: var(--input-border);">
+          <input type="text" id="newTeamName" class="form-control mb-2" placeholder="Tên Team">
+          <input type="text" id="newTeamIdols" class="form-control mb-2" placeholder="Danh sách Idol (cách nhau dấu phẩy)">
+          <button class="btn-gradient w-100 py-2 mt-1" onclick="createNewTeam()">+ Tạo Team</button>
+        </div>
+        <h6 class="fw-bold mb-3" style="color: var(--tab-active);"><i class="bi bi-person-add"></i> Thêm Idol Vào Team</h6>
+        <div class="p-3 border rounded mb-2" style="background: var(--input-bg); border-color: var(--input-border);">
+          <select id="configGroupSelect" class="form-select mb-2"></select>
+          <input type="text" id="newIdolName" class="form-control mb-2" placeholder="Tên Idol mới">
+          <button class="btn-gradient-alt w-100 py-2 mt-1" onclick="addNewIdol()">+ Thêm Idol</button>
+        </div>
+        <h6 class="fw-bold mb-3 mt-4" style="color: #f43f5e;"><i class="bi bi-person-dash"></i> Xoá Idol Khỏi Team</h6>
+        <div class="p-3 border rounded mb-2" style="background: var(--input-bg); border-color: var(--input-border);">
+          <select id="deleteGroupSelect" class="form-select mb-2" onchange="updateDeleteIdolDropdown()"></select>
+          <select id="deleteIdolSelect" class="form-select mb-2"><option value="">-- Chọn Idol cần xoá --</option></select>
+          <button class="btn-danger-custom w-100 py-2 mt-1" onclick="deleteExistingIdol()">- Xoá Idol</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // DÁN LINK API WEB APP (GAS) CỦA BẠN VÀO ĐÂY
+  const API_URL = "https://script.google.com/macros/s/AKfycby5PT2c_U03Zc442ukfa0VCQgKCRMl64k3PMi8zbFY4QkH9m-CWTcupGn19X801g2ry/exec";
+
+  const google = {
+    script: {
+      run: (function() {
+        const makeApiCall = async (action, args, callback, failCallback) => {
+          try {
+            const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: action, args: args }) });
+            const textRes = await res.text();
+            let result;
+            try { result = JSON.parse(textRes); } catch(e) { if(failCallback) failCallback(new Error("Lỗi parse JSON")); return; }
+            if (result.success) { if (callback) callback(result.data); } 
+            else { if(failCallback) failCallback(new Error(result.error)); else showToast("Lỗi: " + result.error, "error"); }
+          } catch(e) { if(failCallback) failCallback(e); else showToast("Lỗi kết nối", "error"); }
+        };
+        const handlerObj = (callback, failCallback) => ({
+          withSuccessHandler: (cb) => handlerObj(cb, failCallback),
+          withFailureHandler: (fcb) => handlerObj(callback, fcb),
+          getGroupsData: () => makeApiCall('getGroupsData', [], callback, failCallback),
+          verifyAdminPin: (pin) => makeApiCall('verifyAdminPin', [pin], callback, failCallback),
+          webGenerateCode: (gId) => makeApiCall('webGenerateCode', [gId], callback, failCallback),
+          invalidateOTP: (gId) => makeApiCall('invalidateOTP', [gId], callback, failCallback),
+          webGetLinks: (gId) => makeApiCall('webGetLinks', [gId], callback, failCallback),
+          webRemoveEmail: (gId, e) => makeApiCall('webRemoveEmail', [gId, e], callback, failCallback),
+          addTeam: (n, i) => makeApiCall('addTeam', [n, i], callback, failCallback),
+          addIdol: (g, i) => makeApiCall('addIdol', [g, i], callback, failCallback),
+          removeIdol: (g, i) => makeApiCall('removeIdol', [g, i], callback, failCallback)
+        });
+        return handlerObj(null, null);
+      })()
+    }
+  };
+
+  let groupsData = {};
+
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `cyber-toast ${type}`;
+    let icon = type === 'success' ? '<i class="bi bi-check-circle-fill" style="color: #34d399;"></i>' : '<i class="bi bi-exclamation-triangle-fill" style="color: #fb7185;"></i>';
+    toast.innerHTML = `${icon} <span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
+  }
+
+  function toggleTheme() {
+    const body = document.body;
+    const newTheme = (body.getAttribute('data-theme') || 'light') === 'dark' ? 'light' : 'dark';
+    body.setAttribute('data-theme', newTheme);
+    localStorage.setItem('adminTheme', newTheme);
+    document.getElementById('themeIcon').className = newTheme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi bi-moon-stars-fill text-primary';
+  }
+  
+  window.onload = function() {
+    const savedTheme = localStorage.getItem('adminTheme') || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi bi-moon-stars-fill text-primary';
+    
+    google.script.run.withSuccessHandler(function(data) { groupsData = data; populateSelects(); }).getGroupsData();
+  }
+  
+  function populateSelects() {
+    const selects = [document.getElementById('groupSelect'), document.getElementById('removeGroupSelect'), document.getElementById('configGroupSelect'), document.getElementById('deleteGroupSelect')];
+    selects.forEach(select => {
+      if (!select) return;
+      select.innerHTML = ""; 
+      for (const key in groupsData) { let option = document.createElement('option'); option.value = key; option.text = groupsData[key].name; select.appendChild(option); }
+    });
+    if (document.getElementById('deleteGroupSelect')) updateDeleteIdolDropdown();
+  }
+
+  function login() {
+    const pin = document.getElementById('pinInput').value;
+    document.getElementById('loginLoader').style.display = 'block';
+    document.getElementById('loginError').style.display = 'none';
+    google.script.run.withSuccessHandler(function(isValid) {
+      document.getElementById('loginLoader').style.display = 'none';
+      if(isValid) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'block';
+        document.getElementById('adminDashboard').classList.add('fade-up-element'); 
+        showToast("Đăng nhập thành công!", "success");
+        setTimeout(() => updateSlider(document.querySelector('.nav-link.active')), 100);
+      } else { 
+        document.getElementById('loginError').style.display = 'block'; 
+      }
+    }).verifyAdminPin(pin);
+  }
+
+  function updateSlider(tabElement) {
+    const slider = document.getElementById('tabSlider');
+    if (!slider || !tabElement) return;
+    slider.style.width = tabElement.offsetWidth + 'px'; slider.style.left = tabElement.offsetLeft + 'px';
+  }
+
+  function switchTab(event, tabId) {
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active'); updateSlider(event.currentTarget);
+    document.querySelectorAll('.tab-pane-animated').forEach(el => el.style.display = 'none');
+    document.getElementById(tabId).style.display = 'block';
+  }
+
+  function validateEmails() {
+    const val = document.getElementById('emailInput').value.trim();
+    const btn = document.getElementById('btnRemove');
+    const input = document.getElementById('emailInput');
+    if (!val) { input.style.borderColor = 'var(--input-border)'; btn.disabled = true; return; }
+    const emails = val.split(/[,\n]+/).map(e => e.trim()).filter(e => e !== "");
+    let allValid = emails.every(e => /^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(e));
+    if (allValid && emails.length > 0) { input.style.borderColor = '#10b981'; btn.disabled = false; } 
+    else { input.style.borderColor = '#f43f5e'; btn.disabled = true; }
+  }
+
+  function copyText(msgType) {
+    navigator.clipboard.writeText(document.getElementById("hiddenCopyText").value).then(() => showToast(msgType === 'otp' ? "Đã copy mã OTP Zalo!" : "Đã copy Link Bảng Zalo!", "success"));
+  }
+
+  function generateCode() {
+    const gId = document.getElementById('groupSelect').value;
+    document.getElementById('adminLoader').style.display = 'block';
+    document.getElementById('outputAreaCode').classList.remove('show');
+    google.script.run.withSuccessHandler(function(res) {
+      document.getElementById('adminLoader').style.display = 'none';
+      if(res.success) {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        const txt = `📌 [FORM ĐĂNG KÝ QUYỀN TRUY CẬP]\n👉 Link: ${res.link}\n🔑 Mã xác thực: ${res.code}\n(Mã có hiệu lực 1 tiếng)`;
+        document.getElementById('outputAreaCode').innerHTML = `<h5 class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Đã tạo mã!</h5><p class="mb-2" style="color: var(--text-main);"><b>Link Form:</b> <a href="${res.link}" target="_blank">Mở Link</a></p><p class="mb-4" style="color: var(--text-main);"><b>Mã OTP:</b> <span class="fs-3 fw-bold text-danger d-block mt-1">${res.code}</span></p><textarea id="hiddenCopyText" style="display:none;">${txt}</textarea><div class="row g-2"><div class="col-8"><button class="btn btn-primary w-100 fw-bold py-2" onclick="copyText('otp')">Copy gửi Zalo</button></div><div class="col-4"><button class="btn btn-outline-danger w-100 py-2 fw-bold" onclick="invalidateOTP('${gId}')">Hủy OTP</button></div></div>`;
+      } else { document.getElementById('outputAreaCode').innerHTML = `<span class="text-danger fw-bold">${res.message}</span>`; }
+      document.getElementById('outputAreaCode').classList.add('show');
+    }).webGenerateCode(gId);
+  }
+
+  function invalidateOTP(gId) {
+    document.getElementById('adminLoader').style.display = 'block';
+    google.script.run.withSuccessHandler(function(res) {
+      document.getElementById('adminLoader').style.display = 'none';
+      if (res.success) { showToast(res.message, "success"); document.getElementById('outputAreaCode').innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle"></i> ${res.message}</span>`; }
+    }).invalidateOTP(gId);
+  }
+
+  function getLinks() {
+    const gId = document.getElementById('groupSelect').value;
+    document.getElementById('adminLoader').style.display = 'block';
+    document.getElementById('outputAreaCode').classList.remove('show');
+    google.script.run.withSuccessHandler(function(res) {
+      document.getElementById('adminLoader').style.display = 'none';
+      let txt = `📌 [LINK BẢNG LÀM VIỆC - TEAM ${res.name.toUpperCase()}]\n`;
+      if (res.link1) txt += `👉 Bảng 1: ${res.link1}\n`; if (res.link2) txt += `👉 Bảng 2: ${res.link2}\n`;
+      document.getElementById('outputAreaCode').innerHTML = `<h5 style="color: var(--text-main);" class="fw-bold mb-3"><i class="bi bi-link-45deg"></i> Link - Team <b>${res.name}</b></h5><a href="${res.link1}" target="_blank" class="d-block mb-3 text-decoration-none bg-primary bg-opacity-10 p-2 rounded fw-bold">🔵 Bảng số 1</a><a href="${res.link2}" target="_blank" class="d-block mb-4 text-decoration-none bg-primary bg-opacity-10 p-2 rounded fw-bold">🔵 Bảng số 2</a><textarea id="hiddenCopyText" style="display:none;">${txt}</textarea><button class="btn btn-primary w-100 fw-bold" style="border-radius:10px; padding:10px;" onclick="copyText('link')">Copy Link gửi Zalo</button>`;
+      document.getElementById('outputAreaCode').classList.add('show');
+    }).webGetLinks(gId);
+  }
+
+  function removeEmail() {
+    const gId = document.getElementById('removeGroupSelect').value; const emailsText = document.getElementById('emailInput').value;
+    document.getElementById('adminLoader').style.display = 'block'; document.getElementById('outputAreaRemove').classList.remove('show');
+    google.script.run.withSuccessHandler(function(res) {
+      document.getElementById('adminLoader').style.display = 'none';
+      if (res.success) { showToast(res.message, "success"); document.getElementById('outputAreaRemove').innerHTML = `<span class="text-success fw-bold fs-6"><i class="bi bi-check-lg"></i> ${res.message}</span>`; document.getElementById('emailInput').value = ""; validateEmails(); } 
+      else { showToast(res.message, "error"); document.getElementById('outputAreaRemove').innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-lg"></i> ${res.message}</span>`; }
+      document.getElementById('outputAreaRemove').classList.add('show');
+    }).webRemoveEmail(gId, emailsText);
+  }
+
+  function createNewTeam() {
+    const teamName = document.getElementById('newTeamName').value.trim(); const idols = document.getElementById('newTeamIdols').value.trim();
+    if (!teamName) return showToast("Vui lòng nhập tên Team!", "error");
+    document.getElementById('adminLoader').style.display = 'block';
+    google.script.run.withSuccessHandler(function(res) {
+      if (res.success) { showToast(res.message, "success"); document.getElementById('newTeamName').value = ""; document.getElementById('newTeamIdols').value = ""; google.script.run.withSuccessHandler(function(newData) { groupsData = newData; populateSelects(); document.getElementById('adminLoader').style.display = 'none'; }).getGroupsData(); } 
+      else { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi: " + res.message, "error"); }
+    }).withFailureHandler(function() { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi kết nối!", "error"); }).addTeam(teamName, idols);
+  }
+
+  function addNewIdol() {
+    const groupId = document.getElementById('configGroupSelect').value; const idolName = document.getElementById('newIdolName').value.trim();
+    if (!idolName) return showToast("Vui lòng nhập tên Idol!", "error");
+    document.getElementById('adminLoader').style.display = 'block';
+    google.script.run.withSuccessHandler(function(res) {
+      if (res.success) { showToast(res.message, "success"); document.getElementById('newIdolName').value = ""; google.script.run.withSuccessHandler(function(newData) { groupsData = newData; populateSelects(); document.getElementById('adminLoader').style.display = 'none'; }).getGroupsData(); } 
+      else { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi: " + res.message, "error"); }
+    }).withFailureHandler(function() { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi kết nối!", "error"); }).addIdol(groupId, idolName);
+  }
+
+  function updateDeleteIdolDropdown() {
+    const groupId = document.getElementById('deleteGroupSelect').value; const idolSelect = document.getElementById('deleteIdolSelect');
+    idolSelect.innerHTML = '<option value="">-- Chọn Idol cần xoá --</option>';
+    if (groupId && groupsData[groupId] && groupsData[groupId].idols) { groupsData[groupId].idols.forEach(idol => { if (idol.trim() !== "") { let option = document.createElement('option'); option.value = idol.trim(); option.text = idol.trim(); idolSelect.appendChild(option); } }); }
+  }
+
+  function deleteExistingIdol() {
+    const groupId = document.getElementById('deleteGroupSelect').value; const idolName = document.getElementById('deleteIdolSelect').value;
+    if (!idolName) return showToast("Vui lòng chọn Idol cần xoá!", "error");
+    document.getElementById('adminLoader').style.display = 'block';
+    google.script.run.withSuccessHandler(function(res) {
+      if (res.success) { showToast(res.message, "success"); google.script.run.withSuccessHandler(function(newData) { groupsData = newData; populateSelects(); document.getElementById('adminLoader').style.display = 'none'; }).getGroupsData(); } 
+      else { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi: " + res.message, "error"); }
+    }).withFailureHandler(function() { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi kết nối!", "error"); }).removeIdol(groupId, idolName);
+  }
+</script>
+</body>
+</html>
