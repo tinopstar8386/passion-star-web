@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Biên Bản Bàn Giao Tài Sản</title>
+    <style>
+        body { background: #e2e8f0; font-family: 'Times New Roman', Times, serif; color: #000; margin: 0; padding: 20px; }
+        .page-a4 { background: #fff; width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.1); line-height: 1.5; font-size: 13pt; }
+        
+        .header { display: flex; justify-content: space-between; text-align: center; margin-bottom: 20px; }
+        .header-left { width: 40%; }
+        .header-right { width: 60%; }
+        
+        .bold { font-weight: bold; }
+        .title { text-align: center; font-size: 16pt; font-weight: bold; margin: 20px 0; text-transform: uppercase; }
+        .text-center { text-align: center; }
+        
+        input[type="text"], input[type="date"], input[type="number"] { 
+            font-family: 'Times New Roman', Times, serif; 
+            font-size: 13pt; 
+            border: none; 
+            border-bottom: 1px dotted #000; 
+            background: transparent; 
+            outline: none; 
+            padding: 2px 5px; 
+        }
+        input:focus { border-bottom: 1px solid #000; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+        th { text-align: center; font-weight: bold; }
+        
+        .controls { text-align: center; margin-top: 30px; display: flex; justify-content: center; gap: 15px; }
+        .btn { padding: 12px 25px; font-family: Arial, sans-serif; font-size: 12pt; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: #fff; display: flex; align-items: center; gap: 8px;}
+        .btn-add { background: #2980b9; margin-bottom: 10px; font-size: 11pt; padding: 8px 15px; }
+        .btn-add-person { background: #8e44ad; color: #fff; border: none; border-radius: 4px; cursor: pointer; padding: 5px 12px; font-size: 10pt; margin-top: 5px; font-weight: bold; }
+        .btn-submit { background: #27ae60; }
+        .btn-print { background: #34495e; }
+        .btn-remove { background: #e74c3c; font-size: 10pt; padding: 4px 8px; color: white; border: none; cursor: pointer; border-radius: 3px; }
+        
+        .signatures { display: flex; justify-content: space-between; text-align: center; margin-top: 20px; }
+        
+        @media print {
+            body { background: #fff; padding: 0; }
+            .page-a4 { box-shadow: none; width: 100%; padding: 0; }
+            .controls, .btn-remove, .btn-add, .btn-add-person, .no-print { display: none !important; }
+            input { border-bottom: none !important; }
+            
+            /* Lệnh bảo vệ nay chỉ áp dụng riêng cho khu vực chữ ký */
+            .signatures {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-a4">
+    <form id="docForm">
+        <div class="header">
+            <div class="header-left">
+                <div class="bold">CÔNG TY TNHH PASSION STAR</div>
+                <div>Số: <input type="text" id="docNumber" style="width: 60px;" placeholder=".../BB"></div>
+            </div>
+            <div class="header-right">
+                <div class="bold" style="white-space: nowrap;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                <div class="bold">Độc lập – Tự do – Hạnh phúc</div>
+                
+                <div style="font-style: italic; margin-top: 5px; display: flex; align-items: center; justify-content: flex-end; gap: 5px;">
+                    <label for="handoverDate" style="cursor: pointer; display: inline-block;" title="Bấm vào đây để chọn ngày">
+                        Hồ Chí Minh, ngày <span id="hdrDay">...</span> 
+                        tháng <span id="hdrMonth">...</span> 
+                        năm <span id="hdrYear">...</span>
+                    </label>
+                    <input type="date" id="handoverDate" class="no-print" style="width: 25px; border: none; outline: none; background: transparent; cursor: pointer; padding: 0;">
+                </div>
+            </div>
+        </div>
+
+        <div class="title">Biên Bản Bàn Giao Tài Sản</div>
+        
+        <div style="margin-bottom: 15px; text-align: justify;">
+            Giữa <span id="introGiver" class="bold">...........................................</span> (bên giao) 
+            và <span id="introReceiver" class="bold">...........................................</span> (bên nhận)
+        </div>
+
+        <div style="text-align: justify;">Hôm nay ngày <span id="textDay">...</span> tháng <span id="textMonth">...</span> năm <span id="textYear">...</span> tại Passion Star đã tiến hành cuộc họp bàn giao tài sản thực hiện theo quy định của công ty.</div>
+
+        <div class="bold" style="margin-top: 15px;">I/ THÀNH PHẦN THAM DỰ:</div>
+        
+        <div class="bold">1/ Bên giao:</div>
+        <div id="giverList">
+            <div class="person-row" style="display: flex; align-items: baseline; gap: 5px; margin-top: 5px;">
+                <span style="white-space: nowrap;">Bà/Ông:</span>
+                <input type="text" class="giver-name" placeholder="Dương Hồ Thái Mỹ" style="flex: 1;" oninput="syncNames()"> 
+                <span style="white-space: nowrap;">Chức vụ:</span>
+                <input type="text" class="giver-role" placeholder="Lễ Tân" style="width: 150px;">
+                <button type="button" class="btn-remove no-print" onclick="removePerson(this, 'giver')">Xóa</button>
+            </div>
+        </div>
+        <div class="no-print" style="text-align: left; margin: 5px 0 15px 0;">
+            <button type="button" class="btn-add-person" onclick="addPerson('giver')">+ Thêm người giao</button>
+        </div>
+
+        <div class="bold">2/ Bên nhận:</div>
+        <div id="receiverList">
+            <div class="person-row" style="display: flex; align-items: baseline; gap: 5px; margin-top: 5px;">
+                <span style="white-space: nowrap;">Bà/Ông:</span>
+                <input type="text" class="receiver-name" placeholder="Bạch Thị Thuý Uyên" style="flex: 1;" oninput="syncNames()"> 
+                <span style="white-space: nowrap;">Chức vụ:</span>
+                <input type="text" class="receiver-role" placeholder="Makeup" style="width: 150px;">
+                <button type="button" class="btn-remove no-print" onclick="removePerson(this, 'receiver')">Xóa</button>
+            </div>
+        </div>
+        <div class="no-print" style="text-align: left; margin: 5px 0 15px 0;">
+            <button type="button" class="btn-add-person" onclick="addPerson('receiver')">+ Thêm người nhận</button>
+        </div>
+
+        <div class="bold" style="margin-top: 15px;">II/ NỘI DUNG BÀN GIAO:</div>
+        <div style="text-align: justify;">
+            Bên <span id="inlineGiver" class="bold">...........................................</span> đã tiến hành bàn giao tài sản cho bên nhận theo biểu thống kê sau:
+        </div>
+
+        <div class="text-center bold" style="margin-top: 10px;">Bảng thống kê tài sản bàn giao</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 6%;">Số TT</th>
+                    <th style="width: 36%;">Tên tài sản</th>
+                    <th style="width: 10%;">Số lượng</th>
+                    <th style="width: 12%;">Đơn vị tính</th>
+                    <th style="width: 26%;">Ghi chú</th>
+                    <th style="width: 10%;" class="no-print">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="assetBody">
+                <tr>
+                    <td class="stt text-center">1</td>
+                    <td><input type="text" class="asset-name" placeholder="Ghế xoay makeup" style="width: 95%; border: none;"></td>
+                    <td class="text-center"><input type="number" class="asset-qty" placeholder="5" style="width: 80%; border: none; text-align: center;"></td>
+                    <td class="text-center"><input type="text" class="asset-unit" placeholder="Cái" style="width: 80%; border: none; text-align: center;"></td>
+                    <td><input type="text" class="asset-note" placeholder="5 cái mới" style="width: 95%; border: none;"></td>
+                    <td class="no-print text-center"><button type="button" class="btn-remove" onclick="removeRow(this)">Xóa</button></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="no-print" style="text-align: left; margin-top: 0;">
+            <button type="button" class="btn btn-add" onclick="addRow()">+ Thêm tài sản</button>
+        </div>
+
+        <div style="margin-top: 15px;">
+            <div class="bold">Tổng giá trị:</div>
+            <div>Bằng số: <input type="text" id="totalNum" placeholder="1.349.000" style="width: 200px;" oninput="formatCurrency(this)"> VNĐ</div>
+            <div>Bằng chữ: <input type="text" id="totalText" placeholder="Một triệu ba trăm bốn mươi chín nghìn đồng chẵn." style="width: 100%;" readonly></div>
+        </div>
+
+        <div style="margin-top: 15px; font-style: italic; text-align: justify;">
+            Kể từ ngày <span id="footerDate">.../.../20...</span> số tài sản trên do bên nhận chịu trách nhiệm quản lý và giữ gìn. Biên bản này có hiệu lực từ ngày thành lập, bên giao giữ bản gốc tại quầy lễ tân.
+        </div>
+
+        <div class="signatures">
+            <div style="width: 45%;">
+                <div class="bold">CHỮ KÝ BÊN GIAO</div>
+                <div style="font-style: italic;">(ký, ghi rõ họ tên)</div>
+                <div id="signGiverContainer">
+                    <div style="height: 80px;"></div>
+                </div>
+            </div>
+            <div style="width: 45%;">
+                <div class="bold">CHỮ KÝ BÊN NHẬN</div>
+                <div style="font-style: italic;">(ký, ghi rõ họ tên)</div>
+                <div id="signReceiverContainer">
+                    <div style="height: 80px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button type="button" class="btn btn-print" onclick="window.print()">🖨️ In Biên Bản</button>
+            <button type="button" id="submitBtn" class="btn btn-submit" onclick="submitData()">💾 Lưu Dữ Liệu</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const dateInput = document.getElementById('handoverDate');
+    dateInput.valueAsDate = new Date();
+    updateDateText();
+    dateInput.addEventListener('change', updateDateText);
+
+    function updateDateText() {
+        const d = new Date(dateInput.value);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        
+        document.getElementById('hdrDay').innerText = day;
+        document.getElementById('hdrMonth').innerText = month;
+        document.getElementById('hdrYear').innerText = year;
+
+        document.getElementById('textDay').innerText = day;
+        document.getElementById('textMonth').innerText = month;
+        document.getElementById('textYear').innerText = year;
+        
+        document.getElementById('footerDate').innerText = `${day}/${month}/${year}`;
+    }
+
+    function addPerson(type) {
+        const list = document.getElementById(type + 'List');
+        const div = document.createElement('div');
+        div.className = 'person-row';
+        div.style.display = 'flex';
+        div.style.alignItems = 'baseline';
+        div.style.gap = '5px';
+        div.style.marginTop = '5px';
+        div.innerHTML = `
+            <span style="white-space: nowrap;">Bà/Ông:</span>
+            <input type="text" class="${type}-name" style="flex: 1;" oninput="syncNames()"> 
+            <span style="white-space: nowrap;">Chức vụ:</span>
+            <input type="text" class="${type}-role" style="width: 150px;">
+            <button type="button" class="btn-remove no-print" onclick="removePerson(this, '${type}')">Xóa</button>
+        `;
+        list.appendChild(div);
+        syncNames();
+    }
+
+    function removePerson(btn, type) {
+        const list = document.getElementById(type + 'List');
+        if (list.children.length > 1) {
+            btn.closest('.person-row').remove();
+            syncNames();
+        } else {
+            alert('Cần có ít nhất một người đại diện!');
+        }
+    }
+
+    function syncNames() {
+        const givers = Array.from(document.querySelectorAll('.giver-name')).map(input => input.value).filter(val => val.trim() !== '');
+        const receivers = Array.from(document.querySelectorAll('.receiver-name')).map(input => input.value).filter(val => val.trim() !== '');
+
+        document.getElementById('introGiver').innerText = givers.length > 0 ? givers.join(', ') : '...........................................';
+        document.getElementById('inlineGiver').innerText = givers.length > 0 ? givers.join(', ') : '...........................................';
+        document.getElementById('introReceiver').innerText = receivers.length > 0 ? receivers.join(', ') : '...........................................';
+
+        document.getElementById('signGiverContainer').innerHTML = givers.length > 0 
+            ? givers.map(name => `<div style="height: 80px;"></div><div style="font-weight: bold; font-size: 13pt;">${name}</div>`).join('')
+            : `<div style="height: 80px;"></div>`;
+
+        document.getElementById('signReceiverContainer').innerHTML = receivers.length > 0 
+            ? receivers.map(name => `<div style="height: 80px;"></div><div style="font-weight: bold; font-size: 13pt;">${name}</div>`).join('')
+            : `<div style="height: 80px;"></div>`;
+    }
+
+    function updateSTT() {
+        document.querySelectorAll('#assetBody tr').forEach((row, index) => { 
+            row.querySelector('.stt').innerText = index + 1; 
+        });
+    }
+
+    function addRow() {
+        const tbody = document.getElementById('assetBody');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="stt text-center"></td>
+            <td><input type="text" class="asset-name" style="width: 95%; border: none;"></td>
+            <td class="text-center"><input type="number" class="asset-qty" style="width: 80%; border: none; text-align: center;"></td>
+            <td class="text-center"><input type="text" class="asset-unit" style="width: 80%; border: none; text-align: center;"></td>
+            <td><input type="text" class="asset-note" style="width: 95%; border: none;"></td>
+            <td class="no-print text-center"><button type="button" class="btn-remove" onclick="removeRow(this)">Xóa</button></td>
+        `;
+        tbody.appendChild(tr);
+        updateSTT();
+    }
+
+    function removeRow(btn) {
+        if (document.querySelectorAll('#assetBody tr').length > 1) {
+            btn.closest('tr').remove();
+            updateSTT();
+        }
+    }
+
+    const mangso = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+    
+    function formatCurrency(input) {
+        let valueStr = input.value.replace(/\D/g, '');
+        if (valueStr === '') {
+            input.value = '';
+            document.getElementById('totalText').value = '';
+            return;
+        }
+        
+        let bigValue = BigInt(valueStr);
+        input.value = new Intl.NumberFormat('vi-VN').format(bigValue);
+        
+        if (valueStr.length > 15) {
+            document.getElementById('totalText').value = "Số tiền quá lớn.";
+        } else {
+            document.getElementById('totalText').value = docTien(parseInt(valueStr, 10));
+        }
+    }
+
+    function docHangChuc(so, daydu) {
+        let chuoi = "", chuc = Math.floor(so / 10), donvi = so % 10;
+        if (chuc > 1) {
+            chuoi = " " + mangso[chuc] + " mươi";
+            if (donvi == 1) { chuoi += " mốt"; }
+        } else if (chuc == 1) {
+            chuoi = " mười";
+            if (donvi == 1) { chuoi += " một"; }
+        } else if (daydu && donvi > 0) { chuoi = " lẻ"; }
+        if (donvi == 5 && chuc >= 1) { chuoi += " lăm"; } 
+        else if (donvi > 1 || (donvi == 1 && chuc == 0)) { chuoi += " " + mangso[donvi]; }
+        return chuoi;
+    }
+
+    function docBlock(so, daydu) {
+        let chuoi = "", tram = Math.floor(so / 100);
+        so = so % 100;
+        if (daydu || tram > 0) {
+            chuoi = " " + mangso[tram] + " trăm";
+            chuoi += docHangChuc(so, true);
+        } else {
+            chuoi = docHangChuc(so, false);
+        }
+        return chuoi;
+    }
+
+    function docHangTrieu(so, daydu) {
+        let chuoi = "", trieu = Math.floor(so / 1000000);
+        so = so % 1000000;
+        if (trieu > 0) { chuoi = docBlock(trieu, daydu) + " triệu"; daydu = true; }
+        let ngan = Math.floor(so / 1000);
+        so = so % 1000;
+        if (ngan > 0) { chuoi += docBlock(ngan, daydu) + " nghìn"; daydu = true; }
+        if (so > 0) { chuoi += docBlock(so, daydu); }
+        return chuoi;
+    }
+
+    function docTien(so) {
+        if (so == 0) return "Không đồng";
+        let chuoi = "", hauto = "", ty;
+        let originalSo = so; 
+        
+        do {
+            ty = so % 1000000000;
+            so = Math.floor(so / 1000000000);
+            if (so > 0) { chuoi = docHangTrieu(ty, true) + hauto + chuoi; } 
+            else { chuoi = docHangTrieu(ty, false) + hauto + chuoi; }
+            hauto = " tỷ";
+        } while (so > 0);
+        
+        chuoi = chuoi.trim();
+        let suffix = (originalSo % 1000 === 0) ? " đồng chẵn." : " đồng.";
+        return chuoi.charAt(0).toUpperCase() + chuoi.slice(1) + suffix;
+    }
+
+    function submitData() {
+        const btn = document.getElementById('submitBtn');
+        btn.innerText = 'Đang lưu...';
+        btn.disabled = true;
+
+        let assetsSummary = "";
+        document.querySelectorAll('#assetBody tr').forEach((row, index) => {
+            const name = row.querySelector('.asset-name').value;
+            const qty = row.querySelector('.asset-qty').value;
+            const unit = row.querySelector('.asset-unit').value;
+            const note = row.querySelector('.asset-note').value;
+            assetsSummary += `${index + 1}. ${name} (SL: ${qty} ${unit}) - Ghi chú: ${note}\n`;
+        });
+
+        const givers = Array.from(document.querySelectorAll('.giver-name')).map(input => input.value).filter(val => val.trim() !== '');
+        const receivers = Array.from(document.querySelectorAll('.receiver-name')).map(input => input.value).filter(val => val.trim() !== '');
+
+        const payload = {
+            docNumber: document.getElementById('docNumber').value,
+            date: dateInput.value,
+            giverName: givers.length > 0 ? givers.join(', ') : "",
+            receiverName: receivers.length > 0 ? receivers.join(', ') : "",
+            assetsSummary: assetsSummary,
+            totalNum: document.getElementById('totalNum').value,
+            totalText: document.getElementById('totalText').value
+        };
+
+        // --- CODE MỚI DÙNG FETCH API THAY THẾ CHO GOOGLE.SCRIPT.RUN ---
+        const API_URL = "https://script.google.com/macros/s/AKfycbzJARso-HssEoSGf70vLpPNH42A64LZLneS9uTmc8KEZqyhZ3Wx8AJaXoSXJXlonUYE/exec"; 
+
+        fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'processHandoverData', payload: payload })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if(result.success) {
+                alert('Đã lưu dữ liệu vào Google Sheets thành công!');
+            } else {
+                alert('Lỗi khi lưu: ' + result.error);
+            }
+        })
+        .catch(error => {
+            alert('Lỗi kết nối Server: ' + error);
+        })
+        .finally(() => {
+            btn.innerText = '💾 Lưu Dữ Liệu';
+            btn.disabled = false;
+        });
+    }
+</script>
+</body>
+</html>
