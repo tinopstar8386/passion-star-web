@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root { --bg-color: #f8fafc; --card-bg: #ffffff; --border-color: #cbd5e1; --text-main: #0f172a; --table-header: #f1f5f9; --row-hover: #e2e8f0; }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0;}
+    
+    button { transition: transform 0.1s ease; outline: none; border: none; cursor: pointer;}
+    button:active { transform: scale(0.92); }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;}
+    .toolbar h2 { margin: 0; font-size: 1.25rem; font-weight: 800; color: #3b82f6; text-transform: uppercase;}
+    
+    .table-container { max-height: 75vh; overflow-y: auto; overflow-x: auto; background: var(--card-bg); border-radius: 12px; margin: 0 30px 100px 30px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 0;}
+    
+    table { border-collapse: separate; border-spacing: 0; width: max-content; font-size: 0.85rem; text-align: center; margin: 0 auto; background: var(--card-bg); border-top: 1px solid var(--border-color); border-left: 1px solid var(--border-color); }
+    th, td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); height: 46px; vertical-align: middle; padding: 4px; }
+    
+    .header-row-1 th { position: sticky; top: 0; z-index: 10; background-color: var(--table-header); height: 60px; box-sizing: border-box; padding: 8px; font-weight: 700; line-height: 1.3; }
+    .header-row-2 th { position: sticky; top: 59px; z-index: 10; background-color: var(--table-header); height: 50px; box-sizing: border-box; padding: 8px; font-weight: 700; line-height: 1.3; }
+    
+    tbody tr:hover td { background-color: var(--row-hover); }
+
+    .group-cell { font-weight: 800; text-transform: uppercase; width: 110px; background: var(--card-bg); position: sticky; left: 0; z-index: 5;}
+    .name-cell { text-align: center !important; padding: 4px 10px; width: 190px; font-weight: 700; white-space: nowrap; background: var(--card-bg); position: sticky; left: 110px; z-index: 5; border-right: 2px solid var(--border-color);}
+    
+    .header-row-1 .group-cell, .header-row-1 .name-cell { z-index: 30 !important; }
+
+    .delete-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 0.8rem; opacity: 0.3; transition: 0.2s; }
+    .delete-btn:hover { opacity: 1; transform: translateY(-50%) scale(1.3); }
+    body.export-mode .delete-btn { display: none !important; }
+    
+    .judge-1 { background-color: #e0f2fe; color: #0284c7; }
+    .judge-2 { background-color: #fef08a; color: #a16207; }
+    
+    /* MC Mode Styles */
+    body.mc-mode .judge-2 { display: none !important; }
+    body.mc-mode .hide-mc { display: none !important; }
+    body.mc-mode .admin-only { display: none !important; }
+    body.mc-mode .delete-btn { display: none !important; }
+
+    .ls-col { background-color: #f3e8ff; color: #7e22ce; cursor: pointer; transition: 0.2s; user-select: none; }
+    .ls-col:hover { background-color: #e9d5ff; }
+    
+    .score-input { width: 45px; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; text-align: center; font-weight: 700; font-family: 'Inter'; outline: none; font-size: 0.9rem; background: transparent;}
+    .score-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+    
+    .total-cell, .result-cell { font-weight: 800; font-size: 1.1rem; color: #3b82f6; cursor: pointer; transition: 0.2s; }
+    .total-cell:hover, .result-cell:hover { background: #eff6ff; }
+    
+    .pass-badge, .fail-badge { color: white; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem; display: inline-block; line-height: 1.2; text-align: center; white-space: nowrap; }
+    .pass-badge { background: #10b981; } .fail-badge { background: #ef4444; }
+
+    .vip-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 800; margin-left: 8px; color: white; text-transform: uppercase; display: inline-block;}
+    .badge-bnart { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
+    .badge-beternal { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+    .badge-astrax { background: linear-gradient(135deg, #06b6d4 0%, #0e7490 100%); }
+    .badge-fashion { background: linear-gradient(135deg, #475569 0%, #1e293b 100%); } 
+    .badge-angelik { background: linear-gradient(135deg, #f472b6 0%, #db2777 100%); } 
+    .badge-bee { background: linear-gradient(135deg, #fda4af 0%, #f43f5e 100%); } 
+
+    .cn-text { display: none; font-weight: 500; font-size: 0.65rem; color: #64748b; margin-top: 3px;}
+    .badge-cn { display: none; }
+    
+    body.export-mode .cn-text { display: block; }
+    body.export-mode .badge-cn { display: inline; font-size: 0.65rem; font-weight: 500; }
+    
+    body.export-mode .table-container { max-height: none !important; overflow: visible !important; margin: 0 !important; border: none !important; box-shadow: none !important; padding: 30px !important; background: #ffffff !important; }
+    body.export-mode .score-input { border: none !important; padding: 0 !important; pointer-events: none; font-size: 1.05rem; color: #0f172a; }
+    body.export-mode .score-input::-webkit-outer-spin-button, body.export-mode .score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    body.export-mode ::-webkit-scrollbar { display: none; }
+    body.export-mode .group-cell, body.export-mode .name-cell { position: static !important; }
+    
+    body.export-compact .judge-1, body.export-compact .judge-2, body.export-compact .score-col { display: none !important; }
+
+    #actionBar { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; padding: 15px 30px; box-shadow: 0 -10px 15px -3px rgba(0,0,0,0.1); display: flex; justify-content: flex-end; align-items: center; z-index: 100; border-top: 2px solid #3b82f6;}
+    .btn-ok { background: #3b82f6; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 700; font-size: 1rem;}
+    .btn-cancel { background: #e2e8f0; color: #475569; padding: 10px 24px; border-radius: 8px; font-weight: 700; font-size: 1rem; }
+
+    #toast { position: fixed; top: 20px; left: 50%; transform: translate(-50%, -20px); background: #10b981; color: white; padding: 12px 25px; border-radius: 8px; font-weight: 700; opacity: 0; visibility: hidden; transition: all 0.3s; z-index: 9999;}
+    #toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+    #toast.error { background: #ef4444; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1001; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s ease;}
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal-box { background: var(--card-bg); width: 400px; padding: 25px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); text-align: left;}
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;}
+    
+    .form-input { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 5px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h2>📝 Bảng Điểm Tiếng Anh Idol</h2>
+    <div style="display: flex; gap: 8px;">
+      <button class="admin-only" style="padding: 8px 16px; background: #f59e0b; color: white; border-radius: 8px; font-weight: 700;" onclick="openLinkModal()">🔗 Tạo Link MC</button>
+      <button class="admin-only" style="padding: 8px 16px; background: #8b5cf6; color: white; border-radius: 8px; font-weight: 700;" onclick="openAddIdolModal()">➕ Thêm Idol</button>
+      <button class="admin-only" style="padding: 8px 16px; background: #ef4444; color: white; border-radius: 8px; font-weight: 700;" onclick="openClearAllModal()">🗑️ Làm Mới Tháng</button>
+      <button class="admin-only" style="padding: 8px 16px; background: #10b981; color: white; border-radius: 8px; font-weight: 700;" onclick="openExportModal()">📸 Xuất Ảnh</button>
+      <button style="padding: 8px 16px; background: #e2e8f0; color: #475569; border-radius: 8px; font-weight: 700;" onclick="refreshData()">🔄 Tải lại DS</button>
+    </div>
+  </div>
+
+  <div class="table-container" id="captureArea">
+    <div id="exportHeader" style="display: none; text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #3b82f6; margin: 0; font-size: 1.6rem; text-transform: uppercase;">Bảng Điểm Tiếng Anh Idol</h1>
+        <h2 style="color: #64748b; margin: 5px 0 0 0; font-size: 1.2rem; font-weight: 600;">偶像英语测试成绩表</h2>
+        <div id="exportDateLabel" style="margin-top: 5px; font-weight: 600; color: #0f172a;"></div>
+    </div>
+
+    <table id="scoreTable">
+      <thead>
+        <tr class="header-row-1">
+          <th rowspan="2" class="group-cell">TEAM<br><span class="cn-text">群组</span></th>
+          <th rowspan="2" class="name-cell">IDOL<br><span class="cn-text">姓名</span></th>
+          <th colspan="6" class="judge-1">NGƯỜI CHẤM 1 (MC)<br><span class="cn-text" style="font-size:0.75rem;">评委 1 (MC)</span></th>
+          <th colspan="6" class="judge-2">NGƯỜI CHẤM 2 (Tino)<br><span class="cn-text" style="font-size:0.75rem;">评委 2 (Tino)</span></th>
+          <th rowspan="2" class="ls-col hide-mc">ĐIỂM LIVESTREAM<br><span class="cn-text" style="font-size:0.7rem;">直播评分</span></th>
+          <th rowspan="2" class="hide-mc">TỔNG ĐIỂM<br><span class="cn-text" style="font-size:0.7rem;">总分</span></th>
+          <th rowspan="2" class="hide-mc">KẾT QUẢ<br><span class="cn-text" style="font-size:0.7rem;">结果</span></th>
+        </tr>
+        <tr class="header-row-2">
+          <th class="judge-1">Phát âm<br><span class="cn-text">发音 (20)</span></th><th class="judge-1">Diễn đạt<br><span class="cn-text">表达 (20)</span></th><th class="judge-1">Câu từ<br><span class="cn-text">句型 (20)</span></th>
+          <th class="judge-1">Ứng biến<br><span class="cn-text">应变 (20)</span></th><th class="judge-1">Ngữ pháp<br><span class="cn-text">语法 (10)</span></th><th class="judge-1">Từ vựng<br><span class="cn-text">词汇 (10)</span></th>
+          <th class="judge-2">Phát âm<br><span class="cn-text">发音 (20)</span></th><th class="judge-2">Diễn đạt<br><span class="cn-text">表达 (20)</span></th><th class="judge-2">Câu từ<br><span class="cn-text">句型 (20)</span></th>
+          <th class="judge-2">Ứng biến<br><span class="cn-text">应变 (20)</span></th><th class="judge-2">Ngữ pháp<br><span class="cn-text">语法 (10)</span></th><th class="judge-2">Từ vựng<br><span class="cn-text">词汇 (10)</span></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  
+  <div id="actionBar">
+    <button class="btn-ok" onclick="submitScores()" id="btnSubmit">💾 Lưu Bảng Điểm</button>
+  </div>
+
+  <div id="toast">Thông báo</div>
+
+  <div class="modal-overlay admin-only" id="addIdolModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0; color: #8b5cf6;">➕ Thêm Idol & Nhóm Mới</h3>
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Chọn Nhóm / Team:</label>
+        <select id="newIdolTeam" class="form-input" onchange="checkCustomTeam()"></select>
+        <input type="text" id="newIdolTeamCustom" class="form-input" placeholder="Nhập tên nhóm mới..." style="display:none; margin-top:8px;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Tên Idol:</label>
+        <input type="text" id="newIdolName" class="form-input" placeholder="Ví dụ: Sunny">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeAddIdolModal()">Hủy</button>
+        <button class="btn-ok" onclick="submitNewIdol()" style="background:#10b981;">Lưu Lên Mạng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay admin-only" id="deleteIdolModal">
+    <div class="modal-box" style="width: 320px; text-align: center;">
+      <h3 style="margin-top:0; color: #ef4444;">⚠️ Xóa Idol</h3>
+      <p style="font-size: 0.9rem; color: #475569;">Bạn có chắc chắn muốn xóa <b><span id="deleteIdolNameDisplay"></span></b> khỏi danh sách chấm điểm?</p>
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+        <button class="btn-cancel" style="width: 100%;" onclick="closeDeleteIdolModal()">Hủy</button>
+        <button style="background: #ef4444; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; width: 100%;" onclick="executeDeleteIdol()">Xóa Ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay admin-only" id="clearAllModal">
+    <div class="modal-box" style="width: 350px; text-align: center;">
+      <h3 style="margin-top:0; color: #ef4444;">⚠️ Xóa Toàn Bộ Điểm</h3>
+      <p style="font-size: 0.9rem; color: #475569;">Bạn có chắc chắn muốn xóa sạch điểm để làm tháng mới không?<br><b>(Lưu ý: Dữ liệu trong sheet DiemTiengAnh sẽ bị xóa sạch, hãy sao chép (Duplicate) Sheet nếu cần lưu trữ lịch sử).</b></p>
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+        <button class="btn-cancel" style="width: 100%;" onclick="closeClearAllModal()">Hủy</button>
+        <button style="background: #ef4444; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; width: 100%;" onclick="executeClearAll()">Xóa Sạch</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay admin-only" id="exportConfigModal">
+    <div class="modal-box" style="width: 480px;">
+      <h3 style="margin-top:0; color: #10b981;">📸 Tùy Chọn Xuất Ảnh</h3>
+      <div style="margin-bottom: 15px;">
+        <label style="cursor: pointer; font-weight: 600;"><input type="radio" name="exportType" value="full" checked> 📋 Xuất toàn bộ bảng (Đầy đủ 12 cột điểm)</label><br>
+        <label style="cursor: pointer; font-weight: 600; margin-top: 8px; display: inline-block;"><input type="radio" name="exportType" value="compact"> ✂️ Xuất Rút Gọn (Chỉ Tên, LS & Kết Quả Tổng)</label>
+      </div>
+      <div style="margin-top: 15px; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; max-height: 250px; overflow-y: auto; background: #f8fafc;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px;">
+             <span style="font-size: 0.8rem; font-weight: 800; color: #475569;">CHỌN NGƯỜI CẦN XUẤT:</span>
+             <div>
+               <a href="javascript:void(0)" onclick="selectAllExport(true)" style="color: #3b82f6; font-size: 0.8rem; font-weight: 600; margin-right: 10px; text-decoration: none;">Chọn tất cả</a>
+               <a href="javascript:void(0)" onclick="selectAllExport(false)" style="color: #ef4444; font-size: 0.8rem; font-weight: 600; text-decoration: none;">Bỏ chọn</a>
+             </div>
+          </div>
+          <div id="exportPeopleList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeExportConfig()">Hủy</button>
+        <button class="btn-ok" onclick="executeExport()">📸 Chụp Ảnh Ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay admin-only" id="randomizerModal">
+    <div class="modal-box" style="width: 320px; text-align: center;">
+      <h3 style="margin-top:0; color: #f59e0b;" id="randomizerTitle">🔮 Phù phép điểm</h3>
+      <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Hệ thống tự rải điểm Đậu hoặc Rớt ngẫu nhiên:</p>
+      <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+        <button style="padding: 12px 20px; background: #10b981; color: white; border-radius: 8px; font-weight: 700; width: 100%;" onclick="generateRandomScores(true)">Đậu (PASS)</button>
+        <button style="padding: 12px 20px; background: #ef4444; color: white; border-radius: 8px; font-weight: 700; width: 100%;" onclick="generateRandomScores(false)">Rớt (FAIL)</button>
+      </div>
+      <div style="border-top: 1px dashed #cbd5e1; padding-top: 15px; text-align: left;">
+        <label style="font-size: 0.85rem; font-weight: 700; color: #475569;">🎯 Hoặc chia tự động theo đúng số điểm đích:</label>
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <input type="number" id="targetScoreInput" placeholder="Ví dụ: 72" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-weight: 600;">
+          <button style="padding: 10px 15px; background: #3b82f6; color: white; border-radius: 8px; font-weight: 700; white-space: nowrap;" onclick="generateExactScore()">Chia điểm</button>
+        </div>
+      </div>
+      <button class="btn-cancel" style="margin-top: 20px; width: 100%;" onclick="closeRandomizerModal()">Hủy bỏ thao tác</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay admin-only" id="linkGeneratorModal">
+    <div class="modal-box" style="width: 480px;">
+      <h3 style="margin-top:0; color: #f59e0b;">🔗 Tạo Link Cho MC</h3>
+      <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px;">Chọn các Idol cần MC chấm điểm ca này:</p>
+      <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; max-height: 250px; overflow-y: auto; background: #f8fafc; margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px;">
+             <span style="font-size: 0.8rem; font-weight: 800; color: #475569;">DANH SÁCH IDOL:</span>
+             <div>
+               <a href="javascript:void(0)" onclick="selectAllLink(true)" style="color: #3b82f6; font-size: 0.8rem; font-weight: 600; margin-right: 10px; text-decoration: none;">Chọn tất cả</a>
+               <a href="javascript:void(0)" onclick="selectAllLink(false)" style="color: #ef4444; font-size: 0.8rem; font-weight: 600; text-decoration: none;">Bỏ chọn</a>
+             </div>
+          </div>
+          <div id="linkIdolList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;"></div>
+      </div>
+      <input type="text" id="generatedLink" class="form-input" readonly placeholder="Link sẽ hiển thị ở đây..." style="background: #f1f5f9; font-weight: 600;">
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeLinkModal()">Đóng</button>
+        <button class="btn-ok" onclick="generateLink()" style="background: #3b82f6;">Tạo Link</button>
+        <button class="btn-ok" onclick="copyGeneratedLink()" style="background: #10b981;">📋 Copy Link</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- THAY LINK API CỦA BẠN VÀO ĐÂY ---
+    const API_URL = "https://script.google.com/macros/s/AKfycbzqKUHiYTDAxgIrNQyWjH0R4k5YmMCMMHQxV2NHP3L0ecmSQAG3fYO6EhCkU4vO6DA0/exec";
+
+    function runScript(action, payload = {}) {
+      return fetch(API_URL, {
+        method: 'POST',
+        redirect: 'follow', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, payload: payload })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === 'error') throw new Error(res.message);
+        return res.data;
+      });
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const SELECTED_IDOLS_PARAM = urlParams.get('idols') || "";
+    const ROLE_PARAM = urlParams.get('role') || "";
+    
+    let idolsData = [];
+    let scoresMap = {};
+    let isSyncing = false;
+    let currentRowForRandom = null;
+    let idolToDelete = null;
+    
+    // Tự động nhận diện Domain Vercel/GitHub Pages hiện tại của bạn
+    let appUrl = window.location.origin + window.location.pathname;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if(ROLE_PARAM === 'mc') document.body.classList.add('mc-mode');
+      refreshData();
+    });
+
+    function refreshData() {
+      if(isSyncing) return;
+      isSyncing = true;
+      showToast("⏳ Đang tải danh sách...", true); 
+      runScript('getInitialData')
+        .then(res => { 
+          if(res.success) { 
+              idolsData = res.data; 
+              scoresMap = res.scores || {}; 
+              renderTable(); 
+              showToast("✅ Đã tải xong!"); 
+          } else {
+              showToast("Lỗi: " + res.message, false, true);
+          }
+          isSyncing = false;
+        })
+        .catch(err => { 
+          showToast("Lỗi kết nối!", false, true); 
+          isSyncing = false; 
+        });
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+      
+      let filterNames = SELECTED_IDOLS_PARAM && SELECTED_IDOLS_PARAM !== "undefined" ? decodeURIComponent(SELECTED_IDOLS_PARAM).split(',') : [];
+
+      let teams = {};
+      idolsData.forEach(idol => {
+        if (filterNames.length > 0 && !filterNames.includes(idol.name)) return;
+
+        let teamName = idol.team.toUpperCase();
+        if(!teams[teamName]) teams[teamName] = [];
+        teams[teamName].push(idol.name);
+      });
+
+      let tbodyHTML = "";
+      for (let team in teams) {
+        teams[team].forEach((idolName, idx) => {
+          
+          let savedRow = scoresMap[idolName];
+          let scoresArr = Array(12).fill("");
+          let lsVal = "";
+          
+          if(savedRow) {
+             for(let k=0; k<12; k++) {
+                 scoresArr[k] = savedRow[3+k] !== undefined && savedRow[3+k] !== "" ? savedRow[3+k] : "";
+             }
+             let possibleCols = [16, 15, 17, 18];
+             for(let c of possibleCols) {
+                 if(savedRow[c] === "PASS" || savedRow[c] === "FAILED") {
+                     lsVal = savedRow[c]; break;
+                 }
+             }
+          }
+
+          let badgeClass = "";
+          if (team.includes("ANGELIK")) badgeClass = "badge-angelik";
+          else if (team.includes("FASHION")) badgeClass = "badge-fashion";
+          else if (team.includes("B.ETERNAL") || team.includes("BETERNAL")) badgeClass = "badge-beternal";
+          else if (team.includes("BNART")) badgeClass = "badge-bnart";
+          else if (team.includes("ASTRA")) badgeClass = "badge-astrax";
+          else if (team.includes("BEE")) badgeClass = "badge-bee";
+          
+          let badgeHTML = badgeClass ? `<br><span class="vip-badge ${badgeClass}">${team}</span>` : "";
+
+          let tr = `<tr data-team="${team}" data-name="${idolName}">`;
+          if (idx === 0) tr += `<td rowspan="${teams[team].length}" class="group-cell">${team}</td>`;
+          
+          tr += `<td class="name-cell" style="position: sticky; left: 110px;">
+                    ${idolName} ${badgeHTML}
+                    <span class="delete-btn" onclick="confirmDeleteIdol('${team}', '${idolName}')" title="Xóa Idol này">❌</span>
+                 </td>`;
+          
+          for(let i=0; i<12; i++) {
+            let maxVal = (i === 4 || i === 5 || i === 10 || i === 11) ? 10 : 20; 
+            let jClass = i < 6 ? "judge-1" : "judge-2";
+            tr += `<td class="score-col ${jClass}"><input type="number" min="0" max="${maxVal}" class="score-input" oninput="calculateRow(this)" value="${scoresArr[i]}"></td>`;
+          }
+          
+          let lsHtml = '-';
+          if(lsVal === "PASS") lsHtml = '<span class="pass-badge">PASS<span class="badge-cn"><br>合格</span></span>';
+          if(lsVal === "FAILED") lsHtml = '<span class="fail-badge">FAILED<span class="badge-cn"><br>不合格</span></span>';
+
+          tr += `<td class="ls-col hide-mc" onclick="toggleLS(this)" title="Click để chọn Kết quả Livestream">
+                  <span class="ls-status" data-val="${lsVal}">${lsHtml}</span>
+                 </td>`;
+
+          tr += `<td class="total-cell hide-mc" ondblclick="showRandomizerModal(this)" title="Nhấp đúp để Phù phép">0</td>`;
+          tr += `<td class="result-cell hide-mc" ondblclick="showRandomizerModal(this)" title="Nhấp đúp để Phù phép"><span class="fail-badge">FAILED<span class="badge-cn"><br>不合格</span></span></td>`;
+          tr += `</tr>`;
+          
+          tbodyHTML += tr;
+        });
+      }
+      tbody.innerHTML = tbodyHTML;
+      
+      let rows = tbody.querySelectorAll("tr");
+      rows.forEach(r => {
+          let firstInput = r.querySelector(".score-input");
+          if(firstInput && firstInput.value !== "") calculateRow(firstInput);
+      });
+    }
+
+    function calculateRow(inputElement) {
+      if (inputElement.value !== "") {
+        let parsedVal = parseInt(inputElement.value, 10);
+        let max = parseInt(inputElement.getAttribute("max"));
+        if (parsedVal > max) parsedVal = max;
+        if (parsedVal < 0) parsedVal = 0;
+        inputElement.value = parsedVal;
+      }
+
+      let row = inputElement.closest("tr");
+      let inputs = row.querySelectorAll(".score-input");
+      let sumJ1 = 0, sumJ2 = 0, hasData = false;
+
+      inputs.forEach((inp, index) => {
+        let val = parseFloat(inp.value) || 0;
+        if(inp.value !== "") hasData = true;
+        if (index < 6) sumJ1 += val; else sumJ2 += val;
+      });
+
+      let totalCell = row.querySelector(".total-cell");
+      let resultCell = row.querySelector(".result-cell");
+
+      if (!hasData) {
+        totalCell.textContent = "0";
+        resultCell.innerHTML = `<span class="fail-badge">FAILED<span class="badge-cn"><br>不合格</span></span>`;
+        return;
+      }
+
+      let finalScore = (sumJ1 + sumJ2) / 2;
+      totalCell.textContent = finalScore.toFixed(1).replace(".0", ""); 
+      
+      if (finalScore >= 70) resultCell.innerHTML = `<span class="pass-badge">PASS<span class="badge-cn"><br>合格</span></span>`;
+      else resultCell.innerHTML = `<span class="fail-badge">FAILED<span class="badge-cn"><br>不合格</span></span>`;
+    }
+
+    function toggleLS(tdElement) {
+      let span = tdElement.querySelector('.ls-status');
+      let currentVal = span.getAttribute('data-val');
+      if (currentVal === "") {
+         span.setAttribute('data-val', 'PASS');
+         span.innerHTML = '<span class="pass-badge">PASS<span class="badge-cn"><br>合格</span></span>';
+      } else if (currentVal === "PASS") {
+         span.setAttribute('data-val', 'FAILED');
+         span.innerHTML = '<span class="fail-badge">FAILED<span class="badge-cn"><br>不合格</span></span>';
+      } else {
+         span.setAttribute('data-val', '');
+         span.innerHTML = '-';
+      }
+    }
+
+    function openAddIdolModal() {
+      let teamSelect = document.getElementById('newIdolTeam');
+      let uniqueTeams = [...new Set(idolsData.map(i => i.team))];
+      let opts = uniqueTeams.map(t => `<option value="${t}">${t}</option>`).join('');
+      opts += `<option value="CUSTOM">➕ Thêm nhóm mới...</option>`;
+      teamSelect.innerHTML = opts;
+      checkCustomTeam();
+      document.getElementById('newIdolName').value = '';
+      document.getElementById('addIdolModal').classList.add('active');
+    }
+    function checkCustomTeam() { document.getElementById('newIdolTeamCustom').style.display = (document.getElementById('newIdolTeam').value === 'CUSTOM') ? 'block' : 'none'; }
+    function closeAddIdolModal() { document.getElementById('addIdolModal').classList.remove('active'); }
+    
+    function submitNewIdol() {
+      let team = document.getElementById('newIdolTeam').value;
+      if (team === 'CUSTOM') team = document.getElementById('newIdolTeamCustom').value.trim();
+      let name = document.getElementById('newIdolName').value.trim();
+      
+      if(!team || !name) return showToast("⚠️ Vui lòng nhập đủ Nhóm và Tên!", false, true);
+      closeAddIdolModal(); showToast("⏳ Đang lưu dữ liệu...", true);
+      
+      runScript('addIdol', { team: team, name: name })
+        .then(res => {
+            if(res === "SUCCESS") { showToast("✅ Thêm thành công!"); refreshData(); } 
+            else showToast(res, false, true);
+        })
+        .catch(err => {
+            showToast("Lỗi mạng!", false, true);
+        });
+    }
+
+    function confirmDeleteIdol(team, name) {
+      idolToDelete = { team: team, name: name };
+      document.getElementById('deleteIdolNameDisplay').innerText = name;
+      document.getElementById('deleteIdolModal').classList.add('active');
+    }
+    function closeDeleteIdolModal() {
+      idolToDelete = null; document.getElementById('deleteIdolModal').classList.remove('active');
+    }
+    
+    function executeDeleteIdol() {
+      if(!idolToDelete) return;
+      let team = idolToDelete.team; let name = idolToDelete.name;
+      closeDeleteIdolModal(); showToast(`⏳ Đang xóa ${name}...`, true);
+      isSyncing = true;
+      
+      runScript('deleteIdol', { team: team, name: name })
+        .then(res => {
+            isSyncing = false;
+            if(res === "SUCCESS") { showToast(`✅ Đã xóa ${name} khỏi danh sách!`); refreshData(); } 
+            else showToast(res, false, true);
+        })
+        .catch(err => {
+            isSyncing = false;
+            showToast("Lỗi mạng!", false, true);
+        });
+    }
+
+    function openClearAllModal() { document.getElementById('clearAllModal').classList.add('active'); }
+    function closeClearAllModal() { document.getElementById('clearAllModal').classList.remove('active'); }
+    
+    function executeClearAll() {
+      closeClearAllModal();
+      showToast("⏳ Đang xóa toàn bộ điểm trong Sheet...", true);
+      isSyncing = true;
+      
+      runScript('clearAllScoresDB')
+        .then(res => {
+            isSyncing = false;
+            if (res === "SUCCESS") { 
+                showToast("✅ Đã làm mới tháng thành công!"); 
+                refreshData(); 
+            } else { showToast(res, false, true); }
+        })
+        .catch(err => {
+            isSyncing = false;
+            showToast("Lỗi mạng!", false, true);
+        });
+    }
+
+    function showRandomizerModal(tdElement) {
+      currentRowForRandom = tdElement.closest("tr");
+      document.getElementById('randomizerTitle').innerText = "🔮 Phù phép: " + currentRowForRandom.getAttribute("data-name");
+      document.getElementById('targetScoreInput').value = '';
+      document.getElementById('randomizerModal').classList.add('active');
+    }
+    function closeRandomizerModal() { document.getElementById('randomizerModal').classList.remove('active'); }
+
+    function applyLSRandom(isPass) {
+      let span = currentRowForRandom.querySelector(".ls-status");
+      if(isPass) { span.setAttribute('data-val', 'PASS'); span.innerHTML = '<span class="pass-badge">PASS<span class="badge-cn"><br>合格</span></span>'; } 
+      else { span.setAttribute('data-val', 'FAILED'); span.innerHTML = '<span class="fail-badge">FAILED<span class="badge-cn"><br>不合格</span></span>'; }
+    }
+
+    function generateRandomScores(isPass) {
+      if(!currentRowForRandom) return;
+      let inputs = currentRowForRandom.querySelectorAll(".score-input");
+      inputs.forEach((inp, idx) => {
+        let max = (idx === 4 || idx === 5 || idx === 10 || idx === 11) ? 10 : 20;
+        let val = 0;
+        if(isPass) { let minVal = Math.floor(max * 0.75); val = Math.floor(Math.random() * (max - minVal + 1)) + minVal; } 
+        else { let minVal = Math.floor(max * 0.2); let maxFail = Math.floor(max * 0.65); val = Math.floor(Math.random() * (maxFail - minVal + 1)) + minVal; }
+        inp.value = val;
+      });
+      applyLSRandom(isPass); calculateRow(inputs[0]); closeRandomizerModal();
+    }
+
+    function generateExactScore() {
+      if(!currentRowForRandom) return;
+      let targetInput = document.getElementById('targetScoreInput').value;
+      if(targetInput === "") return showToast("⚠️ Vui lòng nhập điểm!", false, true);
+      
+      let targetAverage = parseFloat(targetInput);
+      if(targetAverage < 0 || targetAverage > 100) return showToast("⚠️ Điểm chỉ được từ 0 - 100", false, true);
+
+      let targetSum = Math.round(targetAverage * 2); 
+      let maxes = [20, 20, 20, 20, 10, 10, 20, 20, 20, 20, 10, 10];
+      let current = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      let ratio = targetSum / 200;
+      
+      for(let i=0; i<12; i++) {
+        let variance = (Math.random() * 0.2 - 0.1); 
+        let adjustedRatio = ratio + variance;
+        if(adjustedRatio < 0) adjustedRatio = 0; if(adjustedRatio > 1) adjustedRatio = 1;
+        current[i] = Math.floor(maxes[i] * adjustedRatio);
+      }
+      
+      let currentSum = current.reduce((a,b) => a+b, 0);
+      while (currentSum < targetSum) { let r = Math.floor(Math.random() * 12); if (current[r] < maxes[r]) { current[r]++; currentSum++; } }
+      while (currentSum > targetSum) { let r = Math.floor(Math.random() * 12); if (current[r] > 0) { current[r]--; currentSum--; } }
+      
+      let inputs = currentRowForRandom.querySelectorAll(".score-input");
+      inputs.forEach((inp, idx) => { inp.value = current[idx]; });
+      
+      applyLSRandom(targetAverage >= 70); calculateRow(inputs[0]); closeRandomizerModal();
+    }
+
+    function submitScores() {
+      if(isSyncing) return;
+      let rows = document.querySelectorAll("#tableBody tr");
+      let payload = [];
+
+      rows.forEach(row => {
+        let inputs = row.querySelectorAll(".score-input");
+        let lsStatus = row.querySelector(".ls-status").getAttribute("data-val");
+        
+        let hasValue = Array.from(inputs).some(inp => inp.value !== "") || lsStatus !== "";
+        
+        if(hasValue) {
+          payload.push({
+            team: row.getAttribute("data-team"), name: row.getAttribute("data-name"),
+            j1_phatam: inputs[0].value, j1_diendat: inputs[1].value, j1_cautu: inputs[2].value, j1_ungbien: inputs[3].value, j1_nguphap: inputs[4].value, j1_tuvung: inputs[5].value,
+            j2_phatam: inputs[6].value, j2_diendat: inputs[7].value, j2_cautu: inputs[8].value, j2_ungbien: inputs[9].value, j2_nguphap: inputs[10].value, j2_tuvung: inputs[11].value,
+            total: row.querySelector(".total-cell").textContent, 
+            livestream_result: lsStatus, 
+            result: row.querySelector(".result-cell").textContent.includes("PASS") ? "PASS" : "FAILED"
+          });
+        }
+      });
+
+      if(payload.length === 0) return showToast("⚠️ Nhập ít nhất 1 dòng để lưu!", false, true);
+      isSyncing = true; document.getElementById("btnSubmit").innerText = "⏳ Đang lưu...";
+      
+      runScript('saveScores', { payloadStr: JSON.stringify(payload) })
+        .then(res => {
+            isSyncing = false; document.getElementById("btnSubmit").innerText = "💾 Lưu Bảng Điểm";
+            if (res === "SUCCESS") showToast("🎉 Đã lưu thành công!"); else showToast(res, false, true);
+        })
+        .catch(err => {
+            isSyncing = false; document.getElementById("btnSubmit").innerText = "💾 Lưu Bảng Điểm"; 
+            showToast("Lỗi mạng!", false, true);
+        });
+    }
+
+    function openExportModal() {
+      let container = document.getElementById('exportPeopleList');
+      container.innerHTML = '';
+      idolsData.forEach(idol => {
+        container.innerHTML += `<label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+            <input type="checkbox" class="export-cb" value="${idol.name}" checked>
+            <b>${idol.name}</b> <span style="color:#64748b; font-size:0.75rem">(${idol.team})</span></label>`;
+      });
+      document.getElementById('exportConfigModal').classList.add('active');
+    }
+    
+    function selectAllExport(state) { document.querySelectorAll('.export-cb').forEach(cb => cb.checked = state); }
+    function closeExportConfig() { document.getElementById('exportConfigModal').classList.remove('active'); }
+
+    function executeExport() {
+      let selected = [];
+      document.querySelectorAll('.export-cb:checked').forEach(cb => selected.push(cb.value));
+      if(selected.length === 0) return showToast("⚠️ Hãy chọn ít nhất 1 Idol để xuất!", false, true);
+      
+      let type = document.querySelector('input[name="exportType"]:checked').value;
+      closeExportConfig(); showToast("📸 Đang lấy nét ống kính...", true);
+
+      let today = new Date();
+      let prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      let pMonth = prevMonthDate.getMonth() + 1;
+      let pYear = prevMonthDate.getFullYear();
+      
+      document.getElementById('exportDateLabel').innerText = `Tháng / 月份: ${pMonth}/${pYear}`;
+
+      document.body.classList.add('export-mode');
+      if (type === 'compact') document.body.classList.add('export-compact');
+      document.getElementById('exportHeader').style.display = 'block';
+
+      let rows = document.querySelectorAll("#tableBody tr");
+      let teamsMap = {};
+      
+      rows.forEach(row => {
+         let team = row.getAttribute('data-team');
+         if(!teamsMap[team]) teamsMap[team] = { all: [], visible: [] };
+         teamsMap[team].all.push(row);
+         if(selected.includes(row.getAttribute('data-name'))) {
+             teamsMap[team].visible.push(row); row.style.display = '';
+         } else row.style.display = 'none';
+      });
+
+      for(let t in teamsMap) {
+          teamsMap[t].all.forEach(r => { let gc = r.querySelector('.group-cell'); if(gc) { r._gc = gc; r.removeChild(gc); } });
+          if(teamsMap[t].visible.length > 0) {
+              let firstVis = teamsMap[t].visible[0];
+              let gcToUse = teamsMap[t].all[0]._gc; 
+              gcToUse.rowSpan = teamsMap[t].visible.length;
+              firstVis.insertBefore(gcToUse, firstVis.firstChild);
+          }
+      }
+
+      setTimeout(() => {
+        html2canvas(document.getElementById('captureArea'), { backgroundColor: '#ffffff', scale: window.devicePixelRatio > 1 ? window.devicePixelRatio * 1.5 : 2, useCORS: true, logging: false 
+        }).then(canvas => {
+          document.body.classList.remove('export-mode', 'export-compact'); document.getElementById('exportHeader').style.display = 'none';
+          
+          for(let t in teamsMap) {
+              let teamData = teamsMap[t];
+              if(teamData.visible.length > 0) { let gc = teamData.visible[0].querySelector('.group-cell'); if(gc) teamData.visible[0].removeChild(gc); }
+              let absoluteFirst = teamData.all[0];
+              let originalGc = absoluteFirst._gc; originalGc.rowSpan = teamData.all.length;
+              absoluteFirst.insertBefore(originalGc, absoluteFirst.firstChild);
+              teamData.all.forEach(r => r.style.display = '');
+          }
+
+          let link = document.createElement('a'); 
+          link.download = `BangDiemTiengAnh_Thang_${pMonth}_${pYear}.png`; 
+          link.href = canvas.toDataURL("image/png", 1.0); 
+          link.click();
+          
+          hideToast(); showToast("✅ Tách! Xuất ảnh thành công!"); 
+        }).catch(err => { 
+          document.body.classList.remove('export-mode', 'export-compact'); document.getElementById('exportHeader').style.display = 'none';
+          rows.forEach(row => row.style.display = ''); showToast("❌ Lỗi chụp ảnh!", false, true); 
+        });
+      }, 800);
+    }
+
+    let toastTimer;
+    function hideToast() { document.getElementById('toast').classList.remove('show'); }
+    function showToast(msg, keep = false, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg; toast.className = '';
+      if (isError) toast.classList.add('error');
+      void toast.offsetWidth; toast.classList.add('show');
+      clearTimeout(toastTimer);
+      if(!keep) toastTimer = setTimeout(() => hideToast(), 3500);
+    }
+
+    function openLinkModal() {
+      let container = document.getElementById('linkIdolList');
+      container.innerHTML = '';
+      idolsData.forEach(idol => {
+        container.innerHTML += `<label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer;">
+            <input type="checkbox" class="link-cb" value="${idol.name}">
+            <b>${idol.name}</b> <span style="color:#64748b; font-size:0.75rem">(${idol.team})</span></label>`;
+      });
+      document.getElementById('generatedLink').value = '';
+      document.getElementById('linkGeneratorModal').classList.add('active');
+    }
+    
+    function selectAllLink(state) { document.querySelectorAll('.link-cb').forEach(cb => cb.checked = state); }
+    function closeLinkModal() { document.getElementById('linkGeneratorModal').classList.remove('active'); }
+    
+    function generateLink() {
+      let selected = [];
+      document.querySelectorAll('.link-cb:checked').forEach(cb => selected.push(cb.value));
+      if(selected.length === 0) return showToast("⚠️ Hãy chọn ít nhất 1 Idol!", false, true);
+      
+      document.getElementById('generatedLink').value = appUrl + "?role=mc&idols=" + encodeURIComponent(selected.join(','));
+    }
+    
+    function copyGeneratedLink() {
+      let linkInput = document.getElementById('generatedLink');
+      if(!linkInput.value) return showToast("⚠️ Vui lòng bấm Tạo Link trước!", false, true);
+      navigator.clipboard.writeText(linkInput.value).then(() => {
+          showToast("✅ Đã copy link gửi MC!");
+          closeLinkModal();
+      });
+    }
+  </script>
+</body>
+</html>
