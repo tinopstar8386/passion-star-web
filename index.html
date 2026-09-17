@@ -13,6 +13,10 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Flatpickr (Giao diện lịch xịn) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+
     <style>
         :root {
             --bg-base: #050505;
@@ -61,117 +65,86 @@
         }
 
         .ambient-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: -1;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
             background: radial-gradient(circle at 15% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
                         radial-gradient(circle at 85% 100%, rgba(139, 92, 246, 0.08) 0%, transparent 40%);
             filter: blur(60px);
         }
 
-        .container {
-            width: 100%;
-            max-width: 650px;
-            position: relative;
-            z-index: 1;
-        }
+        .container { width: 100%; max-width: 650px; position: relative; z-index: 1; }
 
         /* --- HEADER --- */
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 35px;
-            animation: fadeInDown 0.8s ease-out forwards;
-        }
-
+        .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; animation: fadeInDown 0.8s ease-out forwards; }
         .profile-section { display: flex; align-items: center; gap: 20px; }
         .avatar-wrapper { position: relative; width: 72px; height: 72px; }
         
         .avatar {
             width: 100%; height: 100%; border-radius: 20px; object-fit: cover;
-            border: 1px solid var(--border-light); box-shadow: var(--shadow-sm);
-            z-index: 2; position: relative;
+            border: 1px solid var(--border-light); box-shadow: var(--shadow-sm); z-index: 2; position: relative;
         }
-
         .avatar-wrapper::after {
-            content: ''; position: absolute; inset: -3px;
-            background: var(--grad-1); border-radius: 22px; z-index: 1;
-            filter: blur(10px); opacity: 0.6; animation: pulseGlow 4s infinite alternate;
+            content: ''; position: absolute; inset: -3px; background: var(--grad-1); border-radius: 22px; z-index: 1; filter: blur(10px); opacity: 0.6; animation: pulseGlow 4s infinite alternate;
         }
 
-        .user-info h1 {
-            font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px;
-            background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-
+        .user-info h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .user-info p { color: var(--text-secondary); font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
         
-        .badge {
-            background: rgba(99, 102, 241, 0.12); color: #818cf8;
-            padding: 3px 8px; border-radius: 8px; font-size: 11px; font-weight: 700;
-            border: 1px solid rgba(99, 102, 241, 0.25);
-        }
+        .badge { background: rgba(99, 102, 241, 0.12); color: #818cf8; padding: 3px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; border: 1px solid rgba(99, 102, 241, 0.25); }
 
-        .time-widget {
-            background: var(--bg-surface); border: 1px solid var(--border-light);
-            padding: 12px 18px; border-radius: 18px; backdrop-filter: var(--glass-blur);
-            box-shadow: var(--shadow-sm); text-align: right;
-        }
-
+        .time-widget { background: var(--bg-surface); border: 1px solid var(--border-light); padding: 12px 18px; border-radius: 18px; backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-sm); text-align: right; }
         #clock-time { font-size: 22px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
         #clock-date { font-size: 12px; color: var(--text-secondary); margin-top: 3px; font-weight: 500; }
 
         /* --- TÌM KIẾM --- */
-        .search-bar {
-            position: relative; margin-bottom: 30px;
-            animation: fadeInUp 0.8s ease-out 0.1s forwards; opacity: 0;
-        }
-
+        .search-bar { position: relative; margin-bottom: 30px; animation: fadeInUp 0.8s ease-out 0.1s forwards; opacity: 0; }
         .search-bar input {
             width: 100%; background: var(--bg-surface); border: 1px solid var(--border-light);
             padding: 16px 20px 16px 52px; border-radius: 18px; color: var(--text-primary);
-            font-size: 15px; outline: none; backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-sm);
-            transition: var(--transition-smooth);
+            font-size: 15px; outline: none; backdrop-filter: var(--glass-blur); transition: var(--transition-smooth);
         }
-
         .search-bar input:focus { border-color: rgba(99, 102, 241, 0.4); background: var(--bg-surface-hover); }
         .search-bar i { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); font-size: 17px; }
 
-        /* --- QUẢN LÝ TASK (TASK MANAGER) --- */
+        /* --- QUẢN LÝ TASK NÂNG CẤP --- */
         .task-container {
             background: var(--bg-surface); border: 1px solid var(--border-light);
-            border-radius: 20px; padding: 20px; margin-bottom: 35px;
-            backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-sm);
+            border-radius: 20px; padding: 20px; margin-bottom: 35px; backdrop-filter: var(--glass-blur);
             animation: fadeInUp 0.8s ease-out 0.2s forwards; opacity: 0;
         }
 
-        .task-input-row {
-            display: flex; gap: 10px; margin-bottom: 16px;
+        .task-input-wrapper { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .task-input-wrapper > input[type="text"] {
+            width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light);
+            padding: 14px 16px; border-radius: 14px; color: #fff; font-size: 15px; outline: none;
         }
 
-        .task-input-row input[type="text"] {
-            flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light);
-            padding: 12px 16px; border-radius: 12px; color: #fff; font-size: 14px; outline: none;
+        .task-controls { display: flex; gap: 10px; width: 100%; }
+        
+        .input-with-icon { position: relative; flex: 1; }
+        .input-with-icon i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 14px; z-index: 2; pointer-events: none;}
+        .input-with-icon input {
+            width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light);
+            padding: 12px 14px 12px 40px; border-radius: 12px; color: var(--text-secondary); font-size: 14px; outline: none; cursor: pointer;
         }
 
-        .task-input-row input[type="datetime-local"] {
+        .custom-select {
             background: rgba(0,0,0,0.3); border: 1px solid var(--border-light);
-            padding: 12px 14px; border-radius: 12px; color: var(--text-secondary); font-size: 13px; outline: none;
-            color-scheme: dark;
+            padding: 12px; border-radius: 12px; color: var(--text-secondary); font-size: 14px;
+            outline: none; cursor: pointer; min-width: 130px; appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 10px auto;
         }
+        
+        .custom-select option { background: var(--bg-card); color: #fff; }
 
-        .task-input-row button {
-            background: var(--grad-1); border: none; width: 46px; border-radius: 12px;
+        #btnAddTask {
+            background: var(--grad-1); border: none; width: 50px; border-radius: 12px;
             color: #fff; font-size: 16px; cursor: pointer; transition: transform 0.2s;
             display: flex; align-items: center; justify-content: center;
         }
-        .task-input-row button:hover { transform: scale(1.04); }
+        #btnAddTask:hover { transform: scale(1.05); }
 
-        .task-list {
-            display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto;
-        }
-
+        .task-list { display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; }
         .task-list::-webkit-scrollbar { width: 5px; }
         .task-list::-webkit-scrollbar-thumb { background: var(--border-focus); border-radius: 10px; }
 
@@ -182,44 +155,31 @@
         }
 
         .task-info { display: flex; flex-direction: column; gap: 4px; }
-        .task-name { font-size: 14px; font-weight: 600; color: #fff; }
+        .task-name { font-size: 14px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px;}
         .task-time { font-size: 12px; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
         .task-time.late { color: #f43f5e; font-weight: 600; }
+        
+        .repeat-badge { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: #cbd5e1; }
 
         .btn-done {
-            background: transparent; border: 1px solid var(--border-light);
-            color: var(--text-secondary); width: 30px; height: 30px; border-radius: 8px;
+            background: transparent; border: 1px solid var(--border-light); color: var(--text-secondary); width: 30px; height: 30px; border-radius: 8px;
             cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
         }
         .btn-done:hover { background: #10b981; color: #fff; border-color: #10b981; }
-
         .empty-task { text-align: center; color: var(--text-tertiary); font-size: 13px; padding: 12px; }
 
+        /* Override Flatpickr Dark mode để đồng bộ Glassmorphism */
+        .flatpickr-calendar { background: #1C2331 !important; box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important; border: 1px solid var(--border-light) !important; border-radius: 16px !important; }
+
         /* --- APP CARDS --- */
-        .category-title {
-            font-size: 13px; text-transform: uppercase; font-weight: 700; color: var(--text-secondary);
-            letter-spacing: 1.2px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
-            animation: fadeInUp 0.8s ease-out 0.3s forwards; opacity: 0;
-        }
-        
+        .category-title { font-size: 13px; text-transform: uppercase; font-weight: 700; color: var(--text-secondary); letter-spacing: 1.2px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; animation: fadeInUp 0.8s ease-out 0.3s forwards; opacity: 0; }
         .category-title::after { content: ""; flex-grow: 1; height: 1px; background: var(--border-light); }
 
-        .links-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 35px;
-            animation: fadeInUp 0.8s ease-out 0.4s forwards; opacity: 0;
-        }
-
-        .app-card {
-            background: var(--bg-surface); border: 1px solid var(--border-light);
-            border-radius: 20px; padding: 20px; text-decoration: none; display: flex; flex-direction: column; gap: 14px;
-            transition: var(--transition-smooth); position: relative; overflow: hidden; backdrop-filter: var(--glass-blur);
-        }
+        .links-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 35px; animation: fadeInUp 0.8s ease-out 0.4s forwards; opacity: 0; }
+        .app-card { background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 20px; padding: 20px; text-decoration: none; display: flex; flex-direction: column; gap: 14px; transition: var(--transition-smooth); position: relative; overflow: hidden; backdrop-filter: var(--glass-blur); }
         .app-card:hover { transform: translateY(-4px); background: var(--bg-surface-hover); border-color: var(--border-focus); box-shadow: var(--shadow-md); }
 
-        .icon-box {
-            width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-            font-size: 18px; color: white; transition: var(--transition-smooth);
-        }
+        .icon-box { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; transition: var(--transition-smooth); }
         .app-card:hover .icon-box { transform: scale(1.08) rotate(4deg); }
 
         .bg-grad-1 { background: var(--grad-1); } .bg-grad-2 { background: var(--grad-2); }
@@ -245,8 +205,9 @@
             .links-grid { grid-template-columns: 1fr; }
             .header-container { flex-direction: column; gap: 20px; text-align: center; }
             .profile-section { flex-direction: column; }
-            .task-input-row { flex-direction: column; }
-            .task-input-row button { width: 100%; height: 42px; }
+            .task-controls { flex-wrap: wrap; }
+            .input-with-icon, .custom-select, #btnAddTask { flex: 1 1 auto; }
+            #btnAddTask { height: 44px; width: 100%; }
         }
     </style>
 </head>
@@ -262,7 +223,7 @@
                     <img src="https://images.unsplash.com/photo-1789348982785-9a5e3931d8d2?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0" alt="Avatar" class="avatar">
                 </div>
                 <div class="user-info">
-                    <h1>Tino</h1>
+                    <h1>Khánh Tín</h1>
                     <p>Manager <span class="badge">Passion Star</span></p>
                 </div>
             </div>
@@ -279,20 +240,35 @@
             <i class="fa-solid fa-magnifying-glass"></i>
         </div>
 
-        <!-- TASK MANAGER TÍCH HỢP GOOGLE SHEETS -->
+        <!-- TASK MANAGER TÍCH HỢP GOOGLE SHEETS & FLATPICKR -->
         <div class="category-title"><i class="fa-solid fa-list-check"></i> Công Việc Hôm Nay</div>
         <div class="task-container">
-            <div class="task-input-row">
+            <div class="task-input-wrapper">
                 <input type="text" id="taskInput" placeholder="Thêm công việc cần xử lý...">
-                <input type="datetime-local" id="deadlineInput">
-                <button onclick="addTask()" id="btnAddTask" title="Thêm công việc"><i class="fa-solid fa-plus"></i></button>
+                
+                <div class="task-controls">
+                    <div class="input-with-icon">
+                        <i class="fa-regular fa-calendar"></i>
+                        <input type="text" id="deadlineInput" placeholder="Chọn ngày giờ...">
+                    </div>
+                    
+                    <select id="repeatInput" class="custom-select">
+                        <option value="none">Không lặp lại</option>
+                        <option value="daily">Hằng ngày</option>
+                        <option value="weekly">Hằng tuần</option>
+                        <option value="monthly">Hằng tháng</option>
+                        <option value="yearly">Hằng năm</option>
+                    </select>
+
+                    <button onclick="addTask()" id="btnAddTask" title="Thêm công việc"><i class="fa-solid fa-plus"></i></button>
+                </div>
             </div>
             <div class="task-list" id="taskList">
                 <div class="empty-task"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải dữ liệu từ Google Sheets...</div>
             </div>
         </div>
 
-        <!-- DANH MỤC 1: HỆ THỐNG CỐT LÕI (4 MỤC NGUYÊN BẢN) -->
+        <!-- DANH MỤC 1: HỆ THỐNG CỐT LÕI (4 MỤC) -->
         <div class="category-title"><i class="fa-solid fa-server"></i> Hệ Thống Cốt Lõi</div>
         <div class="links-grid" id="core-apps">
             <a href="2fa.html" class="app-card" target="_blank" data-name="tra cứu tài khoản 2fa system">
@@ -313,7 +289,7 @@
             </a>
         </div>
 
-        <!-- DANH MỤC 2: VẬN HÀNH & NHÂN SỰ (6 MỤC NGUYÊN BẢN ĐẦY ĐỦ) -->
+        <!-- DANH MỤC 2: VẬN HÀNH & NHÂN SỰ (6 MỤC) -->
         <div class="category-title" style="margin-top: 20px;"><i class="fa-solid fa-briefcase"></i> Vận Hành & Nhân Sự</div>
         <div class="links-grid list-grid" id="ops-apps">
             <a href="timeline.html" class="app-card" target="_blank" data-name="timeline makeup live livestream">
@@ -321,31 +297,26 @@
                 <div class="app-info"><div class="app-title">Timeline Makeup & Live</div><div class="app-desc">Lịch trình & phân công ca trực</div></div>
                 <i class="fa-solid fa-chevron-right arrow-icon"></i>
             </a>
-
             <a href="loichuc.html" class="app-card" target="_blank" data-name="workspace lời chúc idol">
                 <div class="icon-box bg-grad-5"><i class="fa-solid fa-envelope-open-text"></i></div>
                 <div class="app-info"><div class="app-title">Workspace Lời Chúc Idol</div><div class="app-desc">Quản lý nội dung chúc mừng</div></div>
                 <i class="fa-solid fa-chevron-right arrow-icon"></i>
             </a>
-
             <a href="sop.html" class="app-card" target="_blank" data-name="sop hr manager agency">
                 <div class="icon-box" style="background: #334155;"><i class="fa-solid fa-file-signature"></i></div>
                 <div class="app-info"><div class="app-title">SOP & HR Manager</div><div class="app-desc">Quy trình chuẩn Passion Agency</div></div>
                 <i class="fa-solid fa-chevron-right arrow-icon"></i>
             </a>
-
             <a href="chamdiem.html" class="app-card" target="_blank" data-name="chấm điểm tiếng anh idol">
                 <div class="icon-box" style="background: #be123c;"><i class="fa-solid fa-language"></i></div>
                 <div class="app-info"><div class="app-title">Chấm Điểm Tiếng Anh</div><div class="app-desc">Đánh giá ngoại ngữ Idol</div></div>
                 <i class="fa-solid fa-chevron-right arrow-icon"></i>
             </a>
-
             <a href="bbbangiao.html" class="app-card" target="_blank" data-name="biên bản bàn giao tài sản">
                 <div class="icon-box" style="background: #854d0e;"><i class="fa-solid fa-box-open"></i></div>
                 <div class="app-info"><div class="app-title">Bàn Giao Tài Sản</div><div class="app-desc">Biên bản thiết bị Passion Star</div></div>
                 <i class="fa-solid fa-chevron-right arrow-icon"></i>
             </a>
-
             <a href="admin.html" class="app-card" target="_blank" data-name="quản lý lịch nghỉ phép">
                 <div class="icon-box" style="background: #0ea5e9;"><i class="fa-solid fa-calendar-day"></i></div>
                 <div class="app-info"><div class="app-title">Quản Lý Lịch Nghỉ</div><div class="app-desc">Hệ thống xin phép/duyệt off</div></div>
@@ -354,14 +325,27 @@
         </div>
     </div>
 
+    <!-- Script thư viện Flatpickr & Tiếng Việt -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script>
+
     <!-- SCRIPT CHỨC NĂNG -->
     <script>
         // ==========================================
-        // CẤU HÌNH LIÊN KẾT GOOGLE APPS SCRIPT
+        // DÁN LINK WEB APP CỦA BẠN VÀO DÒNG BÊN DƯỚI
         // ==========================================
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxHmvzqzOR8vFcLRGNZDQJ5HAI2kUku5Khk_mhCfEe8qMSA9K2-kZkegT4pxTQJncjFWQ/exec";
+        const GOOGLE_SCRIPT_URL = "DÁN_LINK_WEB_APP_CỦA_BẠN_VÀO_ĐÂY";
 
-        // 1. ĐỒNG HỒ THỜI GIAN THỰC
+        // Khởi tạo Flatpickr (Giao diện lịch)
+        flatpickr("#deadlineInput", {
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
+            locale: "vn",
+            time_24hr: true,
+            placeholder: "Chọn ngày giờ..."
+        });
+
+        // ĐỒNG HỒ THỜI GIAN THỰC
         function updateClock() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -378,7 +362,7 @@
         }
         updateClock(); setInterval(updateClock, 1000);
 
-        // 2. LỌC TÌM KIẾM APP
+        // LỌC TÌM KIẾM APP
         function filterApps() {
             let input = document.getElementById('searchInput').value.toLowerCase();
             let cards = document.getElementsByClassName('app-card');
@@ -389,11 +373,19 @@
             }
         }
 
-        // 3. TASK MANAGER KẾT NỐI GOOGLE SHEETS
+        // TỪ ĐIỂN DỊCH CHUỖI LẶP LẠI
+        const repeatLabels = {
+            'daily': 'Hằng ngày',
+            'weekly': 'Hằng tuần',
+            'monthly': 'Hằng tháng',
+            'yearly': 'Hằng năm'
+        };
+
+        // TASK MANAGER API
         let tasks = [];
 
         async function fetchTasks() {
-            if (GOOGLE_SCRIPT_URL === "DÁN_LINK_WEB_APP_CỦA_BẠN_VÀO_ĐÂY") {
+            if (GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbxHmvzqzOR8vFcLRGNZDQJ5HAI2kUku5Khk_mhCfEe8qMSA9K2-kZkegT4pxTQJncjFWQ/exec") {
                 document.getElementById('taskList').innerHTML = '<div class="empty-task">⚠️ Vui lòng dán link Web App của Google Sheets vào code để bắt đầu!</div>';
                 return;
             }
@@ -405,7 +397,7 @@
                     renderTasks();
                 }
             } catch (error) {
-                console.error("Lỗi khi tải task:", error);
+                console.error("Lỗi:", error);
                 document.getElementById('taskList').innerHTML = '<div class="empty-task">Không thể kết nối đến Google Sheets.</div>';
             }
         }
@@ -421,12 +413,25 @@
 
             const now = new Date();
 
+            // Sắp xếp Task nào gần hạn nhất lên đầu
+            tasks.sort((a, b) => {
+                if(!a.deadline) return 1;
+                if(!b.deadline) return -1;
+                return new Date(a.deadline.replace(' ', 'T')) - new Date(b.deadline.replace(' ', 'T'));
+            });
+
             tasks.forEach((task) => {
                 let timeDisplay = 'Không có hạn';
                 let lateClass = '';
+                
+                // Hiển thị Nhãn lặp lại
+                let repeatBadge = '';
+                if(task.repeat && task.repeat !== 'none') {
+                    repeatBadge = `<span class="repeat-badge"><i class="fa-solid fa-rotate"></i> ${repeatLabels[task.repeat]}</span>`;
+                }
 
                 if (task.deadline) {
-                    const dl = new Date(task.deadline);
+                    const dl = new Date(task.deadline.replace(' ', 'T'));
                     timeDisplay = `${String(dl.getHours()).padStart(2,'0')}:${String(dl.getMinutes()).padStart(2,'0')} - ${dl.getDate()}/${dl.getMonth()+1}`;
                     if(now > dl) {
                         timeDisplay = `⚠️ Trễ hạn (${timeDisplay})`;
@@ -437,7 +442,7 @@
                 list.innerHTML += `
                     <div class="task-item" id="task-${task.id}">
                         <div class="task-info">
-                            <span class="task-name">${task.name}</span>
+                            <span class="task-name">${task.name} ${repeatBadge}</span>
                             <span class="task-time ${lateClass}"><i class="fa-regular fa-clock"></i> ${timeDisplay}</span>
                         </div>
                         <button class="btn-done" onclick="completeTask('${task.id}')" title="Hoàn thành task">
@@ -451,6 +456,7 @@
         async function addTask() {
             const name = document.getElementById('taskInput').value.trim();
             const deadline = document.getElementById('deadlineInput').value;
+            const repeat = document.getElementById('repeatInput').value;
             const btn = document.getElementById('btnAddTask');
 
             if(!name) {
@@ -466,12 +472,13 @@
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'addTask', name: name, deadline: deadline })
+                    body: JSON.stringify({ action: 'addTask', name: name, deadline: deadline, repeat: repeat })
                 });
 
                 document.getElementById('taskInput').value = '';
                 document.getElementById('deadlineInput').value = '';
-                // Chờ Google Sheet ghi xong và cập nhật lại danh sách
+                document.getElementById('repeatInput').value = 'none';
+                
                 setTimeout(fetchTasks, 1500);
             } catch (error) {
                 alert("Có lỗi khi lưu vào Google Sheets!");
@@ -492,14 +499,14 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'completeTask', id: id })
                 });
-                setTimeout(fetchTasks, 1000);
+                // Load lại ds để hiển thị ngày hẹn mới (nếu là task lặp lại) hoặc ẩn task đi
+                setTimeout(fetchTasks, 1500);
             } catch (error) {
                 alert("Không thể cập nhật trạng thái công việc!");
                 if (taskEl) taskEl.style.opacity = '1';
             }
         }
 
-        // Tự động tải task từ Google Sheets khi mở trang
         fetchTasks();
     </script>
 </body>
