@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>SOP & Admin Manager | Passion Star</title>
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = { darkMode: 'class' };
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    
+    <!-- THƯ VIỆN CHỌN NGÀY FLATPICKR -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        .submenu { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .submenu.open { max-height: 500px; }
+        
+        /* CUSTOM FLATPICKR UI - GIAO DIỆN CAO CẤP */
+        .flatpickr-calendar {
+            background: #1e293b !important; border: 1px solid #334155 !important; border-radius: 12px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+            padding: 10px !important; font-family: 'Inter', sans-serif !important; width: 310px !important; z-index: 99999 !important;
+        }
+        .flatpickr-calendar.arrowTop:before { border-bottom-color: #334155 !important; }
+        .flatpickr-calendar.arrowTop:after { border-bottom-color: #1e293b !important; }
+        .flatpickr-calendar.arrowBottom:before { border-top-color: #334155 !important; }
+        .flatpickr-calendar.arrowBottom:after { border-top-color: #1e293b !important; }
+        .flatpickr-months { display: flex; align-items: center; justify-content: space-between !important; padding: 5px 10px 15px 10px !important; border-bottom: 1px solid #334155 !important; margin-bottom: 10px !important; }
+        .flatpickr-months .flatpickr-prev-month, .flatpickr-months .flatpickr-next-month { position: static !important; fill: #94a3b8 !important; height: 24px !important; padding: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; z-index: 10; }
+        .flatpickr-months .flatpickr-prev-month:hover, .flatpickr-months .flatpickr-next-month:hover { fill: #fff !important; }
+        .flatpickr-current-month { position: static !important; height: auto !important; width: auto !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: 0 !important; gap: 5px; }
+        .flatpickr-current-month span.cur-month { font-size: 16px !important; font-weight: 700 !important; color: #f8fafc !important; margin-left: 0 !important; }
+        .flatpickr-current-month input.cur-year { font-size: 16px !important; font-weight: 600 !important; color: #94a3b8 !important; }
+        span.flatpickr-weekday { color: #94a3b8 !important; font-weight: 700 !important; font-size: 12px !important; }
+        .flatpickr-days, .dayContainer { width: 100% !important; min-width: 100% !important; max-width: 100% !important; }
+        .flatpickr-day { color: #e2e8f0 !important; border-radius: 50% !important; max-width: 36px !important; height: 36px !important; line-height: 36px !important; margin: 2px 0 !important; border: 1px solid transparent !important; }
+        .flatpickr-day.selected { background: #38bdf8 !important; border-color: #38bdf8 !important; box-shadow: 0 4px 10px rgba(56, 189, 248, 0.4) !important; font-weight: 700 !important; color: #fff !important; }
+        .flatpickr-day:hover:not(.selected) { background: #334155 !important; border-color: #334155 !important; color: #fff !important; }
+        .flatpickr-day.today { border-color: #38bdf8 !important; }
+        .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { color: #475569 !important; }
+
+        .chk-wrap { cursor: pointer; transition: all 0.2s ease; }
+        .chk-wrap:active { transform: scale(0.98); }
+        .chk-box { transition: all 0.3s ease; }
+        .chk-wrap input:checked + .chk-box { background-color: #4f46e5; border-color: #4f46e5; }
+        .tick-svg { stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset 0.4s cubic-bezier(0.65, 0, 0.45, 1) 0.1s; }
+        .chk-wrap input:checked + .chk-box .tick-svg { stroke-dashoffset: 0; }
+        .chk-text { transition: all 0.3s ease; position: relative; display: inline-block; }
+        .chk-wrap input:checked ~ .chk-text-box .chk-text { color: #94a3b8; }
+        .chk-wrap input:checked ~ .chk-text-box .chk-text::after { content: ''; position: absolute; left: 0; top: 50%; width: 100%; height: 1.5px; background: #94a3b8; animation: strikethrough 0.3s ease-out forwards; }
+        @keyframes strikethrough { from { width: 0; } to { width: 100%; } }
+        .fade-view { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .sortable-ghost { opacity: 0.4; background-color: #0f172a; border: 1px dashed #475569; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 h-screen w-screen overflow-hidden flex">
+
+    <!-- GLOBAL LOADER -->
+    <div id="global-loader" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[9999] backdrop-blur-sm pointer-events-auto">
+        <div class="bg-slate-800 px-8 py-6 rounded-2xl shadow-2xl flex flex-col items-center transform transition-transform scale-100">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-700 border-t-indigo-500 mb-4"></div>
+            <div id="loader-text" class="text-[15px] font-bold text-white mb-1">Đang xử lý dữ liệu...</div>
+            <div class="text-[12px] text-slate-400 font-medium">Vui lòng không click hay đóng trang lúc này!</div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[999] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="w-72 bg-[#0b1120] border-r border-slate-800 text-slate-300 flex flex-col z-20 flex-shrink-0">
+        <div onclick="changeView('dashboard')" class="h-16 flex items-center px-6 border-b border-slate-800 cursor-pointer hover:bg-slate-800 transition-colors" title="Về trang chủ">
+            <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center mr-3 shadow-lg shadow-indigo-500/20">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h1 class="font-bold text-lg text-white">Passion Star</h1>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4 flex flex-col" id="sidebar-menu"></nav>
+        <div class="px-4 py-2 border-t border-slate-800">
+            <button onclick="openNewSopModal()" class="w-full flex items-center justify-center px-3 py-2.5 rounded-lg text-[12px] font-bold bg-slate-800 hover:bg-slate-700 text-white transition-colors focus:ring-2 focus:ring-slate-500 outline-none">
+                + Thêm Quy trình / Bộ phận
+            </button>
+        </div>
+        <div class="p-4 border-t border-slate-800 space-y-2">
+            <button onclick="changeView('notices')" class="w-full flex items-center px-3 py-2.5 rounded-lg text-[13px] font-bold text-sky-400 hover:bg-slate-800 transition-colors focus:ring-2 focus:ring-sky-500 outline-none">
+                <svg class="w-5 h-5 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg> Thông báo Công ty
+            </button>
+            <button onclick="changeView('rules')" class="w-full flex items-center px-3 py-2.5 rounded-lg text-[13px] font-bold text-amber-500 hover:bg-slate-800 transition-colors focus:ring-2 focus:ring-amber-500 outline-none">
+                <svg class="w-5 h-5 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Nội Quy Công Ty
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN AREA -->
+    <main class="flex-1 flex flex-col h-full bg-[#0f172a] relative">
+        <header class="h-16 border-b border-slate-800 px-6 flex items-center justify-between bg-[#0f172a] z-10 shadow-sm">
+            <div id="header-area" class="flex items-center text-[13px] font-medium text-slate-400"></div>
+            <div class="flex items-center gap-2">
+                <button onclick="changeView('admin')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 font-bold flex items-center text-[12px] transition-colors whitespace-nowrap focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <svg class="w-4 h-4 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg> Cài đặt Admin
+                </button>
+            </div>
+        </header>
+        <div class="flex-1 flex overflow-hidden w-full relative" id="main-content-wrapper">
+            <div id="main-content" class="w-full h-full flex fade-view"></div>
+        </div>
+    </main>
+
+    <!-- CÁC POPUP MODALS -->
+    <div id="new-sop-modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[1000] backdrop-blur-sm pointer-events-auto">
+        <div class="bg-slate-800 rounded-xl shadow-xl w-[400px] p-6">
+            <h3 class="text-base font-bold text-white mb-4">Tạo Quy trình (SOP) Mới</h3>
+            <div class="flex flex-col gap-3 mb-5">
+                <div>
+                    <label class="text-[12px] font-semibold text-slate-400 mb-1 block">Chọn hoặc Tạo Bộ phận:</label>
+                    <select id="new-sop-dept-select" onchange="toggleNewDeptInput(this.value)" class="w-full px-3 py-2 text-[13px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500 font-medium"></select>
+                    <input type="text" id="new-sop-dept-input" placeholder="Nhập tên Bộ phận mới..." class="hidden w-full mt-2 px-3 py-2 text-[13px] rounded-lg border border-indigo-500 bg-slate-900 text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="text-[12px] font-semibold text-slate-400 mb-1 block">Tên Quy trình (VD: Onboarding Idol):</label>
+                    <input type="text" id="new-sop-name-input" class="w-full px-3 py-2 text-[13px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-slate-700 pt-4">
+                <button onclick="closeNewSopModal()" class="px-4 py-2 text-[12px] font-bold text-slate-300 hover:bg-slate-700 rounded-lg outline-none">Hủy (Esc)</button>
+                <button onclick="confirmCreateSOP()" class="px-5 py-2 text-[12px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg outline-none">Tạo ngay</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[1000] backdrop-blur-sm pointer-events-auto">
+        <div class="bg-slate-800 rounded-2xl shadow-2xl w-[360px] p-6 transform scale-95 transition-transform" id="confirm-modal-box">
+            <div class="flex flex-col items-center text-center">
+                <div class="w-14 h-14 rounded-full bg-red-900/40 text-red-400 flex items-center justify-center mb-4">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-2" id="confirm-modal-title">Xác nhận</h3>
+                <p class="text-[13px] text-slate-400 mb-6" id="confirm-modal-desc">Bạn có chắc chắn?</p>
+            </div>
+            <div class="flex justify-center gap-3">
+                <button onclick="closeConfirm()" class="px-6 py-2.5 text-[13px] font-bold text-slate-300 hover:bg-slate-700 rounded-lg outline-none">Hủy thao tác</button>
+                <button id="confirm-modal-btn" class="px-6 py-2.5 text-[13px] font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg outline-none">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-step-modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[1000] backdrop-blur-sm pointer-events-auto">
+        <div class="bg-slate-800 rounded-xl shadow-xl w-[400px] p-6">
+            <h3 class="text-base font-bold text-white mb-3">Sửa tên Bước lớn</h3>
+            <input type="text" id="edit-step-name-input" onkeypress="if(event.key === 'Enter') confirmEditStep()" class="w-full px-4 py-2.5 text-[13px] rounded-lg border border-slate-600 bg-slate-700 text-white focus:ring-2 focus:ring-indigo-500 outline-none mb-5 font-medium">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeEditStepModal()" class="px-4 py-2 text-[12px] font-bold text-slate-300 hover:bg-slate-700 rounded-lg outline-none">Hủy (Esc)</button>
+                <button onclick="confirmEditStep()" class="px-5 py-2 text-[12px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg outline-none">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-check-modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[1000] backdrop-blur-sm pointer-events-auto">
+        <div class="bg-slate-800 rounded-xl shadow-xl w-[500px] max-w-[95%] p-6">
+            <h3 class="text-base font-bold text-white mb-4">Sửa tác vụ Checklist</h3>
+            <div class="flex flex-col gap-3 mb-5">
+                <div>
+                    <label class="text-[12px] font-semibold text-slate-400 mb-1 block">Thuộc Bước lớn:</label>
+                    <select id="edit-check-step-select" onchange="toggleEditNewStepInput(this.value)" class="w-full px-3 py-2 text-[13px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500 font-medium"></select>
+                    <input type="text" id="edit-check-step-name-new" placeholder="Nhập tên Bước lớn mới..." class="hidden w-full mt-2 px-3 py-2 text-[13px] rounded-lg border border-indigo-500 bg-slate-900 text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="text-[12px] font-semibold text-slate-400 mb-1 block">Nội dung thao tác:</label>
+                    <input type="text" id="edit-check-text-input" class="w-full px-3 py-2 text-[13px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="flex-1">
+                        <label class="text-[12px] font-semibold text-slate-400 mb-1 block">Nội quy đính kèm:</label>
+                        <select id="edit-check-rule" class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[12px] font-semibold text-slate-400 mb-1 block">Link File (Tùy chọn):</label>
+                        <input type="text" id="edit-check-file" placeholder="https://..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-slate-700 pt-4">
+                <button onclick="closeEditCheckModal()" class="px-4 py-2 text-[12px] font-bold text-slate-300 hover:bg-slate-700 rounded-lg outline-none">Hủy (Esc)</button>
+                <button onclick="confirmEditCheck()" class="px-5 py-2 text-[12px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg outline-none">Cập nhật thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SỬA NỘI QUY -->
+    <div id="edit-rule-modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[1000] backdrop-blur-sm pointer-events-auto">
+        <div class="bg-slate-800 rounded-xl shadow-xl w-[500px] max-w-[95%] p-6">
+            <h3 class="text-base font-bold text-white mb-4">Chỉnh sửa Nội quy</h3>
+            <input type="hidden" id="edit-rule-id">
+            <div class="space-y-3 mb-5">
+                <input type="text" id="edit-rule-title" placeholder="Tiêu đề nội quy..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                <textarea id="edit-rule-content" rows="4" placeholder="Nội dung chi tiết (xuống dòng tự do)..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <div class="flex gap-2">
+                    <input type="text" id="edit-rule-zalo" placeholder="Tên Group Zalo..." class="flex-1 px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="edit-rule-date" class="date-picker-input w-[130px] px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-slate-700 pt-4">
+                <button onclick="closeEditRuleModal()" class="px-4 py-2 text-[12px] font-bold text-slate-300 hover:bg-slate-700 rounded-lg outline-none">Hủy (Esc)</button>
+                <button onclick="confirmEditRule()" class="px-5 py-2 text-[12px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg outline-none">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SỬA THÔNG BÁO -->
+    <div id="edit-notice-modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[1000] backdrop-blur-sm pointer-events-auto">
+        <div class="bg-slate-800 rounded-xl shadow-xl w-[500px] max-w-[95%] p-6">
+            <h3 class="text-base font-bold text-white mb-4">Chỉnh sửa Thông báo</h3>
+            <input type="hidden" id="edit-notice-id">
+            <div class="space-y-3 mb-5">
+                <input type="text" id="edit-notice-title" placeholder="Tiêu đề thông báo..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500">
+                <textarea id="edit-notice-content" rows="4" placeholder="Nội dung thông báo..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500"></textarea>
+                <div class="flex gap-2">
+                    <input type="text" id="edit-notice-zalo" placeholder="Tên Group Zalo..." class="flex-1 px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="text" id="edit-notice-date" class="date-picker-input w-[130px] px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 border-t border-slate-700 pt-4">
+                <button onclick="closeEditNoticeModal()" class="px-4 py-2 text-[12px] font-bold text-slate-300 hover:bg-slate-700 rounded-lg outline-none">Hủy (Esc)</button>
+                <button onclick="confirmEditNotice()" class="px-5 py-2 text-[12px] font-bold bg-sky-600 hover:bg-sky-700 text-white rounded-lg outline-none">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GÁN IDOL -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[900] backdrop-blur-sm pointer-events-auto">
+        <div class="bg-slate-800 rounded-xl shadow-xl w-80 p-5">
+            <h3 class="text-base font-bold text-white mb-3">Giao quy trình cho Idol</h3>
+            <input type="text" id="idol-name-input" onkeypress="if(event.key === 'Enter') confirmAssign()" placeholder="Nhập Tên Idol..." class="w-full px-3 py-2 text-[13px] rounded-lg border border-slate-600 bg-slate-700 text-white focus:ring-2 focus:ring-indigo-500 outline-none mb-5">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal()" class="px-3 py-1.5 text-[12px] font-bold text-slate-300 hover:bg-slate-700 rounded-lg outline-none">Hủy (Esc)</button>
+                <button onclick="confirmAssign()" class="px-4 py-1.5 text-[12px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg outline-none">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ĐỌC NỘI QUY -->
+    <div id="rule-modal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center z-[900] backdrop-blur-sm pointer-events-auto">
+        <div class="bg-slate-800 rounded-xl shadow-2xl w-[600px] max-w-[95%] p-6 flex flex-col max-h-[90vh]">
+            <h3 class="text-xl font-bold text-white mb-1" id="rule-modal-title"></h3>
+            <div class="text-[12px] font-medium text-slate-400 mb-4">🔗 Zalo Group: <span class="text-indigo-400" id="rule-modal-zalo"></span></div>
+            <div class="flex-1 overflow-y-auto p-4 bg-slate-900/50 rounded-lg border border-slate-700 mb-5">
+                <div id="rule-modal-content" class="text-[14px] leading-relaxed text-slate-300 whitespace-pre-wrap font-medium"></div>
+            </div>
+            <div class="flex justify-end gap-3 shrink-0">
+                <button onclick="closeRuleModal()" class="px-4 py-2 text-[12px] font-bold text-slate-300 hover:bg-slate-700 rounded-lg outline-none">Đóng lại (Esc)</button>
+                <button id="rule-modal-copy-btn" class="px-5 py-2 text-[12px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg flex items-center transition-colors outline-none">
+                    <svg class="w-4 h-4 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copy
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+// DÁN WEB APP URL BẠN VỪA COPY Ở BƯỚC 1 VÀO ĐÂY:
+        const API_URL = "https://script.google.com/macros/s/AKfycbwSHxYQcQXmnpeN-zaeQTwwXKuXnYcy1fUT0DeG20QK5WEVUNcBzeP433rk7DJDsRLF/exec"; 
+
+        // Cầu nối biến google.script.run thành Fetch API
+        const google = {
+            script: {
+                run: {
+                    withSuccessHandler: function(callback) {
+                        this.callback = callback;
+                        return this;
+                    },
+                    _call: async function(action, ...args) {
+                        try {
+                            // Dùng text/plain để vượt qua rào cản CORS của Google
+                            const res = await fetch(API_URL, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify({ action: action, args: args })
+                            });
+                            const result = await res.json();
+                            if (result.success && this.callback) {
+                                this.callback(result.data);
+                            } else if (!result.success) {
+                                showToast("Lỗi Hệ thống: " + result.error, "error");
+                            }
+                        } catch(e) { 
+                            showToast("Lỗi kết nối Server", "error"); 
+                        }
+                    },
+                    // Mapping toàn bộ các hàm cũ sang Request mới
+                    getSopData: function() { return this._call('getSopData'); },
+                    getRulesData: function() { return this._call('getRulesData'); },
+                    getNoticesData: function() { return this._call('getNoticesData'); },
+                    createNewSOP: function(d, s) { return this._call('createNewSOP', d, s); },
+                    addNotice: function(t, c, z, d) { return this._call('addNotice', t, c, z, d); },
+                    editNotice: function(id, t, c, z, d) { return this._call('editNotice', id, t, c, z, d); },
+                    deleteNotice: function(id) { return this._call('deleteNotice', id); },
+                    addRule: function(t, c, z, d) { return this._call('addRule', t, c, z, d); },
+                    editRule: function(id, t, c, z, d) { return this._call('editRule', id, t, c, z, d); },
+                    deleteRule: function(id) { return this._call('deleteRule', id); },
+                    renameTemplateStep: function(d, s, o, n) { return this._call('renameTemplateStep', d, s, o, n); },
+                    editTemplateRow: function(id, ns, nt, nr, nf) { return this._call('editTemplateRow', id, ns, nt, nr, nf); },
+                    reorderTemplates: function(o) { return this._call('reorderTemplates', o); },
+                    addTemplateRow: function(d, s, sn, cn, r, f) { return this._call('addTemplateRow', d, s, sn, cn, r, f); },
+                    deleteTemplateRow: function(id) { return this._call('deleteTemplateRow', id); },
+                    updateChecklist: function(id, st, i, d, s) { return this._call('updateChecklist', id, st, i, d, s); },
+                    deleteIdol: function(d, s, i) { return this._call('deleteIdol', d, s, i); },
+                    assignToIdol: function(d, s, i) { return this._call('assignToIdol', d, s, i); }
+                }
+            }
+        };
+        
+        // --- GIỮ NGUYÊN TOÀN BỘ CODE CŨ BÊN DƯỚI DÒNG NÀY ---
+        let db = {};
+        // ... let rulesData = [];
+        let db = {};
+        let rulesData = [];
+        let noticesData = []; 
+        let state = { dept: null, sop: null, view: 'dashboard', idol: null, step: null };
+        let hasUnsavedChanges = false;
+        let currentEditStepName = null;
+        let currentEditCheckId = null;
+
+        // BẮT SỰ KIỆN PHÍM ESC ĐỂ ĐÓNG MỌI POPUP CỬA SỔ
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape" || event.key === "Esc") {
+                closeNewSopModal(); closeConfirm(); closeEditStepModal(); closeEditCheckModal(); closeEditRuleModal(); closeEditNoticeModal(); closeModal(); closeRuleModal();
+            }
+        });
+
+        // HÀM KHỞI TẠO LỊCH CHUYÊN NGHIỆP CÓ KHÓA INPUT CHỐNG NHẬP BẬY
+        function initFlatpickr() {
+            document.querySelectorAll(".date-picker-input").forEach(el => { if (el._flatpickr) el._flatpickr.destroy(); });
+            flatpickr(".date-picker-input", {
+                dateFormat: "Y-m-d", altInput: true, altFormat: "d.m.Y", allowInput: false, disableMobile: true, monthSelectorType: "static",
+                locale: {
+                    firstDayOfWeek: 1, 
+                    weekdays: { shorthand: ["SU", "MO", "TU", "WE", "TH", "FR", "SA"], longhand: ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"] },
+                    months: { shorthand: ["Thg 1", "Thg 2", "Thg 3", "Thg 4", "Thg 5", "Thg 6", "Thg 7", "Thg 8", "Thg 9", "Thg 10", "Thg 11", "Thg 12"], longhand: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"] }
+                }
+            });
+            setTimeout(() => { document.querySelectorAll('.flatpickr-input:not([type="hidden"])').forEach(el => { if (!el.value) el.placeholder = "dd.mm.yyyy"; }); }, 50);
+        }
+
+        function showLoader(text = 'Đang xử lý...') { document.getElementById('loader-text').innerText = text; document.getElementById('global-loader').classList.replace('hidden', 'flex'); }
+        function hideLoader() { document.getElementById('global-loader').classList.replace('flex', 'hidden'); }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? 'bg-emerald-600' : (type === 'error' ? 'bg-red-600' : 'bg-sky-600');
+            toast.className = `${bg} px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 text-[12px] font-bold text-white transition-all transform translate-y-10 opacity-0 duration-300 z-[999] pointer-events-auto`;
+            toast.innerHTML = `<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${type === 'error' ? 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'}"/></svg> <span>${msg}</span>`;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
+            setTimeout(() => { toast.classList.add('opacity-0', 'translate-x-full'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        let confirmAction = null;
+        function showConfirm(title, desc, onConfirm) {
+            document.getElementById('confirm-modal-title').innerText = title; document.getElementById('confirm-modal-desc').innerText = desc;
+            confirmAction = onConfirm; document.getElementById('confirm-modal').classList.replace('hidden', 'flex');
+            setTimeout(() => document.getElementById('confirm-modal-box').classList.remove('scale-95'), 10); document.getElementById('confirm-modal-btn').focus();
+        }
+        function closeConfirm() { document.getElementById('confirm-modal-box').classList.add('scale-95'); setTimeout(() => document.getElementById('confirm-modal').classList.replace('flex', 'hidden'), 150); confirmAction = null; }
+        document.getElementById('confirm-modal-btn').addEventListener('click', () => { if (confirmAction) confirmAction(); closeConfirm(); });
+
+        function init() {
+            document.getElementById('main-content').innerHTML = `<div class="flex-1 flex flex-col items-center justify-center text-slate-500"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mb-4"></div>Đang tải dữ liệu...</div>`;
+            google.script.run.withSuccessHandler(data => {
+                db = JSON.parse(data); const firstDept = Object.keys(db)[0];
+                if(firstDept && !state.dept) { state.dept = firstDept; state.sop = Object.keys(db[firstDept]?.sops || {})[0]; }
+                hasUnsavedChanges = false; renderUI();
+            }).getSopData();
+            google.script.run.withSuccessHandler(data => { rulesData = JSON.parse(data); }).getRulesData();
+            google.script.run.withSuccessHandler(data => { noticesData = JSON.parse(data); }).getNoticesData();
+        }
+
+        function changeView(view) { 
+            if(hasUnsavedChanges) return showToast("Bạn có thay đổi Kéo thả chưa được Lưu. Vui lòng ấn Lưu thay đổi!", 'error');
+            if(view === 'admin' && (!state.dept || !state.sop)) return showToast("Vui lòng chọn 1 Quy trình SOP ở menu trái trước!", 'error');
+            state.view = view; const mc = document.getElementById('main-content'); mc.classList.remove('fade-view'); void mc.offsetWidth; mc.classList.add('fade-view'); renderUI(); 
+        }
+
+        function renderUI() { renderSidebar(); renderHeader(); if (state.view === 'rules') renderRules(); else if (state.view === 'notices') renderNotices(); else if (state.view === 'admin') renderAdmin(); else if (state.view === 'dashboard') renderDashboard(); else renderExecution(); }
+
+        function renderSidebar() {
+            let html = '<div class="mb-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider px-4">Danh sách bộ phận</div>';
+            Object.keys(db).forEach(deptName => {
+                const isOpen = state.dept === deptName;
+                html += `<div class="mb-2 px-3"><button onclick="toggleDept('${deptName}')" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-[13px] font-bold text-slate-300 hover:bg-slate-800 transition-colors focus:ring-2 focus:ring-indigo-500 outline-none"><span class="flex items-center uppercase text-[11px]"><svg class="w-3.5 h-3.5 mr-2 text-indigo-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>${deptName}</span><svg class="w-4 h-4 transform transition-transform ${isOpen?'rotate-180':''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 9l-7 7-7-7"/></svg></button><div class="submenu ${isOpen ? 'open' : ''}"><div class="pl-4 pr-2 py-1 space-y-1 border-l border-slate-700 ml-4 mt-1">`;
+                Object.keys(db[deptName].sops).forEach(sopName => {
+                    const isActive = state.sop === sopName && state.dept === deptName && (state.view !== 'rules' && state.view !== 'notices');
+                    html += `<button onclick="selectSop('${deptName}', '${sopName}')" class="w-full text-left px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${isActive ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'} focus:ring-2 focus:ring-indigo-500 outline-none">${sopName}</button>`;
+                }); html += `</div></div></div>`;
+            }); document.getElementById('sidebar-menu').innerHTML = html;
+        }
+
+        function renderHeader() {
+            let h = ``;
+            if (state.view === 'rules') h += `📜 Nội quy công ty`;
+            else if (state.view === 'notices') h += `📢 Thông báo công ty`;
+            else if (state.view === 'admin') h += `⚙️ Cài đặt Admin Quy trình`;
+            else if (state.dept && state.sop) {
+                h += `${state.dept} <svg class="w-3.5 h-3.5 mx-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 5l7 7-7 7"/></svg> <span class="font-bold ${state.view === 'dashboard' ? 'text-white' : 'text-indigo-400 cursor-pointer hover:underline focus:ring-2 focus:ring-indigo-500 outline-none rounded'}" tabindex="0" onkeypress="if(event.key==='Enter') changeView('dashboard')" onclick="changeView('dashboard')">${state.sop}</span>`;
+                if(state.view === 'execution' && state.idol) h += `<svg class="w-3.5 h-3.5 mx-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 5l7 7-7 7"/></svg> <span class="font-bold text-white">${state.idol}</span>`;
+            } else { h += `Vui lòng tạo hoặc chọn một Quy trình`; }
+            document.getElementById('header-area').innerHTML = h;
+        }
+
+        function toggleDept(dept) { state.dept = state.dept === dept ? null : dept; renderSidebar(); }
+        function selectSop(dept, sop) { if(hasUnsavedChanges) return showToast("Bạn có thay đổi Kéo thả chưa được Lưu!", 'error'); state.dept = dept; state.sop = sop; changeView('dashboard'); }
+
+        // ==========================================
+        // TẠO QUY TRÌNH (SOP) MỚI
+        // ==========================================
+        function openNewSopModal() {
+            let deptOptions = `<option value="" disabled selected>-- Chọn Bộ phận có sẵn --</option>`;
+            Object.keys(db).forEach(d => { deptOptions += `<option value="${d}">${d}</option>`; });
+            deptOptions += `<option value="__NEW__" class="font-bold text-indigo-400">[+] Tạo Bộ phận Mới...</option>`;
+            document.getElementById('new-sop-dept-select').innerHTML = deptOptions; document.getElementById('new-sop-dept-input').classList.add('hidden'); document.getElementById('new-sop-name-input').value = ''; document.getElementById('new-sop-modal').classList.replace('hidden', 'flex');
+        }
+        function toggleNewDeptInput(val) { const input = document.getElementById('new-sop-dept-input'); if(val === '__NEW__') { input.classList.remove('hidden'); input.focus(); } else { input.classList.add('hidden'); input.value = ''; } }
+        function closeNewSopModal() { document.getElementById('new-sop-modal').classList.replace('flex', 'hidden'); }
+        function confirmCreateSOP() {
+            const selectVal = document.getElementById('new-sop-dept-select').value; const deptName = selectVal === '__NEW__' ? document.getElementById('new-sop-dept-input').value.trim() : selectVal;
+            const sopName = document.getElementById('new-sop-name-input').value.trim(); if(!deptName || !sopName) return showToast("Vui lòng điền đủ Tên Bộ phận và Quy trình!", 'error');
+            showLoader('Đang tạo quy trình mới...'); google.script.run.withSuccessHandler(data => { hideLoader(); closeNewSopModal(); db = JSON.parse(data); state.dept = deptName; state.sop = sopName; showToast("Đã tạo Quy trình thành công!"); changeView('admin'); }).createNewSOP(deptName, sopName);
+        }
+
+        // ==========================================
+        // THÔNG BÁO CÔNG TY & NỘI QUY (LƯỢC BỚT TRONG CHÚ THÍCH NHƯNG VẪN ĐẦY ĐỦ LOGIC DƯỚI ĐÂY)
+        // ==========================================
+        function renderNotices() {
+            let html = `<div class="p-6 w-full max-w-4xl mx-auto overflow-y-auto h-full"><h2 class="text-xl font-bold text-white mb-5">Thông báo công ty</h2>
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mb-6 shadow-sm"><h3 class="font-bold text-white mb-3 text-[13px]">+ Tạo thông báo mới</h3><div class="space-y-3"><input type="text" id="notice-title" placeholder="Tiêu đề thông báo..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500"><textarea id="notice-content" rows="3" placeholder="Nội dung thông báo..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500"></textarea><div class="flex flex-col sm:flex-row gap-2"><input type="text" id="notice-zalo" placeholder="Tên Group Zalo..." class="flex-1 px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500"><input type="text" id="notice-date" class="date-picker-input sm:w-[130px] px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-sky-500"><button onclick="submitNotice()" class="px-6 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold text-[12px] rounded-lg whitespace-nowrap focus:ring-2 focus:ring-sky-400 outline-none">Đăng thông báo</button></div></div></div><div class="space-y-4">`;
+            if(noticesData.length === 0) html += `<div class="p-5 text-center text-[12px] bg-slate-800 rounded-lg">Chưa có thông báo nào.</div>`;
+            noticesData.forEach((notice) => {
+                const safeTitle = notice.title.replace(/'/g, "\\'"); const safeContent = notice.content.replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "<br>"); const safeZalo = notice.zalo.replace(/'/g, "\\'");
+                html += `<div class="bg-slate-800 border-l-4 border-sky-500 rounded-r-xl p-4 shadow-sm relative group"><div class="flex flex-col md:flex-row md:justify-between md:items-start gap-3 mb-2"><div><h3 class="text-[14px] font-bold text-white mb-0.5">${notice.title}</h3><div class="flex flex-wrap items-center text-[11px] text-slate-400 gap-x-3">${notice.zalo ? `<span><b class="text-sky-400">Zalo:</b> ${notice.zalo}</span>` : ''}${notice.dateStr ? `<span>🕒 ${notice.dateStr}</span>` : ''}</div></div><div class="flex items-center gap-1.5 shrink-0"><button onclick="openEditNoticeModal(${notice.rowIndex})" class="p-1.5 bg-slate-700 text-slate-400 hover:text-sky-400 hover:bg-slate-600 rounded transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button><button onclick="uiDeleteNotice(${notice.rowIndex})" class="p-1.5 bg-slate-700 text-slate-400 hover:text-red-400 hover:bg-slate-600 rounded transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button><button onclick="copyRuleText('${safeTitle}', '${safeContent}', '${safeZalo}')" class="px-2.5 py-1.5 bg-sky-900/40 text-sky-400 border border-sky-800/50 rounded text-[11px] font-bold flex items-center hover:bg-sky-900 transition-colors focus:ring-2 focus:ring-sky-500 outline-none"><svg class="w-3.5 h-3.5 mr-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copy</button></div></div><div class="text-[13px] leading-relaxed max-w-none whitespace-pre-wrap text-slate-300 pt-2 border-t border-slate-700">${notice.content}</div></div>`;
+            }); document.getElementById('main-content').innerHTML = html + `</div></div>`; setTimeout(() => { initFlatpickr(); }, 50);
+        }
+        function submitNotice() { const t = document.getElementById('notice-title').value.trim(); const c = document.getElementById('notice-content').value.trim(); if(!t || !c) return showToast("Vui lòng điền đủ!", 'error'); showLoader('Đang đăng...'); google.script.run.withSuccessHandler(data => { hideLoader(); noticesData = JSON.parse(data); renderNotices(); showToast("Đã đăng!"); }).addNotice(t, c, document.getElementById('notice-zalo').value.trim(), document.getElementById('notice-date').value); }
+        function openEditNoticeModal(rowIndex) { const notice = noticesData.find(n => n.rowIndex === rowIndex); if(!notice) return; document.getElementById('edit-notice-id').value = rowIndex; document.getElementById('edit-notice-title').value = notice.title; document.getElementById('edit-notice-content').value = notice.content; document.getElementById('edit-notice-zalo').value = notice.zalo; const dateInput = document.getElementById('edit-notice-date'); dateInput.value = notice.rawDate; if (dateInput._flatpickr) dateInput._flatpickr.setDate(notice.rawDate); document.getElementById('edit-notice-modal').classList.replace('hidden', 'flex'); }
+        function closeEditNoticeModal() { document.getElementById('edit-notice-modal').classList.replace('flex', 'hidden'); }
+        function confirmEditNotice() { const id = document.getElementById('edit-notice-id').value; const t = document.getElementById('edit-notice-title').value.trim(); const c = document.getElementById('edit-notice-content').value.trim(); if(!t || !c) return showToast("Vui lòng điền đủ!", 'error'); showLoader('Đang lưu...'); google.script.run.withSuccessHandler(data => { hideLoader(); closeEditNoticeModal(); noticesData = JSON.parse(data); renderNotices(); showToast("Đã sửa!"); }).editNotice(id, t, c, document.getElementById('edit-notice-zalo').value.trim(), document.getElementById('edit-notice-date').value); }
+        function uiDeleteNotice(rowIndex) { showConfirm('Xóa Thông báo?', 'Bạn có chắc muốn xóa?', () => { showLoader('Đang xóa...'); google.script.run.withSuccessHandler(data => { hideLoader(); noticesData = JSON.parse(data); renderNotices(); showToast("Đã xóa!"); }).deleteNotice(rowIndex); }); }
+
+        function renderRules() {
+            let html = `<div class="p-6 w-full max-w-4xl mx-auto overflow-y-auto h-full"><h2 class="text-xl font-bold text-white mb-5">Nội quy & Chính sách</h2>
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 mb-6 shadow-sm"><h3 class="font-bold text-white mb-3 text-[13px]">+ Đăng Nội quy mới</h3><div class="space-y-3"><input type="text" id="rule-title" placeholder="Tiêu đề nội quy..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500"><textarea id="rule-content" rows="3" placeholder="Nội dung chi tiết..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500"></textarea><div class="flex flex-col sm:flex-row gap-2"><input type="text" id="rule-zalo" placeholder="Tên Group Zalo..." class="flex-1 px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500"><input type="text" id="rule-date" class="date-picker-input sm:w-[130px] px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500"><button onclick="submitRule()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[12px] rounded-lg whitespace-nowrap focus:ring-2 focus:ring-indigo-400 outline-none">Đăng lên</button></div></div></div><div class="space-y-4">`;
+            if(rulesData.length === 0) html += `<div class="p-5 text-center text-[12px] bg-slate-800 rounded-lg">Chưa có nội quy nào.</div>`;
+            rulesData.forEach((rule) => {
+                const safeTitle = rule.title.replace(/'/g, "\\'"); const safeContent = rule.content.replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "<br>"); const safeZalo = rule.zalo.replace(/'/g, "\\'");
+                html += `<div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-sm"><div class="flex flex-col md:flex-row md:justify-between md:items-start gap-3 mb-2"><div><h3 class="text-[14px] font-bold text-white mb-0.5">${rule.title}</h3><div class="flex flex-wrap items-center text-[11px] text-slate-400 gap-x-3"><span><b class="text-indigo-400">Zalo:</b> ${rule.zalo || 'Không có'}</span>${rule.dateStr ? `<span>🕒 ${rule.dateStr}</span>` : ''}</div></div><div class="flex items-center gap-1.5 shrink-0"><button onclick="openEditRuleModal(${rule.rowIndex})" class="p-1.5 bg-slate-700 text-slate-400 hover:text-indigo-400 hover:bg-slate-600 rounded transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button><button onclick="uiDeleteRule(${rule.rowIndex})" class="p-1.5 bg-slate-700 text-slate-400 hover:text-red-400 hover:bg-slate-600 rounded transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button><button onclick="copyRuleText('${safeTitle}', '${safeContent}', '${safeZalo}')" class="px-2.5 py-1.5 bg-emerald-900/40 text-emerald-400 border border-emerald-800/50 rounded text-[11px] font-bold flex items-center hover:bg-emerald-900 transition-colors outline-none"><svg class="w-3.5 h-3.5 mr-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copy</button><button onclick="downloadWord('${safeTitle}', '${safeContent}', '${rule.dateStr}', '${safeZalo}')" class="px-2.5 py-1.5 bg-indigo-900/40 text-indigo-400 border border-indigo-800/50 rounded text-[11px] font-bold flex items-center hover:bg-indigo-900 transition-colors outline-none"><svg class="w-3.5 h-3.5 mr-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Word</button></div></div><div class="text-[13px] leading-relaxed max-w-none whitespace-pre-wrap text-slate-300 border-t border-slate-700 pt-3">${rule.content}</div></div>`;
+            }); document.getElementById('main-content').innerHTML = html + `</div></div>`; setTimeout(() => { initFlatpickr(); }, 50);
+        }
+        function submitRule() { const t = document.getElementById('rule-title').value.trim(), c = document.getElementById('rule-content').value.trim(); if(!t || !c) return showToast("Vui lòng điền đủ!", 'error'); showLoader('Đang lưu...'); google.script.run.withSuccessHandler(data => { hideLoader(); rulesData = JSON.parse(data); renderRules(); showToast("Đã đăng!"); }).addRule(t, c, document.getElementById('rule-zalo').value.trim(), document.getElementById('rule-date').value); }
+        function openEditRuleModal(rowIndex) { const rule = rulesData.find(r => r.rowIndex === rowIndex); if(!rule) return; document.getElementById('edit-rule-id').value = rowIndex; document.getElementById('edit-rule-title').value = rule.title; document.getElementById('edit-rule-content').value = rule.content; document.getElementById('edit-rule-zalo').value = rule.zalo; const dateInput = document.getElementById('edit-rule-date'); dateInput.value = rule.rawDate; if (dateInput._flatpickr) dateInput._flatpickr.setDate(rule.rawDate); document.getElementById('edit-rule-modal').classList.replace('hidden', 'flex'); }
+        function closeEditRuleModal() { document.getElementById('edit-rule-modal').classList.replace('flex', 'hidden'); }
+        function confirmEditRule() { const id = document.getElementById('edit-rule-id').value; const t = document.getElementById('edit-rule-title').value.trim(); const c = document.getElementById('edit-rule-content').value.trim(); if(!t || !c) return showToast("Vui lòng điền đủ!", 'error'); showLoader('Đang lưu...'); google.script.run.withSuccessHandler(data => { hideLoader(); closeEditRuleModal(); rulesData = JSON.parse(data); renderRules(); showToast("Đã sửa!"); }).editRule(id, t, c, document.getElementById('edit-rule-zalo').value.trim(), document.getElementById('edit-rule-date').value); }
+        function uiDeleteRule(rowIndex) { showConfirm('Xóa Nội quy?', 'Bạn có chắc muốn xóa?', () => { showLoader('Đang xóa...'); google.script.run.withSuccessHandler(data => { hideLoader(); rulesData = JSON.parse(data); renderRules(); showToast("Đã xóa!"); }).deleteRule(rowIndex); }); }
+
+        function copyRuleText(title, content, zalo) { const textToCopy = `📌 [THÔNG BÁO / NỘI QUY] ${title}\n\n${content.replace(/<br>/g, '\n')}\n\n👉 Nhóm Zalo hỗ trợ: ${zalo || 'Không có'}`; if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(textToCopy).then(() => showToast('Đã copy nội dung!')).catch(e => fallbackCopy(textToCopy)); } else { fallbackCopy(textToCopy); } }
+        function fallbackCopy(text) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast('Đã copy nội dung!'); } catch (err) {} document.body.removeChild(ta); }
+        function downloadWord(title, content, date, zalo) { const htmlString = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>${title}</title></head><body style="font-family: Arial, sans-serif; line-height: 1.6;"><h1 style="color: #4f46e5; text-align: center;">${title}</h1><p style="text-align: right; color: #555;"><i>Ngày ban hành: ${date}</i></p><p style="text-align: right; color: #555;"><i>Phổ biến tại Group: ${zalo}</i></p><hr style="border:1px solid #ccc; margin-bottom: 20px;" /><div>${content}</div></body></html>`; const blob = new Blob(['\ufeff', htmlString], { type: 'application/msword' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `NoiQuy_${title.replace(/\s+/g, '_')}.doc`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast('Đang tải file Word về máy...'); }
+
+
+        // ==========================================
+        // ADMIN (SỬA CHECKLIST SOP)
+        // ==========================================
+        function renderAdmin() {
+            const templateStepsObj = db[state.dept]?.sops[state.sop]?.idols['TEMPLATE']?.steps || {};
+            let html = `<div class="p-6 w-full max-w-5xl mx-auto overflow-y-auto h-full relative"><div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 mb-5 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md"><div><h2 class="text-base font-bold text-white mb-0.5">Chỉnh sửa Template: ${state.sop}</h2><p class="text-[12px] text-slate-400">Kéo thả tự do các biểu tượng ⋮⋮. Nhớ ấn "Lưu thay đổi" sau khi xếp xong.</p></div><button id="save-order-btn" onclick="saveOrderToServer()" class="hidden px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-bold rounded-lg shadow-md transition-colors flex items-center whitespace-nowrap focus:ring-2 focus:ring-emerald-500 outline-none"><svg class="w-4 h-4 mr-1.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg> Lưu thay đổi</button></div><div id="admin-steps-wrapper" class="space-y-4">`;
+            Object.keys(templateStepsObj).forEach(stepTitle => {
+                const safeStepTitle = stepTitle.replace(/'/g, "\\'");
+                html += `<div class="admin-step-container bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-sm" data-step-name="${stepTitle}"><div class="flex items-center gap-2 mb-3"><div class="step-drag-handle cursor-grab active:cursor-grabbing text-slate-500 hover:text-slate-300 p-1" tabindex="0"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/></svg></div><h3 class="font-bold text-white uppercase text-[12px] bg-slate-700 px-3 py-1 rounded-full">${stepTitle}</h3><button onclick="openEditStepModal('${safeStepTitle}')" class="text-slate-500 hover:text-indigo-400 p-1 transition-colors outline-none rounded" title="Sửa tên Bước này"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button></div><div class="admin-checklist-wrapper space-y-1.5 pl-2 border-l border-slate-700 ml-2 pb-2 min-h-[30px]">`;
+                templateStepsObj[stepTitle].checklists.forEach(chk => {
+                    html += `<div class="admin-checklist-item flex items-center justify-between p-2.5 bg-slate-900/50 rounded-lg border border-slate-700 hover:border-indigo-500/50 group" data-id="${chk.id}"><div class="flex items-center flex-1 gap-2"><div class="check-drag-handle cursor-grab active:cursor-grabbing text-slate-500 hover:text-slate-400 p-1" tabindex="0"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/></svg></div><div class="flex flex-col"><span class="text-[13px] font-medium text-slate-300">${chk.text}</span><div class="flex gap-4 mt-0.5">${chk.rule ? `<span class="text-[10px] text-indigo-400 font-bold">🔗 Nội quy: ${chk.rule}</span>` : ''}${chk.file ? `<span class="text-[10px] text-sky-400 font-bold">📎 File kèm</span>` : ''}</div></div></div><div class="flex items-center gap-1 shrink-0"><button onclick="openEditCheckModal('${chk.id}')" class="text-slate-500 hover:text-indigo-400 p-1.5 opacity-0 group-hover:opacity-100 transition-all outline-none rounded"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button><button onclick="adminDeleteStep('${chk.id}')" class="text-slate-500 hover:text-red-400 p-1.5 opacity-0 group-hover:opacity-100 transition-all outline-none rounded"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></div>`;
+                }); html += `</div></div>`;
+            });
+            let selectOptions = `<option value="" disabled selected>-- Chọn Bước lớn có sẵn --</option>`;
+            Object.keys(templateStepsObj).forEach(st => { selectOptions += `<option value="${st}">${st}</option>`; });
+            selectOptions += `<option value="__NEW__" class="font-bold text-indigo-400">[+] Tạo Bước Lớn Mới...</option>`;
+            let ruleOptions = `<option value="">(Tùy chọn: Không có Nội quy)</option>`;
+            rulesData.forEach(r => { ruleOptions += `<option value="${r.title.replace(/"/g, "&quot;")}">🔗 Đính kèm: ${r.title}</option>`; });
+            html += `</div><div class="bg-slate-800 border border-dashed border-slate-600 rounded-xl p-5 mt-6 mb-10"><h4 class="font-bold text-white mb-3 text-[13px]">+ Thêm tác vụ mới</h4><div class="flex flex-col gap-2"><select id="add-step-select" onchange="toggleNewStepInput(this.value)" class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500 font-medium">${selectOptions}</select><input type="text" id="add-step-name" placeholder="Nhập tên Bước Lớn mới..." class="hidden w-full px-3 py-2 text-[12px] rounded-lg border border-indigo-500 bg-slate-900 text-white outline-none"><input type="text" id="add-check-name" placeholder="Nội dung Checklist nhỏ cần làm..." class="w-full px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500"><div class="flex flex-col sm:flex-row gap-2"><select id="add-check-rule" class="flex-1 px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500">${ruleOptions}</select><input type="text" id="add-check-file" placeholder="Link tải File đính kèm..." class="flex-1 px-3 py-2 text-[12px] rounded-lg border border-slate-600 bg-slate-700 text-white outline-none focus:ring-2 focus:ring-indigo-500"><button onclick="adminAddStep()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[12px] rounded-lg whitespace-nowrap transition-colors focus:ring-2 focus:ring-indigo-500 outline-none">Thêm tác vụ</button></div></div></div></div>`;
+            document.getElementById('main-content').innerHTML = html; initSortable();
+        }
+
+        function openEditStepModal(oldName) { if(hasUnsavedChanges) return showToast('Vui lòng click "Lưu thay đổi" trước!', 'error'); currentEditStepName = oldName; document.getElementById('edit-step-name-input').value = oldName; document.getElementById('edit-step-modal').classList.replace('hidden', 'flex'); document.getElementById('edit-step-name-input').focus(); }
+        function closeEditStepModal() { document.getElementById('edit-step-modal').classList.replace('flex', 'hidden'); }
+        function confirmEditStep() { const newName = document.getElementById('edit-step-name-input').value.trim(); if(!newName) return showToast('Không được để trống', 'error'); if(newName === currentEditStepName) return closeEditStepModal(); showLoader('Đang cập nhật...'); google.script.run.withSuccessHandler(() => { hideLoader(); showToast('Đã sửa tên!'); closeEditStepModal(); init(); }).renameTemplateStep(state.dept, state.sop, currentEditStepName, newName); }
+
+        function openEditCheckModal(chkId) {
+            if(hasUnsavedChanges) return showToast('Vui lòng Lưu kéo thả trước!', 'error'); currentEditCheckId = chkId;
+            const templateStepsObj = db[state.dept]?.sops[state.sop]?.idols['TEMPLATE']?.steps || {};
+            let foundChk = null; let foundStep = null;
+            Object.keys(templateStepsObj).forEach(stepTitle => { const match = templateStepsObj[stepTitle].checklists.find(c => String(c.id) === String(chkId)); if(match) { foundChk = match; foundStep = stepTitle; } });
+            if(!foundChk) return;
+            let selectOptions = `<option value="" disabled>-- Chọn Bước có sẵn --</option>`; Object.keys(templateStepsObj).forEach(st => { selectOptions += `<option value="${st}" ${st === foundStep ? 'selected' : ''}>${st}</option>`; }); selectOptions += `<option value="__NEW__" class="font-bold text-indigo-400">[+] Đổi sang Bước Lớn Mới...</option>`;
+            document.getElementById('edit-check-step-select').innerHTML = selectOptions; document.getElementById('edit-check-step-name-new').classList.add('hidden');
+            let ruleOptions = `<option value="">(Tùy chọn: Không có Nội quy)</option>`; rulesData.forEach(r => { ruleOptions += `<option value="${r.title.replace(/"/g, "&quot;")}" ${r.title === foundChk.rule ? 'selected' : ''}>🔗 Đính kèm: ${r.title}</option>`; });
+            document.getElementById('edit-check-rule').innerHTML = ruleOptions; document.getElementById('edit-check-text-input').value = foundChk.text; document.getElementById('edit-check-file').value = foundChk.file || '';
+            document.getElementById('edit-check-modal').classList.replace('hidden', 'flex'); document.getElementById('edit-check-text-input').focus();
+        }
+        function toggleEditNewStepInput(val) { const input = document.getElementById('edit-check-step-name-new'); if(val === '__NEW__') { input.classList.remove('hidden'); input.focus(); } else { input.classList.add('hidden'); input.value = ''; } }
+        function closeEditCheckModal() { document.getElementById('edit-check-modal').classList.replace('flex', 'hidden'); }
+        function confirmEditCheck() { const selectVal = document.getElementById('edit-check-step-select').value; const newStep = selectVal === '__NEW__' ? document.getElementById('edit-check-step-name-new').value.trim() : selectVal; const newText = document.getElementById('edit-check-text-input').value.trim(); const newRule = document.getElementById('edit-check-rule').value; const newFile = document.getElementById('edit-check-file').value.trim(); if(!newStep || !newText) return showToast('Vui lòng điền đủ', 'error'); showLoader('Đang cập nhật...'); google.script.run.withSuccessHandler(() => { hideLoader(); showToast('Đã sửa!'); closeEditCheckModal(); init(); }).editTemplateRow(currentEditCheckId, newStep, newText, newRule, newFile); }
+
+        function initSortable() { if(typeof Sortable === 'undefined') return; const stepsWrap = document.getElementById('admin-steps-wrapper'); if(stepsWrap) { new Sortable(stepsWrap, { animation: 150, handle: '.step-drag-handle', ghostClass: 'sortable-ghost', onEnd: markUnsavedChanges }); } document.querySelectorAll('.admin-checklist-wrapper').forEach(wrap => { new Sortable(wrap, { group: 'checklists', animation: 150, handle: '.check-drag-handle', ghostClass: 'sortable-ghost', onEnd: markUnsavedChanges }); }); }
+        function markUnsavedChanges() { hasUnsavedChanges = true; document.getElementById('save-order-btn').classList.remove('hidden'); }
+        function saveOrderToServer() { const newOrder = []; document.querySelectorAll('.admin-step-container').forEach(stepEl => { const stepName = stepEl.dataset.stepName; stepEl.querySelectorAll('.admin-checklist-item').forEach(checkEl => { newOrder.push({ id: checkEl.dataset.id, step: stepName }); }); }); showLoader('Đang lưu thứ tự...'); google.script.run.withSuccessHandler(() => { hideLoader(); showToast('Đã sắp xếp!'); hasUnsavedChanges = false; init(); }).reorderTemplates(newOrder); }
+
+        function toggleNewStepInput(val) { const input = document.getElementById('add-step-name'); if(val === '__NEW__') { input.classList.remove('hidden'); input.focus(); } else { input.classList.add('hidden'); input.value = ''; } }
+        function adminAddStep() { if(hasUnsavedChanges) return showToast('Vui lòng click "Lưu thay đổi" trước!', 'error'); const selectVal = document.getElementById('add-step-select').value; const stepName = selectVal === '__NEW__' ? document.getElementById('add-step-name').value.trim() : selectVal; const checkName = document.getElementById('add-check-name').value.trim(); if(!stepName || !checkName) return showToast('Vui lòng điền đủ thông tin!', 'error'); showLoader('Đang thêm...'); google.script.run.withSuccessHandler(() => { hideLoader(); showToast('Thêm thành công!'); init(); }).addTemplateRow(state.dept, state.sop, stepName, checkName, document.getElementById('add-check-rule').value, document.getElementById('add-check-file').value.trim()); }
+        function adminDeleteStep(rowId) { if(hasUnsavedChanges) return showToast('Vui lòng click "Lưu thay đổi" trước!', 'error'); showConfirm('Xóa khỏi Template?', 'Xóa vĩnh viễn?', () => { showLoader('Đang xóa...'); google.script.run.withSuccessHandler(() => { hideLoader(); showToast('Đã xóa!'); init(); }).deleteTemplateRow(rowId); }); }
+
+        // ==========================================
+        // DASHBOARD IDOL
+        // ==========================================
+        function getIdolSteps(dept, sop, idol) {
+            const stepsObj = db[dept].sops[sop].idols[idol].steps;
+            const steps = Object.keys(stepsObj).map(title => ({ title, ...stepsObj[title] }));
+            let hasFoundActive = false; let totalChk = 0, doneChk = 0; let lastTime = '';
+            steps.forEach(s => {
+                const sT = s.checklists.length; const doneChecklists = s.checklists.filter(c => c.isDone); const sD = doneChecklists.length;
+                totalChk += sT; doneChk += sD;
+                // LOGIC KHÓA TUẦN TỰ (XONG BƯỚC 1 MỚI MỞ BƯỚC 2 CHO TỪNG IDOL)
+                if (sD === sT && sT > 0) s.status = 'completed'; 
+                else if (!hasFoundActive) { s.status = 'active'; hasFoundActive = true; } 
+                else s.status = 'locked'; 
+                if (doneChecklists.length > 0) { const validTimes = doneChecklists.map(c => c.time).filter(t => t); if(validTimes.length > 0) lastTime = validTimes[validTimes.length - 1]; }
+            });
+            return { steps, progress: Math.round((doneChk/totalChk)*100) || 0, completedAt: lastTime };
+        }
+
+        function renderDashboard() {
+            const idolsObj = db[state.dept]?.sops[state.sop]?.idols || {};
+            const idolNames = Object.keys(idolsObj).filter(n => n !== 'TEMPLATE').sort((a, b) => idolsObj[a]._order - idolsObj[b]._order);
+            const total = idolNames.length; let completed = 0; idolNames.forEach(name => { if(getIdolSteps(state.dept, state.sop, name).progress === 100) completed++; });
+            const doing = total - completed;
+
+            let html = `<div class="p-6 w-full max-w-6xl mx-auto overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between"><div><p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Tổng Idol Gán SOP</p><h3 class="text-2xl font-bold text-white">${total}</h3></div><div class="w-10 h-10 rounded-full bg-blue-900/30 flex items-center justify-center text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg></div></div>
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between"><div><p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Đang thực hiện</p><h3 class="text-2xl font-bold text-indigo-400">${doing}</h3></div><div class="w-10 h-10 rounded-full bg-indigo-900/30 flex items-center justify-center text-indigo-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div></div>
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm flex items-center justify-between"><div><p class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1">Đã hoàn thành</p><h3 class="text-2xl font-bold text-emerald-400">${completed}</h3></div><div class="w-10 h-10 rounded-full bg-emerald-900/30 flex items-center justify-center text-emerald-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div></div>
+                </div>
+                <div class="flex justify-between items-center mb-5"><div><h2 class="text-xl font-bold text-white">Danh sách Idol</h2></div><button onclick="openModal()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[12px] font-bold shadow-md active:scale-95 flex items-center whitespace-nowrap focus:ring-2 focus:ring-indigo-500 outline-none">+ Giao cho Idol mới</button></div>`;
+            
+            if(idolNames.length === 0) html += `<div class="text-center p-8 text-[12px] border border-dashed border-slate-700 rounded-xl">Chưa có Idol nào.</div>`;
+            else {
+                html += `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">`;
+                idolNames.forEach(name => {
+                    const { progress, completedAt } = getIdolSteps(state.dept, state.sop, name); const isDone = progress === 100;
+                    html += `<div tabindex="0" onkeypress="if(event.key==='Enter') goExecution('${name}')" class="relative bg-slate-800 border border-slate-700 p-5 rounded-2xl shadow-sm hover:border-indigo-500 cursor-pointer group transition-all focus:ring-2 focus:ring-indigo-500 outline-none" onclick="goExecution('${name}')">${isDone ? `<button onclick="event.stopPropagation(); confirmDeleteIdol('${name}')" class="absolute top-3 right-3 p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 outline-none" title="Xóa dữ liệu"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}<div class="flex justify-between items-center mb-1 ${isDone ? 'pr-6' : ''}"><h4 class="font-bold text-white text-[16px] group-hover:text-indigo-400 truncate pr-2">${name}</h4><span class="text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 ${isDone ? 'bg-emerald-900/50 text-emerald-400' : 'bg-slate-700 text-slate-300'}">${progress}%</span></div>${isDone && completedAt ? `<div class="text-[11px] text-emerald-500 font-semibold mt-1.5">✅ Hoàn thành: ${completedAt}</div>` : ''}<div class="w-full bg-slate-700 rounded-full h-1 mt-4"><div class="${isDone ? 'bg-emerald-500' : 'bg-indigo-500'} h-1 rounded-full" style="width: ${progress}%"></div></div></div>`;
+                }); html += `</div>`;
+            }
+            document.getElementById('main-content').innerHTML = html + `</div>`;
+        }
+
+        // ==========================================
+        // EXECUTION (LÀM TASK)
+        // ==========================================
+        function renderExecution() {
+            const { steps, progress } = getIdolSteps(state.dept, state.sop, state.idol);
+            const activeStepObj = steps.find(s => s.status === 'active') || steps.find(s => s.status === 'completed');
+            if(!state.step && activeStepObj) state.step = activeStepObj.title;
+            const isIdolCompleted = progress === 100;
+
+            let tlHtml = `<div class="w-[280px] bg-[#0b1120] border-r border-slate-800 overflow-y-auto p-4 hidden md:block">`;
+            steps.forEach((s, i) => {
+                const isSel = s.title === state.step; let ic, tc, bc;
+                if (s.status === 'completed') { ic = "bg-emerald-500 text-white"; tc = "text-slate-400"; bc = isSel ? "bg-slate-800 shadow ring-1 ring-emerald-500/50" : "hover:bg-slate-800/50 cursor-pointer"; }
+                else if (s.status === 'active') { ic = "bg-slate-800 border-[3px] border-indigo-500"; tc = "text-indigo-400 font-bold"; bc = isSel ? "bg-slate-800 shadow ring-1 ring-indigo-500" : "hover:bg-slate-800/50 cursor-pointer"; }
+                else { ic = "bg-slate-700 border-slate-600"; tc = "text-slate-500"; bc = "opacity-60 cursor-not-allowed"; }
+                tlHtml += `<div class="relative flex p-3 rounded-xl transition-all mb-2 ${bc} outline-none" tabindex="${s.status!=='locked'?'0':'-1'}" ${s.status!=='locked'?`onkeypress="if(event.key==='Enter'){state.step='${s.title}';renderUI()}" onclick="state.step='${s.title}';renderUI()"`:''}>${i !== steps.length - 1 ? `<div class="absolute top-10 left-[26px] bottom-[-16px] w-0.5 bg-slate-700"></div>` : ''}<div class="mr-3 z-10"><div class="w-7 h-7 rounded-full flex items-center justify-center shadow-sm ${ic}">${s.status==='completed'?`<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="3" d="M5 13l4 4L19 7"/></svg>`:''}</div></div><div><span class="text-[9px] font-bold uppercase text-slate-500 mb-0.5 block">BƯỚC ${i + 1}</span><h4 class="text-[12px] ${tc}">${s.title}</h4></div></div>`;
+            }); tlHtml += `</div>`;
+
+            let clHtml = `<div class="flex-1 overflow-y-auto p-4 md:p-6"><div class="max-w-3xl mx-auto">`;
+            const currentStepData = steps.find(s => s.title === state.step);
+            const isLastStep = steps.findIndex(s => s.title === state.step) === steps.length - 1;
+            
+            if(currentStepData) {
+                // FIX LOCK: Cho phép chỉnh sửa ngay cả khi bước này đã "completed" (tránh kẹt undo nếu lỡ bấm nhầm)
+                const isStepActive = currentStepData.status === 'active' || currentStepData.status === 'completed';
+                const totalC = currentStepData.checklists.length;
+                const doneC = currentStepData.checklists.filter(c => c.isDone).length;
+                
+                clHtml += `<h2 class="text-xl font-bold text-white mb-4">${currentStepData.title}</h2>
+                    ${isIdolCompleted ? `<div class="mb-4 bg-emerald-900/30 border border-emerald-800/50 p-3 rounded-xl flex items-center text-emerald-400 text-[12px] font-bold"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"/></svg> Dữ liệu đã khóa bảo vệ vì Idol đã hoàn thành toàn bộ SOP.</div>` : ''}
+                    <div class="bg-slate-800 border border-slate-700 shadow-sm rounded-xl p-4 md:p-6"><div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-700"><span class="text-[13px] font-bold text-slate-200">Checklist công việc</span><span class="text-[11px] font-bold px-3 py-1 bg-slate-700 text-slate-300 rounded-full">${doneC}/${totalC}</span></div><div class="space-y-2">`;
+
+                let isPreviousDone = true; 
+                currentStepData.checklists.forEach((chk, index, array) => {
+                    const isNextChecked = (index < array.length - 1) ? array[index + 1].isDone : false;
+                    const canInteract = isStepActive && !isIdolCompleted && isPreviousDone && !isNextChecked;
+                    const disabled = canInteract ? '' : 'disabled';
+                    const cursor = canInteract ? 'hover:bg-slate-700/50' : 'cursor-not-allowed opacity-50';
+                    const ruleBtn = chk.rule ? `<button onclick="event.preventDefault(); event.stopPropagation(); openRuleModal('${chk.rule.replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-indigo-900/40 text-indigo-400 text-[11px] font-bold rounded flex items-center shrink-0 border border-indigo-800/50 hover:bg-indigo-800 transition-colors outline-none"><svg class="w-3.5 h-3.5 mr-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg> Xem nội quy</button>` : '';
+                    const fileBtn = chk.file ? `<a href="${chk.file}" target="_blank" onclick="event.stopPropagation()" class="px-2.5 py-1.5 bg-sky-900/40 text-sky-400 text-[11px] font-bold rounded flex items-center shrink-0 border border-sky-800/50 hover:bg-sky-800 transition-colors outline-none"><svg class="w-3.5 h-3.5 mr-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> 📎 Tải File</a>` : '';
+
+                    clHtml += `<label tabindex="${disabled ? '-1' : '0'}" onkeypress="if(event.key==='Enter') toggleChecklist('${chk.id}', ${canInteract})" class="chk-wrap block p-3 rounded-xl border border-transparent ${chk.isDone ? 'bg-slate-800' : ''} ${cursor} outline-none"><div class="flex items-start"><div class="relative flex items-start mt-0.5 shrink-0"><input type="checkbox" class="sr-only" ${chk.isDone ? 'checked' : ''} ${disabled} tabindex="-1" onchange="toggleChecklist('${chk.id}', ${canInteract})"><div class="chk-box w-4 h-4 border-2 border-slate-600 rounded flex items-center justify-center bg-slate-700 mr-3 shrink-0"><svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path class="tick-svg" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div></div><div class="chk-text-box flex-1 flex flex-col xl:flex-row xl:justify-between xl:items-center gap-2"><div><span class="text-[13px] font-medium chk-text text-slate-200 leading-snug block">${chk.text}</span>${chk.isDone && chk.time ? `<div class="text-[10px] text-emerald-500 mt-1 font-medium italic">✓ Hoàn thành lúc ${chk.time}</div>` : ''}</div><div class="flex items-center gap-2 shrink-0">${ruleBtn} ${fileBtn}</div></div></div></label>`;
+                    if (!chk.isDone) isPreviousDone = false; 
+                });
+                clHtml += `</div></div>`;
+                
+                if (!isIdolCompleted && doneC === totalC && totalC > 0) {
+                    if(isLastStep) clHtml += `<button onclick="finishSop()" class="mt-6 w-full py-3 rounded-xl text-[13px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors flex justify-center items-center outline-none"><svg class="w-4 h-4 mr-1.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="3" d="M5 13l4 4L19 7"/></svg> ✅ Hoàn thành quy trình</button>`;
+                    else clHtml += `<button onclick="nextStep()" class="mt-6 w-full py-3 rounded-xl text-[13px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors flex justify-center items-center outline-none">Chuyển sang Bước tiếp theo 👉</button>`;
+                }
+            }
+            clHtml += `</div></div>`;
+            document.getElementById('main-content').innerHTML = tlHtml + clHtml;
+        }
+
+        function toggleChecklist(id, canInteract) {
+            if(!canInteract) return; 
+            // FIX ID NUMERIC BUGS: Bọc String() tránh lỗi so sánh chữ và số gây kẹt dữ liệu
+            const chk = db[state.dept].sops[state.sop].idols[state.idol].steps[state.step].checklists.find(c => String(c.id) === String(id));
+            if (!chk) return;
+            chk.isDone = !chk.isDone;
+            chk.time = chk.isDone ? new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ' - ' + new Date().toLocaleDateString('vi-VN', {day:'2-digit', month:'2-digit'}) : '';
+            renderUI(); 
+            google.script.run.updateChecklist(id, chk.isDone, state.idol, state.dept, state.sop);
+        }
+
+        function confirmDeleteIdol(idolName) { showConfirm('Xóa Idol?', `Bạn muốn XÓA vĩnh viễn dữ liệu của "${idolName}"? Dữ liệu không thể khôi phục!`, () => { showLoader('Đang xóa dữ liệu Idol...'); google.script.run.withSuccessHandler(data => { hideLoader(); db = JSON.parse(data); showToast('Đã dọn dẹp Idol thành công!'); renderUI(); }).deleteIdol(state.dept, state.sop, idolName); }); }
+        function goExecution(idol) { state.idol = idol; state.step = null; changeView('execution'); }
+        function nextStep() { state.step = null; renderUI(); }
+        function finishSop() { showToast('🎉 Idol đã hoàn thành xuất sắc quy trình SOP này!'); setTimeout(() => changeView('dashboard'), 1500); }
+        function openModal() { document.getElementById('modal').classList.replace('hidden', 'flex'); setTimeout(()=>document.getElementById('idol-name-input').focus(), 100); }
+        function closeModal() { document.getElementById('modal').classList.replace('flex', 'hidden'); }
+        function confirmAssign() { const idolName = document.getElementById('idol-name-input').value.trim(); if(!idolName) return showToast('Vui lòng nhập tên!', 'error'); showLoader('Đang gán Idol...'); google.script.run.withSuccessHandler(data => { hideLoader(); db = JSON.parse(data); closeModal(); document.getElementById('idol-name-input').value = ''; showToast('Đã gán Idol thành công!'); goExecution(idolName); }).assignToIdol(state.dept, state.sop, idolName); }
+        function openRuleModal(ruleTitle) { const rule = rulesData.find(r => r.title === ruleTitle); if(!rule) return showToast("Không tìm thấy quy định này!", 'error'); document.getElementById('rule-modal-title').innerText = rule.title; document.getElementById('rule-modal-zalo').innerText = rule.zalo || 'Không có'; document.getElementById('rule-modal-content').innerHTML = rule.content.replace(/\n/g, "<br>"); const safeTitle = rule.title.replace(/'/g, "\\'"); const safeContent = rule.content.replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "<br>"); const safeZalo = rule.zalo.replace(/'/g, "\\'"); document.getElementById('rule-modal-copy-btn').setAttribute('onclick', `copyRuleText('${safeTitle}', '${safeContent}', '${safeZalo}')`); document.getElementById('rule-modal').classList.replace('hidden', 'flex'); }
+        function closeRuleModal() { document.getElementById('rule-modal').classList.replace('flex', 'hidden'); }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
