@@ -8,11 +8,45 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
-    :root { --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); --card-bg: rgba(255, 255, 255, 0.95); --text-main: #2c3e50; --text-muted: #6c757d; --input-bg: #f8f9fa; --input-border: #e9ecef; --tab-active: #764ba2; --card-shadow: 0 15px 35px rgba(0,0,0,0.1); }
-    [data-theme="dark"] { --bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); --card-bg: rgba(30, 32, 42, 0.95); --text-main: #f8f9fa; --text-muted: #a0aab2; --input-bg: #222431; --input-border: #3f4254; --tab-active: #a87ffb; --card-shadow: 0 15px 35px rgba(0,0,0,0.5); }
-    body { background: var(--bg-gradient); color: var(--text-main); font-family: 'Poppins', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 20px 0; transition: background 0.5s ease; overflow-x: hidden;}
+    :root { 
+      --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+      --card-bg: rgba(255, 255, 255, 0.95); 
+      --text-main: #2c3e50; 
+      --text-muted: #6c757d; 
+      --input-bg: #f8f9fa; 
+      --input-border: #e9ecef; 
+      --tab-active: #764ba2; 
+      --card-shadow: 0 15px 35px rgba(0,0,0,0.1); 
+    }
+
+    [data-theme="dark"] { 
+      --bg-gradient: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%); 
+      --card-bg: rgba(30, 32, 42, 0.95); 
+      --text-main: #f8f9fa; 
+      --text-muted: #a0aab2; 
+      --input-bg: #222431; 
+      --input-border: #3f4254; 
+      --tab-active: #a87ffb; 
+      --card-shadow: 0 15px 35px rgba(0,0,0,0.5); 
+    }
+
+    body { 
+      background: var(--bg-gradient); 
+      color: var(--text-main); 
+      font-family: 'Poppins', sans-serif; 
+      min-height: 100vh; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      margin: 0; 
+      padding: 20px 0; 
+      transition: background 0.5s ease; 
+      overflow-x: hidden;
+    }
+
     @keyframes smoothFadeUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
     .fade-up-element { animation: smoothFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    
     @keyframes tabTransition { 0% { opacity: 0; transform: translateY(12px) scale(0.99); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
     .tab-pane-animated { animation: tabTransition 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
@@ -21,6 +55,7 @@
     .cyber-toast.show { transform: translateX(0) scale(1); opacity: 1; }
     .cyber-toast.success { border-color: rgba(16, 185, 129, 0.5); }
     .cyber-toast.error { border-color: rgba(244, 63, 94, 0.5); }
+    
     .theme-toggle { position: fixed; top: 20px; right: 20px; background: var(--card-bg); color: var(--text-main); border: 1px solid var(--input-border); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--card-shadow); transition: all 0.3s; z-index: 9999; }
     
     .glass-card { background: var(--card-bg); border-radius: 24px; box-shadow: var(--card-shadow); padding: 40px; width: 100%; max-width: 600px; margin: 0 auto; text-align: center; transition: all 0.3s ease; }
@@ -46,7 +81,14 @@
     @keyframes typingPulse { 0%, 100% { box-shadow: -22px 0 0 -3px, 0 0 0 -3px, 22px 0 0 -3px; } 25% { box-shadow: -22px 0 0 3px, 0 0 0 -3px, 22px 0 0 -3px; } 50% { box-shadow: -22px 0 0 -3px, 0 0 0 3px, 22px 0 0 -3px; } 75% { box-shadow: -22px 0 0 -3px, 0 0 0 -3px, 22px 0 0 3px; } }
     #adminLoader { position: absolute !important; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0 !important; z-index: 99; }
     
-    .admin-card { min-height: 640px; height: auto; display: flex; flex-direction: column; position: relative; }
+    /* ĐÃ SỬA: Xóa min-height: 640px để khung tự thu nhỏ cho gọn */
+    .admin-card { 
+        height: auto; 
+        display: flex; 
+        flex-direction: column; 
+        position: relative; 
+    }
+    
     .tab-inner-flex { display: flex; flex-direction: column; justify-content: flex-start; max-height: 500px; overflow-y: auto; overflow-x: hidden; width: 100%; padding-right: 5px; }
     .tab-inner-flex::-webkit-scrollbar { width: 6px; }
     .tab-inner-flex::-webkit-scrollbar-thumb { background: var(--input-border); border-radius: 10px; }
@@ -159,14 +201,31 @@
       run: (function() {
         const makeApiCall = async (action, args, callback, failCallback) => {
           try {
-            const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: action, args: args }) });
+            const res = await fetch(API_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+                body: JSON.stringify({ action: action, args: args }) 
+            });
             const textRes = await res.text();
             let result;
-            try { result = JSON.parse(textRes); } catch(e) { if(failCallback) failCallback(new Error("Lỗi parse JSON")); return; }
-            if (result.success) { if (callback) callback(result.data); } 
-            else { if(failCallback) failCallback(new Error(result.error)); else showToast("Lỗi: " + result.error, "error"); }
-          } catch(e) { if(failCallback) failCallback(e); else showToast("Lỗi kết nối", "error"); }
+            try { 
+                result = JSON.parse(textRes); 
+            } catch(e) { 
+                if(failCallback) failCallback(new Error("Lỗi parse JSON")); 
+                return; 
+            }
+            if (result.success) { 
+                if (callback) callback(result.data); 
+            } else { 
+                if(failCallback) failCallback(new Error(result.error)); 
+                else showToast("Lỗi: " + result.error, "error"); 
+            }
+          } catch(e) { 
+              if(failCallback) failCallback(e); 
+              else showToast("Lỗi kết nối", "error"); 
+          }
         };
+
         const handlerObj = (callback, failCallback) => ({
           withSuccessHandler: (cb) => handlerObj(cb, failCallback),
           withFailureHandler: (fcb) => handlerObj(callback, fcb),
@@ -180,6 +239,7 @@
           addIdol: (g, i) => makeApiCall('addIdol', [g, i], callback, failCallback),
           removeIdol: (g, i) => makeApiCall('removeIdol', [g, i], callback, failCallback)
         });
+
         return handlerObj(null, null);
       })()
     }
@@ -194,8 +254,12 @@
     let icon = type === 'success' ? '<i class="bi bi-check-circle-fill" style="color: #34d399;"></i>' : '<i class="bi bi-exclamation-triangle-fill" style="color: #fb7185;"></i>';
     toast.innerHTML = `${icon} <span>${message}</span>`;
     container.appendChild(toast);
+    
     setTimeout(() => toast.classList.add('show'), 10);
-    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
+    setTimeout(() => { 
+        toast.classList.remove('show'); 
+        setTimeout(() => toast.remove(), 400); 
+    }, 3000);
   }
 
   function toggleTheme() {
@@ -211,23 +275,41 @@
     document.body.setAttribute('data-theme', savedTheme);
     document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi bi-moon-stars-fill text-primary';
     
-    google.script.run.withSuccessHandler(function(data) { groupsData = data; populateSelects(); }).getGroupsData();
+    google.script.run.withSuccessHandler(function(data) { 
+        groupsData = data; 
+        populateSelects(); 
+    }).getGroupsData();
   }
   
   function populateSelects() {
-    const selects = [document.getElementById('groupSelect'), document.getElementById('removeGroupSelect'), document.getElementById('configGroupSelect'), document.getElementById('deleteGroupSelect')];
+    const selects = [
+        document.getElementById('groupSelect'), 
+        document.getElementById('removeGroupSelect'), 
+        document.getElementById('configGroupSelect'), 
+        document.getElementById('deleteGroupSelect')
+    ];
+    
     selects.forEach(select => {
       if (!select) return;
       select.innerHTML = ""; 
-      for (const key in groupsData) { let option = document.createElement('option'); option.value = key; option.text = groupsData[key].name; select.appendChild(option); }
+      for (const key in groupsData) { 
+          let option = document.createElement('option'); 
+          option.value = key; 
+          option.text = groupsData[key].name; 
+          select.appendChild(option); 
+      }
     });
-    if (document.getElementById('deleteGroupSelect')) updateDeleteIdolDropdown();
+    
+    if (document.getElementById('deleteGroupSelect')) {
+        updateDeleteIdolDropdown();
+    }
   }
 
   function login() {
     const pin = document.getElementById('pinInput').value;
     document.getElementById('loginLoader').style.display = 'block';
     document.getElementById('loginError').style.display = 'none';
+    
     google.script.run.withSuccessHandler(function(isValid) {
       document.getElementById('loginLoader').style.display = 'none';
       if(isValid) {
@@ -245,12 +327,15 @@
   function updateSlider(tabElement) {
     const slider = document.getElementById('tabSlider');
     if (!slider || !tabElement) return;
-    slider.style.width = tabElement.offsetWidth + 'px'; slider.style.left = tabElement.offsetLeft + 'px';
+    slider.style.width = tabElement.offsetWidth + 'px'; 
+    slider.style.left = tabElement.offsetLeft + 'px';
   }
 
   function switchTab(event, tabId) {
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-    event.currentTarget.classList.add('active'); updateSlider(event.currentTarget);
+    event.currentTarget.classList.add('active'); 
+    updateSlider(event.currentTarget);
+    
     document.querySelectorAll('.tab-pane-animated').forEach(el => el.style.display = 'none');
     document.getElementById(tabId).style.display = 'block';
   }
@@ -259,37 +344,67 @@
     const val = document.getElementById('emailInput').value.trim();
     const btn = document.getElementById('btnRemove');
     const input = document.getElementById('emailInput');
-    if (!val) { input.style.borderColor = 'var(--input-border)'; btn.disabled = true; return; }
+    
+    if (!val) { 
+        input.style.borderColor = 'var(--input-border)'; 
+        btn.disabled = true; 
+        return; 
+    }
+    
     const emails = val.split(/[,\n]+/).map(e => e.trim()).filter(e => e !== "");
     let allValid = emails.every(e => /^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(e));
-    if (allValid && emails.length > 0) { input.style.borderColor = '#10b981'; btn.disabled = false; } 
-    else { input.style.borderColor = '#f43f5e'; btn.disabled = true; }
+    
+    if (allValid && emails.length > 0) { 
+        input.style.borderColor = '#10b981'; 
+        btn.disabled = false; 
+    } else { 
+        input.style.borderColor = '#f43f5e'; 
+        btn.disabled = true; 
+    }
   }
 
   function copyText(msgType) {
-    navigator.clipboard.writeText(document.getElementById("hiddenCopyText").value).then(() => showToast(msgType === 'otp' ? "Đã copy mã OTP Zalo!" : "Đã copy Link Bảng Zalo!", "success"));
+    navigator.clipboard.writeText(document.getElementById("hiddenCopyText").value).then(() => {
+        showToast(msgType === 'otp' ? "Đã copy mã OTP Zalo!" : "Đã copy Link Bảng Zalo!", "success");
+    });
   }
 
   function generateCode() {
     const gId = document.getElementById('groupSelect').value;
     document.getElementById('adminLoader').style.display = 'block';
     document.getElementById('outputAreaCode').classList.remove('show');
+    
     google.script.run.withSuccessHandler(function(res) {
       document.getElementById('adminLoader').style.display = 'none';
       if(res.success) {
         confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
         const txt = `📌 [FORM ĐĂNG KÝ QUYỀN TRUY CẬP]\n👉 Link: ${res.link}\n🔑 Mã xác thực: ${res.code}\n(Mã có hiệu lực 1 tiếng)`;
-        document.getElementById('outputAreaCode').innerHTML = `<h5 class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Đã tạo mã!</h5><p class="mb-2" style="color: var(--text-main);"><b>Link Form:</b> <a href="${res.link}" target="_blank">Mở Link</a></p><p class="mb-4" style="color: var(--text-main);"><b>Mã OTP:</b> <span class="fs-3 fw-bold text-danger d-block mt-1">${res.code}</span></p><textarea id="hiddenCopyText" style="display:none;">${txt}</textarea><div class="row g-2"><div class="col-8"><button class="btn btn-primary w-100 fw-bold py-2" onclick="copyText('otp')">Copy gửi Zalo</button></div><div class="col-4"><button class="btn btn-outline-danger w-100 py-2 fw-bold" onclick="invalidateOTP('${gId}')">Hủy OTP</button></div></div>`;
-      } else { document.getElementById('outputAreaCode').innerHTML = `<span class="text-danger fw-bold">${res.message}</span>`; }
+        
+        document.getElementById('outputAreaCode').innerHTML = `
+            <h5 class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Đã tạo mã!</h5>
+            <p class="mb-2" style="color: var(--text-main);"><b>Link Form:</b> <a href="${res.link}" target="_blank">Mở Link</a></p>
+            <p class="mb-4" style="color: var(--text-main);"><b>Mã OTP:</b> <span class="fs-3 fw-bold text-danger d-block mt-1">${res.code}</span></p>
+            <textarea id="hiddenCopyText" style="display:none;">${txt}</textarea>
+            <div class="row g-2">
+                <div class="col-8"><button class="btn btn-primary w-100 fw-bold py-2" onclick="copyText('otp')">Copy gửi Zalo</button></div>
+                <div class="col-4"><button class="btn btn-outline-danger w-100 py-2 fw-bold" onclick="invalidateOTP('${gId}')">Hủy OTP</button></div>
+            </div>`;
+      } else { 
+          document.getElementById('outputAreaCode').innerHTML = `<span class="text-danger fw-bold">${res.message}</span>`; 
+      }
       document.getElementById('outputAreaCode').classList.add('show');
     }).webGenerateCode(gId);
   }
 
   function invalidateOTP(gId) {
     document.getElementById('adminLoader').style.display = 'block';
+    
     google.script.run.withSuccessHandler(function(res) {
       document.getElementById('adminLoader').style.display = 'none';
-      if (res.success) { showToast(res.message, "success"); document.getElementById('outputAreaCode').innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle"></i> ${res.message}</span>`; }
+      if (res.success) { 
+          showToast(res.message, "success"); 
+          document.getElementById('outputAreaCode').innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle"></i> ${res.message}</span>`; 
+      }
     }).invalidateOTP(gId);
   }
 
@@ -297,60 +412,144 @@
     const gId = document.getElementById('groupSelect').value;
     document.getElementById('adminLoader').style.display = 'block';
     document.getElementById('outputAreaCode').classList.remove('show');
+    
     google.script.run.withSuccessHandler(function(res) {
       document.getElementById('adminLoader').style.display = 'none';
+      
       let txt = `📌 [LINK BẢNG LÀM VIỆC - TEAM ${res.name.toUpperCase()}]\n`;
-      if (res.link1) txt += `👉 Bảng 1: ${res.link1}\n`; if (res.link2) txt += `👉 Bảng 2: ${res.link2}\n`;
-      document.getElementById('outputAreaCode').innerHTML = `<h5 style="color: var(--text-main);" class="fw-bold mb-3"><i class="bi bi-link-45deg"></i> Link - Team <b>${res.name}</b></h5><a href="${res.link1}" target="_blank" class="d-block mb-3 text-decoration-none bg-primary bg-opacity-10 p-2 rounded fw-bold">🔵 Bảng số 1</a><a href="${res.link2}" target="_blank" class="d-block mb-4 text-decoration-none bg-primary bg-opacity-10 p-2 rounded fw-bold">🔵 Bảng số 2</a><textarea id="hiddenCopyText" style="display:none;">${txt}</textarea><button class="btn btn-primary w-100 fw-bold" style="border-radius:10px; padding:10px;" onclick="copyText('link')">Copy Link gửi Zalo</button>`;
+      if (res.link1) txt += `👉 Bảng 1: ${res.link1}\n`; 
+      if (res.link2) txt += `👉 Bảng 2: ${res.link2}\n`;
+      
+      document.getElementById('outputAreaCode').innerHTML = `
+          <h5 style="color: var(--text-main);" class="fw-bold mb-3"><i class="bi bi-link-45deg"></i> Link - Team <b>${res.name}</b></h5>
+          <a href="${res.link1}" target="_blank" class="d-block mb-3 text-decoration-none bg-primary bg-opacity-10 p-2 rounded fw-bold">🔵 Bảng số 1</a>
+          <a href="${res.link2}" target="_blank" class="d-block mb-4 text-decoration-none bg-primary bg-opacity-10 p-2 rounded fw-bold">🔵 Bảng số 2</a>
+          <textarea id="hiddenCopyText" style="display:none;">${txt}</textarea>
+          <button class="btn btn-primary w-100 fw-bold" style="border-radius:10px; padding:10px;" onclick="copyText('link')">Copy Link gửi Zalo</button>`;
+          
       document.getElementById('outputAreaCode').classList.add('show');
     }).webGetLinks(gId);
   }
 
   function removeEmail() {
-    const gId = document.getElementById('removeGroupSelect').value; const emailsText = document.getElementById('emailInput').value;
-    document.getElementById('adminLoader').style.display = 'block'; document.getElementById('outputAreaRemove').classList.remove('show');
+    const gId = document.getElementById('removeGroupSelect').value; 
+    const emailsText = document.getElementById('emailInput').value;
+    
+    document.getElementById('adminLoader').style.display = 'block'; 
+    document.getElementById('outputAreaRemove').classList.remove('show');
+    
     google.script.run.withSuccessHandler(function(res) {
       document.getElementById('adminLoader').style.display = 'none';
-      if (res.success) { showToast(res.message, "success"); document.getElementById('outputAreaRemove').innerHTML = `<span class="text-success fw-bold fs-6"><i class="bi bi-check-lg"></i> ${res.message}</span>`; document.getElementById('emailInput').value = ""; validateEmails(); } 
-      else { showToast(res.message, "error"); document.getElementById('outputAreaRemove').innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-lg"></i> ${res.message}</span>`; }
+      
+      if (res.success) { 
+          showToast(res.message, "success"); 
+          document.getElementById('outputAreaRemove').innerHTML = `<span class="text-success fw-bold fs-6"><i class="bi bi-check-lg"></i> ${res.message}</span>`; 
+          document.getElementById('emailInput').value = ""; 
+          validateEmails(); 
+      } else { 
+          showToast(res.message, "error"); 
+          document.getElementById('outputAreaRemove').innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-lg"></i> ${res.message}</span>`; 
+      }
       document.getElementById('outputAreaRemove').classList.add('show');
     }).webRemoveEmail(gId, emailsText);
   }
 
   function createNewTeam() {
-    const teamName = document.getElementById('newTeamName').value.trim(); const idols = document.getElementById('newTeamIdols').value.trim();
+    const teamName = document.getElementById('newTeamName').value.trim(); 
+    const idols = document.getElementById('newTeamIdols').value.trim();
     if (!teamName) return showToast("Vui lòng nhập tên Team!", "error");
+    
     document.getElementById('adminLoader').style.display = 'block';
+    
     google.script.run.withSuccessHandler(function(res) {
-      if (res.success) { showToast(res.message, "success"); document.getElementById('newTeamName').value = ""; document.getElementById('newTeamIdols').value = ""; google.script.run.withSuccessHandler(function(newData) { groupsData = newData; populateSelects(); document.getElementById('adminLoader').style.display = 'none'; }).getGroupsData(); } 
-      else { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi: " + res.message, "error"); }
-    }).withFailureHandler(function() { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi kết nối!", "error"); }).addTeam(teamName, idols);
+      if (res.success) { 
+          showToast(res.message, "success"); 
+          document.getElementById('newTeamName').value = ""; 
+          document.getElementById('newTeamIdols').value = ""; 
+          
+          google.script.run.withSuccessHandler(function(newData) { 
+              groupsData = newData; 
+              populateSelects(); 
+              document.getElementById('adminLoader').style.display = 'none'; 
+          }).getGroupsData(); 
+      } else { 
+          document.getElementById('adminLoader').style.display = 'none'; 
+          showToast("Lỗi: " + res.message, "error"); 
+      }
+    }).withFailureHandler(function() { 
+        document.getElementById('adminLoader').style.display = 'none'; 
+        showToast("Lỗi kết nối!", "error"); 
+    }).addTeam(teamName, idols);
   }
 
   function addNewIdol() {
-    const groupId = document.getElementById('configGroupSelect').value; const idolName = document.getElementById('newIdolName').value.trim();
+    const groupId = document.getElementById('configGroupSelect').value; 
+    const idolName = document.getElementById('newIdolName').value.trim();
+    
     if (!idolName) return showToast("Vui lòng nhập tên Idol!", "error");
     document.getElementById('adminLoader').style.display = 'block';
+    
     google.script.run.withSuccessHandler(function(res) {
-      if (res.success) { showToast(res.message, "success"); document.getElementById('newIdolName').value = ""; google.script.run.withSuccessHandler(function(newData) { groupsData = newData; populateSelects(); document.getElementById('adminLoader').style.display = 'none'; }).getGroupsData(); } 
-      else { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi: " + res.message, "error"); }
-    }).withFailureHandler(function() { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi kết nối!", "error"); }).addIdol(groupId, idolName);
+      if (res.success) { 
+          showToast(res.message, "success"); 
+          document.getElementById('newIdolName').value = ""; 
+          
+          google.script.run.withSuccessHandler(function(newData) { 
+              groupsData = newData; 
+              populateSelects(); 
+              document.getElementById('adminLoader').style.display = 'none'; 
+          }).getGroupsData(); 
+      } else { 
+          document.getElementById('adminLoader').style.display = 'none'; 
+          showToast("Lỗi: " + res.message, "error"); 
+      }
+    }).withFailureHandler(function() { 
+        document.getElementById('adminLoader').style.display = 'none'; 
+        showToast("Lỗi kết nối!", "error"); 
+    }).addIdol(groupId, idolName);
   }
 
   function updateDeleteIdolDropdown() {
-    const groupId = document.getElementById('deleteGroupSelect').value; const idolSelect = document.getElementById('deleteIdolSelect');
+    const groupId = document.getElementById('deleteGroupSelect').value; 
+    const idolSelect = document.getElementById('deleteIdolSelect');
     idolSelect.innerHTML = '<option value="">-- Chọn Idol cần xoá --</option>';
-    if (groupId && groupsData[groupId] && groupsData[groupId].idols) { groupsData[groupId].idols.forEach(idol => { if (idol.trim() !== "") { let option = document.createElement('option'); option.value = idol.trim(); option.text = idol.trim(); idolSelect.appendChild(option); } }); }
+    
+    if (groupId && groupsData[groupId] && groupsData[groupId].idols) { 
+        groupsData[groupId].idols.forEach(idol => { 
+            if (idol.trim() !== "") { 
+                let option = document.createElement('option'); 
+                option.value = idol.trim(); 
+                option.text = idol.trim(); 
+                idolSelect.appendChild(option); 
+            } 
+        }); 
+    }
   }
 
   function deleteExistingIdol() {
-    const groupId = document.getElementById('deleteGroupSelect').value; const idolName = document.getElementById('deleteIdolSelect').value;
+    const groupId = document.getElementById('deleteGroupSelect').value; 
+    const idolName = document.getElementById('deleteIdolSelect').value;
+    
     if (!idolName) return showToast("Vui lòng chọn Idol cần xoá!", "error");
     document.getElementById('adminLoader').style.display = 'block';
+    
     google.script.run.withSuccessHandler(function(res) {
-      if (res.success) { showToast(res.message, "success"); google.script.run.withSuccessHandler(function(newData) { groupsData = newData; populateSelects(); document.getElementById('adminLoader').style.display = 'none'; }).getGroupsData(); } 
-      else { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi: " + res.message, "error"); }
-    }).withFailureHandler(function() { document.getElementById('adminLoader').style.display = 'none'; showToast("Lỗi kết nối!", "error"); }).removeIdol(groupId, idolName);
+      if (res.success) { 
+          showToast(res.message, "success"); 
+          
+          google.script.run.withSuccessHandler(function(newData) { 
+              groupsData = newData; 
+              populateSelects(); 
+              document.getElementById('adminLoader').style.display = 'none'; 
+          }).getGroupsData(); 
+      } else { 
+          document.getElementById('adminLoader').style.display = 'none'; 
+          showToast("Lỗi: " + res.message, "error"); 
+      }
+    }).withFailureHandler(function() { 
+        document.getElementById('adminLoader').style.display = 'none'; 
+        showToast("Lỗi kết nối!", "error"); 
+    }).removeIdol(groupId, idolName);
   }
 </script>
 </body>
