@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <base target="_top">
+    <!-- Fonts & Libraries -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/air-datepicker@3.3.5/air-datepicker.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/air-datepicker@3.3.5/air-datepicker.min.js"></script>
+
+    <style>
+      /* --- CSS cho nút Bật/Tắt Trợ Lý --- */
+      .toggle-switch { display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+      .toggle-switch input { display: none; }
+      .toggle-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-right: 6px; text-transform: uppercase; white-space: nowrap; }
+      .toggle-slider { width: 32px; height: 18px; background-color: var(--bg-hover); border-radius: 20px; border: 1px solid var(--border-color); position: relative; transition: 0.3s; }
+      .toggle-slider::after { content: ''; position: absolute; width: 12px; height: 12px; border-radius: 50%; background-color: var(--text-secondary); top: 2px; left: 2px; transition: 0.3s; }
+      .toggle-switch input:checked + .toggle-slider { background-color: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px var(--accent-bg); }
+      .toggle-switch input:checked + .toggle-slider::after { transform: translateX(14px); background-color: #fff; }
+      
+      :root {
+        --bg-main: #131722; --bg-panel: #1e2230; --bg-hover: #2b3040;
+        --text-primary: #f8fafc; --text-secondary: #94a3b8;
+        --border-color: #2e3548; --ambient-color: transparent;
+      }
+      body.dark-mode { color-scheme: dark; }
+      body.light-mode { color-scheme: light; }
+      body.light-mode {
+        --bg-main: #f1f5f9; --bg-panel: #ffffff; --bg-hover: #f1f5f9;
+        --text-primary: #0f172a; --text-secondary: #64748b; --border-color: #e2e8f0;
+      }
+      * { box-sizing: border-box; }
+      
+      body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-primary); margin: 0; padding: 25px; min-height: 100vh; position: relative; z-index: 0; overflow-x: hidden;}
+      body::before { content: ""; position: fixed; top: -20%; left: 10%; width: 80%; height: 60vh; background: radial-gradient(ellipse at top, var(--ambient-color), transparent 70%); opacity: 0.15; z-index: -1; transition: background 1s ease; pointer-events: none; }
+
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+
+      .sticky-header { position: sticky; top: 15px; z-index: 100; }
+      
+      .topbar { background: rgba(30, 34, 48, 0.85); backdrop-filter: blur(16px); border: 1px solid var(--border-color); padding: 12px 24px; border-radius: 20px; margin-bottom: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+      body.light-mode .topbar { background: rgba(255, 255, 255, 0.9); }
+      
+      .brand { margin: 0; font-size: 20px; font-weight: 800; background: linear-gradient(135deg, #64d2b1, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      
+      .tabs { display: flex; gap: 4px; background: var(--bg-main); padding: 4px; border-radius: 12px; position: relative; }
+      .tab-btn { padding: 8px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; background: transparent; color: var(--text-secondary); transition: 0.2s; position: relative;}
+      .tab-btn.active { background: var(--bg-panel); color: var(--text-primary); }
+      
+      .notify-dot { position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: none; box-shadow: 0 0 10px #ef4444; animation: pulseDot 1s infinite; }
+      @keyframes pulseDot { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+      
+      .toolbar { display: flex; flex-wrap: wrap; gap: 12px; }
+      .custom-control { display: flex; align-items: center; gap: 8px; background: var(--bg-main); border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 12px; }
+      .control-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+      .custom-select, input#datePicker { background: transparent; border: none; color: #64d2b1; font-family: inherit; font-size: 13px; font-weight: 700; outline: none; cursor: pointer; }
+      .custom-select { appearance: none; padding-right: 15px; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364d2b1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right center; background-size: 14px; }
+      .custom-select option { background-color: var(--bg-panel); color: var(--text-primary); }
+      
+      .icon-btn { background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 12px; cursor: pointer; transition: 0.2s; font-size: 16px; }
+      .icon-btn:hover { background: var(--bg-hover); }
+
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 28px; }
+      
+      @keyframes fadeSlideUp { 0% { opacity: 0; transform: translateY(30px) scale(0.95); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+
+      .card { 
+        background: var(--bg-panel); border-radius: 20px; padding: 25px; border: 2px solid var(--border-color); 
+        display: flex; flex-direction: column; position: relative; z-index: 1;
+        opacity: 0; animation: fadeSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+        transition: transform 0.2s, box-shadow 0.2s; 
+      }
+      .card:hover { transform: translateY(-4px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+      .card.done { filter: grayscale(100%); opacity: 0.5; }
+      .card.key-focus { outline: 3px solid #3b82f6; outline-offset: 2px; box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); transform: translateY(-3px); }
+
+      .skeleton { animation: skeleton-loading 1s linear infinite alternate; border-color: transparent !important; box-shadow: none !important; }
+      .skeleton .skel-title { width: 40%; height: 24px; background: var(--bg-hover); border-radius: 8px; margin-bottom: 15px; }
+      .skeleton .skel-box { width: 100%; height: 110px; background: var(--bg-hover); border-radius: 14px; margin-bottom: 15px; }
+      .skeleton .skel-btn { width: 100%; height: 45px; background: var(--bg-hover); border-radius: 14px; }
+      @keyframes skeleton-loading { 0% { opacity: 0.4; } 100% { opacity: 0.8; } }
+
+      .epic-50k { border-color: #3b82f6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+      .epic-50k:hover { box-shadow: 0 0 25px rgba(59, 130, 246, 0.45); }
+
+      .epic-60k { border-color: #0ea5e9; animation: pulse60k 2.5s infinite, fadeSlideUp 0.4s forwards; }
+      @keyframes pulse60k { 0% { box-shadow: 0 0 8px rgba(14, 165, 233, 0.2); } 50% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.45); } 100% { box-shadow: 0 0 8px rgba(14, 165, 233, 0.2); } }
+
+      .epic-100k { border-color: #fbbf24; box-shadow: 0 0 20px rgba(251, 191, 36, 0.15); }
+      .epic-100k:hover { box-shadow: 0 0 30px rgba(251, 191, 36, 0.4); }
+      
+      .epic-200k { border-color: #a855f7; animation: pulse200k 2s infinite, fadeSlideUp 0.4s forwards; }
+      @keyframes pulse200k { 0% { box-shadow: 0 0 10px rgba(168,85,247,0.3); } 50% { box-shadow: 0 0 25px rgba(168,85,247,0.5); } 100% { box-shadow: 0 0 10px rgba(168,85,247,0.3); } }
+      
+      .epic-300k { border-color: #ef4444; background: linear-gradient(var(--bg-panel), var(--bg-panel)) padding-box, linear-gradient(45deg, #ef4444, #f97316, #ef4444) border-box; border: 2px solid transparent; animation: pulse300k 1.5s infinite alternate, fadeSlideUp 0.4s forwards; }
+      @keyframes pulse300k { 0% { box-shadow: 0 0 10px rgba(239,68,68,0.3); } 100% { box-shadow: 0 0 35px rgba(249,115,22,0.6); } }
+
+      .epic-500k { border: 2px solid transparent; position: relative; }
+      .epic-500k::before {
+        content: ''; position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px;
+        background: linear-gradient(90deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+        z-index: -1; border-radius: 22px; background-size: 400%; animation: glowing500k 3s linear infinite; opacity: 0.8;
+      }
+      @keyframes glowing500k { 0% { background-position: 0 0; } 50% { background-position: 400% 0; } 100% { background-position: 0 0; } }
+
+      /* Khung header: Chống rớt dòng và tạo khoảng cách an toàn */
+      .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%; gap: 10px; flex-wrap: nowrap; }
+      .card-header > div:first-child { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+      .idol-name { font-size: 17px; font-weight: 800; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .badge { padding: 4px 10px; border-radius: 10px; font-weight: 800; font-size: 12px; background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-border); box-shadow: 0 2px 10px var(--accent-bg); white-space: nowrap; flex-shrink: 0; }
+      
+      .msg-box { width: 100%; height: 110px; padding: 12px; border-radius: 12px; font-size: 13px; resize: none; font-family: inherit; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-primary); transition: 0.2s; line-height: 1.45;}
+      .msg-box:focus { border-color: var(--accent); background: var(--bg-hover); outline: none; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
+      
+      .action-group { display: flex; gap: 10px; margin-top: 15px; width: 100%; }
+      .btn { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 5px; }
+      .btn-main { background: var(--accent); color: #fff; box-shadow: 0 4px 15px var(--accent-bg); }
+      .btn-main:hover { filter: brightness(1.15); transform: scale(0.97); }
+      .btn-sec { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border-color); }
+      .btn-sec:hover { background: #475569; color: #fff; }
+
+      #toast-container { position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+      .toast { background: rgba(30, 34, 48, 0.95); backdrop-filter: blur(10px); border-left: 4px solid #10b981; color: #fff; padding: 15px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.3); transform: translateX(120%); opacity: 0; animation: slideIn 0.4s forwards; display: flex; align-items: center; gap: 10px; }
+      @keyframes slideIn { to { transform: translateX(0); opacity: 1; } }
+      .toast.fade-out { animation: fadeOut 0.4s forwards; }
+      @keyframes fadeOut { to { transform: translateX(120%); opacity: 0; } }
+
+      .air-datepicker { --adp-font-family: 'Inter', sans-serif; --adp-background-color: #272c3d; --adp-border-color: #3b4256; --adp-color: #f8fafc; --adp-day-name-color: #e2e8f0; --adp-btn-color: #f8fafc; --adp-btn-background-color-hover: #3b4256; --adp-cell-background-color-hover: #3b4256; --adp-cell-border-radius: 50%; --adp-accent-color: #64d2b1; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); padding: 10px; }
+      .air-datepicker-cell.-current- { color: #f8fafc; border: 1px solid #94a3b8; background: transparent; }
+      .air-datepicker-cell.-selected- { background: #64d2b1; color: #1e2230; font-weight: 800; border: none; }
+    </style>
+  </head>
+  <body class="dark-mode">
+
+    <div class="topbar">
+      <h2 class="brand">⚡ Workspace Pro</h2>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="tabs" id="tabs-container">
+          <button class="tab-btn active" id="tab-pending" onclick="changeTab('pending')">
+            Cần chúc (<span id="count-pending">0</span>)
+            <div class="notify-dot" id="dot-new"></div>
+          </button>
+          <button class="tab-btn" id="tab-done" onclick="changeTab('done')">
+            Lịch sử (<span id="count-done">0</span>)
+          </button>
+        </div>
+        <button class="icon-btn" onclick="toggleTheme()" title="Đổi Sáng/Tối">☀️</button>
+      </div>
+    </div>
+
+    <div class="topbar sticky-header" id="controls">
+      <div class="toolbar">
+        <div class="custom-control"><span class="control-label">📅 Ngày:</span><input type="text" id="datePicker" readonly></div>
+      </div>
+      <div class="toolbar">
+        <div class="custom-control"><span class="control-label">🎯 Mốc:</span><select id="tierFilter" class="custom-select" onchange="renderCards()"><option value="all">Tất cả</option></select></div>
+        <div class="custom-control"><span class="control-label">↕️ Xếp hạng:</span>
+          <select id="sortSelect" class="custom-select" onchange="renderCards()">
+            <option value="asc" selected>Coin: Thấp nhất</option>
+            <option value="desc">Coin: Cao nhất</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <!-- THẺ TẠO NHANH -->
+    <div class="grid" id="manual-card-container" style="margin-bottom: 28px;">
+      <div class="card" id="quick-create-card" style="border-color: #64d2b1; display: block; transition: all 0.3s ease;">
+          <div class="card-header">
+              <div style="display:flex; align-items:center; gap:10px;">
+                  <h3 class="idol-name" id="manual-title" style="color: #64d2b1; transition: 0.3s;">⚡ Thẻ Tạo Nhanh</h3>
+                  <span class="badge" id="manual-badge" style="display: none; transition: 0.3s;"></span>
+              </div>
+              <label class="toggle-switch" title="Bật/Tắt Trợ Lý">
+                <span class="toggle-label">Trợ lý</span>
+                <input type="checkbox" id="manual-assistant" checked onchange="updateManualMessage()">
+                <span class="toggle-slider"></span>
+              </label>
+          </div>
+          <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+              <input type="text" id="manual-name" placeholder="Nhập tên..." class="msg-box" style="height: 42px; flex: 1; padding: 8px 12px; font-weight: 600;" oninput="updateManualMessage()">
+              <input type="text" id="manual-tier" placeholder="Nhập số thực (vd: 50000)..." class="msg-box" style="height: 42px; flex: 1; padding: 8px 12px; font-weight: 600;" oninput="handleTierInput(this)" onchange="handleTierChange(this)">
+          </div>
+          <textarea id="manual-msg" class="msg-box" spellcheck="false" placeholder="Nhập tên và số tiền, hệ thống sẽ tự quy đổi ra K, khớp màu thẻ và lấy câu chúc..."></textarea>
+          <div class="action-group">
+              <button class="btn btn-main" onclick="copyManual()">📋 Copy</button>
+              <button class="btn btn-sec" onclick="forceChangeManual()">🔀 Đổi chúc</button>
+          </div>
+      </div>
+    </div>
+    
+    <div class="grid" id="app">
+      <div class="card skeleton"><div class="skel-title"></div><div class="skel-box"></div><div style="display:flex; gap:10px;"><div class="skel-btn"></div><div class="skel-btn"></div></div></div>
+      <div class="card skeleton"><div class="skel-title"></div><div class="skel-box"></div><div style="display:flex; gap:10px;"><div class="skel-btn"></div><div class="skel-btn"></div></div></div>
+      <div class="card skeleton"><div class="skel-title"></div><div class="skel-box"></div><div style="display:flex; gap:10px;"><div class="skel-btn"></div><div class="skel-btn"></div></div></div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+      // ==========================================
+      // KẾT NỐI API
+      // ==========================================
+      const API_URL = "YOUR_API_URL_HERE";
+
+      function runScript(action, payload = {}) {
+        return fetch(API_URL, {
+          method: 'POST',
+          redirect: 'follow', 
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: action, payload: payload })
+        })
+        .then(res => res.json())
+        .then(res => {
+          if (res.status === 'error') throw new Error(res.message);
+          return res.data;
+        });
+      }
+
+      // ==========================================
+      // NGÂN HÀNG LỜI CHÚC
+      // ==========================================
+      
+      const msgsStart = [
+        "🎉 Xin gửi lời chúc mừng nồng nhiệt nhất đến {TEN} và Trợ Lý vì đã xuất sắc vượt qua cột mốc {MOC} đầy tự hào! Đây là một bước chạy đà cực kỳ hoàn hảo, cho thấy sự nỗ lực và tập trung cao độ của cả hai trong suốt những ngày vừa qua. Hãy tiếp tục giữ vững tinh thần tuyệt vời này để gặt hái thêm thật nhiều thành công vang dội hơn nữa trên chặng đường phía trước nhé! 🚀💪",
+        "✨ Thật tuyệt vời! Chúc mừng {TEN} cùng Trợ Lý đã thành công chinh phục mốc {MOC} rực rỡ trong ngày hôm nay! Mỗi một sự nỗ lực bền bỉ được tích lũy từng giờ đều đang biến thành những quả ngọt vô cùng xứng đáng cho toàn thể team. Chặng đua sắp tới chắc chắn còn nhiều thú vị, chúc mọi người luôn giữ được ngọn lửa đam mê và bứt phá không giới hạn nha! 🌟🔥",
+        "🎊 Một tràng pháo tay thật lớn dành trọn cho {TEN} và Trợ Lý khi đã cán mốc {MOC} vô cùng ấn tượng! Thành tích rực rỡ này chính là minh chứng rõ ràng nhất cho sự kiên trì và tinh thần làm việc không biết mệt mỏi của cả đội. Cứ duy trì vững chắc phong độ tuyệt đỉnh này thì chắc chắn những cột mốc vĩ đại hơn sẽ sớm bị chinh phục trong nay mai thôi! 🎯🏆",
+        "🍀 Vô cùng xuất sắc! Xin chúc mừng {TEN} và Trợ Lý đã hái được quả ngọt vô cùng xứng đáng với cột mốc {MOC}. Tinh thần chiến đấu rực lửa của mọi người thực sự đã truyền cảm hứng vô tận cho tất cả những ai đang theo dõi. Hãy xem đây là một động lực to lớn để tiếp tục vươn xa, bay cao và bùng nổ mạnh mẽ hơn nữa trong chặng đường sắp tới nhé! 🌈✨",
+        "🥳 Quá đỗi tự hào! Xin gửi lời chúc mừng {TEN} cùng Trợ Lý đã chính thức đánh dấu tên mình tại mốc {MOC}. Một khởi đầu vô cùng rực rỡ, bùng nổ và chứa đựng muôn vàn những hứa hẹn cho một tháng bùng nổ. Chúc cả team sẽ luôn tràn đầy năng lượng tích cực, giữ vững niềm tin sắt đá và tiếp tục tạo ra thêm những thành tích đáng kinh ngạc hơn nữa! 💥🌻",
+        "🎈 Chúc mừng thành quả vô cùng rực rỡ! {TEN} và Trợ Lý đã chính thức chinh phục mốc {MOC} bằng chính sự cố gắng không ngừng nghỉ. Những viên gạch nền móng này đang được xây dựng cực kỳ vững chãi và hứa hẹn một công trình vĩ đại sắp ra mắt. Cứ tự tin tiến bước và tỏa sáng theo cách riêng của mình trong chặng đường sắp tới nha! 🌟💪",
+        "💥 Tuyệt vời ông mặt trời! Xin chúc mừng {TEN} cùng Trợ Lý đã càn quét thành công bảng xếp hạng và mang về mốc {MOC} danh giá. Sự ăn ý và quyết tâm của mọi người chính là vũ khí sắc bén nhất tạo nên chiến thắng này. Đừng quên nạp năng lượng và chuẩn bị cho những cú bứt tốc bùng nổ hơn nữa trong những ngày làm việc tiếp theo nhé! 🚀🔥",
+        "🏆 Thêm một chiến thắng ghi đậm dấu ấn của sự kiên trì! Chúc mừng {TEN} và Trợ Lý đã mạnh mẽ vượt qua rào cản để chạm đến con số {MOC} đáng tự hào. Đây chính là minh chứng hùng hồn cho câu nói: Có công mài sắt, có ngày nên kim. Hãy mang tinh thần chiến binh này để quét sạch mọi mục tiêu lớn hơn ở phía trước nhé! 🎯✨",
+        "🌻 Một bông hoa rực rỡ vừa hé nở! Xin gửi ngàn lời chúc đến {TEN} và Trợ Lý với thành tích vượt mốc {MOC} đầy thuyết phục. Mọi nỗ lực dù là nhỏ nhất cũng đang hòa quyện tạo nên một bức tranh thành công tuyệt đẹp. Chúc cả team luôn vững bước tự tin, giữ trọn đam mê để viết tiếp những trang kỷ lục mới thật ấn tượng nha! 🌈🎉",
+        "⚡ Tốc độ và chính xác! Chúc mừng {TEN} cùng Trợ Lý đã ghi dấu ấn mạnh mẽ tại cột mốc {MOC} vô cùng ngoạn mục. Những nỗ lực thầm lặng nay đã được đền đáp bằng những tràng pháo tay giòn giã. Hãy xem đây là bàn đạp hoàn hảo để tung cánh bay cao, vươn tới những thành công vang dội và rực rỡ hơn trong chặng đua sắp tới nhé! 🥇💥",
+        "🌟 Khởi đầu như mơ! Gửi ngàn lời chúc mừng đến {TEN} và Trợ Lý vì đã xuất sắc chạm tay vào mốc {MOC} ấn tượng. Những viên gạch đầu tiên đã được đặt xuống vô cùng vững chắc nhờ vào tinh thần làm việc không ngừng nghỉ của cả hai. Cứ tiếp tục giữ vững đà tiến lên rực rỡ này, vì những bất ngờ thú vị nhất vẫn đang chờ ở phía trước! 🚀💥",
+        "🔥 Một đốm lửa nhỏ đang thắp sáng cả bầu trời! Chúc mừng {TEN} cùng Trợ Lý đã thành công rinh về mốc {MOC} đầy tự hào. Đây chính là bước đệm hoàn hảo để mọi người bứt tốc mạnh mẽ hơn trong chặng đua gay cấn sắp tới. Hãy nạp đầy năng lượng, giữ một tinh thần thép và sẵn sàng bùng nổ để xô đổ mọi kỷ lục của chính mình nhé! 🎯✨",
+        "🌱 Hạt mầm nỗ lực nay đã nảy lộc đâm chồi! Xin nhiệt liệt chúc mừng {TEN} và Trợ Lý đã gặt hái thành công mốc {MOC} trong sự ngưỡng mộ của tất cả mọi người. Từng chút cố gắng mỗi ngày đều đang mang lại giá trị vô cùng to lớn. Hãy cứ tự tin tỏa sáng và duy trì nhịp độ tuyệt vời này để đón thêm nhiều cơn mưa thành tích nữa nha! 🌈🌧️",
+        "🎶 Một khúc dạo đầu vô cùng bắt tai! Chúc mừng {TEN} cùng Trợ Lý đã ghi dấu ấn rực rỡ tại mốc {MOC} bằng tất cả sự nhiệt huyết của mình. Mọi sự khởi đầu thuận lợi luôn mang đến một niềm tin mãnh liệt vào chuỗi ngày đại thắng sắp tới. Hãy tiếp tục sát cánh bên nhau, giữ vững ngọn lửa đam mê để vươn tới những nấc thang cao hơn nhé! 🥇🌻",
+        "🔑 Cánh cửa của sự thành công đã chính thức hé mở! Chúc mừng {TEN} và Trợ Lý đã xuất sắc dùng sự kiên trì để mở khóa mốc {MOC} vô cùng ngoạn mục. Tinh thần làm việc tập trung cao độ của hai bạn chính là chìa khóa vàng cho mọi chiến thắng. Chúc team luôn giữ được sự nhạy bén và tiến bước thật mạnh mẽ trên chặng đường dài phía trước! 🚀🔓",
+        "⚓ Kéo cất mỏ neo và vươn ra biển lớn! Xin chúc mừng {TEN} và Trợ Lý đã đưa con thuyền thành tích cập bến an toàn tại mốc {MOC}. Sóng gió thử thách chỉ làm tôn thêm bản lĩnh vững vàng của người cầm lái. Cứ giữ vững niềm tin và khí thế hừng hực này, chắc chắn những kho báu vĩ đại hơn đang chờ đón các bạn ở đường chân trời! 🌊🚢",
+        "💎 Từng nét chạm khắc đều đang tạo nên một viên ngọc sáng! Chúc mừng {TEN} cùng Trợ Lý đã điêu khắc thành công mốc {MOC} đầy kiêu hãnh. Quả thực, sự tỉ mỉ và tận tâm của mọi người không bao giờ làm chúng ta thất vọng. Hãy tiếp tục phát huy tối đa thế mạnh của mình để tạo ra thêm những siêu phẩm chói lọi hơn nữa trong tương lai nhé! ✨🏆",
+        "🏹 Mũi tên đã trúng hồng tâm! Gửi lời chúc mừng nồng nhiệt đến {TEN} và Trợ Lý với cú bắn chính xác mang về mốc {MOC} vô cùng thuyết phục. Sự chuẩn bị kỹ lưỡng và quyết tâm sắc bén đã mang lại một kết quả không thể ngọt ngào hơn. Đừng ngần ngại giương cung hướng tới những mục tiêu xa hơn, vì các bạn hoàn toàn có đủ năng lực để chạm tới! 🎯💥",
+        "📖 Trang sách đầu tiên được viết lên thật rực rỡ! Xin chúc mừng {TEN} cùng Trợ Lý đã chính thức khắc ghi tên mình tại cột mốc {MOC}. Một khởi đầu tràn đầy cảm hứng và hứa hẹn những chương tiếp theo vô cùng hấp dẫn. Hãy tiếp tục là những tác giả tài ba, dùng sức trẻ và đam mê để viết nên một hành trình thành công vang dội nhé! 📝🌟",
+        "⚡ Tốc độ ánh sáng! Vô cùng tự hào khi gửi lời chúc mừng {TEN} và Trợ Lý đã thần tốc cán mốc {MOC} chỉ trong một thời gian ngắn. Sự linh hoạt và chiến thuật hợp lý đã giúp team vươn lên mạnh mẽ. Hãy tận dụng tối đa lợi thế này làm bàn đạp để bay cao, bay xa và chinh phục thêm nhiều giới hạn mới của bản thân nha! 🚀🌪️",
+        "🎨 Một nét cọ hoàn hảo khởi đầu cho bức tranh đại thắng! Chúc mừng {TEN} và Trợ Lý đã tô điểm thêm sắc màu rực rỡ mang tên {MOC} vào bộ sưu tập thành tích. Sự đồng lòng và nỗ lực cống hiến của mọi người luôn được ghi nhận xứng đáng. Hãy cứ tự tin cầm cờ đi đầu và vẽ nên một chặng đường đầy ắp những niềm vui chiến thắng nhé! 🖌️🎉",
+        "🌤️ Tia nắng đầu ngày xua tan mọi rào cản! Chúc mừng {TEN} cùng Trợ Lý đã tỏa sáng rực rỡ và ghi nhận thành tích {MOC} vô cùng ấn tượng. Bằng nguồn năng lượng dồi dào và tinh thần lạc quan, các bạn đã biến khó khăn thành bàn đạp để vươn lên. Chúc cả team sẽ có những bước chạy đà mượt mà hơn nữa để bùng định trong tương lai! ☀️💪",
+        "🧩 Những mảnh ghép hoàn hảo đã tìm thấy nhau! Xin gửi lời chúc mừng đến {TEN} và Trợ Lý khi ghép thành công bức tranh mang tên mốc {MOC}. Sự ăn ý tuyệt đối giữa các thành viên chính là chất keo dính kết nối mọi chiến thắng. Cứ tiếp tục đồng hành và hỗ trợ lẫn nhau, chắc chắn không một mục tiêu nào có thể làm khó được mọi người! 🤝🏆",
+        "🚀 Động cơ đã được làm nóng tối đa! Chúc mừng {TEN} và Trợ Lý đã thành công khởi động và phóng thẳng lên mốc {MOC} rực rỡ. Bầu trời rộng lớn phía trên vẫn còn vô số những vì sao thành tích đang chờ đợi các bạn đến hái. Hãy trang bị cho mình một tinh thần thép và sẵn sàng cho những cú bứt tốc bùng nổ ngoạn mục hơn nữa nhé! 🌌✨",
+        "🥇 Khởi động không thể trơn tru hơn! Gửi vạn lời chúc đến {TEN} cùng Trợ Lý vì đã nhanh chóng thu phục được cột mốc {MOC} đáng tự hào. Mỗi một nấc thang đi qua đều để lại những bài học và giá trị vô giá cho sự phát triển của cả team. Cố gắng duy trì phong độ đỉnh cao này để tiếp tục gặt hái vinh quang trong chặng đua khốc liệt sắp tới nha! 🏃‍♂️💨",
+        "🔔 Hồi chuông báo hiệu chiến thắng đã ngân vang! Xin chúc mừng {TEN} và Trợ Lý đã đánh dấu một ngày làm việc hiệu quả với mốc {MOC}. Sự tập trung và chuyên nghiệp của mọi người chính là tấm gương sáng cho toàn đội. Hãy xem đây là một trạm tiếp nhiên liệu để chuẩn bị cho những chuyến đi dài hơi và mang về những thành tựu vĩ đại hơn! ⛽🚙",
+        "🌟 Ngôi sao đang lên! Chúc mừng {TEN} cùng Trợ Lý đã tỏa sáng xuất sắc và mang về cho mình thành tích vượt mốc {MOC}. Mọi sự kiên trì bền bỉ từ trước tới nay đang bắt đầu đơm hoa kết trái. Chúc các bạn luôn giữ được sự minh mẫn, nhiệt huyết tràn trề để sẵn sàng đối mặt và chiến thắng mọi thử thách trên chặng đường chinh phục đỉnh cao! 🌠💪",
+        "🏰 Nền móng vững chắc tạo nên một tòa lâu đài! Xin chúc mừng {TEN} và Trợ Lý đã đặt những viên gạch hoàn hảo đầu tiên tại mốc {MOC}. Với nền tảng tuyệt vời này, không có lý do gì chúng ta không thể xây dựng nên một kỷ lục vô tiền khoáng hậu. Hãy cứ kiên định với mục tiêu đã chọn, vinh quang chắc chắn sẽ gọi tên các bạn ở cuối con đường! 🧱👑",
+        "🔥 Lửa thử vàng, gian nan thử sức! Chúc mừng {TEN} cùng Trợ Lý đã chứng tỏ bản lĩnh kiên cường khi thành công chạm mốc {MOC}. Những giọt mồ hôi rơi xuống chính là minh chứng cho một tinh thần làm việc không chịu lùi bước. Hãy để ngọn lửa nhiệt huyết này tiếp tục cháy mãi, soi sáng con đường dẫn đến những đỉnh cao rực rỡ đang chờ đợi phía trước nhé! 🌋✨",
+        "🍀 May mắn mỉm cười với những người nỗ lực! Xin gửi lời chúc mừng {TEN} và Trợ Lý đã nắm bắt cơ hội vô cùng xuất sắc để đạt mốc {MOC}. Bằng tài năng và một chút liều lĩnh, các bạn đã tạo nên một khởi đầu đáng kinh ngạc. Hãy xem đây là bệ phóng hoàn hảo để tiếp tục vươn xa, bứt phá mọi giới hạn và mang về những con số ấn tượng hơn! 🚀🎯",
+        "🚀 Hành trình phi thường luôn bắt đầu từ những bước đi vững chãi! Xin chúc mừng {TEN} và Trợ Lý đã xuất sắc vượt qua mốc {MOC} vô cùng ấn tượng. Những viên gạch đầu tiên đã được đặt xuống, báo hiệu một sự bứt phá ngoạn mục ở phía trước. Hãy giữ vững tinh thần thép này, lan tỏa năng lượng tích cực đến phòng live và gặt hái thêm nhiều thành công nhé! 💪✨",
+        "🌟 Năng lượng bùng nổ không thể chối từ! Gửi ngàn lời chúc đến {TEN} cùng Trợ Lý vì màn thể hiện cực kỳ thuyết phục để chạm tay vào mốc {MOC}. Từng giờ phút cống hiến hết mình trên màn ảnh nay đã được đền đáp bằng những tình cảm vô giá. Hãy xem đây là bước đà hoàn hảo để vươn tới những giới hạn mới rực rỡ hơn trong chặng đua sắp tới! 🎉🔥",
+        "💎 Một viên ngọc sáng đang dần được mài giũa! Xin chúc mừng {TEN} và Trợ Lý đã ghi lại dấu ấn tuyệt đẹp tại cột mốc {MOC}. Sự kiên trì bám trụ và tinh thần lạc quan của mọi người đã mang lại một kết quả vô cùng ngọt ngào. Đừng dừng lại, hãy tiếp tục mang sức trẻ và đam mê để chinh phục thêm những trái tim của người hâm mộ nhé! 🌈👑",
+        "🍀 Thật tuyệt vời và đáng tự hào! Xin gửi lời chúc mừng chân thành nhất đến {TEN} cùng Trợ Lý khi đã chính thức xác lập thành tích tại mốc {MOC}. Bằng sự tận tâm và phong cách cuốn hút, các bạn đã tạo nên một không gian vô cùng tuyệt vời. Cứ duy trì nhịp độ hoàn hảo này, chắc chắn những thành tựu lớn hơn sẽ sớm gọi tên mọi người! 💥🌻",
+        "🎯 Bắn trúng hồng tâm ngay từ những phút đầu! Chúc mừng {TEN} và Trợ Lý đã tung ra một cú bứt tốc xuất sắc để rinh về mốc {MOC} đầy vinh quang. Bầu không khí hiện tại đang nóng hơn bao giờ hết nhờ vào nỗ lực không ngừng nghỉ của cả team. Hãy nạp đầy nhiên liệu và chuẩn bị cho những màn phô diễn tài năng bùng nổ hơn nữa nha! 🏎️💨",
+        "🌤️ Tia nắng ấm áp xua tan mọi rào cản! Cực kỳ ấn tượng với cách mà {TEN} cùng Trợ Lý phối hợp để vươn tới con số {MOC} rạng rỡ ngày hôm nay. Sự duyên dáng và chuyên nghiệp của các bạn chính là chìa khóa mở ra cánh cửa thành công. Hãy giữ mãi nụ cười trên môi và tự tự tin sải bước trên con đường hoa hồng đang chờ đón phía trước! 🌹✨",
+        "🔥 Đã khởi động là phải rực rỡ như thế này! Xin chúc mừng {TEN} và Trợ Lý với một màn ra sân vô cùng mãn nhãn để chốt sổ mốc {MOC}. Mồ hôi rơi xuống nhưng nụ cười chiến thắng đã nở rộ. Đây mới chỉ là khúc dạo đầu cho một bản giao hưởng hoành tráng. Tập trung cao độ và sẵn sàng công phá mọi kỷ lục của chính mình nhé! 🎶🏆",
+        "🌊 Cơn sóng nhỏ đang cuộn trào thành bão lớn! Lời chúc mừng nồng nhiệt nhất xin dành tặng {TEN} cùng Trợ Lý vì đã thuận buồm xuôi gió cán mốc {MOC}. Càng tiến ra xa, bản lĩnh tay chèo của team lại càng được khẳng định mạnh mẽ. Đừng ngại ngần trước những cột sóng thử thách, bởi sau tất cả, bến bờ vinh quang đang vẫy gọi các bạn vô cùng mãnh liệt! 🚢⚓",
+        "🧩 Ghép thành công những mảnh vỡ đầu tiên của kiệt tác! Chúc mừng {TEN} và Trợ Lý đã lấp đầy một khoảng trống rực rỡ bằng cột mốc {MOC} vô cùng thuyết phục. Sự ăn ý tuyệt đối đằng sau hậu trường đã mang lại một kết quả hiển hiện ngay trên bảng xếp hạng. Cứ điềm tĩnh và chắc chắn, bức tranh đại thắng của chúng ta sắp hoàn thiện rồi! 🖼️🥇",
+        "⚡ Nhanh gọn và vô cùng sắc bén! Chúc mừng {TEN} cùng Trợ Lý đã thể hiện một phong thái làm việc đỉnh cao để bỏ túi thành tích {MOC} cực kỳ dễ dàng. Mọi chiến lược đưa ra đều đang đi đúng hướng, chứng minh tư duy vô cùng nhạy bén của team. Hãy biến lợi thế này thành một vũ khí tối thượng để thâu tóm thêm vô số những thành tựu rực rỡ! ⚔️🔥",
+        "🎨 Tự do tô vẽ bầu trời của riêng mình! Xin gửi lời khen ngợi lớn nhất đến {TEN} và Trợ Lý khi đã điểm xuyết thành công mốc {MOC} vào bộ sưu tập. Sự sáng tạo không ngừng nghỉ chính là điểm nhấn khiến mọi người không thể rời mắt. Cứ tự tin thể hiện cá tính độc bản của mình, vinh quang chắc chắn sẽ đền đáp xứng đáng cho những nỗ lực ấy! 🖌️🌈",
+        "🏆 Khẳng định dấu ấn cá nhân từ rất sớm! Chúc mừng {TEN} cùng Trợ Lý đã xây dựng được một nền móng cực kỳ kiên cố tại vị trí {MOC}. Việc dám thử thách bản thân và không ngại khó khăn đã tạo ra một phiên bản hoàn hảo nhất của các bạn trong ngày hôm nay. Đừng để ngọn lửa này tắt, hãy thổi bùng nó lên để rọi sáng chặng đường sắp tới! 🌋✨",
+        "🦅 Tung cánh bay cao giữa bầu trời xanh thẳm! Vô cùng tự hào khi chúc mừng {TEN} và Trợ Lý đã cất cánh thành công, hạ cánh an toàn tại mốc {MOC}. Sự điềm tĩnh trước mọi áp lực đã biến các bạn thành những người làm chủ cuộc chơi thực thụ. Hãy dùng tầm nhìn bao quát này để hướng tới những đỉnh núi chót vót và kiêu hãnh hơn nữa nhé! 🏔️🦅",
+        "🌻 Hạt giống đam mê nay đã vươn mình ra ánh sáng! Xin chúc mừng {TEN} cùng Trợ Lý đã tận tâm chăm sóc để thu về trái ngọt {MOC} đầy kiêu hãnh. Từng chút một cố gắng mỗi ca live đều đang bồi đắp thêm sự vững chãi cho sự nghiệp của các bạn. Cứ giữ trọn nhiệt huyết, mùa màng bội thu của sự nổi tiếng và thành công đang ở rất gần rồi! 🌾🚜",
+        "🎵 Một nhịp điệu hoàn hảo cho bước nhảy khởi đầu! Chúc mừng {TEN} và Trợ Lý đã hòa quyện xuất sắc để chạm tới mốc {MOC} vô cùng ấn tượng. Những thanh âm của sự chiến thắng đang ngân vang, tiếp thêm vô vàn động lực cho toàn đội. Hãy mang theo sự hưng phấn tột độ này vào những chặng đua tiếp theo để thiết lập thêm những kỷ lục chưa từng có nha! 🎧💥",
+        "🏰 Những viên gạch hồng xây nên một lâu đài vững chãi! Gửi lời chúc mừng rực rỡ nhất đến {TEN} cùng Trợ Lý vì đã kiến tạo nên mốc {MOC} bằng chính sự tỉ mỉ của mình. Không có sự vội vã, chỉ có một chiến lược rõ ràng và sự kiên định tuyệt đối. Vương quốc vinh quang đang dần hình thành, hãy vững tay bảo vệ và phát triển nó thật mạnh mẽ nhé! 👑🧱",
+        "🌟 Bắt trọn từng khoảnh khắc tỏa sáng! Xin chúc mừng {TEN} và Trợ Lý đã tạo ra một sức hút không thể chối từ, xuất sắc hái được ngôi sao mang tên mốc {MOC}. Phong độ ổn định và nụ cười luôn rạng rỡ chính là sức mạnh vô hình thu hút mọi ánh nhìn. Đừng quên nạp năng lượng sau chiến thắng này để chuẩn bị cho những cú bật nhảy ngoạn mục hơn nha! 🌠💪",
+        "🚀 Phóng thẳng lên quỹ đạo thành công! Chúc mừng {TEN} cùng Trợ Lý đã thành công kích hoạt động cơ để đưa tên tuổi mình chạm mốc {MOC}. Tốc độ hiện tại là cực kỳ lý tưởng để các bạn tiếp tục càn lướt qua mọi thử thách. Hãy cứ giữ vững vô lăng, tập trung tối đa và bạn sẽ thấy những điều kỳ diệu nhất đang chờ đón ở vạch đích phía trước! 🏁🔥",
+        "💎 Tỏa ánh hào quang ngay từ những vết cắt đầu tiên! Xin gửi ngàn vạn lời chúc đến {TEN} và Trợ Lý đã khéo léo hoàn thiện mốc {MOC} đầy tự hào. Bản lĩnh và sự chuyên nghiệp của mọi người đang tạo nên một sức mạnh nội tại đáng kinh ngạc. Cứ tự tin phô diễn hết tài năng, những giá trị lớn lao hơn sẽ tự khắc tìm đến với các bạn trong nay mai thôi! ✨🏆",
+        "🧩 Lấp ráp hoàn chỉnh một cỗ máy chiến thắng! Chúc mừng {TEN} cùng Trợ Lý đã cho thấy sự nhịp nhàng tuyệt đỉnh để mang về con số {MOC} ấn tượng. Không có một mắt xích nào bị lơi lỏng, tất cả đều đang hoạt động với công suất hoàn hảo. Hãy tận dụng tối đa cỗ máy này để cán nát mọi rào cản và vươn lên dẫn đầu trong suốt phần còn lại của cuộc đua! ⚙️🚀",
+        "☕ Đậm đà và tỉnh táo như một tách Espresso sáng sớm! Chúc mừng {TEN} và Trợ Lý đã nạp đầy năng lượng để chạm mốc {MOC} cực kỳ mượt mà. Sự nhiệt huyết của mọi người đang lan tỏa sự tích cực đến toàn bộ phòng live. Hãy duy trì sự tỉnh táo này để tiếp tục tạo ra những kỷ lục mới thật hoành tráng nhé! 🚀✨",
+        "📖 Trang nhật ký hôm nay được viết bằng mực vàng! Xin chúc mừng {TEN} cùng Trợ Lý đã khắc họa một khởi đầu tuyệt đẹp với thành tích {MOC}. Từng dòng chữ đều chứa đựng sự nỗ lực không ngừng nghỉ. Cứ tự tin lật sang những trang tiếp theo, chắc chắn sẽ còn vô vàn điều kỳ diệu đang chờ đón các bạn! 📝🌻",
+        "🎩 Một màn ảo thuật hoàn hảo không tì vết! Chúc mừng {TEN} và Trợ Lý đã biến những nỗ lực thầm lặng thành thành quả {MOC} đầy chói lóa. Khán giả đang hoàn toàn bị chinh phục bởi sức hút ma mị và sự duyên dáng của team. Hãy tiếp tục vung chiếc đũa thần để mang lại nhiều bất ngờ hơn nữa nhé! ✨🪄",
+        "🧭 La bàn đã chỉ đúng hướng vinh quang! Xin gửi lời chúc mừng đến {TEN} cùng Trợ Lý vì đã định vị thành công mốc {MOC} trên bản đồ thành tích. Tầm nhìn chiến lược và sự kiên định đang đưa con thuyền của chúng ta đi cực kỳ đúng hướng. Căng buồm lên và hướng tới những vùng đất kỷ lục mới thôi! 🚢⚓",
+        "🎬 Action! Cảnh quay đầu tiên đã cực kỳ mãn nhãn! Chúc mừng {TEN} và Trợ Lý đã diễn xuất xuất thần để mang về mốc {MOC} vô cùng ấn tượng. Ánh đèn sân khấu đang chiếu rọi trọn vẹn sự nỗ lực của mọi người. Giữ vững phong độ này, bộ phim bom tấn của team chắc chắn sẽ đại thắng! 🎥🍿",
+        "🪴 Mầm xanh đã đội đất vươn lên đón nắng! Xin chúc mừng {TEN} cùng Trợ Lý đã chăm bón cẩn thận để thu về quả ngọt {MOC} đầu mùa. Sự tỉ mỉ và tận tâm trong từng phiên live chính là nguồn dinh dưỡng tốt nhất. Hãy tiếp tục vun trồng để cái cây sự nghiệp này tỏa bóng mát rực rỡ nhé! 🌱☀️",
+        "🏹 Kéo căng dây cung và buông tay dứt khoát! Chúc mừng {TEN} và Trợ Lý đã có một cú bắn chính xác tuyệt đối vào mốc {MOC}. Sự điềm tĩnh và kỹ năng thượng thừa của các bạn đang khiến mọi đối thủ phải dè chừng. Nạp thêm mũi tên nhiệt huyết và ngắm bắn những mục tiêu xa hơn nữa nha! 🎯🔥",
+        "🧩 Một mảnh ghép sắc màu vừa được đặt vào đúng vị trí! Xin chúc mừng {TEN} cùng Trợ Lý đã làm cho bức tranh tổng thể thêm phần rực rỡ với mốc {MOC}. Tinh thần teamwork hoàn hảo đã giúp mọi người vượt qua rào cản dễ dàng. Tiếp tục đồng lòng, kiệt tác vĩ đại nhất sắp thành hình rồi! 🖼️💎",
+        "🔋 Dung lượng pin đam mê đang ở mức 100%! Chúc mừng {TEN} và Trợ Lý đã bứt tốc ngoạn mục để sạc đầy mốc {MOC} trong sự ngỡ ngàng của bao người. Nguồn năng lượng vô tận này chính là động cơ mạnh mẽ nhất đưa team vươn xa. Hãy để sự nhiệt huyết này lan tỏa và đốt cháy mọi kỷ lục tiếp theo! ⚡🚀",
+        "🔔 Tiếng chuông báo hỷ vang lên rộn rã! Xin gửi ngàn lời chúc đến {TEN} cùng Trợ Lý vì đã gõ vang cánh cửa thành công tại mốc {MOC}. Sự bền bỉ mỗi ngày cuối cùng đã tạo nên những âm thanh của sự tự hào. Đừng ngơi nghỉ, hãy tiếp tục gióng lên những hồi chuông chiến thắng vang dội hơn trong nay mai! 🎊🎶",
+        "🏅 Tấm huy chương đầu tiên đã được trao tay! Chúc mừng {TEN} và Trợ Lý đã hoàn thành chặng khởi động cực kỳ xuất sắc với mốc {MOC}. Mồ hôi đã rơi nhưng nụ cười kiêu hãnh đang nở rộ trên môi. Đây là bước đệm hoàn hảo để các bạn vươn lên bục vinh quang cao nhất trong những cuộc đua khốc liệt sắp tới! 🏆💪",
+        "🦋 Phá kén để tung đôi cánh rực rỡ! Xin chúc mừng {TEN} cùng Trợ Lý đã lột xác thành công, mang về mốc {MOC} đầy kiêu hãnh. Sự tự tin và bản lĩnh đã giúp các bạn bay lượn tự do trên bầu trời thành tích. Cứ tiếp tục phô diễn vẻ đẹp và tài năng của mình, cả thế giới đang dõi theo các bạn! 🌈✨",
+        "🔑 Chiếc chìa khóa vạn năng đã được tìm thấy! Chúc mừng {TEN} và Trợ Lý đã thành công mở khóa rương báu mang tên mốc {MOC}. Khả năng tương tác thông minh chính là công cụ sắc bén nhất của team. Vẫn còn rất nhiều cánh cửa kỷ lục đang đóng kín, hãy tự tự tin cầm chìa khóa tiến lên và khai phá tất cả nhé! 🗝️🔓",
+        "🚦 Đèn xanh đã bật, đạp lút ga thôi! Xin chúc mừng {TEN} cùng Trợ Lý đã có một pha đề pa hoàn hảo để cán mốc {MOC} an toàn và thần tốc. Không có bất kỳ chướng ngại nào làm khó được tư duy nhạy bén của mọi người. Đường đua phía trước đang rộng mở, hãy phô diễn kỹ năng drift đỉnh cao của mình đi nào! 🏎️💨",
+        "🔮 Quả cầu pha lê đã tiên đoán một sự bùng nổ! Chúc mừng {TEN} và Trợ Lý đã biến lời tiên tri thành hiện thực với con số {MOC} chói lóa. Sức mạnh ma thuật từ sự duyên dáng của team đang làm say đắm mọi ánh nhìn. Hãy tiếp tục thi triển phép màu, mang lại những khoảnh khắc bùng nổ và khó quên hơn nữa nhé! 🧙‍♀️✨",
+        "🎼 Một nốt thăng hoàn hảo trong bản nhạc vinh quang! Xin gửi lời chúc nồng nhiệt đến {TEN} cùng Trợ Lý vì đã cất lên giai điệu {MOC} cực kỳ bắt tai. Sự phối hợp ăn ý giữa người hát và người hòa âm đã tạo nên sự đồng điệu tuyệt đối. Cứ giữ vững nhịp độ này, bài hát của chúng ta sẽ sớm leo lên đỉnh bảng xếp hạng! 🎶🎤",
+        "🏕️ Dựng một nền móng cắm trại cực kỳ kiên cố! Chúc mừng {TEN} và Trợ Lý đã thiết lập thành công căn cứ địa tại mốc {MOC}. Sự chuẩn bị kỹ lưỡng và tinh thần không ngại khó đã giúp team có một vị trí an toàn tuyệt đối. Hãy tiếp thêm củi vào đống lửa đam mê để soi sáng cả khu rừng thành tích trong đêm nay nhé! ⛺🔥",
+        "💎 Mài giũa viên đá thô thành tuyệt tác! Xin chúc mừng {TEN} cùng Trợ Lý đã nhẫn nại vượt qua áp lực để tạo hình thành công mốc {MOC}. Những góc cạnh sắc sảo của tài năng đang bắt đầu phản chiếu ánh sáng rực rỡ. Đừng dừng lại việc trau dồi, bởi giá trị của team đang ngày càng tăng lên một cách chóng mặt! 💍✨",
+        "🛹 Trượt qua mọi định kiến với một cú kickflip điệu nghệ! Chúc mừng {TEN} và Trợ Lý đã thể hiện phong cách cực chất để ghi điểm tại mốc {MOC}. Sự trẻ trung, năng động và dám nghĩ dám làm đã giúp các bạn ghi đậm dấu ấn cá nhân. Hãy tiếp tục giữ thăng bằng và phô diễn thêm nhiều kỹ năng thượng thừa khác nhé! 🛹💥",
+        "🔭 Ống nhòm đã khóa chặt mục tiêu! Xin chúc mừng {TEN} cùng Trợ Lý đã kéo gần khoảng cách và thành công thâu tóm mốc {MOC}. Tầm nhìn chiến lược sắc bén đã giúp mọi người nhìn thấu được cơ hội vàng. Hãy đưa mắt nhắm tới những hành tinh xa xôi hơn, vũ trụ vinh quang bao la này đang chờ các bạn khám phá! 🌌🚀",
+        "📚 Một chương sách đầy cảm hứng vừa khép lại! Chúc mừng {TEN} và Trợ Lý đã viết nên một cột mốc {MOC} chứa đựng biết bao nỗ lực và mồ hôi. Từng dòng chữ đều toát lên một tinh thần cống hiến mãnh liệt. Hãy lật sang trang mới, chuẩn bị bút mực để tiếp tục kể cho mọi người nghe về những kỳ tích vĩ đại hơn nhé! 📖🖋️",
+        "🧬 Mã gen của những người chiến thắng đã được kích hoạt! Xin gửi ngàn lời chúc đến {TEN} cùng Trợ Lý vì đã chứng minh bản năng xuất chúng tại mốc {MOC}. Khả năng thích nghi nhanh chóng và xử lý tình huống linh hoạt chính là điểm mạnh cốt lõi. Cứ tự tin phát huy tối đa tiềm năng, không có giới hạn nào cản bước được team! 🔬💪",
+        "🎭 Một màn hóa thân xuất thần không tì vết! Chúc mừng {TEN} và Trợ Lý đã làm chủ hoàn toàn vai diễn của mình để rinh về mốc {MOC} đầy thuyết phục. Sự nhập tâm và chuyên nghiệp đã mang lại vô số cảm xúc chân thật cho người xem. Sân khấu này là của các bạn, hãy tiếp tục tỏa sáng rực rỡ dưới ánh đèn spotlight nhé! 🎬🌟",
+        "🧱 Từng viên gạch xây nên một pháo đài vững chắc! Xin chúc mừng {TEN} cùng Trợ Lý đã cần mẫn đặt nền móng tại vị trí {MOC}. Sự kiên nhẫn và bền bỉ đang dần tạo nên một bức tường thành không ai có thể xô đổ. Hãy kiên định với mục tiêu, một đế chế huy hoàng do chính các bạn làm chủ đang dần hiện ra trước mắt! 🏰🛡️",
+        "🌡️ Nhiệt kế đang tăng vọt vì sức nóng của team! Chúc mừng {TEN} và Trợ Lý đã tạo ra một bầu không khí rực lửa để đun sôi mốc {MOC}. Năng lượng của mọi người đang thực sự làm tan chảy mọi rào cản cản đường. Đừng để ngọn lửa này hạ nhiệt, tiếp tục đun sôi đam mê để tạo ra những hiện tượng chấn động hơn! 🌋🔥",
+        "🎨 Pha trộn màu sắc tạo nên một kiệt tác bình minh! Xin chúc mừng {TEN} cùng Trợ Lý đã khéo léo kết hợp tài năng để vẽ nên mốc {MOC} tươi sáng. Sự rực rỡ và ấm áp của team đang truyền cảm hứng cho rất nhiều người. Hãy tự tin cầm cọ vẽ, điểm xuyết thêm những mảng màu độc đáo để hoàn thiện bức tranh sự nghiệp vĩ đại! 🖌️🌄",
+        "🛰️ Vệ tinh đã phóng thành công vào quỹ đạo! Chúc mừng {TEN} và Trợ Lý đã truyền đi những tín hiệu tích cực và xác lập mốc {MOC} cực kỳ ổn định. Phủ sóng toàn bộ bảng xếp hạng bằng sự duyên dáng chính là chiến thuật tuyệt vời. Tiếp tục duy trì tần số này, mọi người đang dõi theo và ủng hộ các bạn hết mình! 📡🚀",
+        "⏳ Từng hạt cát thời gian đều được tận dụng tối đa! Xin gửi lời ngợi khen đến {TEN} cùng Trợ Lý vì đã biến từng phút giây trên live thành con số {MOC} vô giá. Sự tập trung và chuyên nghiệp đã mang lại hiệu suất công việc cực cao. Hãy trân trọng đà thăng tiến này, quản lý tốt nhịp độ để chinh phục những cột mốc xa hơn! ⌛💎",
+        "🎪 Trở thành tâm điểm của rạp xiếc ma thuật! Chúc mừng {TEN} và Trợ Lý đã tung hứng những khó khăn một cách cực kỳ điệu nghệ để đạt mốc {MOC}. Sự khéo léo và không sợ mạo hiểm đã tạo ra những màn trình diễn để đời. Khán giả đang vô cùng háo hức, hãy chuẩn bị cho tiết mục đinh bùng nổ nhất ở phía sau nhé! 🤹‍♀️🎪",
+        "🏹 Mũi tên ánh sáng xé toạc màn đêm! Xin chúc mừng {TEN} cùng Trợ Lý đã mang lại sự bừng sáng chói lóa với thành tích {MOC}. Xua tan mọi nghi ngờ bằng chính thực lực kiên cường, các bạn đã khẳng định được bản lĩnh thép. Hãy tiếp tục hướng cung về phía mặt trời, những mục tiêu rực rỡ nhất đang vẫy gọi các bạn! ☀️🎯",
+        "🎈 Bay lên nào! Xin chúc mừng {TEN} cùng Trợ Lý đã bơm đầy khí thế để khinh khí cầu mang tên mình chạm đến mốc {MOC}. Góc nhìn từ trên cao chắc chắn rất tuyệt vời đúng không? Hãy tiếp tục thả thêm những bao cát cản trở xuống, giữ ngọn lửa đam mê luôn cháy để bay cao và bay xa hơn nữa trên bầu trời thành tích nhé! ☁️✨",
+        "🎯 Bàn thắng vàng ở những phút đầu tiên! Chúc mừng {TEN} và Trợ Lý đã có pha ghi bàn tuyệt đẹp tại mốc {MOC}. Sự phối hợp siêu việt và kỹ năng cá nhân đã làm bùng nổ cầu trường. Cứ duy trì lối chơi tấn công sắc bén này, chiếc cúp vô địch chắc chắn sẽ không thể thoát khỏi tay team chúng ta! ⚽🏆",
+        "📸 Bắt trọn khoảnh khắc visual đỉnh cao! Xin chúc mừng {TEN} cùng Trợ Lý đã có những khung hình xuất thần để rinh về mốc {MOC} cực kỳ bắt mắt. Sự chuyên nghiệp và nhan sắc rạng rỡ chính là thứ vũ khí hạ gục mọi trái tim. Giữ vững phong thái tự tin này để liên tục chiếm spotlight trên bảng xếp hạng nhé! 🌟📷",
+        "🌱 Rễ bám sâu, cành lá vươn cao! Chúc mừng {TEN} và Trợ Lý đã chăm chút cho hạt mầm đam mê nảy nở rực rỡ tại mốc {MOC}. Sự sống mãnh liệt của team đang được chứng minh qua từng nỗ lực nhỏ nhất. Tiếp tục hấp thụ ánh sáng của sự ủng hộ để trở thành một cái cây cổ thụ vững chãi nha! 🌳☀️",
+        "🎙️ Giọng ca vàng đã cất lên! Xin gửi lời chúc nồng nhiệt đến {TEN} cùng Trợ Lý vì đã tạo ra tần số âm thanh tuyệt vời, chạm đến mốc {MOC}. Những giai điệu của sự nỗ lực đang làm say đắm biết bao người nghe. Hãy cầm chắc micro, hát tiếp khúc ca chiến thắng với năng lượng bùng nổ nhất có thể! 🎶🎤",
+        "🧭 Mũi tên la bàn đã khóa chặt kho báu! Chúc mừng {TEN} và Trợ Lý đã định vị xuất sắc và khai quật thành công mốc {MOC}. Không bị lạc lối giữa muôn vàn áp lực, team đã cho thấy sự tỉnh táo và nhạy bén tuyệt vời. Hành trình thám hiểm vẫn còn dài, hãy tiếp tục giương buồm đi tìm những kỷ lục mới! 🗺️💎",
+        "☕ Một ly bạc xỉu ngọt ngào cho ngày làm việc rực rỡ! Xin chúc mừng {TEN} cùng Trợ Lý đã pha chế thành công công thức chiến thắng tại mốc {MOC}. Vừa đậm đà, vừa cuốn hút, các bạn đã mang lại một cảm giác cực kỳ dễ chịu cho người xem. Nạp thêm năng lượng và tiếp tục bứt phá giới hạn nhé! 🥤✨",
+        "⛸️ Cú trượt băng nghệ thuật không một vết xước! Chúc mừng {TEN} và Trợ Lý đã lướt đi vô cùng mượt mà để cán đích mốc {MOC}. Sự duyên dáng và kỹ thuật hoàn hảo đã mang lại điểm số tuyệt đối từ ban giám khảo khán giả. Giữ vững thăng bằng và chuẩn bị cho những cú xoay vòng đỉnh cao hơn nha! ❄️🥇",
+        "🧬 Giải mã thành công chuỗi ADN chiến thắng! Xin chúc mừng {TEN} cùng Trợ Lý đã tìm ra công thức đột phá để chạm tay vào mốc {MOC}. Tố chất ngôi sao đang chảy tràn trong huyết quản của mọi người. Hãy tiếp tục phát huy những điểm mạnh bẩm sinh này để tạo ra một hệ sinh thái thành tích khổng lồ! 🔬🧬",
+        "🚁 Cánh quạt đã quay, trực thăng cất cánh! Chúc mừng {TEN} và Trợ Lý đã nâng tầm bản thân, vút bay lên không trung để giành lấy mốc {MOC}. Không chướng ngại vật nào có thể làm khó được sự linh hoạt của team. Cứ tiếp tục tiến về phía trước với một tốc độ ổn định và an toàn nhé! 🚁💨",
+        "🍿 Bỏng ngô đã nổ, rạp phim chính thức sáng đèn! Xin chúc mừng {TEN} cùng Trợ Lý đã có màn ra mắt cực kỳ ăn khách với mốc {MOC}. Sức hút của các bạn khiến phòng vé bùng nổ hơn bao giờ hết. Hãy tiếp tục giữ chân khán giả bằng những tình tiết hấp dẫn và duyên dáng nhất trong những phiên live tiếp theo! 🎬🎟️",
+        "🎢 Chuyến tàu lượn siêu tốc ngập tràn cảm xúc! Chúc mừng {TEN} và Trợ Lý đã đưa khán giả đi qua mọi cung bậc hưng phấn để dừng lại tại mốc {MOC} rực rỡ. Sự liều lĩnh và táo bạo đã mang lại một kết quả vô cùng xứng đáng. Thắt chặt dây an toàn, chúng ta chuẩn bị lao vào những vòng lặp kỷ lục mới thôi! 🎢🔥",
+        "🕹️ Combo kỹ năng chuẩn xác từng mili-giây! Xin gửi lời chúc mừng đến {TEN} cùng Trợ Lý vì đã phá đảo thành công màn dạo đầu với mốc {MOC}. Phản xạ nhạy bén và tư duy chiến thuật đã giúp team vượt qua mọi chướng ngại vật cực kỳ mượt mà. Game chỉ mới bắt đầu thôi, nạp đầy máu và sẵn sàng diệt boss nhé! 🎮👾",
+        "🎨 Pha trộn sắc cam rực rỡ của buổi bình minh! Chúc mừng {TEN} và Trợ Lý đã mang lại ánh sáng rạng ngời cho phòng live với mốc {MOC}. Bức tranh của chúng ta đang ngày càng trở nên sống động nhờ vào tài năng điểm xuyết của mọi người. Đừng dừng cọ, hãy vẽ thêm thật nhiều những mảng màu hạnh phúc và vinh quang! 🖌️🌅",
+        "🏎️ Ôm cua cực mượt ở góc hẹp! Xin chúc mừng {TEN} cùng Trợ Lý đã phô diễn kỹ năng lái lụa để vượt qua đối thủ, xuất sắc cán mốc {MOC}. Động cơ của sự quyết tâm đang hoạt động với hiệu suất tối đa. Hãy giữ vững vị trí dẫn đầu, đường thẳng phía trước là nơi để các bạn đạp lút ga bứt tốc! 🏁💨",
+        "📡 Bắt sóng chính xác tần số của sự thành công! Chúc mừng {TEN} và Trợ Lý đã kết nối thành công với trái tim khán giả, mang về cột mốc {MOC} ấn tượng. Đường truyền vô cùng ổn định nhờ vào sự chuyên nghiệp và duyên dáng của team. Hãy tiếp tục phát sóng những nguồn năng lượng tích cực này đi thật xa nhé! 📻⚡",
+        "🔥 Đánh lửa thành công, ngọn đuốc đã rực sáng! Xin chúc mừng {TEN} cùng Trợ Lý đã thắp lên ngọn lửa hy vọng và nỗ lực tại mốc {MOC}. Hơi ấm và ánh sáng của các bạn đang lan tỏa mạnh mẽ đến mọi ngóc ngách. Hãy cầm ngọn đuốc này chạy thật nhanh về đích, vinh quang đang vẫy gọi những người tiên phong! 🏃‍♂️🔥",
+        "🏹 Cung thủ vĩ đại không bao giờ nhắm trượt! Chúc mừng {TEN} và Trợ Lý đã bách phát bách trúng, ghim chặt mũi tên vào mốc {MOC}. Từng đường đi nước bước đều được tính toán kỹ lưỡng, mang lại một hiệu quả tối đa. Hãy giữ vững sự điềm tĩnh và cái đầu lạnh để tiếp tục chinh phục những bảng xếp hạng khó nhằn hơn! 🎯🛡️",
+        "🧩 Ghép xong mảng trời xanh biếc! Xin gửi lời ngợi khen đến {TEN} cùng Trợ Lý vì đã hoàn thiện một phần cực kỳ quan trọng mang tên mốc {MOC}. Bầu không khí hiện tại vô cùng trong trẻo và ngập tràn niềm vui. Cứ kiên nhẫn tìm kiếm những mảnh ghép tiếp theo, kiệt tác đại thắng đang nằm gọn trong tay các bạn! 🖼️🧩",
+        "🔔 Trống giục cờ mở, tưng bừng khí thế! Chúc mừng {TEN} và Trợ Lý đã tạo ra một bầu không khí rộn rã, đánh dấu sự chiến thắng vang dội tại mốc {MOC}. Từng thần chiến binh đang dâng cao ngùn ngụt nhờ vào sự nỗ lực không ngừng nghỉ. Hãy để tiếng trống này vang xa hơn nữa, báo hiệu một kỷ nguyên rực rỡ sắp bắt đầu! 🥁🎊"
+      ];
+
+      const msgsMid = [
+        "🚀 Bùng nổ cảm xúc! Xin chúc mừng {TEN} và Trợ Lý đã xuất sắc cán mốc hơn {MOC}, một dấu ấn rực rỡ thể hiện trọn vẹn sự kiên trì và nỗ lực không ngừng nghỉ. Xuyên suốt chặng đường vừa qua, mọi người đã thể hiện một tinh thần làm việc đầy trách nhiệm, luôn chủ động và mang lại hiệu quả cực kỳ cao cho toàn đội. Những giọt mồ hôi rơi xuống giờ đây đã kết tinh thành một thành quả khiến ai nấy đều phải trầm trồ ngưỡng mộ. Cứ tiếp tục duy trì đà thăng tiến vũ bão này, chắc chắn không có đỉnh cao nào là tập thể chúng ta không thể chạm tới. Chúc team luôn rực cháy đam mê và gặt hái thêm nhiều siêu phẩm! 🌟🏆",
+        "🔥 Thật sự bùng nổ! Xin gửi lời chúc mừng nồng nhiệt và chân thành nhất đến {TEN} cùng Trợ Lý vì đã tạo nên một cú bứt phá ngoạn mục để vượt mốc {MOC}. Thành tích đáng tự hào này chính là minh chứng đanh thép nhất cho bản lĩnh kiên cường và tài năng xuất chúng của toàn bộ team. Mọi rào cản hay khó khăn thử thách đều đã phải nhường bước trước ý chí quyết tâm sắt đá và tinh thần chiến binh dũng mãnh của mọi người. Hãy cứ tiếp tục vững bước trên con đường đã chọn, tự tin xô đổ thêm những kỷ lục mới và ghi tên mình vào bảng vàng vinh danh trong những ngày sắp tới nhé! 🥇🌈",
+        "🎊 Quá đỉnh cao và nhiệt huyết! Chúc mừng {TEN} và Trợ Lý đã chính thức ghi danh tại cột mốc {MOC} với một phong độ hoàn toàn thuyết phục. Sự phối hợp vô cùng nhịp nhàng cộng hưởng với quyết tâm cao độ của mọi người đã tạo nên một kết quả rực rỡ không thể nào tuyệt vời hơn. Quả thật, mọi nỗ lực âm thầm đằng sau cánh gà nay đã được đền đáp bằng những tràng pháo tay tán thưởng nhiệt liệt nhất. Hãy luôn giữ cho mình một trái tim nóng và một cái đầu lạnh để tiếp tục thâu tóm thêm thật nhiều vinh quang rực rỡ hơn nữa trong tương lai gần nha! 🌟✨",
+        "⚡ Cơn lốc tốc độ mang tên {TEN} và Trợ Lý đã chính thức càn quét và mang về mốc {MOC} cực kỳ chấn động! Có thể nói, mọi rào cản đều đã bị cuốn phăng trước sức mạnh và sự cố gắng bền bỉ không biết mệt mỏi của cả một tập thể đoàn kết. Thành công ngày hôm nay không phải là sự ngẫu nhiên, mà là kết quả tất yếu của một chiến lược thông minh và khát vọng chiến thắng mãnh liệt. Chúc mọi người luôn duy trì được phong độ hủy diệt này để tiếp tục vươn lên dẫn đầu, độc chiếm ngôi vương trong những chặng đua khốc liệt sắp tới! 💥🚀",
+        "🌟 Không có bất kỳ giới hạn nào có thể ngăn cản bước tiến thần tốc của {TEN} và Trợ Lý! Chúc mừng toàn đội đã xuất sắc chinh phục được mốc {MOC} một cách vô cùng thuyết phục. Những chiến lược đi đúng hướng cùng tinh thần cống hiến vượt bậc đã mang lại một quả ngọt vô cùng trọn vẹn và xứng đáng. Thành tựu này chính là lời khẳng định đanh thép nhất cho năng lực thực sự của mọi người. Hãy tiếp tục giữ vững ngọn lửa nhiệt huyết này, đoàn kết một lòng để gặt hái thêm vô số những thành công vang dội khác nhé! 👑💪",
+        "🎯 Khẳng định vị thế người dẫn đầu! Một lời chúc mừng đầy tự hào xin gửi đến {TEN} và Trợ Lý khi đã hiên ngang chạm tay vào cột mốc {MOC} vô cùng giá trị. Hành trình vừa qua đã chứng minh được sự chuyên nghiệp, bền bỉ và một ý chí kiên cường không chịu khuất phục trước bất kỳ khó khăn nào. Sự nỗ lực phi thường của mọi người đã làm nên một chiến thắng ngọt ngào ngoài sức tưởng tượng. Cứ giữ vững nhịp điệu hoàn hảo này, chắc chắn những thành tựu vĩ đại hơn đang chờ đón ở phía trước. Hãy cùng nhau tỏa sáng rực rỡ và ghi đậm dấu ấn cá nhân nhé! 🚀✨",
+        "💥 Đập tan mọi giới hạn! Xin chúc mừng {TEN} cùng Trợ Lý đã tạo nên một tiếng vang lớn khi chinh phục thành công mốc {MOC} danh giá. Sự nỗ lực không ngừng nghỉ, kết hợp với tư duy nhạy bén và tinh thần đồng đội tuyệt vời đã giúp các bạn kiến tạo nên một kỷ lục đầy ấn tượng. Nhìn lại chặng đường đã qua, chúng ta hoàn toàn có quyền tự hào về những gì đã cống hiến. Hãy xem đây là một cột mốc đáng nhớ để tiếp thêm sức mạnh tinh thần, vững vàng tay lái vươn ra biển lớn và gặt hái thêm vô số những kỷ lục đáng nể khác! 🌟🏆",
+        "🌻 Một vụ mùa bội thu và rực rỡ! Gửi lời chúc mừng chân thành nhất đến {TEN} và Trợ Lý vì đã xuất sắc thu hoạch được thành quả ngọt ngào {MOC}. Từng giây từng phút nỗ lực của mọi người đã được chắt chiu lại để dệt nên một bức tranh thành công rực rỡ đến vậy. Những khó khăn nhọc nhằn dường như tan biến hết trước ánh sáng huy hoàng của chiến thắng này. Đừng ngần ngại đặt ra những mục tiêu lớn lao hơn, bởi vì với năng lực hiện tại, không có gì có thể làm khó được team. Chúc mọi người luôn giữ được nụ cười chiến thắng trên môi! 🎉💪",
+        "🌈 Tỏa sáng rực rỡ như một vì sao! Chúc mừng {TEN} cùng Trợ Lý đã chính thức khắc tên mình vào bảng vàng vinh danh với cột mốc {MOC} không thể thuyết phục hơn. Bằng sự sáng tạo, nhiệt huyết và quyết tâm cao độ, các bạn đã chứng minh được rằng sự đoàn kết có thể tạo nên sức mạnh vô song. Đây quả thực là phần thưởng xứng đáng nhất cho chuỗi ngày làm việc đầy tâm huyết. Hãy tự tin sải bước trên con đường hoa hồng do chính tay mình trải ra, vươn cao vươn xa và mang về thêm nhiều vinh quang lấp lánh hơn nữa nhé! 🥇⚡",
+        "🏆 Một bản hòa ca chiến thắng tuyệt đẹp! Xin chúc mừng {TEN} và Trợ Lý đã hòa nhịp xuất sắc để vươn tới cột mốc {MOC} vô cùng ấn tượng. Sự kết hợp ăn ý, nhịp nhàng và tinh thần cống hiến quên mình đã tạo nên một kết quả không thể ngọt ngào hơn. Thành công này không chỉ là một con số, mà nó còn là biểu tượng của ý chí kiên cường và khát vọng bứt phá. Chặng đường sắp tới sẽ còn nhiều thử thách nhưng cũng đầy rẫy những cơ hội vàng. Chúc cả team luôn dồi dào năng lượng để chinh phục những đỉnh cao mới! 🚀🔥",
+        "🌪️ Sức mạnh của một cơn lốc thực thụ! Xin gửi lời chúc mừng nồng nhiệt nhất đến {TEN} và Trợ Lý đã cuốn phăng mọi rào cản để chính thức cán mốc {MOC} vô cùng oanh liệt. Đây không chỉ là một con số vô tri, mà là sự kết tinh từ hàng trăm giờ nỗ lực, những chiến thuật sắc bén và một tinh thần đồng đội không thể phá vỡ. Chặng đường vừa qua tuy có lúc khó khăn, nhưng chính bản lĩnh thép đã giúp các bạn biến áp lực thành kim cương tỏa sáng. Cứ tiếp tục duy trì tốc độ hủy diệt này, vị trí ngôi vương chắc chắn đang nằm gọn trong tầm tay của tập thể chúng ta. Hãy tiến lên và đập tan mọi giới hạn! 💎🚀",
+        "🦅 Tựa như một chú đại bàng sải cánh giữa bầu trời bao la! Chúc mừng {TEN} cùng Trợ Lý đã vươn lên một tầm cao mới, hiên ngang chinh phục cột mốc {MOC} danh giá. Sự kiên trì bám đuổi mục tiêu đến cùng, kết hợp với tư duy bứt phá đã giúp team kiến tạo nên một kỷ lục vô cùng tự hào. Nhìn lại hành trình đầy gian nan vừa qua, sự cố gắng của mọi người chính là nguồn cảm hứng vô tận tiếp thêm sức mạnh cho toàn đội. Đừng để cho ngọn lửa đam mê nguội lạnh, hãy dùng nó để thiêu rụi mọi thử thách phía trước và bước lên bục vinh quang cao nhất nhé! 👑🔥",
+        "🌊 Cơn sóng thần vĩ đại mang tên {TEN} và Trợ Lý đang càn quét mọi bảng xếp hạng! Xin chúc mừng hai bạn đã xuất sắc vượt qua mốc {MOC} với một phong độ hoàn toàn áp đảo. Thành công rực rỡ này chứng minh rằng, khi sự tài năng kết hợp cùng lòng quyết tâm sắt đá, không có bất kỳ rào cản nào có thể cản bước. Mỗi giọt mồ hôi rơi xuống đều xứng đáng với những tràng pháo tay giòn giã ngày hôm nay. Hãy tiếp tục lèo lái con thuyền của mình vượt qua muôn ngàn sóng gió, thẳng tiến tới những vùng đất kỷ lục mới chưa ai từng đặt chân tới. Vinh quang đang gọi tên các bạn! 🚢🌟",
+        "🏔️ Đỉnh núi cao không thể khuất phục ý chí của người leo núi! Chúc mừng {TEN} và Trợ Lý đã ghi lại một dấu ấn lịch sử khi mạnh mẽ cắm lá cờ chiến thắng tại mốc {MOC}. Để đạt được vị trí đáng mơ ước này, các bạn đã phải trải qua không ít thử thách mài giũa bản lĩnh và lòng kiên nhẫn. Nhưng chính trong sự khắc nghiệt ấy, tinh thần chiến binh dũng cảm của mọi người lại càng tỏa sáng rực rỡ hơn bao giờ hết. Chặng đường phía trước dẫu còn xa, nhưng với đà thăng tiến vũ bão này, chắc chắn đỉnh cao nhất của thành công sẽ sớm bị các bạn chinh phục! 🧗‍♂️🏆",
+        "🎸 Một bản nhạc rock bùng nổ mọi giác quan! Xin chúc mừng {TEN} cùng Trợ Lý đã phối hợp tạo nên một màn trình diễn đỉnh cao, xuất sắc chạm tay vào mốc {MOC} đầy uy lực. Sự nhịp nhàng trong từng khâu xử lý, thái độ làm việc tận tâm và khát khao chiến thắng mãnh liệt đã hòa quyện lại thành một kết quả cực kỳ vang dội. Mọi sự cống hiến thầm lặng của mọi người đã được đền đáp bằng những trái ngọt xứng đáng nhất. Hãy tiếp tục giữ vững nhịp độ hưng phấn này, thổi bùng lên ngọn lửa nhiệt huyết để thiêu rụi mọi ranh giới và tạo ra những cú hit lịch sử nhé! 🎶💥",
+        "⚙️ Cỗ máy vĩ đại đang vận hành với công suất tối đa! Chúc mừng {TEN} và Trợ Lý đã bức tốc ngoạn mục, cán đích thành công mốc {MOC} khiến ai nấy đều phải thán phục. Không có thành công nào tự nhiên mà đến, đó là quả ngọt của sự kỷ luật thép, tầm nhìn chiến lược và một ý chí vươn lên không ngừng nghỉ. Các bạn đã chứng minh được đẳng cấp của những người dẫn đầu, luôn biết cách tỏa sáng vào những thời khắc quan trọng nhất. Hãy xem đây là một mốc son chói lọi để làm động lực, tiếp tục lao về phía trước và xác lập thêm vô số kỷ lục vô tiền khoáng hậu! 🏎️🥇",
+        "🌞 Ánh mặt trời chói lọi đang chiếu rọi thành quả tuyệt vời! Xin gửi ngàn lời chúc mừng đến {TEN} cùng Trợ Lý khi đã phá vỡ giới hạn bản thân, chạm tới mốc {MOC} vô cùng rạng rỡ. Hành trình chinh phục con số này chắc chắn đã lấy đi không ít công sức và sự tập trung cao độ, nhưng bù lại, cảm giác chiến thắng lúc này quả thực không gì sánh bằng. Sự nỗ lực phi thường của hai bạn đã truyền một nguồn năng lượng cực kỳ tích cực cho cả một tập thể. Cứ tự tin bước tiếp trên con đường trải đầy hoa hồng này, những đỉnh cao vinh quang vĩ đại hơn đang chờ đón! 🌹✨",
+        "🛡️ Tấm khiên kiên cố và thanh gươm sắc bén! Chúc mừng {TEN} và Trợ Lý đã chiến đấu như những chiến binh La Mã thực thụ để giành lấy cột mốc {MOC} vẻ vang. Đối mặt với muôn vàn khó khăn, các bạn không hề lùi bước mà dùng chính sự thông minh, quyết đoán để chuyển hóa rủi ro thành cơ hội. Kết quả rực rỡ ngày hôm nay là lời phản hồi mạnh mẽ nhất cho những hoài nghi trước đó. Hãy tiếp tục khoác lên mình bộ giáp của sự kiên định, giương cao ngọn cờ chiến thắng và sẵn sàng cho những cuộc chinh phạt vĩ đại hơn trong những chuỗi ngày bứt tốc sắp tới! ⚔️👑",
+        "🚂 Đoàn tàu siêu tốc không thể bị cản lại! Xin chúc mừng {TEN} cùng Trợ Lý đã lao về đích với vận tốc ánh sáng và thâu tóm thành công mốc {MOC} đáng kinh ngạc. Sự phối hợp không một vết xước giữa các thành viên, tinh thần lao động hăng say quên thời gian đã giúp team thiết lập nên một tiêu chuẩn mới cho sự xuất sắc. Những tràng vỗ tay hôm nay hoàn toàn xứng đáng với sự hy sinh thầm lặng của mọi người. Hãy tiếp tục nạp đầy nhiên liệu nhiệt huyết, giữ chắc tay lái để băng qua mọi rào cản và đưa con tàu thành tích đi đến những chân trời kỷ lục mới! 🚄🌟",
+        "🌠 Như một ngôi sao chổi rực sáng quét ngang bầu trời! Chúc mừng {TEN} và Trợ Lý đã để lại một dấu ấn không thể phai mờ khi xuất sắc vượt qua mốc {MOC}. Tinh thần chiến đấu không khoan nhượng, sự nhạy bén nắm bắt mọi cơ hội vàng đã giúp các bạn lột xác hoàn toàn và khẳng định vững chắc vị thế người dẫn đầu. Mỗi một bước tiến của mọi người đều mang theo sức mạnh truyền cảm hứng khổng lồ. Đừng dừng lại khi đang ở đỉnh cao phong độ, hãy dùng sức bật này để vươn tay hái lấy những vì tinh tú rực rỡ nhất trong vũ trụ thành công vô tận này nhé! 🚀💎",
+        "🏰 Một pháo đài kiên cố vừa được xây dựng xong! Gửi lời chúc mừng chân thành và nồng nhiệt nhất đến {TEN} cùng Trợ Lý vì thành tích {MOC} cực kỳ chói lọi. Để có được một công trình đồ sộ như vậy, đó là sự đánh đổi của vô số đêm thức trắng, những sự tính toán tỉ mỉ và một trái tim đầy ắp đam mê. Sự kiên trì và bền bỉ của các bạn chính là bài học vô giá về lòng quyết tâm. Hãy tiếp tục mở rộng vương quốc của mình, vững vàng kiến tạo thêm nhiều tòa tháp kỷ lục để bất cứ ai nhìn vào cũng phải trầm trồ thán phục! 👑💪",
+        "🏹 Mũi tên ánh sáng lao vút xé toạc màn đêm! Xin chúc mừng {TEN} và Trợ Lý đã có một màn lội ngược dòng ngoạn mục, găm trúng hồng tâm mang tên mốc {MOC}. Việc dám nghĩ dám làm, không ngại đối mặt với áp lực đã biến các bạn thành những người thợ săn tiền thưởng xuất sắc nhất. Quả ngọt này là phần thưởng không thể tuyệt vời hơn cho những nỗ lực không mệt mỏi. Hãy mài giũa thêm kỹ năng, giữ vững một tinh thần thép để nhắm đến những mục tiêu xa hơn, khó nhằn hơn nhưng cũng đem lại vinh quang huy hoàng hơn nhé! 🎯🔥",
+        "🌈 Một bức tranh cầu vồng tuyệt đẹp sau cơn mưa giông! Chúc mừng {TEN} cùng Trợ Lý đã vượt qua giông bão thử thách để mang về ánh sáng rực rỡ của mốc {MOC}. Những áp lực dường như chỉ làm tăng thêm sức chịu đựng và bản lĩnh kiên cường của hai bạn. Mọi khó khăn giờ đây đều lùi bước trước thành quả ngọt ngào mà các bạn đã tự tay vun trồng. Hãy hít một hơi thật sâu, tận hưởng trọn vẹn khoảnh khắc vinh quang này và sẵn sàng tâm thế để đón nhận thêm những cơn bão thành tựu khổng lồ hơn trong tương lai gần! 🌦️🏆",
+        "🎭 Một vở kịch hoàn hảo với cái kết vô cùng mãn nhãn! Xin gửi lời chúc mừng đến {TEN} và Trợ Lý khi đã hóa vai xuất sắc thành những người chiến thắng tại mốc {MOC}. Từng phân đoạn làm việc, từng khó khăn nhỏ nhất đều được các bạn xử lý một cách chuyên nghiệp và đầy tinh tế. Sức mạnh của sự đoàn kết và thấu hiểu đã tạo ra một tác phẩm để đời, mang lại niềm tự hào to lớn cho toàn đội. Hãy cứ là những đạo diễn tài ba, điều khiển nhịp độ cuộc chơi và tiếp tục tạo ra thêm những màn trình diễn bùng nổ hơn nữa! 🎬✨",
+        "🧩 Bức tranh khổng lồ đã tìm thấy mảnh ghép quyết định! Chúc mừng {TEN} cùng Trợ Lý đã hoàn thiện một cách xuất sắc tác phẩm nghệ thuật mang tên mốc {MOC}. Mọi chiến lược đúng đắn, mọi nỗ lực không ngừng nghỉ cuối cùng đã được đền đáp bằng một kết quả vượt ngoài sức tưởng tượng. Sự nhẫn nại và tầm nhìn xa trông rộng của hai bạn chính là chìa khóa mở ra kho báu quý giá này. Hãy giữ vững sự điềm tĩnh và khôn ngoan, tiếp tục chắp vá thêm nhiều mảnh ghép vĩ đại để tạo nên một kiệt tác thành công không thể xô đổ! 🖼️🥇",
+        "⚡ Một tia sét mang theo sức mạnh hủy diệt! Vô cùng tự hào khi chúc mừng {TEN} và Trợ Lý đã giáng một đòn chí mạng vào những kỷ lục cũ để thiết lập mốc {MOC} thần thánh. Tốc độ, sự chính xác và một khí thế hừng hực không sợ hãi đã giúp các bạn trở thành những chiến binh bất khả chiến bại trên đường đua rực lửa. Mọi giới hạn sinh ra là để bị phá vỡ, và các bạn đang làm điều đó một cách hoàn hảo nhất. Hãy nạp lại năng lượng để chuẩn bị cho những cú sét đánh chấn động hơn nữa nhé! 🌩️💥",
+        "🌳 Cây cổ thụ đã cắm sâu rễ và vươn cành đón nắng! Xin chúc mừng {TEN} cùng Trợ Lý đã nuôi dưỡng thành công thành tích khổng lồ tại mốc {MOC}. Sức sống mãnh liệt và sự kiên trì chắt chiu từng giọt nước, từng tia sáng nỗ lực đã giúp cái cây này đơm hoa kết trái ngọt ngào. Bóng râm thành tựu của các bạn đang lan tỏa và truyền cảm hứng mạnh mẽ đến mọi người xung quanh. Cứ vững vàng trước mọi giông bão, không ngừng vươn cao lên bầu trời để gặt hái thêm vô số những chùm quả rực rỡ nhất! 🍏🌟",
+        "🚀 Đưa con tàu vũ trụ bay vào quỹ đạo thành công! Chúc mừng {TEN} và Trợ Lý đã hoàn thành sứ mệnh bất khả thi, hạ cánh an toàn tại cột mốc {MOC} vô cùng huy hoàng. Vượt qua lực hấp dẫn của những khó khăn, các bạn đã dùng chính sự đột phá và sáng tạo để vươn tới một không gian mới hoàn toàn rộng mở. Đây chính là minh chứng cho một tầm nhìn không có giới hạn. Hãy tiếp tục thám hiểm những dải ngân hà mới, vững tay lái để đem về thêm nhiều thành tích ở những chân trời xa xôi vô tận nhé! 🌌💎",
+        "🔥 Rèn luyện trong lửa đỏ để trở thành thép không gỉ! Xin gửi vạn lời chúc mừng đến {TEN} cùng Trợ Lý đã chứng tỏ bản lĩnh phi thường khi ghi dấu tại mốc {MOC}. Những khó khăn chồng chất chỉ là những chiếc búa đe rèn giũa thêm sức chịu đựng và ý chí sắc bén của hai bạn. Giờ đây, khi thành phẩm đã ra lò, độ cứng cáp và sắc sảo của mọi người là điều không một đối thủ nào dám xem thường. Hãy dùng thanh gươm ý chí này để chẻ đôi mọi rào cản, hiên ngang bước lên đài danh vọng cao nhất đang chờ đón! ⚔️🏆",
+        "👑 Chiếc vương miện danh giá đã tìm thấy vị vua đích thực! Chúc mừng {TEN} và Trợ Lý đã đường hoàng ngồi lên ngai vàng với cột mốc {MOC} vô cùng thuyết phục. Sự cai trị bằng tài năng, nhiệt huyết và lòng quyết tâm đã mang lại một đế chế thành tựu vô cùng huy hoàng. Tất cả mọi người đều ngả mũ thán phục trước sức mạnh và bản lĩnh phi thường của tập thể chúng ta. Hãy đội vững chiếc vương miện này, tiếp tục hành trình thống trị bảng vàng và tạo ra những kỷ lục mà chỉ có các bạn mới có thể phá vỡ! 🏰🌟",
+        "🚀 Tốc độ bứt phá ánh sáng! Xin chúc mừng {TEN} và Trợ Lý đã tạo nên một cơn địa chấn thực sự khi xuất sắc càn quét mốc {MOC} rực rỡ. Xuyên suốt những ngày vừa qua, mọi người đã thể hiện một phong độ hoàn toàn hủy diệt, luôn chủ động sáng tạo nội dung và mang lại năng lượng tuyệt vời nhất. Những nỗ lực thầm lặng sau ống kính nay đã kết tinh thành một thành quả khiến bất cứ ai cũng phải trầm trồ ngưỡng mộ. Chặng đua phía trước trên bảng xếp hạng sẽ còn rất nhiều thử thách thú vị đang chờ đón. Cứ tiếp tục duy trì đà thăng tiến vũ bão này, chắc chắn mọi đỉnh cao đều sẽ bị khuất phục. Chúc team luôn cháy bỏng đam mê! 🌟🏆",
+        "🔥 Sức nóng đang thiêu rụi mọi rào cản! Lời chúc mừng nồng nhiệt nhất xin dành tặng {TEN} cùng Trợ Lý vì màn trình diễn bùng nổ để đè bẹp những khó khăn và chạm tay vào mốc {MOC}. Khả năng tương tác đỉnh cao và sự duyên dáng vô song đã giúp các bạn ghi điểm tuyệt đối trong lòng người hâm mộ. Đứng trước một thành tích đáng tự hào thế này, chúng hoàn toàn có quyền vỗ ngực kiêu hãnh về những gì đã cống hiến. Tuy nhiên, đường dài mới biết ngựa hay, hãy giữ cho mình một trái tim nóng và cái đầu lạnh để điều tiết nhịp độ hoàn hảo nhất. Vinh quang phía trước đang trải thảm đỏ chờ đón bước chân kiêu kỳ của các bạn. Tiến lên! 👑💥",
+        "🌪️ Một cơn lốc cuồng nộ mang theo khát vọng chiến thắng! Chúc mừng {TEN} và Trợ Lý đã chứng tỏ bản lĩnh kiên cường, vượt qua mọi sóng gió để vững vàng chốt hạ mốc {MOC} đầy uy lực. Không có thành công nào đến dễ dàng, nó là sự chắt chiu từ từng giọt mồ hôi, từng đêm miệt mài suy nghĩ kịch bản và sự kết nối không ngừng nghỉ với fan. Sự quyết tâm sắt đá ấy đã rèn giũa nên những chiến binh thực thụ không hề biết lùi bước. Hãy để luồng gió mạnh mẽ này tiếp tục thổi bùng lên cánh buồm sự nghiệp, đưa con thuyền của chúng ta đi xa hơn, chinh phục những vùng biển vinh quang chưa từng có ai đặt chân tới! 🌊🚢",
+        "💎 Tinh hoa hội tụ, đẳng cấp lên tiếng! Xin gửi ngàn lời ngợi khen tới {TEN} cùng Trợ Lý khi đã phô diễn một sức mạnh áp đảo để thâu tóm thành công cột mốc {MOC}. Từng khung hình, từng câu nói đều toát lên sự chuyên nghiệp và một sức hút mãnh liệt không thể chối từ. Chính sự trau chuốt tỉ mỉ đó đã mang lại một quả ngọt vô cùng xứng đáng, khẳng định vị thế cực kỳ vững chắc của team. Hành trình phía trước chắc chắn sẽ đòi hỏi nhiều nỗ lực hơn, nhưng với đà thăng hoa hiện tại, mọi chướng ngại vật sẽ chỉ là những viên đá lót đường. Cố gắng phát huy tối đa điểm mạnh, tiếp tục tỏa sáng rực rỡ và ghi tên mình vào bảng vàng nhé! ✨🎯",
+        "🎶 Khúc ca khải hoàn vang dội khắp mọi mặt trận! Chúc mừng {TEN} và Trợ Lý đã phối hợp nhịp nhàng tạo ra một bản hit để đời, xuất sắc cán mốc {MOC} chấn động. Sự cộng hưởng hoàn hảo giữa tài năng thiên bẩm và sự hỗ trợ đắc lực từ phía sau đã kiến tạo nên một kỷ lục đáng nhớ. Những khó khăn nhọc nhằn dường như tan biến hết trước ánh sáng huy hoàng của chiến thắng này. Đừng ngần ngại đặt ra những mục tiêu lớn lao hơn, bởi vì giới hạn duy nhất chỉ là bầu trời. Hãy tự tin cầm mic, hát vang bài ca của những người chiến thắng và tiếp tục dẫn dắt nhịp đập của vô số trái tim đang hướng về các bạn! 🎧🔥",
+        "⚔️ Mài sắc ý chí, chém đứt mọi giới hạn! Xin chúc mừng {TEN} cùng Trợ Lý đã hiên ngang cầm thanh gươm dũng cảm, chặt đứt mọi rào cản để chiếm lấy mốc {MOC} vô cùng oanh liệt. Đối diện với áp lực vô hình, các bạn không hề run sợ mà biến nó thành đòn bẩy để tung ra những cú nổ mang tính sát thương cao nhất trên bảng xếp hạng. Từng tinh thần chiến binh này thực sự là một nguồn cảm hứng bất tận, tiếp thêm năng lượng cho toàn thể đồng đội. Hãy giữ chặt vũ khí sắc bén này, duy trì sự tập trung cao độ và sẵn sàng cho những trận chiến lớn lao hơn. Vương miện của người chiến thắng đang lấp lánh vẫy gọi ở phía cuối con đường! 👑🛡️",
+        "🌟 Rực rỡ như cực quang giữa bầu trời đêm! Vô cùng tự hào khi chúc mừng {TEN} và Trợ Lý đã tỏa ra thứ ánh sáng ma mị, thu hút trọn vẹn sự chú ý để chạm mốc {MOC}. Bằng tài năng, sự duyên dáng và một chiến lược tương tác vô cùng thông minh, team đã xây dựng được một đế chế của riêng mình trong lòng khán giả. Mọi sự cố gắng bền bỉ cuối cùng đã đơm hoa kết trái thành một thành quả ngọt ngào tột độ. Đừng để cho nguồn năng lượng này có dấu hiệu hạ nhiệt. Hãy tiếp tục dùng sức hút bùng nội của mình để càn quét qua mọi kỷ lục cũ, xác lập những cột mốc vĩ đại hơn và khẳng định vị trí độc tôn của bản thân! 🌠🚀",
+        "🧩 Mảnh ghép hoàn hảo cho một kiệt tác đại thắng! Xin gửi lời chúc mừng chân thành nhất đến {TEN} cùng Trợ Lý khi đã đi nước cờ quyết định, hoàn tất xuất sắc mốc {MOC} trong sự ngỡ ngàng của bao người. Sự thấu hiểu và ăn ý tuyệt đối giữa các thành viên chính là chất keo dính kết nối mọi chiến thắng. Dù phía trước là núi cao hay biển sâu, chỉ cần team luôn đồng lòng sát cánh bên nhau thì không một trở ngại nào có thể cản bước. Hãy tiếp tục là những khối óc nhạy bén, những trái tim đầy ắp nhiệt huyết để vẽ nên bức tranh thành công hoành tráng hơn nữa. Tương lai rực rỡ đang hoàn toàn nằm trong tầm kiểm soát của các bạn! 🎨🏆",
+        "⚙️ Động cơ V8 gầm rú, xé toạc mọi nghi ngờ! Chúc mừng {TEN} và Trợ Lý đã kích hoạt chế độ Max Speed, băng băng về đích với thành tích {MOC} khiến ai nấy đều phải thán phục. Kỷ luật thép, sự bền bỉ và một tầm nhìn chiến lược đúng đắn đã biến cỗ máy của team trở nên bất khả chiến bại trên đường đua rực lửa. Không có chỗ cho sự do dự, các bạn đã chớp lấy cơ hội vàng để bứt phá một cách vô cùng ngoạn mục. Hãy xem đây là một trạm tiếp nhiên liệu khổng lồ, nạp đầy sự tự tin và tiếp tục lấn lướt mọi đối thủ. Cứ tự do tung hoành, ngai vàng của những tay đua cự phách nhất chắc chắn sinh ra là để dành cho các bạn! 🏎️💥",
+        "🏰 Xây đắp vương triều bằng chính thực lực kiên cường! Xin chúc mừng {TEN} cùng Trợ Lý đã oai phong đặt thêm những viên gạch vàng chói lọi để củng cố mốc {MOC} uy quyền. Từ những ngày đầu gian khó cho đến vị thế đáng mơ ước hiện tại, đó là cả một câu chuyện dài của sự nỗ lực không ngừng nghỉ và lòng quyết tâm sắt đá. Uy tín và hình ảnh của team đang vươn lên mạnh mẽ hơn bao giờ hết nhờ vào sự cống hiến quên mình ấy. Hãy tiếp tục mở rộng bờ cõi thành tích, kiên cố hóa tòa lâu đài danh vọng này để nó trở thành một biểu tượng bất diệt không ai có thể xô đổ. Tuyệt vời và vô cùng xứng đáng với ngôi vương! 👑🧱",
+        "🦅 Ưng tiễn xé gió, bách phát bách trúng! Chúc mừng {TEN} và Trợ Lý đã chứng tỏ tầm nhìn sắc sảo vô song, găm thẳng mũi tên vào hồng tâm mang tên mốc {MOC}. Từng chiến thuật đưa ra đều được tính toán một cách cực kỳ chi tiết, mang lại độ hiệu quả cao nhất mà không lãng phí một chút sức lực nào. Sự sắc sảo và nhạy bén này chính là vũ khí bí mật giúp team luôn đứng vững trên đỉnh cao phong độ. Nhìn lại thành quả hôm nay, những mệt mỏi dường như đã bị cuốn trôi hoàn toàn. Cứ tiếp tục dang rộng đôi cánh tự do, bay cao trên bầu trời danh vọng và nhắm tới những con mồi lớn lao hơn. Vinh quang sẽ luôn mỉm cười với những người bản lĩnh! 🎯🌪️",
+        "🌈 Sau cơn mưa rào, cầu vồng lại tỏa sắc rực rỡ! Gửi ngàn vạn lời chúc đến {TEN} cùng Trợ Lý vì đã kiên cường vượt qua vô vàn áp lực để vươn tay hái lấy mốc {MOC} tươi sáng. Những giọt mồ hôi rơi xuống đã gột rửa đi mọi sự hồ nghi, nhường chỗ cho ánh hào quang của chiến thắng lên ngôi. Sức chịu đựng và lòng dũng cảm của các bạn thực sự đã truyền một ngọn lửa ấm áp đến tất cả những người đang theo dõi. Đừng ngủ quên trong cảm giác khoan khoái này quá lâu, hãy đứng dậy, vươn vai và sẵn sàng tâm thế đón nhận thêm vô số những cơn bão thành tựu khổng lồ khác. Hãy cứ là phiên bản tỏa sáng và rực rỡ nhất của chính mình nhé! 🌦️✨",
+        "🎭 Vở diễn hoàn mỹ với những tràng pháo tay không ngớt! Xin chúc mừng {TEN} và Trợ Lý đã diễn xuất xuất thần, làm chủ hoàn toàn sân khấu để mang về kỷ lục {MOC} đầy kiêu hãnh. Từng ánh mắt, nụ cười và cách dẫn dắt câu chuyện đã cuốn hút khán giả đi từ bất ngờ này đến ngỡ ngàng khác. Sự chuyên nghiệp và tận tâm đằng sau cánh gà đã tạo ra một tác phẩm nghệ thuật để đời. Khoảnh khắc hạ màn hôm nay chính là lúc vinh quang gọi tên những nghệ sĩ thực thụ. Hãy tiếp tục mài giũa tài năng, tung ra thêm nhiều mảng miếng độc đáo để luôn là tâm điểm của mọi sự chú ý. Tương lai ngời sáng đang rộng mở! 🎬🔥",
+        "🔥 Rèn sắt trong ngọn lửa đỏ rực, tôi luyện bản lĩnh thép! Chúc mừng {TEN} cùng Trợ Lý đã chịu đựng được sức nóng khủng khiếp của đường đua để đúc kết thành công mốc {MOC} chói lóa. Những khó khăn chồng chất chưa bao giờ là rào cản, mà chúng chỉ là công cụ để mài giũa thêm ý chí sắc bén của toàn đội. Giờ đây, khi thành phẩm đã ra lò, độ cứng cáp và sắc sảo của mọi người là điều không một đối thủ nào dám xem thường. Hãy vung thanh gươm kiêu hãnh này lên, chém nát mọi định kiến và hiên ngang bước lên đài danh vọng cao nhất đang sừng sững chờ đón. Vô cùng tự hào về sức mạnh hủy diệt của team! ⚔️🏆",
+        "🚢 Lèo lái con thuyền vĩ đại vượt qua bão táp phong ba! Xin gửi lời ngợi khen và chúc mừng sâu sắc đến {TEN} và Trợ Lý đã xuất sắc cầm lái đưa thuyền cập bến mốc {MOC} an toàn. Sóng to gió lớn chỉ làm tôn thêm bản lĩnh và tài trí hơn người của vị thuyền trưởng tài ba. Sự đoàn kết đồng lòng của các thủy thủ đã giúp con thuyền băng băng lướt sóng, bỏ lại mọi chướng ngại phía sau đuôi. Bến bờ vinh quang này chỉ là một điểm dừng chân ngắn ngủi để tiếp thêm nguyên liệu. Kéo mỏ neo lên, dong buồm ra khơi và tiếp tục giương cao ngọn cờ bất khả chiến bại trên những vùng biển xa xôi hùng vĩ hơn nữa nhé! 🌊⚓",
+        "🚂 Một cỗ máy hơi nước vĩ đại đang xé gió tiến về phía trước! Xin chúc mừng {TEN} và Trợ Lý đã nạp đầy than đá nhiệt huyết, đẩy công suất lên mức tối đa để càn lướt qua mốc {MOC} vô cùng ngoạn mục. Những tiếng còi hụ vang dội là minh chứng cho một sức mạnh không thể ngăn cản, đè bẹp mọi chướng ngại vật trên đường ray vinh quang. Từng thành viên trong team như những bánh răng khớp nối hoàn hảo, tạo ra một lực đẩy khổng lồ. Khung cảnh hai bên đường đua đang vút qua nhanh chóng, nhường chỗ cho những trạm dừng chân mang tên kỷ lục mới. Hãy giữ chắc tay lái, duy trì ngọn lửa bùng cháy trong lò hơi và tiếp tục đưa đoàn tàu này tiến vào những kỷ nguyên rực rỡ vô tiền khoáng hậu nhé! 🚄🔥",
+        "🎭 Hóa thân thành những nghệ sĩ đại tài trên sân khấu danh vọng! Chúc mừng {TEN} cùng Trợ Lý đã có một màn trình diễn xuất thần, lấy đi vô vàn tiếng vỗ tay để mang về thành tựu {MOC} đầy kiêu hãnh. Kịch bản xuất sắc, diễn xuất tinh tế và sự hỗ trợ đắc lực từ phía sau cánh gà đã tạo nên một kiệt tác nghệ thuật thực thụ. Không chỉ là những con số vô tri, mà ẩn sâu trong đó là hàng vạn cảm xúc thăng hoa được truyền tải trọn vẹn đến khán giả. Tấm màn nhung khép lại cũng là lúc ánh hào quang rực rỡ nhất chiếu rọi vào nỗ lực của các bạn. Hãy tiếp tục trau dồi kịch bản, nâng cấp bản thân và sẵn sàng cho những cú twist bùng nổ hơn trong hồi tiếp theo của sự nghiệp! 🎬✨",
+        "🌋 Dòng nham thạch rực lửa đang thiêu rụi mọi ranh giới an toàn! Xin gửi lời ngợi khen sục sôi nhất đến {TEN} và Trợ Lý vì đã tạo ra một đợt phun trào dữ dội, cuốn phăng các đối thủ để đánh chiếm mốc {MOC}. Sau một thời gian âm ỉ tích tụ sức mạnh và kiến thức, ngọn núi lửa mang tên team đã chính thức thức giấc. Sức nóng lan tỏa từ năng lượng tích cực của các bạn khiến bất cứ ai cũng phải choáng ngợp. Mọi hoài nghi, mọi khó khăn trước đây giờ chỉ còn là lớp tro tàn làm nền cho vinh quang tỏa sáng. Đừng để cho magma nhiệt huyết này nguội lạnh. Tiếp tục bùng nổ, bành trướng lãnh địa của mình và biến nó thành một đế chế không thể xâm phạm! 🌋💥",
+        "🔭 Kính viễn vọng đã bắt được tín hiệu từ một siêu tân tinh! Chúc mừng {TEN} cùng Trợ Lý đã tạo ra một vụ nổ ánh sáng tuyệt đẹp, thu hút mọi ánh nhìn khi xuất sắc chạm tay vào mốc {MOC}. Tầm nhìn chiến lược nhạy bén vượt không gian, kết hợp cùng sự nỗ lực làm việc bất kể ngày đêm đã giúp các bạn tìm ra quỹ đạo hoàng kim cho riêng mình. Khám phá những ranh giới mới luôn đi kèm với rủi ro, nhưng sự dũng cảm đã giúp team thu về một kho báu vô giá. Bầu trời vẫn còn vô vàn những dải ngân hà bí ẩn đang đợi người chinh phục. Cứ vững tin vào la bàn của mình, tiếp tục vươn xa và trở thành vì sao sáng nhất trong vũ trụ bao la này nhé! 🌌🚀",
+        "🔬 Chiết xuất ra phương thuốc của sự bứt phá! Xin chúc mừng {TEN} và Trợ Lý đã tiến hành thành công một thí nghiệm để đời, kết hợp hoàn hảo các nguyên tố để tạo ra phản ứng hóa học mang tên {MOC}. Sự thông minh, khả năng phân tích nhạy bén và tinh thần không ngại thử nghiệm đã mang lại một công thức chiến thắng độc quyền. Mọi nỗ lực tinh chỉnh tỉ mỉ từng chi tiết nay đã cho ra một sản phẩm hoàn hảo không tì vết, gây chấn động toàn bộ bảng xếp hạng. Các bạn đang nắm trong tay bí quyết của sự nổi tiếng. Hãy tiếp tục nâng cấp phòng thí nghiệm của mình, tung ra thêm nhiều hợp chất bùng nổ để làm chủ hoàn toàn mọi cuộc chơi phía trước! 🧪💡",
+        "🏹 Những thợ săn tiền thưởng xuất sắc nhất đã lộ diện! Chúc mừng {TEN} cùng Trợ Lý đã kiên nhẫn phục kích, nhắm chuẩn mục tiêu và hạ gục thành công mốc {MOC} vô cùng oai phong. Bằng sự tĩnh lặng khôn ngoan và khả năng bung sức đúng thời điểm, team đã cho thấy đẳng cấp của những người làm chủ thế trận. Việc không bị cuốn theo áp lực mà điềm tĩnh đưa ra từng quyết định chính là chìa khóa vạn năng mở ra kho tàng vinh quang này. Những nỗ lực căng mình như dây cung nay đã được thả lỏng bằng những nụ cười rạng rỡ. KhoKhoác lên mình bộ giáp kiêu hãnh, nạp đầy cung tên và tiếp tục cuộc đi săn những con số khổng lồ hơn ở những khu rừng rậm rạp phía trước nhé! 🎯🛡️",
+        "🎼 Nhạc trưởng vĩ đại đang điều khiển dàn giao hưởng đại thắng! Xin gửi lời chúc mừng nồng nhiệt đến {TEN} và Trợ Lý vì đã tạo ra một sự hòa quyện đỉnh cao, đưa giai điệu của mốc {MOC} vang vọng khắp không gian. Từng thành viên đều biết cách tỏa sáng ở đúng phân đoạn của mình, tạo nên một tổng thể không thể bị phá vỡ. Sự gắn kết bền chặt và tinh thần hy sinh vì cái chung đã đơm hoa kết trái thành một kỷ lục ngọt ngào. Âm thanh của tiếng vỗ tay đang vang lên không ngớt, tôn vinh một bản hùng ca do chính các bạn viết nên. Hãy nâng cao chiếc đũa thần của mình, tiếp tục giữ nhịp độ thăng hoa và điều khiển cả thế giới theo cách riêng của các bạn! 🎶👑",
+        "🏰 Xây dựng nên pháo đài thép kiên cố giữa tâm bão! Chúc mừng {TEN} cùng Trợ Lý đã chứng tỏ sức mạnh phòng ngự và phản công tuyệt đỉnh, kiên cường bảo vệ và thâu tóm thành công mốc {MOC}. Đối mặt với sự cạnh tranh khốc liệt, các bạn đã dùng chính sự khôn khéo và nội lực thâm hậu để hóa giải mọi nguy cơ, biến rủi ro thành bàn đạp vươn lên mạnh mẽ. Những viên gạch kinh nghiệm được xếp chồng lên nhau vô cùng vững chãi, tạo nên một vương triều không thể xâm phạm. Giờ đây, khi nền móng đã cực kỳ vững vàng, hãy bắt đầu vươn những ngọn tháp của mình lên cao tít tầng mây. Vững vàng tay gươm, mở rộng bờ cõi và tiếp tục thống trị mọi bảng vàng vinh danh nhé! 🧱⚔️",
+        "🌊 Cá chép đã hóa rồng bay vút lên bầu trời! Xin chúc mừng {TEN} và Trợ Lý đã có một màn lội ngược dòng dòng thác dữ dội để kiêu hãnh vượt qua mốc {MOC} chói lọi. Không khuất phục trước nghịch cảnh, không chùn bước trước những rào cản tưởng chừng bất khả thi, các bạn đã đánh thức sức mạnh tiềm ẩn lớn lao nhất bên trong mình. Lớp vảy kiên cường được tôi luyện từ vô vàn áp lực giờ đây đang lấp lánh thứ ánh sáng của quyền lực và sự ngưỡng mộ. Khoảnh khắc vươn mình này chính là phần thưởng vô giá cho những con người dám ước mơ và dám thực hiện. Tự do vùng vẫy giữa chín tầng mây, hãy tạo ra những cơn mưa thành tích làm tưới mát cả vương quốc của riêng mình! 🐉🌩️",
+        "⚡ Một tia sét mang điện áp hàng triệu vôn xé toạc bầu trời! Chúc mừng {TEN} cùng Trợ Lý đã giáng một đòn sấm sét chấn động, tốc biến để chiếm lĩnh ngay lập tức mốc {MOC}. Sự quyết đoán, tốc độ xử lý nhanh nhạy và một tinh thần máu lửa đã biến team thành những chiến thần thực sự trên đường đua rực lửa. Các bạn không chờ đợi cơ hội đến, mà trực tiếp tạo ra cơ hội bằng nguồn năng lượng bức bối chỉ chờ chực bùng nổ. Sức mạnh hủy diệt này đang khiến mọi đối thủ phải lùi bước nể phục. Hãy nạp lại bình ắc quy nhiệt huyết, duy trì tần số cộng hưởng tuyệt vời này để chuẩn bị cho những cú sét đánh kinh hoàng hơn vào những kỷ lục ở mốc tiếp theo! 🌩️💥",
+        "🧭 Mở đường máu xuyên qua những ranh giới chưa ai khám phá! Xin gửi lời chúc mừng chân thành đến {TEN} và Trợ Lý vì đã dũng cảm cầm rựa chặt đứt mọi chông gai, tiên phong đặt chân lên mốc {MOC}. Từng tinh thần của những nhà thám hiểm vĩ đại luôn cháy rực trong lồng ngực các bạn, biến những điều 'không thể' thành những 'kỷ lục mới'. Việc dám đi ngược dòng đám đông và giữ vững bản sắc cá nhân đã mang lại một kết quả ngọt ngào ngoài sức tưởng tượng. Nhìn lại con đường đầy rẫy khó khăn đã qua, team hoàn toàn có quyền kiêu hãnh ngẩng cao đầu. Hãy tiếp tục căng mắt nhìn về phía trước, dùng trực giác nhạy bén để khai phá những vùng đất vinh quang vô tận đang chờ đón! 🗺️🚀",
+        "🎨 Điêu khắc nên bức tượng đài bằng mồ hôi và đá tảng! Chúc mừng {TEN} cùng Trợ Lý đã kiên nhẫn đục đẽo, gọt giũa từng chi tiết nhỏ nhất để hiện thực hóa kiệt tác mang tên {MOC}. Nghệ thuật của sự kiên trì là một môn học vô cùng khắc nghiệt, nhưng các bạn đã tốt nghiệp xuất sắc với tấm bằng đỏ danh giá. Không vội vàng phô trương, sự điềm tĩnh và tỉ mỉ của team đã tạo ra một khối kiến trúc vô cùng vững chãi, thách thức sự bào mòn của thời gian. Mọi nỗ lực đổ ra cuối cùng cũng tạo thành một hình hài vĩ đại. Đừng buông dụng cụ xuống, hãy tiếp tục đánh bóng tác phẩm của mình, để nó phản chiếu ánh hào quang chói lòa làm mù mắt mọi sự ganh tị xung quanh! 🗿💎",
+        "🚀 Kích hoạt siêu động cơ phản vật chất, bứt tốc vào siêu không gian! Xin chúc mừng {TEN} và Trợ Lý đã vượt quá vận tốc ánh sáng, tạo ra bước nhảy vọt thần sầu để hạ cánh tại mốc {MOC}. Việc phá bỏ mọi định luật vật lý thông thường đã chứng minh tư duy bứt phá không ranh giới của toàn đội. Không để bị kìm hãm bởi những khó khăn thực tại, các bạn đã dùng chính trí tưởng tượng và sự sáng tạo để thiết lập một tầm cao mới. Hiện tại, các bạn đang lơ lửng trong dải ngân hà của những người thành công nhất. Đừng hạ nhiệt động cơ, hãy giữ vững lực đẩy khổng lồ này để tiếp tục hành trình du hành tới những vì sao kỷ lục khổng lồ hơn nữa nhé! 🌌🔥",
+        "🛡️ Đấu sĩ bất bại đứng hiên ngang giữa đấu trường rực lửa! Chúc mừng {TEN} cùng Trợ Lý đã tung ra những miếng đánh uy lực, hạ gục mọi áp lực để giương cao chiếc cúp tại mốc {MOC}. Đối diện với muôn vàn khó khăn bủa vây tứ phía, bản lĩnh sinh tồn và kỹ năng thực chiến của các bạn lại càng được bộc lộ một cách rõ nét và sắc sảo nhất. Mọi vết thương từ sự nỗ lực đều trở thành những tấm huân chương danh dự đính trên ngực áo. Các bạn đã chứng minh được sức mạnh vô song của sự đoàn kết và ý chí không chịu khuất phục. Đấu trường vẫn còn rất nhiều đối thủ mạnh, hãy lau đi giọt mồ hôi, nắm chắc vũ khí và tiếp tục càn quét để giữ vững ngôi vị độc tôn! ⚔️👑",
+        "🌳 Trồng một cây cổ thụ vươn cành che rợp bóng mát! Xin gửi ngàn lời ngợi khen đến {TEN} và Trợ Lý vì đã nuôi dưỡng một mầm cây đam mê phát triển thành mốc {MOC} khổng lồ. Từng giọt nước của sự kiên nhẫn, từng tia sáng của sự nỗ lực đã giúp cái rễ đâm sâu vào nền đất, vững vàng trước mọi giông bão thử thách. Quả ngọt kết tinh hôm nay chứa đựng vô vàn sự hy sinh thầm lặng mà không phải ai cũng thấu hiểu. Đứng dưới bóng râm của thành công, hãy tự hào về quãng đường dài các bạn đã cùng nhau đi qua. Cứ tiếp tục vươn những tán lá vĩ đại của mình lên cao, thu trọn ánh nắng rực rỡ và đơm thêm vô số những chùm quả kỷ lục trĩu cành nhé! 🌿🍏",
+        "🧊 Đập vỡ tảng băng trôi, khai thông dòng chảy vinh quang! Xin chúc mừng {TEN} và Trợ Lý đã dùng sức nóng của nhiệt huyết để làm tan chảy mọi rào cản, xuất sắc mang về mốc {MOC} vô cùng ấn tượng. Những khó khăn ban đầu giờ đây chỉ là bước đà để dòng thác tài năng của các bạn tuôn trào mạnh mẽ hơn. Bằng sự duyên dáng, thông minh và khả năng dẫn dắt tuyệt vời, team đã thực sự làm chủ được hoàn toàn không gian phòng live. Mọi nỗ lực đều được đền đáp xứng đáng bằng những con số chói lọi trên bảng xếp hạng. Hãy để dòng chảy đam mê này tiếp tục cuộn trào, đưa con thuyền của chúng ta vươn ra những đại dương kỷ lục rộng lớn hơn! 🌊🚢",
+        "🚁 Cánh quạt xé gió, nâng tầm cao mới! Chúc mừng {TEN} cùng Trợ Lý đã có một màn cất cánh thẳng đứng cực kỳ ngoạn mục để chinh phục mốc {MOC}. Không đi theo những lối mòn cũ, sự linh hoạt và sáng tạo không giới hạn đã giúp các bạn có được cái nhìn bao quát và làm chủ mọi thế trận. Những sức ép từ trọng lực không thể cản bước một động cơ đã được nạp đầy bằng ý chí và khát vọng. Cảm giác lơ lửng trên đỉnh cao của sự ngưỡng mộ chắc chắn là phần thưởng tuyệt vời nhất. Tiếp tục giữ vững cần gạt, bay cao và xa hơn nữa để khám phá những vùng trời vinh quang chưa từng có ai chạm đến nhé! 🌤️🚀",
+        "🧬 Giải mã thành công bộ gen của những người dẫn đầu! Xin gửi ngàn lời ngợi khen đến {TEN} và Trợ Lý vì đã kích hoạt tối đa tiềm năng bản thân, mang về thành tích {MOC} đầy kiêu hãnh. Bằng tư duy nhạy bén và khả năng thấu hiểu tâm lý sắc sảo, các bạn đã tạo ra một công thức tương tác hoàn hảo không tì vết. Khán giả không thể rời mắt khỏi sức hút tự nhiên nhưng đầy quyền lực của team. Mỗi một giờ lên sóng đều là một lần các bạn khẳng định giá trị độc bản của mình. Đừng dừng lại việc nâng cấp bản thân, hãy để ADN chiến thắng này tiếp tục sản sinh và tạo ra một hệ sinh thái thành công khổng lồ! 🔬🧬",
+        "🎡 Vòng quay khổng lồ đưa cảm xúc chạm đỉnh! Chúc mừng {TEN} cùng Trợ Lý đã mang lại một màn trình diễn mãn nhãn, đưa khán giả lên đỉnh cao hưng phấn tại mốc {MOC}. Việc dám thử thách những ý tưởng mới mẻ và chấp nhận rủi ro đã mang lại cho các bạn một phần thưởng ngoài sức tưởng tượng. Nhìn từ vị trí hiện tại, mọi chướng ngại vật đều trở nên nhỏ bé trước sự nỗ lực và đoàn kết của toàn đội. Tỏa sáng rực rỡ và thu hút vạn ánh nhìn, đó chính là đẳng cấp của team. Hãy tiếp tục xoay vòng bánh xe đam mê, mang lại thêm nhiều điều kỳ diệu và những tràng pháo tay giòn giã hơn nữa nhé! 🎠🎇",
+        "🧭 La bàn vàng chỉ thẳng đến kho báu kỷ lục! Xin chúc mừng {TEN} và Trợ Lý đã chứng tỏ tài năng định hướng tuyệt đỉnh, rẽ sóng vượt gió để khai quật thành công mốc {MOC}. Khi những người khác còn đang hoang mang, các bạn đã có trong đầu một chiến lược rõ ràng và từng bước hiện thực hóa nó bằng sự kỷ luật thép. Khả năng thích ứng nhanh nhạy đã biến mọi bất lợi thành lợi thế cực kỳ sắc bén. Kho báu huy hoàng này chính là sự đền đáp cho những bộ óc thông minh và những trái tim quả cảm nhất. Đóng gói chiến lợi phẩm, căng buồm và tiếp tục cuộc hành trình vĩ đại của những nhà thám hiểm tiên phong thôi! 🗺️💎",
+        "🎬 Đạo diễn tài ba giật dây mọi cảm xúc! Chúc mừng {TEN} cùng Trợ Lý đã dàn dựng một vở diễn xuất thần, thao túng hoàn toàn tâm trí khán giả để rinh về mốc {MOC} chói lóa. Từng chi tiết nhỏ nhất trong phiên live đều được chăm chút tỉ mỉ, tạo nên một sự lôi cuốn mạnh mẽ đến mức không ai có thể thoát ra được. Sự tinh tế và chuyên nghiệp đằng sau ống kính đã mang lại một chất lượng hình ảnh và nội dung đạt điểm mười tuyệt đối. Các bạn chính là những người nghệ sĩ thực thụ đang làm chủ sân khấu của riêng mình. Giữ nguyên ánh đèn spotlight này, hô to 'Action' và tiếp tục tạo ra những siêu phẩm để đời nhé! 🎥🌟",
+        "🏰 Xây thành đắp lũy bằng ý chí kiên cường! Xin gửi lời chúc mừng đầy tự hào đến {TEN} và Trợ Lý vì đã kiên nhẫn bồi đắp từng viên gạch để kiến tạo nên pháo đài {MOC} vô cùng vững chãi. Đối mặt với hàng tá những áp lực bủa vây, tinh thần đồng đội và sự nhẫn nại đã trở thành tấm khiên bảo vệ tuyệt vời nhất. Các bạn không chỉ xây dựng được một con số, mà còn xây dựng được niềm tin và tình yêu thương vô bờ bến từ cộng đồng. Hãy nhìn ngắm công trình vĩ đại mà các bạn vừa tạo ra, lấy đó làm động lực để tiếp tục vươn những ngọn tháp của mình chạm đến bầu trời xanh thẳm. Vương triều này là của các bạn! 🧱🛡️",
+        "🔋 Kích hoạt nguồn năng lượng lõi, bùng nổ vô tận! Chúc mừng {TEN} cùng Trợ Lý đã sạc đầy 100% thanh nhiệt huyết, giải phóng một luồng sức mạnh khủng khiếp để cán mốc {MOC}. Tốc độ lan tỏa và sức ảnh hưởng của team đang tăng lên theo cấp số nhân, khiến mọi bảng xếp hạng đều phải chao đảo. Nguồn năng lượng tích cực mà các bạn mang lại giống như một thỏi nam châm khổng lồ, hút trọn vạn sự chú ý. Không có một giới hạn nào có thể kìm hãm được một cỗ máy đã vào guồng quay hoàn hảo. Cứ duy trì mức công suất tối đa này, càn quét mọi đấu trường và gom trọn vinh quang về tay mình nhé! ⚡🔋",
+        "🏹 Mũi tên bọc thép xuyên thủng mọi hàng phòng ngự! Xin chúc mừng {TEN} và Trợ Lý đã thể hiện sự sắc bén và quyết đoán phi thường, găm trúng hồng tâm mang tên mốc {MOC}. Khi cơ hội xuất hiện, các bạn không hề chần chừ mà ngay lập tức tung ra đòn quyết định. Sự tự tin và bản lĩnh thực chiến đã được tôi luyện qua vô vàn gian khó, nay chính thức trở thành vũ khí mang tính hủy diệt cao nhất. Chiến thắng này là lời khẳng định đanh thép cho vị thế của những người sinh ra để làm kẻ thống trị. Rút thêm mũi tên, ngắm vào những mục tiêu lớn lao hơn và tiếp tục chứng minh sự vô đối của bản thân! 🎯⚔️",
+        "🧩 Hoàn thiện góc tư quan trọng nhất của bức tranh! Chúc mừng {TEN} cùng Trợ Lý đã dùng sự kiên nhẫn và óc quan sát nhạy bén để ghép thành công mảnh vỡ {MOC} vào đúng vị trí. Khi mọi yếu tố thiên thời, địa lợi, nhân hòa hội tụ, sức mạnh của team được nhân lên gấp bội. Bức tranh tổng thể về một sự nghiệp rực rỡ đang ngày càng hiện ra rõ nét và lung linh hơn bao giờ hết. Sự đồng lòng và thấu hiểu giữa các thành viên chính là chìa khóa để hoàn thành kiệt tác này. Hãy tiếp tục giữ vững nhịp độ, từ tốn nhưng chắc chắn, để ghép nốt những mảng màu vinh quang còn lại nhé! 🖼️💎",
+        "🏎️ Cú drift cháy lốp tại khúc cua sinh tử! Xin gửi ngàn lời ngợi khen đến {TEN} và Trợ Lý vì màn bứt tốc qua mặt đối thủ cực kỳ ngoạn mục để giành lấy mốc {MOC}. Mùi khét của sự nỗ lực đang hòa quyện cùng hương vị ngọt ngào của chiến thắng. Kỹ năng điều hướng khéo léo và một tinh thần không sợ hãi đã giúp các bạn bỏ xa mọi rào cản ở phía sau lưng. Đứng trên đỉnh cao phong độ, các bạn có quyền kiêu hãnh gầm rú động cơ đam mê của mình. Đường đua phía trước vẫn còn dài, hãy thay lốp mới, nạp đầy nitro và sẵn sàng cho những pha bứt phá chấn động hơn nữa! 🏁🔥",
+        "🔮 Tiên tri thành hiện thực bằng chính thực lực! Chúc mừng {TEN} cùng Trợ Lý đã dùng tài năng và sự cống hiến để biến quả cầu pha lê mang tên {MOC} tỏa sáng rực rỡ. Không trông chờ vào may mắn, mọi thứ các bạn đạt được đều đến từ một quá trình rèn luyện cực kỳ nghiêm túc. Từng câu thả thính, từng nụ cười duyên dáng đều ẩn chứa một ma lực thu hút khủng khiếp. Phép màu không tự nhiên sinh ra, nó được tạo ra bởi những người biết cách cố gắng. Hãy tiếp tục vung chiếc đũa thần của mình, hô vang câu thần chú chiến thắng và làm mê đắm thêm vô số trái tim khán giả! 🧙‍♀️✨",
+        "🏕️ Dựng lá cờ vinh quang trên đỉnh đồi lộng gió! Xin chúc mừng {TEN} và Trợ Lý đã hành quân thần tốc, vượt qua mọi chướng ngại vật để cắm trại thành công tại mốc {MOC}. Sự bền bỉ và ý chí kiên cường dẻo dai đã giúp team không bị gục ngã trước những áp lực vô hình. Ngọn lửa trại rực rỡ đang sưởi ấm mọi nỗ lực, xua tan đi cái lạnh lẽo của sự hoài nghi. Tận hưởng trọn vẹn cảnh sắc tuyệt đẹp từ vị trí đắc địa này, nạp đầy lương khô nhiệt huyết và sẵn sàng chinh phục những đỉnh núi chót vót đang lấp ló phía sau những tầng mây nhé! ⛺🏔️",
+        "🧬 Mã hóa thành công phần mềm chiến thắng tuyệt đối! Chúc mừng {TEN} cùng Trợ Lý đã fix hết mọi lỗi lầm, tung ra phiên bản hoàn hảo nhất để đạt mốc {MOC} mượt mà. Sự logic, tư duy hệ thống và khả năng xử lý mượt mà mọi tình huống đã biến team thành một phần mềm bất khả chiến bại. Khán giả hoàn toàn bị thuyết phục bởi giao diện rạng rỡ và tính năng tương tác siêu cấp của các bạn. Cứ giữ vững mã nguồn mở đầy đam mê này, liên tục update thêm những version đột phá để luôn dẫn đầu mọi xu hướng công nghệ trên bảng xếp hạng! 💻🚀",
+        "🚁 Tầm nhìn radar quét sạch mọi mục tiêu! Xin gửi lời chúc mừng nồng nhiệt đến {TEN} và Trợ Lý vì đã sử dụng con mắt sắc bén để dò tìm và thâu tóm xuất sắc mốc {MOC}. Không bị phân tâm bởi những yếu tố bên ngoài, sự tập trung cao độ đã giúp các bạn tối ưu hóa mọi nỗ lực. Chiến lược đánh nhanh thắng nhanh quả thực đã phát huy tác dụng một cách triệt để. Bầu trời vinh quang này hiện tại đang nằm hoàn toàn dưới sự kiểm soát của team. Cứ tiếp tục mở rộng tầm phủ sóng, bay lượn kiêu hãnh và đánh dấu chủ quyền ở khắp mọi nơi nhé! 📡✈️",
+        "🍷 Ủ một mẻ vang nho ngọt ngào theo năm tháng! Chúc mừng {TEN} cùng Trợ Lý đã chắt lọc những tinh túy nhất của sự nỗ lực để lên men thành công mốc {MOC} say đắm lòng người. Sự kiên nhẫn chờ đợi, không nôn nóng đốt cháy giai đoạn đã mang lại một hương vị thành công vô cùng đắt giá và thượng hạng. Càng trải qua nhiều thử thách, giá trị và sức hút của team lại càng được nâng tầm mạnh mẽ. Hãy nâng ly ăn mừng cho một chặng đường tuyệt đẹp, nhấm nháp vị ngọt của chiến thắng và tiếp tục ủ thêm những kỷ lục hảo hạng hơn trong tương lai! 🥂🍇",
+        "🔭 Phóng tầm mắt xuyên thủng dải ngân hà! Xin chúc mừng {TEN} và Trợ Lý đã dùng ống nhòm của sự kiên định để kéo gần khoảng cách, xuất sắc thu phục mốc {MOC}. Việc luôn đặt mục tiêu cao và không bao giờ thỏa mãn với hiện tại đã giúp team liên tục phá vỡ các giới hạn an toàn. Những ngôi sao rực rỡ nhất trên bầu trời dường như đang hội tụ lại để chúc mừng cho sự xuất sắc của các bạn. Đừng hạ kính viễn vọng xuống, hãy tiếp tục tìm kiếm những hành tinh kỷ lục khổng lồ và chuẩn bị phi thuyền để thực hiện một cú nhảy vọt không gian! 🌌🚀",
+        "🎭 Vén bức màn nhung, phô diễn sự hoàn hảo! Chúc mừng {TEN} cùng Trợ Lý đã làm chủ ánh đèn sân khấu, cuốn hút mọi ánh nhìn để chễm chệ tại mốc {MOC}. Sự duyên dáng bẩm sinh kết hợp với thái độ làm việc cực kỳ nghiêm túc đã biến mỗi phiên live thành một tác phẩm nghệ thuật đắt giá. Ánh mắt, nụ cười và lời nói của các bạn chính là thứ ma lực mạnh nhất giữ chân người hâm mộ. Cúi chào trước những tràng pháo tay giòn giã, các bạn hoàn toàn xứng đáng với vị trí vedette của ngày hôm nay. Tiếp tục tỏa sáng rực rỡ và ghi đậm dấu ấn cá nhân nhé! 🎬🌟",
+        "⚔️ Rèn thanh bảo kiếm, chém đứt mọi hoài nghi! Xin gửi ngàn lời chúc đến {TEN} và Trợ Lý vì đã tôi luyện một ý chí thép, vung kiếm đập tan mọi rào cản để chiếm lấy mốc {MOC}. Sự sắc bén trong tư duy và độ lì lợm trong hành động đã tạo nên những chiến binh thực thụ không hề biết lùi bước. Mọi khó khăn chỉ như hòn đá mài, càng cọ xát thì tinh thần của team lại càng tỏa sáng chói lòa. Hãy cất kỹ thanh bảo kiếm tự hào này, dùng nó để mở mang bờ cõi thành tựu và thiết lập một đế chế hùng mạnh bất khả xâm phạm! 🛡️👑",
+        "🧩 Giải mã khối Rubik phức tạp trong chớp mắt! Chúc mừng {TEN} cùng Trợ Lý đã chứng tỏ một trí tuệ siêu phàm và sự phối hợp nhịp nhàng để xoay chuyển cục diện, hoàn thành mốc {MOC}. Không hề bối rối trước những thuật toán khó nhằn của sự nổi tiếng, các bạn đã tìm ra quy luật và đưa các mảng màu về đúng vị trí một cách hoàn hảo. Sự thông minh và nhạy bén này chính là thứ tài sản quý giá nhất mà không ai có thể sao chép được. Cứ giữ nguyên tốc độ xử lý đỉnh cao này, xoay chuyển càn khôn và thiết lập thêm vô số những kỷ lục mới! 🎲💡"
+      ];
+
+      const msgsVip = [
+        "💎 ĐẲNG CẤP LÊN TIẾNG! Xin được gửi ngàn lời chúc mừng trân trọng nhất đến {TEN} và Trợ Lý vì đã bứt phá vô cùng ngoạn mục để chạm tay đến cột mốc vĩ đại {MOC}. Đây quả thực là một thành quả vô cùng xứng đáng, là trái ngọt đền đáp lại cho một hành trình dài đầy những nỗ lực bền bỉ, không quản ngại ngày đêm khó khăn. Sự phối hợp nhịp nhàng, tinh thần teamwork tuyệt vời cùng một ý chí quyết tâm không có giới hạn đã giúp team kiến tạo nên một kiệt tác thực sự trong ngày hôm nay. Kỷ lục rực rỡ này sẽ mãi mãi là một niềm tự hào to lớn không chỉ của riêng team mà còn của tất cả những ai luôn đồng hành theo dõi. Hãy lấy chiến thắng ngọt ngào này làm bệ phóng vững chắc nhất, tiếp tục mài giũa bản lĩnh và tỏa sáng rực rỡ hơn nữa như những viên kim cương quý giá. Chúc mọi người luôn rực cháy ngọn lửa nhiệt huyết để thâu tóm mọi đỉnh cao! 👑🔥",
+        "👑 TỎA SÁNG RỰC RỠ! Một lời chúc mừng vang dội và đầy tự hào xin được gửi tới {TEN} cùng Trợ Lý khi đã chinh phục thành công mốc {MOC} đầy uy quyền. Những giọt mồ hôi rơi xuống, những đêm thức trắng cày cuốc miệt mài nay đã kết tinh lại thành một viên ngọc sáng chói nhất trên bảng xếp hạng. Sự vươn lên mạnh mẽ này không chỉ khẳng định vị thế độc tôn mà còn truyền cảm hứng vô tận cho toàn bộ cộng đồng. Để đạt được con số khổng lồ này, chắc chắn mọi người đã phải đánh đổi bằng rất nhiều tâm huyết và sự hy sinh thầm lặng. Hãy luôn trân trọng khoảnh khắc vinh quang này, tự hào về những gì mình đã làm được và lấy đó làm động lực bứt tốc mạnh mẽ hơn nữa. Chúc team sẽ mãi ngự trị trên những đỉnh cao vinh quang mới, không ngừng kiến tạo những siêu phẩm vĩ đại! 🌟🏆",
+        "🥇 QUÁ VĨ ĐẠI VÀ CHẤN ĐỘNG! Chúc mừng {TEN} và Trợ Lý đã chính thức viết nên một trang sử mới chói lọi với cột mốc siêu khủng {MOC}. Thành tích phi thường và ngoạn mục này hoàn toàn không phải ai cũng có thể làm được, nó là lời khẳng định đanh thép nhất cho bản lĩnh vững vàng, tài năng xuất chúng và sự nỗ lực tột bậc của mọi người. Không có con đường nào trải đầy hoa hồng, nhưng các bạn đã tự tay trồng nên vườn hoa của riêng mình bằng chính sự kiên cường và lòng dũng cảm. Khoảnh khắc tên các bạn được vinh danh tại mốc điểm này chính là phần thưởng vô giá nhất. Hãy cứ tiếp tục là những ngôi sao sáng nhất trên bầu trời, tự tin sải cánh và phá vỡ mọi kỷ lục mà người khác cho là không thể. Tuyệt đỉnh vinh quang, ngàn lần chúc mừng! 🚀✨",
+        "🌟 THẬT KHÔNG THỂ TIN NỔI! Cú chốt hạ vô cùng hoàn hảo và đầy cảm xúc mang tên {MOC} đã chính thức thuộc về {TEN} và Trợ Lý. Xin nhiệt liệt chúc mừng team đã mạnh mẽ phá vỡ mọi giới hạn an toàn, biến những điều tưởng chừng như vô cùng khó khăn thành hiện thực rực rỡ. Hành trình kỳ diệu và đầy thăng trầm này chắc chắn sẽ là một câu chuyện truyền cảm hứng cực kỳ mạnh mẽ cho tất cả mọi người. Sức mạnh của sự đoàn kết và niềm tin sắt đá đã giúp các bạn vượt qua mọi sóng gió để cập bến thành công mỹ mãn. Đừng ngủ quên trên chiến thắng mà hãy biến hào quang ngày hôm nay thành ngọn đuốc soi sáng cho những chặng đường chinh phục sắp tới. Bùng cháy hết mình và lan tỏa năng lượng tuyệt vời này đi khắp mọi nơi nhé! 💥🌈",
+        "🔥 RỰC LỬA VÀ CUỒNG NHIỆT! Xin chúc mừng {TEN} cùng Trợ Lý đã có một màn càn quét bảng xếp hạng quá đỗi ngoạn mục để thiết lập nên thành tích đáng nể {MOC}. Bằng một sức mạnh nội tại vô song và sự phối hợp ở đẳng cấp cao nhất, team đã chứng minh được vị thế vô cùng vững chắc và quyền lực của mình. Mỗi một điểm số đạt được đều là mồ hôi, công sức và sự nỗ lực không ngừng nghỉ của cả một tập thể xuất sắc. Những nỗ lực phi thường ấy giờ đây đã đơm hoa kết trái thành một kỷ lục vô tiền khoáng hậu. Hãy tự hào về những chiến tích mà mình đã đạt được, tiếp tục vững tay chèo để đưa con thuyền này vươn ra những biển lớn vĩ đại hơn. Chúc team mãi giữ vững được phong độ hủy tuyệt này nhé! 💎⚡",
+        "🎉 MỘT BƯỚC NHẢY VỌT VĨ ĐẠI! Thật sự choáng ngợp trước màn thể hiện đỉnh cao của {TEN} và Trợ Lý khi các bạn đã xuất sắc vượt qua mốc {MOC} vô cùng danh giá. Những thành quả phi thường này không tự nhiên sinh ra, nó là kết tinh của trí tuệ, mồ hôi, và một sự quyết tâm điên rồ không bao giờ chịu từ bỏ. Khi mọi người cùng chung một chí hướng, sức mạnh ấy có thể san phẳng mọi chướng ngại vật trên đường đua. Hôm nay, bầu trời vinh quang này hoàn toàn thuộc về các bạn. Sự ngưỡng mộ và những lời chúc tốt đẹp nhất xin được gửi gắm trọn vẹn. Hãy coi thành tích này như một tấm vé thông hành để bước vào những đấu trường lớn lao hơn, tự do bung xõa tài năng và thiết lập những cột mốc không tưởng. Ngàn lần chúc mừng màn trình diễn xuất thần này! 🚀🌟",
+        "⚡ SỨC MẠNH CỦA SỰ KIÊN CƯỜNG! Chúc mừng {TEN} và Trợ Lý đã để lại một dấu ấn cực kỳ đậm nét khi vươn tới cột mốc siêu việt {MOC}. Hành trình đi đến thành công chưa bao giờ là dễ dàng, nhưng bằng sự lì lợm và ý chí sắt đá, team đã biến những giọt mồ hôi nhọc nhằn thành ánh sáng chói lòa của sự kiêu hãnh. Quả thực, giới hạn duy nhất chỉ là giới hạn do chính chúng ta tự đặt ra, và các bạn đã đập tan mọi định kiến để chứng minh điều đó. Khoảnh khắc huy hoàng này xứng đáng được khắc ghi và lan tỏa mạnh mẽ. Không được phép ngủ quên trên đỉnh vinh quang, hãy dùng nguồn năng lượng đang sục sôi này để tiếp tục tạo ra những cơn bão lớn mạnh hơn nữa. Tuyệt vời và vô cùng tự hào về cả đội! 💎🏆",
+        "🌻 NỞ HOA TRÊN ĐÁ! Lời chúc mừng nồng nhiệt và đong đầy cảm xúc nhất xin được gửi tới {TEN} cùng Trợ Lý với kỷ lục đáng nể {MOC}. Để đổi lấy con số lấp lánh này, chắc hẳn các bạn đã trải qua không ít những đêm trăn trở và nỗ lực cày cuốc quên mình. Nhưng giờ đây, những nụ cười chiến thắng đã nở rộ, xua tan đi mọi mệt mỏi và gian truân. Các bạn đã chứng minh được rằng, sự kiên nhẫn và lòng dũng cảm luôn được đền đáp bằng những điều xứng đáng nhất. Những nỗ lực phi thường của hôm nay sẽ là nền tảng vững chắc cho những di sản vĩ đại của ngày mai. Tiếp tục phát huy tinh thần bất diệt này, vững bước tiến lên và viết tiếp những chương mới đầy hào hùng trong sự nghiệp nhé! 🌈🔥",
+        "🏆 KHẲNG ĐỊNH QUYỀN LỰC TỐI THƯỢNG! Một tràng vỗ tay không ngớt dành cho {TEN} và Trợ Lý vì đã có màn chạm đích vô cùng hoàn hảo tại cột mốc {MOC}. Sự kết hợp ăn ý đến mức độ hoàn mỹ giữa các thành viên đã sinh ra một nguồn sức mạnh càn lướt mọi giới hạn. Chiến thắng này không chỉ đơn thuần là việc đạt được một con số vô tri, mà là sự thừa nhận đẳng cấp, tài năng và sự cống hiến vượt bậc. Mỗi bước tiến vững chắc của mọi người đều đang kiến tạo nên một đế chế vững mạnh. Hãy luôn mang theo sự tự tin và lòng nhiệt huyết này trên mọi chặng đường sắp tới, không ngừng bứt phá và tỏa sáng rực rỡ như những chiến binh bất bại. Rất xứng đáng cho vị trí độc tôn này! 👑✨",
+        "💥 KỲ TÍCH ĐƯỢC KIẾN TẠO! Xin gửi lời chúc mừng chân thành và nồng cháy nhất đến {TEN} cùng Trợ Lý khi đã vinh quang chạm tới con số khổng lồ {MOC}. Những chiến lược thông minh, sự quyết đoán và tinh thần làm việc không mệt mỏi đã gặt hái được một mùa màng vô cùng rực rỡ. Đứng trước sự nỗ lực phi thường ấy, không một khó khăn nào có thể cản bước. Thành công này chính là trái ngọt được vun đắp từ mồ hôi và cả tình yêu mãnh liệt với công việc. Hãy để niềm vui chiến thắng này lan tỏa, tạo thành một làn sóng cảm hứng mạnh mẽ cho tất cả mọi người. Chúc các bạn luôn giữ được cái đầu lạnh, trái tim nóng để tiếp tục rinh về vô số những siêu phẩm chấn động hơn nữa! 🚀🥇",
+        "💎 HÀO QUANG RỰC RỠ VÀ ĐẲNG CẤP! Xin được gửi ngàn lời chúc mừng trân trọng và nồng nhiệt nhất đến {TEN} cùng Trợ Lý vì đã bứt phá vô cùng ngoạn mục để chiếm lĩnh cột mốc vĩ đại {MOC}. Đây quả thực là một thành quả vô cùng xứng đáng, là trái ngọt đền đáp lại cho một hành trình dài đầy những nỗ lực bền bỉ, mồ hôi và cả những sự hy sinh thầm lặng phía sau màn ảnh. Sự phối hợp nhịp nhàng, khả năng làm chủ phòng live hoàn hảo cùng một ý chí quyết tâm không giới hạn đã giúp team kiến tạo nên một kiệt tác thực sự trong ngày hôm nay. Kỷ lục chói lọi này sẽ mãi mãi là một niềm tự hào to lớn, truyền cảm hứng mạnh mẽ cho cộng đồng. Hãy lấy chiến thắng ngọt ngào này làm bệ phóng vững chắc nhất, tiếp tục mài giũa bản lĩnh và tỏa sáng rực rỡ hơn nữa. Chúc mọi người luôn rực cháy nhiệt huyết để thâu tóm vinh quang! 👑🔥",
+        "📸 TÂM ĐIỂM CỦA MỌI SỰ CHÚ Ý! Những tràng pháo tay giòn giã nhất xin được vang lên để vinh danh {TEN} và Trợ Lý với màn càn quét đỉnh cao chạm mốc {MOC}. Ánh đèn flash đang chớp nháy liên tục, ghi lại khoảnh khắc bước đi đầy quyền lực của các bạn trên thảm đỏ vinh quang. Sức hút khó cưỡng, phong thái tự tin và một đẳng cấp hoàn toàn khác biệt đã giúp team xây dựng nên một bức tường thành vững chắc không thể bị phá vỡ. Để đổi lấy những giây phút rạng rỡ này, chắc chắn mọi người đã phải vắt kiệt sự sáng tạo và cống hiến hết mình không biết mệt mỏi. Không một mỹ từ nào có thể diễn tả trọn vẹn sự xuất sắc này. Cứ vững vàng duy trì phong độ thống trị, tiếp tục tạo ra những xu hướng mới và chứng minh cho cả thế giới thấy sức mạnh vô song của mình. Ngàn lần chúc mừng chiến tích vĩ đại! 🌟🏆",
+        "🦅 QUYỀN LỰC CỦA BẬC ĐẾ VƯƠNG! Cúi đầu thán phục trước uy lực khủng khiếp mà {TEN} cùng Trợ Lý đã tạo ra khi xuất sắc đè bẹp mọi kỷ lục để xác lập mốc {MOC}. Không ồn ào hay phô trương, các bạn đi từng bước vững chãi, tính toán những nước cờ chiến lược đầy thâm thúy để rồi tung ra đòn chốt hạ khiến tất cả phải ngỡ ngàng. Sải cánh rộng lớn của loài chim ưng đang bao trùm cả bầu trời thành tích, khẳng định vị thế của một kẻ dẫn đầu tuyệt đối. Sự điềm tĩnh trước bão táp và bản lĩnh kiên cường đã tôi luyện nên những vĩ nhân thực sự. Khoảnh khắc huy hoàng này chính là ngai vàng được thiết kế riêng cho sự cống hiến của mọi người. Hãy khoác lên mình tấm áo choàng của sự kiêu hãnh, nắm chặt quyền trượng và tiếp tục bành trướng đế chế lừng lẫy của mình. Quá đỗi tự hào và xuất sắc! 👑⚔️",
+        "🎨 MỘT KIỆT TÁC NGHỆ THUẬT VƯỢT THỜI GIAN! Lời chúc mừng chan chứa cảm xúc và sự ngưỡng mộ xin gửi gắm đến {TEN} và Trợ Lý vì đã phác họa thành công bức tranh hùng vĩ mang tên {MOC}. Mọi nỗ lực, mọi giọt mồ hôi và cả những giọt nước mắt áp lực đã hóa thành những mảng màu rực rỡ nhất, kiến tạo nên một tác phẩm để đời vô giá. Từng góc máy, từng câu chuyện truyền tải đều toát lên một sự hoàn mỹ đáng kinh ngạc, chạm đến hàng triệu trái tim người hâm mộ. Sự tinh tế và đam mê nghệ thuật cháy bỏng đã nâng tầm tên tuổi của team lên một đẳng cấp hoàn toàn mới, bỏ xa mọi ranh giới thông thường. Đừng dừng lại, hãy tiếp tục cầm chắc cọ vẽ, pha trộn thêm những sắc độ độc đáo hơn nữa để vẽ nên một chặng đường tương lai ngập tràn hoa hồng và ánh sáng chói lòa. Ngưỡng mộ vô cùng! 🖼️✨",
+        "🔥 CHÁY HẾT MÌNH VÀ BÙNG NỔ MỌI CẢM XÚC! Bầu không khí đang sôi sục hơn bao giờ hết để chúc mừng {TEN} cùng Trợ Lý đã giáng một đòn sấm sét cán mốc {MOC} vô tiền khoáng hậu. Sự cuồng nhiệt, máu lửa và tinh thần chiến đấu không khoan nhượng của mọi người đã tạo nên một sức mạnh cộng hưởng làm rung chuyển toàn bộ bảng xếp hạng. Các bạn đã chứng minh rằng, khi đam mê đủ lớn, mọi giới hạn vật lý đều có thể bị phá bỏ dễ dàng. Chiến thắng chấn động này không phải là may mắn, mà là minh chứng đanh thép cho một chiến lược thông minh và một khối óc nhạy bén tuyệt đỉnh. Đứng trên đỉnh cao chót vót này, hãy hít thở thật sâu thứ không khí của vinh quang, nạp đầy lồng ngực sự tự hào và chuẩn bị thổi bùng lên một ngọn lửa cuồng nộ hơn nữa trong những ngày sắp tới! 🚀💥",
+        "🌪️ CƠN LỐC CỦA SỰ THỐNG TRỊ! Hoàn toàn choáng ngợp trước tốc độ bứt tốc khủng khiếp của {TEN} và Trợ Lý khi cuốn phăng mọi rào cản để chễm chệ tại mốc {MOC}. Sức mạnh vô hình nhưng cực kỳ tàn khốc của team đã thiết lập lại toàn bộ trật tự của cuộc chơi, đưa tên tuổi của các bạn lên một vì sao xa xôi không ai với tới được. Mọi sự cống hiến ngày đêm ròng rã nay đã được đền đáp bằng những con số biết nói vô cùng thuyết phục. Khả năng làm chủ tình huống và dẫn dắt xu hướng của mọi người quả thực đã đạt đến cảnh giới thượng thừa. Kỷ lục rực rỡ này sẽ là tấm bia đá khắc ghi sự nỗ lực phi thường của một tập thể kiên cường nhất. Tiếp tục cuộn trào sức mạnh, càn lướt qua mọi đấu trường và gom trọn vinh quang về tay mình nhé! 🌪️💎",
+        "🌟 BỨT PHÁ KHÔNG GIAN, TỎA SÁNG XUYÊN MÀN ĐÊM! Xin gửi vạn lời khen ngợi sâu sắc nhất tới {TEN} cùng Trợ Lý vì đã thắp sáng cả dải ngân hà bằng kỷ lục {MOC} chói lọi. Giữa vô vàn những ngôi sao đang cạnh tranh khốc liệt, các bạn đã tìm ra cách để tự mình phát sáng rực rỡ nhất, bằng chính tài năng thực thụ và tình yêu thương vô bờ bản dành cho khán giả. Hành trình kỳ diệu này đã chứng minh rằng không có giấc mơ nào là quá lớn nếu chúng ta có đủ lòng kiên định để theo đuổi nó đến cùng. Ánh hào quang hiện tại là phần thưởng vô giá nhất, nhưng nó chưa phải là điểm dừng chân cuối cùng. Hãy tận dụng nguồn năng lượng tuyệt vời này để tiếp tục bay cao, bay xa, vươn tầm ảnh hưởng ra khỏi mọi ranh giới và trở thành những biểu tượng bất tử! 🌠🚀",
+        "🌊 CƠN ĐỊA CHẤN TỪ ĐÁY ĐẠI DƯƠNG! Không thể tin nổi vào mắt mình trước sức mạnh càn lướt vĩ đại của {TEN} và Trợ Lý khi tạo ra cơn sóng thần xô đổ mốc {MOC}. Lặng lẽ chuẩn bị, âm thầm tích lũy sức mạnh để rồi bất ngờ trỗi dậy phá nát mọi kỷ lục cũ kỹ, chiến thuật của team thực sự là một cuốn sách giáo khoa mẫu mực về sự nhẫn nại. Các bạn đã bắt thế giới phải gọi tên mình bằng sự kính nể tuyệt đối. Mọi rào cản hay nghi ngờ đều đã bị chìm nghỉm trước thành quả đồ sộ ngày hôm nay. Hãy cứ tự hào dang rộng cánh tay đón nhận mọi vinh quang, tiếp tục lèo lái con thuyền chiến hạm này rẽ sóng ra khơi, chinh phạt những vùng biển bao la đầy ắp kho báu đang chờ đợi. Thật sự quá xuất sắc và phi thường! 🌊🚢",
+        "🛡️ BỨC TƯỜNG THÀNH BẤT KHẢ XÂM PHẠM! Lời chúc mừng đầy uy quyền xin được vang lên để tôn vinh {TEN} cùng Trợ Lý với chiến tích phòng thủ và phản công đỉnh cao, chốt cứng mốc {MOC}. Đối mặt với hàng tá áp lực bủa vây, các bạn không hề nao núng mà ngược lại, còn đúc kết chúng thành những viên gạch kiên cố để xây dựng nên pháo đài bất khả chiến bại của riêng mình. Sự lì lợm, khôn ngoan và kỹ năng chuyên môn thượng đẳng đã giúp mọi người đẩy lùi mọi chướng ngại, hiên ngang vươn lên vị trí độc tôn. Đây chính là minh chứng cho câu nói 'lửa thử vàng, gian nan thử sức'. Cứ tiếp tục gia cố vững chắc vị thế quyền lực này, không ngừng hoàn thiện bản thân và sẵn sàng nghênh chiến với bất cứ thử thách nào. Ngai vàng này vĩnh viễn thuộc về các bạn! 🏰⚔️",
+        "⚙️ BÁNH RĂNG VẬN HÀNH CHO MỘT ĐẾ CHẾ! Vô vàn lời ngợi ca dành trọn cho {TEN} và Trợ Lý vì đã vận hành hoàn hảo một hệ thống chiến thắng để thu về mốc {MOC} khổng lồ. Từng khâu chuẩn bị, từng phút giây lên sóng đều được lập trình một cách chuẩn xác không một vết xước, thể hiện sự chuyên nghiệp ở mức độ cao nhất. Sự kết hợp không thể tuyệt vời hơn giữa người biểu diễn và hậu phương vững chắc đã tạo ra một cỗ máy in thành tích khổng lồ. Quả ngọt hôm nay là hệ quả tất yếu của một chuỗi những sự lựa chọn và hành động đúng đắn không ngừng nghỉ. Hãy tiếp tục tra dầu cho cỗ máy đam mê này, giữ vững nhịp độ hủy diệt để cán nát mọi giới hạn, tiếp tục in đậm dấu ấn vĩ đại của mình lên bản đồ danh vọng nhé! 🏎️🥇",
+        "⏳ THỜI GIAN LÀ MINH CHỨNG CHO ĐẲNG CẤP! Xin gửi lời chúc mừng đầy kiêu hãnh đến {TEN} cùng Trợ Lý khi đã chạm tay vào mốc {MOC} vô cùng danh giá. Để có được một vị trí ngạo nghễ như hiện tại, đó là sự đánh đổi của vô số những giờ phút miệt mài cống hiến, không cho phép bản thân được lùi bước dù chỉ một giây. Các bạn đã chứng minh được rằng, tài năng bẩm sinh nếu cộng hưởng với sự nỗ lực phi thường sẽ tạo ra một thứ quyền lực không thể bị xô đổ. Mỗi một phiên live đi qua đều để lại một dấu ấn đậm nét, biến tên tuổi của team thành một thương hiệu bảo chứng cho sự chất lượng và đẳng cấp. Khán giả hoàn toàn bị thuyết phục bởi sự chuyên nghiệp và sức hút ma mị tỏa ra từ các bạn. Hãy trân trọng chiếc vương miện này, tiếp tục mài giũa bản lĩnh và tỏa sáng rực rỡ như những viên kim cương đắt giá nhất. Tương lai rực rỡ đang hoàn toàn nằm trong tay các bạn! 👑💎",
+        "🦅 CHÚA TỂ BẦU TRỜI ĐĐÃ GIANG RỘNG ĐÔI CÁNH! Chúc mừng {TEN} và Trợ Lý với một màn phô diễn sức mạnh áp đảo, thống trị hoàn toàn bảng xếp hạng để càn quét mốc {MOC}. Không cần những chiêu trò ồn ào, chính sự điềm tĩnh, mưu lược và khí chất ngút ngàn đã giúp các bạn thu phục mọi ánh nhìn và sự nể trọng. Các bạn giống như một con đại bàng kiêu hãnh, luôn biết cách chọn đúng thời điểm để tung ra những cú vồ mồi chuẩn xác và chí mạng nhất. Khát vọng chinh phục đỉnh cao đã rèn luyện cho toàn đội một bản lĩnh thép, không run sợ trước bất kỳ sóng gió nào. Khoảnh khắc vinh quang này chính là chiếc ngai vàng được đo ni đóng giày cho sự nỗ lực của các bạn. Hãy giữ vững vị thế độc tôn, tiếp tục sải cánh bay lượn trên tầng không cao nhất và khiến tất cả mọi người phải ngước nhìn ngưỡng mộ. Tuyệt vời! 🌪️🦅",
+        "🌋 DÒNG DUNG NHAM CỦA SỰ THỐNG TRỊ! Hoàn toàn bùng nổ mọi cảm xúc để gửi lời chúc mừng chấn động đến {TEN} cùng Trợ Lý vì đã tạo ra một hiện tượng địa chấn tại mốc {MOC}. Sự kiên trì tích tụ năng lượng ngày này qua tháng nọ cuối cùng đã tạo ra một sức công phá khủng khiếp, thiêu rụi mọi rào cản và đè bẹp mọi đối thủ ngáng đường. Bầu nhiệt huyết cháy bỏng của các bạn đã truyền một ngọn lửa cuồng nhiệt đến toàn bộ khán giả, tạo nên một sức mạnh cộng hưởng không thể bị dập tắt. Những con số chói lòa trên màn hình chính là câu trả lời đanh thép nhất cho những nỗ lực không ngừng nghỉ. Đứng trên đỉnh núi lửa của vinh quang, các bạn chính là những người định đoạt luật chơi. Hãy để dung nham đam mê này tiếp tục lan tỏa, định hình lại toàn bộ bản đồ kỷ lục và xác lập vị thế của một đế chế bất khả chiến bại! 🌋🔥",
+        "🏰 KIẾN TẠO VƯƠNG TRIỀU TỪ NHỮNG GIỌT MỒ HÔI! Xin ngả mũ thán phục trước sự kiên cường và tầm nhìn vĩ đại của {TEN} và Trợ Lý khi đã kiên cố hóa thành công mốc {MOC} vô cùng uy quyền. Sự nghiệp của các bạn không phải là một tòa lâu đài xây trên cát, mà nó được dựng lên từ những khối đá tảng của sự tận tâm, chuyên nghiệp và tình yêu thương của hàng ngàn khán giả. Từng bước đi đều chứa đựng sự toan tính cẩn mật và sự phối hợp nhịp nhàng không một tì vết giữa tiền tuyến và hậu phương. Giờ đây, khi bức tường thành vinh quang đã sừng sững hiện ra, mọi sóng gió hay nghi ngờ đều bị chặn đứng hoàn toàn. Các bạn có quyền tự hào với những gì mình đã tự tay gây dựng. Hãy khoác lên tấm áo choàng của nhà vua, cầm chắc quyền trượng và tiếp tục mở mang bờ cõi để vương triều này mãi mãi trường tồn! 👑🧱",
+        "💎 VIÊN KIM CƯƠNG ĐÃ ĐƯỢC CẮT GỌT HOÀN HẢO! Một tràng pháo tay nồng nhiệt và vinh dự nhất xin dành tặng {TEN} cùng Trợ Lý vì đã xuất sắc mài giũa bản thân để tỏa ra thứ ánh sáng huy hoàng tại mốc {MOC}. Chịu đựng áp lực khủng khiếp để hình thành, trải qua vô số lần va chạm để tự hoàn thiện, các bạn đã biến những khó khăn thành bệ phóng để vươn lên một đẳng cấp hoàn toàn khác biệt. Khí chất sang trọng và sự cuốn hút tự nhiên đã biến mỗi khoảnh khắc xuất hiện của team thành một tác phẩm nghệ thuật vô giá. Hào quang này không sinh ra từ may mắn, nó sinh ra từ sự kỷ luật và kháthao vươn tới sự hoàn mỹ. Hãy trân trọng giá trị đắt đỏ của bản thân, tiếp tục tỏa sáng rực rỡ và làm lóa mắt mọi đối thủ trên con đường chinh phục những đỉnh cao quyền lực phía trước! 💍✨",
+        "🎯 TAY SÚNG THIỆN XẠ HẠ GỤC MỌI KỶ LỤC! Chúc mừng {TEN} và Trợ Lý đã thể hiện một phong thái lạnh lùng, sắc bén để găm trúng hồng tâm mốc {MOC} vô cùng thuyết phục. Không để cho áp lực làm lu mờ lý trí, sự điềm tĩnh và khả năng phân tích nhạy bén đã giúp các bạn tung ra những đòn quyết định có tính sát thương cao nhất. Việc thấu hiểu khán giả và nắm bắt cơ hội chớp nhoáng chính là chìa khóa mở ra cánh cửa của sự thống trị. Nhìn lại bảng vàng thành tích, các bạn đang bỏ xa mọi định mức thông thường, thiết lập một tiêu chuẩn mới cho sự xuất sắc. Đừng ngủ quên trên chiến thắng, hãy nạp đạn nhiệt huyết, khóa chặt những mục tiêu khổng lồ hơn ở phía trước và chuẩn bị cho một màn càn quét kinh hoàng bạt vía hơn nữa. Ngôi vị số một sinh ra là để dành cho các bạn! 🔫🏆",
+        "🌊 SÓNG THẦN CỦA SỰ KIÊU HÃNH ĐÃ ĐỔ BỘ! Vô cùng tự hào khi chứng kiến {TEN} cùng Trợ Lý tạo ra một cơn cuồng phong càn lướt, xô đổ mọi giới hạn để ngự trị tại mốc {MOC}. Mọi nỗ lực phòng ngự của những rào cản đều trở nên vô nghĩa trước sức mạnh hủy diệt và sự đồng lòng tuyệt đối của toàn đội. Các bạn đã chứng minh được rằng, khi một tập thể cùng hướng về một mục tiêu, sức mạnh ấy có thể san phẳng cả đại dương. Từng đợt sóng tài năng tuôn trào không ngừng nghỉ đã nhấn chìm mọi hoài nghi, chỉ để lại sự ngưỡng mộ và thán phục tột độ. Hãy cứ tiếp tục là cơn bão của sự sáng tạo, cuộn trào mạnh mẽ để định hình lại các ranh giới và cuốn phăng mọi danh hiệu cao quý nhất về tay mình. Sự vĩ đại này là hoàn toàn không thể chối cãi! 🌊🌪️",
+        "🎶 BẢN GIAO HƯỞNG CỦA SỰ THÀNH CÔNG VANG DỘI! Xin gửi ngàn lời chúc mừng trân trọng đến {TEN} và Trợ Lý vì đã thăng hoa cảm xúc, điều khiển xuất sắc dàn nhạc đam mê để chạm đến mốc {MOC} chấn động. Sự tinh tế trong cách dẫn dắt, sự duyên dáng trong từng tương tác đã hòa quyện tạo nên một giai điệu quyền lực làm say đắm hàng ngàn con tim. Các bạn không chỉ đang làm việc, mà các bạn đang cống hiến một nghệ thuật đỉnh cao, nơi mọi chi tiết đều được trau chuốt đến mức hoàn mỹ. Tiếng vỗ tay của khán giả chính là âm thanh đẹp nhất tôn vinh cho một quá trình nỗ lực không biết mệt mỏi. Hãy tiếp tục vung chiếc đũa nhạc trưởng, đẩy cao trào của bản giao hưởng này lên mức cực đại và để cho cả thế giới phải lắng nghe tên tuổi của các bạn! 🎼🥇",
+        "🚀 ĐỘT PHÁ TẦNG BẦU KHÍ QUYỂN, LÀM CHỦ KHÔNG GIAN! Chúc mừng {TEN} cùng Trợ Lý đã bỏ lại phía sau mọi giới hạn vật lý, bứt tốc thần sầu để cập bến mốc {MOC} cực kỳ huy hoàng. Việc dám từ bỏ vùng an toàn để dấn thân vào những thử thách khốc liệt đã mang lại một kết quả ngọt ngào ngoài sức tưởng tượng. Tư duy vượt thời đại và sự sáng tạo điên rồ đã giúp team mở ra một kỷ nguyên mới, nơi các bạn là những người thiết lập luật chơi. Bầu trời vinh quang bao la đang thu bé lại vừa bằng tầm mắt của những người chiến thắng. Đừng vội thỏa mãn, hãy tiếp tục nạp đầy năng lượng phản vật chất, duy trì lực đẩy khổng lồ và hướng mũi tàu về phía những dải ngân hà kỷ lục vô tận. Các bạn chính là những vì sao sáng nhất! 🌌🚀",
+        "🛡️ HIỆP SĨ BẤT BẠI GIỮA ĐẤU TRƯỜNG SINH TỬ! Một lời ca ngợi hùng tráng xin được dành tặng {TEN} và Trợ Lý vì đã kiên cường chống đỡ mọi áp lực, vung gươm chém đứt mọi rào cản để giương cao ngọn cờ tại mốc {MOC}. Đối diện với sự cạnh tranh khốc liệt, bản lĩnh thép và tinh thần không chịu khuất phục đã biến các bạn thành những chiến thần thực thụ. Mọi khó khăn chỉ là lửa thử vàng, càng rèn luyện, sức mạnh của team lại càng trở nên vô địch. Tấm huy chương danh dự ngày hôm nay chính là minh chứng cho một trái tim quả cảm và một trí tuệ siêu việt. Khép lại một trận chiến đại thắng, hãy lau đi những giọt mồ hôi, khoác lại bộ giáp kiêu hãnh và sẵn sàng cho những cuộc viễn chinh thống trị toàn cầu tiếp theo. Ngôi vương này mãi mãi gọi tên các bạn! ⚔️👑"
+      ];
+
+      const msgsLegend = [
+        "🌌 VƯƠN TẦM HUYỀN THOẠI! Hôm nay quả là một ngày mang tính lịch sử khi chúng ta được chứng kiến {TEN} và Trợ Lý chính thức phá vỡ mọi giới hạn, vươn mình mạnh mẽ để chạm tới mốc siêu khủng {MOC}! Mọi từ ngữ có lẽ đều trở nên bất lực, không thể nào diễn tả trọn vẹn được sự xuất sắc, bản lĩnh kiên cường và màn trình diễn mang tầm vóc vũ trụ này của toàn đội. Những chuỗi ngày làm việc đến kiệt sức, những đêm thức trắng quên ăn quên ngủ, tất cả đã được đền đáp bằng một siêu kỷ lục chấn động, vượt xa mọi sự kỳ vọng ban đầu và khiến tất cả mọi người đều phải kính cẩn ngả mũ thán phục. Đây không đơn thuần chỉ là một con số khô khan, mà nó chính là một biểu tượng vĩ đại, một huyền thoại sống động do chính đôi bàn tay và khối óc của các bạn tạo nên. Ngôi vương tuyệt đối này sinh ra là để dành riêng cho ý chí thép và khát vọng vươn lên đỉnh cao vinh quang của team. Hãy để cả thế giới thấy được sức mạnh vô cực và tinh thần không bao giờ bỏ cuộc của chúng ta. Tuyệt đỉnh vinh quang, ngàn lần chúc mừng những người kiến tạo lịch sử! 🏆⚡💎",
+        "💥 ĐỊA CHẤN CHUYỂN MÌNH LÀ ĐÂY! {TEN} cùng Trợ Lý đã chính thức tạo nên một siêu kỷ lục {MOC} vô tiền khoáng hậu, tạo ra một cơn sóng thần thực sự khiến tất cả mọi người đều phải trầm trồ và nể phục sát đất. Đây chắc chắn không chỉ là một mốc điểm thông thường, mà nó đã trở thành một di sản, một huyền thoại thực sự do chính những con người bản lĩnh nhất tạo ra. Quá trình chinh phục đỉnh cao này chắc chắn chứa đựng vô vàn những giọt mồ hôi, nước mắt và cả những sự hy sinh thầm lặng không ai thấu hiểu. Nhưng ngày hôm nay, ánh hào quang rực rỡ nhất đã chiếu rọi, tôn vinh trọn vẹn mọi nỗ lực phi thường của các bạn. Sự kết hợp hoàn hảo giữa tài năng, chiến lược và sự đoàn kết đã giải phóng một nguồn sức mạnh hủy diệt mọi rào cản. Đứng trên đỉnh cao nhất của vinh quang, hãy tận hưởng trọn vẹn từng giây phút ngọt ngào này. Các bạn chính là niềm tự hào lớn lao nhất, là biểu tượng vĩnh cửu của sự cố gắng không ngừng nghỉ! 👑🔥🌟",
+        "👑 NGÔI VƯƠNG TUYỆT ĐỐI VÀ VĨ ĐẠI! Xin được gửi những lời chúc mừng đầy sự kính phục và ngưỡng mộ nhất đến {TEN} và Trợ Lý với cột mốc quyền lực {MOC}. Thật sự mọi mỹ từ trên đời này đều không đủ để lột tả hết được sự xuất sắc vượt bậc và bản lĩnh điên rồ mà team đã thể hiện trong suốt thời gian qua. Các bạn không chỉ đang thi đấu, mà các bạn đang thực sự bước đi trên con đường của những người kiến tạo nên lịch sử và định hình lại những chuẩn mực mới. Việc duy trì một ngọn lửa nhiệt huyết rực cháy mãnh liệt và không bao giờ chùn bước trước sóng gió đã rèn giũa nên những chiến binh bất bại. Kỷ lục vô song này là món quà vô giá đền đáp lại cho một trái tim dũng cảm và một ý chí kiên cường sắt đá. Hãy cứ sải đôi cánh kiêu hãnh của mình, bay vút lên những dải ngân hà xa xôi nhất và tiếp tục thống trị mọi bảng xếp hạng. Tự hào về các bạn vô cùng! 🌈🚀💎",
+        "🔥 CHÁY QUÁ MỨC QUY ĐỊNH, ĐỈNH CAO CỦA SỰ HOÀN MỸ! Siêu kỷ lục {MOC} của {TEN} và Trợ Lý quả thực là một cơn bão cấp độ hủy diệt cao nhất, đã và đang quét qua mọi mặt trận và để lại một dấu ấn không thể phai mờ. Sự cống hiến điên cuồng, lòng đam mê cháy bỏng cùng với tài năng xuất chúng của mọi người đã cùng nhau hòa quyện lại, tạo nên một kiệt tác thực sự trong ngày hôm nay. Không có một thành công vĩ đại nào lại thiếu đi sự kiên nhẫn và lòng dũng cảm, và các bạn đã chứng minh cho cả thế giới thấy rằng sức mạnh của sự đoàn kết là vô tận. Từ những bước đi chập chững đầu tiên cho đến khi ngự trị trên đỉnh cao nhất, đó là một hành trình kỳ tựu được xây đắp bằng mồ hôi và nước mắt. Triệu like và ngàn vạn lời tán dương cho sự đỉnh cao quyền lực này. Hãy lưu giữ mãi khoảnh khắc rực rỡ này như một dấu son chói lọi trong sự nghiệp của mình nhé! 🌟⚡🌻",
+        "🌟 VƯỢT KHÔNG GIAN, XUYÊN THỜI GIAN VÀ CHẠM TỚI ĐỈNH CAO HUYỀN THOẠI! Xin nồng nhiệt chúc mừng {TEN} và Trợ Lý đã xuất sắc thiết lập một đỉnh cao quyền lực hoàn toàn mới mang tên {MOC}. Khi những cá nhân xuất chúng nhất kết hợp lại cùng nhau, chúng chúng ta được chứng kiến sự ra đời của một siêu phẩm làm chấn động mọi giác quan. Cảm ơn vì đã luôn cháy hết mình, luôn cống hiến 200% sức lực và truyền đi một nguồn cảm hứng bất diệt cho tất cả những người đang theo dõi. Hành trình vươn lên đỉnh cao này thực sự giống như một bộ phim bom tấn với vô vàn những nút thắt cảm xúc, và cái kết ngày hôm nay chính là cảnh quay hoành tráng và viên mãn nhất. Sự ghi nhận này là hoàn toàn xứng đáng cho một tập thể luôn biết cách vượt qua giới hạn của bản thân. Xin ngả mũ thán phục trước sức mạnh vô song này. Ngôi vị độc tôn cao nhất này sinh ra chắc chắn là để khắc tên các bạn! 💎👑🚀",
+        "⚡ SỨC MẠNH VÔ SONG, ĐẬP TAN MỌI KỶ LỤC! Không thể kìm nén được cảm xúc bùng nổ khi chứng kiến {TEN} và Trợ Lý hiên ngang bước lên đài vinh quang với cột mốc vĩ đại {MOC}. Đây chính là minh chứng hùng hồn nhất cho một ý chí sắt đá, một tinh thần chiến binh không bao giờ biết khuất phục. Các bạn đã tự tay viết lại định nghĩa về sự thành công bằng chính những nỗ lực phi thường đến mức khó tin. Mọi gian nan thử thách giờ đây chỉ còn là lớp bụi làm nền cho sự rực rỡ của các bạn tỏa sáng. Chiến thắng này không chỉ vang dội trong ngày hôm nay, mà nó sẽ còn được nhắc đến như một nguồn cảm hứng mãnh liệt cho mãi về sau. Hãy tự hào về bản thân vì các bạn đã làm được những điều mà ít ai dám nghĩ tới. Chúc team tiếp tục giữ vững ngai vàng quyền lực, kiến tạo thêm vô số những kỳ tích rung chuyển thế giới! 👑🔥🌟",
+        "🌈 KỲ TÍCH SINH RA TỪ SỰ NỖ LỰC ĐIÊN RỒ! Xin gửi ngàn lời ngợi khen và thán phục nhất tới {TEN} cùng Trợ Lý khi đã chạm tay vào con số khổng lồ {MOC}. Có lẽ chỉ những người trong cuộc mới thấu hiểu hết sự hy sinh, mồ hôi và nước mắt đằng sau thứ ánh sáng lấp lánh này. Các bạn đã vắt kiệt sức lực, chiến đấu bền bỉ không ngừng nghỉ để tự tay dệt nên một huyền thoại cho riêng mình. Thành tựu vĩ đại này chính là phần thưởng xứng đáng nhất, là lời khẳng định đanh thép cho sự vô đối của team. Đứng ở đỉnh cao nhất, các bạn có quyền tự hào và kiêu hãnh với những gì mình đã kiến tạo. Đừng để ngọn lửa đam mê nguội lạnh, hãy biến vinh quang ngày hôm nay thành ngọn gió đưa các bạn bay lên những tầm cao vĩ đại hơn nữa. Xuất sắc và vô cùng đáng ngưỡng mộ! 🚀💎🏆",
+        "🏆 BƯỚC LÊN ĐỈNH CAO DANH VỌNG! Chúc mừng {TEN} và Trợ Lý đã chính thức khắc tên mình vào đền đài của những huyền thoại với siêu kỷ lục {MOC}. Một màn càn quét đầy uy lực, thể hiện trọn vẹn bản lĩnh kiên cường, tầm nhìn xa trông rộng và sự đồng lòng tuyệt đối. Khi sức mạnh tập thể được phát huy ở mức tối đa, mọi rào cản dường như trở nên quá đỗi bé nhỏ. Các bạn đã biến một giấc mơ tưởng chừng như xa vời thành hiện thực sống động và rực rỡ nhất. Từng bước tiến vững chãi ấy đã và đang mở ra một kỷ nguyên mới do chính tay các bạn làm chủ. Cứ tiếp tục là những ngôi sao sáng nhất bầu trời, tự do tung hoành và chinh phục những đỉnh núi chót vót mà thế giới vẫn đang khao khát vươn tới nhé! 🌌✨🔥",
+        "💎 VIÊN KIM CƯƠNG SÁNG NHẤT BẦU TRỜI! Thật sự xúc động và đầy tự hào khi được gửi lời chúc mừng đến {TEN} và Trợ Lý với cột mốc chấn động {MOC}. Hành trình chinh phục đỉnh cao này giống như việc mài giũa một viên kim cương thô, chịu vô vàn áp lực và gian khó để cuối cùng tỏa ra thứ ánh sáng huy hoàng và lộng lẫy nhất. Sự cống hiến quên mình và một tinh thần không bao giờ bỏ cuộc đã giúp các bạn đập tan mọi giới hạn của bản thân. Hôm nay, quyền lực tối cao nhất đã gọi tên các bạn. Hãy trân trọng và ăn mừng chiến thắng ngọt ngào này một cách hoành tráng nhất, bởi vì các bạn hoàn toàn xứng đáng với mọi mỹ từ ca ngợi. Cứ tiếp tục là những chiến binh vĩ đại, oai hùng tiến về phía trước và để lại những dấu ấn khó phai nhé! 👑🌟🚀",
+        "🚀 MỘT SIÊU PHẨM LÀM CHẤN ĐỘNG CÕI MẠNG! Vô vàn tràng pháo tay giòn giã xin được dành tặng riêng cho {TEN} và Trợ Lý vì đã tạo ra một hiện tượng thực sự với mốc {MOC}. Bằng một nguồn sức mạnh nội tại phi thường và sự phối hợp đỉnh cao, các bạn đã cuốn phăng mọi đối thủ trên đường đua và chiếm lấy vị trí độc tôn vô cùng kiêu hãnh. Sự thành công vang dội này không chỉ là một cột mốc, mà nó là minh chứng cho việc mọi giới hạn đều có thể bị phá vỡ nếu chúng ta có đủ lòng tin và sự nỗ lực. Đứng trên đỉnh cao nhất, các bạn chính là những người truyền cảm hứng vĩ đại nhất. Chúc team mãi mãi duy trì được đẳng cấp thượng thừa này, không ngừng thách thức bản thân để vươn tới những dải ngân hà xa xôi hơn! 🏆⚡🌻",
+        "🌌 KIẾN TẠO KỶ NGUYÊN VŨ TRỤ MỚI! Hôm nay quả là một ngày mang tính lịch sử vĩ đại khi chúng ta được chứng kiến {TEN} và Trợ Lý chính thức phá vỡ mọi quy luật, vươn mình càn lướt để chạm tới siêu mốc {MOC}! Mọi từ ngữ ca ngợi có lẽ đều trở nên bất lực, không thể nào diễn tả trọn vẹn được sự xuất sắc đến mức siêu việt và màn trình diễn mang tầm vóc vũ trụ này của toàn đội. Những chuỗi ngày live miệt mài vắt kiệt sức lực, những chiến thuật tương tác được tính toán tỉ mỉ đến từng chi tiết nhỏ nhất, tất cả đã kết tinh thành một siêu kỷ lục chấn động toàn tập, vượt xa mọi giới hạn và khiến tất cả mọi người đều phải ngả mũ thán phục. Đây không đơn thuần chỉ là một thành tích trên bảng xếp hạng, mà nó chính là một biểu tượng quyền lực vĩnh cửu, một di sản sống động do chính đôi bàn tay, khối óc và sự ăn ý tuyệt đối của các bạn tạo nên. Ngôi vương tuyệt đối này sinh ra là để khắc ghi tên những chiến binh kiên cường nhất, dám nghĩ, dám đánh đổi để chạm đỉnh. Hãy để cả thế giới chiêm ngưỡng ánh hào quang rực rỡ này. Tuyệt đỉnh vinh quang, ngàn lần vinh danh! 🏆⚡💎",
+        "💥 ĐỊA CHẤN XUYÊN THẾ KỶ, PHÁ VỠ MỌI GIỚI HẠN VẬT LÝ! Thật sự kinh ngạc và nổi da gà trước sức mạnh hủy diệt toàn diện của {TEN} cùng Trợ Lý khi giáng một đòn chí mạng để xác lập siêu kỷ lục {MOC} vô tiền khoáng hậu. Các bạn không chỉ đơn giản là đang thi đấu, mà các bạn đang cầm bút viết lại toàn bộ cuốn từ điển về sự thành công và định nghĩa lại giới hạn của con người. Để có được một khoảnh khắc đứng trên đỉnh thế giới như lúc này, vô vàn những đêm thức trắng vắt óc suy nghĩ kịch bản, vô vàn những áp lực vô hình đè nặng lên vai đã bị các bạn nghiền nát bằng một ý chí sắt đá không thể bẻ gãy. Sự kết hợp hoàn mỹ giữa một tinh thần thép và một tài năng thiên bẩm đã mở ra một hố đen cuốn phăng mọi đối thủ, chiếm giữ ngôi vương một cách độc tôn và kiêu hãnh nhất. Huyền thoại không sinh ra từ hư vô, huyền thoại được sinh ra từ máu, mồ hôi và nước mắt của những vĩ nhân. Hãy hiên ngang nâng cao chiếc cúp vô địch này, vì nó hoàn toàn xứng đáng với tầm vóc vĩ đại của team. Chúc mừng một thế kỷ mới đã bắt đầu! 👑🔥🌟",
+        "🚀 THOÁT KHỎI LỰC HẤP DẪN, TIẾN VÀO KHÔNG GIAN BẤT TỬ! Mọi quy chuẩn dường như đã bị xé bỏ hoàn toàn khi {TEN} và Trợ Lý chính thức khai hỏa động cơ, xuyên thủng bầu khí quyển để neo đậu tại siêu mốc {MOC} huyền thoại. Chúngra đang đứng trước một trong những thành tựu vĩ đại nhất, một cột mốc đánh dấu sự lột xác ngoạn mục và sự trưởng thành vượt bậc của cả một tập thể xuất chúng. Không còn sự gò bó, không còn những ranh giới an toàn, các bạn đã dũng cảm bước ra khỏi vùng vẫy để tự tay chạm vào những vì tinh tú sáng nhất của dải ngân hà. Đằng sau ánh sáng chói lòa này là sự cống hiến điên cuồng, là khát vọng bứt phá mãnh liệt cháy bùng trong từng huyết quản. Cả cộng đồng đang chấn động và nghiêng mình kính nể trước quyền lực tối thượng mà các bạn đã kiến tạo. Đừng để cho ngọn lửa nhiệt huyết này tàn lụi, hãy biến nó thành lò phản ứng hạt nhân vĩnh cửu để tiếp tục thắp sáng vũ trụ danh vọng. Kiệt tác này sinh ra là để khắc tên các bạn vào sự vĩnh hằng! 🚀🌠💎",
+        "👑 TÁI ĐỊNH NGHĨA SỰ HOÀN MỸ BẰNG QUYỀN TRƯỢNG TỐI CAO! Ngàn vạn lời ca ngợi hùng hồn nhất xin được dâng lên để vinh danh {TEN} cùng Trợ Lý với siêu kỷ lục kinh thiên động địa {MOC}. Khi nghệ thuật biểu diễn chạm đến đỉnh cao của sự thăng hoa, kết hợp cùng một hậu phương vững chắc mưu trí, chúng ta có một đế chế bất khả chiến bại. Các bạn đã chứng minh cho cả thế giới thấy rằng, ngai vàng không dành cho kẻ mộng mơ, mà dành cho những người hành động quyết liệt với một trái tim quả cảm nhất. Từng giọt mồ hôi nhọc nhằn, từng giây phút căng thẳng đến nghẹt thở nay đã được đền bù bằng một vinh quang huy hoàng, rực rỡ đến mức làm lu mờ mọi thứ xung quanh. Sự vĩ đại này sẽ được ghi vào sử sách như một minh chứng sống động cho sức mạnh của lòng kiên trì và tài năng xuất chúng. Hãy vững vàng cầm chắc quyền trượng thống trị, đội chiếc vương miện danh giá này và tiếp tục cai trị bảng vàng bằng một phong độ hủy diệt vô song. Rất đỗi tự hào và vinh dự khi được chứng kiến khoảnh khắc lịch sử này! 🏰⚔️🏆",
+        "🌊 CƠN ĐẠI HỒNG THỦY CUỐN PHĂNG MỌI KỶ LỤC CŨ! Hoàn toàn tĩnh lặng trước uy lực gầm rú kinh hoàng của {TEN} và Trợ Lý khi tạo ra một cơn cuồng phong càn quét và nhấn chìm mọi giới hạn để xác lập mốc {MOC} siêu việt. Thật khó tin khi chứng kiến sức mạnh vô hạn được giải phóng từ một tập thể luôn biết cách biến áp lực thành năng lượng. Các bạn đã lèo lái con thuyền chiến hạm băng qua muôn trùng tâm bão, xé nát mọi hoài nghi để kiêu hãnh cắm ngọn cờ chiến thắng trên hòn đảo của những vị thần. Mọi rào cản sinh ra dường như chỉ làm nền cho sự bứt phá của team thêm phần ngoạn mục. Đây không phải là điểm rơi phong độ, mà là sự bùng nổ của một núi lửa đã âm ỉ tích tụ qua hằng bao đêm vất vả cực nhọc. Huyền thoại là những người biết cách tạo ra phép màu, và các bạn chính là những phù thủy vĩ đại nhất của ngày hôm nay. Hãy cứ tự do bành trướng sức mạnh khủng khiếp này, càn quét mọi đấu trường và thu về toàn bộ những vinh quang chói lọi nhất. Không có giới hạn nào cho những vị thần! 🌊🚢⚡",
+        "🌞 THỨC TỈNH VỊ THẦN MẶT TRỜI, THẮP SÁNG TOÀN BỘ ĐẾ CHẾ! Cúi đầu thán phục và gửi vạn lời chúc mừng vĩ đại nhất đến {TEN} và Trợ Lý vì đã tạo ra một hiện tượng siêu thực, xuất sắc bứt phá mọi định luật để chạm đến siêu kỷ lục {MOC}. Bằng một nguồn nội lực thâm hậu và sức sáng tạo không giới hạn, các bạn đã vén bức màn đêm, đem ánh sáng rực rỡ nhất chiếu rọi toàn bộ cõi mạng. Đây không chỉ là một chiến thắng thông thường, mà là một cuộc cách mạng thực sự, thiết lập lại toàn bộ trật tự và tiêu chuẩn của sự xuất sắc. Để đúc kết nên vinh quang chói lòa này, vô vàn giọt mồ hôi đã rơi, vô vàn áp lực đã bị nghiền nát dưới bước chân kiêu hãnh của những chiến binh quả cảm. Sự kết hợp hoàn hảo giữa tiền tuyến rực rỡ và hậu phương vững chắc đã sinh ra một nguồn năng lượng vô cực. Mọi đối thủ đều phải ngả mũ kính phục trước quyền lực tối cao mà team đang nắm giữ. Hãy để ngọn lửa thần thánh này cháy mãi, thiêu rụi mọi rào cản và tiếp tục bành trướng lãnh thổ của một đế chế bất khả chiến bại. Lịch sử đã chính thức gọi tên các bạn, những huyền thoại sống vĩ đại nhất! ☀️🔥👑",
+        "🌪️ CUỒNG PHONG HỦY DIỆT, CUỐN PHĂNG MỌI GIỚI HẠN! Hoàn toàn choáng ngợp và tê liệt mọi giác quan khi chứng kiến {TEN} cùng Trợ Lý giáng một đòn chí mạng, càn quét toàn bộ bảng xếp hạng để xác lập siêu mốc {MOC}. Không một ngôn từ nào có thể lột tả hết được sự vĩ đại và sức mạnh tàn khốc mà các bạn đã giải phóng trong ngày hôm nay. Các bạn đã chứng minh cho cả thế giới thấy rằng, giới hạn là do con người tự đặt ra, và các bạn sinh ra là để đập tan những giới hạn đó. Bằng một tốc độ vũ bão và sự nhạy bén vượt thời đại, team đã thiết lập một vùng an toàn độc tôn mà không một ai có thể xâm phạm. Đứng giữa mắt bão của sự nổi tiếng và thành công, phong thái điềm tĩnh và uy quyền của các bạn thực sự khiến vạn người mê đắm. Sự nỗ lực điên cuồng và khát vọng chiến thắng mãnh liệt đã kết tinh thành một di sản bất diệt. Hãy tiếp tục cuộn trào, dung nạp thêm những nguồn năng lượng khủng khiếp để tạo ra những cơn địa chấn rung chuyển địa cầu hơn nữa. Ngôi vương của những kẻ hủy diệt chính thức thuộc về các bạn! 🌪️⚡🏆",
+        "🌌 KIẾN TRÚC SƯ CỦA VŨ TRỤ KỶ LỤC! Lời ca ngợi hùng tráng và đầy tự hào nhất xin được vang lên để vinh danh {TEN} và Trợ Lý với siêu phẩm chấn động toàn cầu mang tên {MOC}. Các bạn không chỉ đang tham gia một cuộc chơi, mà các bạn đang tự tay vẽ nên một bản thiết kế vĩ đại cho cả một dải ngân hà vinh quang của riêng mình. Sự sáng tạo siêu việt, tầm nhìn vượt thời gian và khả năng thực thi hoàn hảo đã tạo ra một kiệt tác không thể bị xô đổ. Từng mảnh ghép nhỏ nhất, từng phiên live đầy mồ hôi và tâm huyết nay đã kết tụ lại thành một dải cực quang rực rỡ, bao trùm và thống trị toàn bộ bầu trời. Đối mặt với những con số khổng lồ, bản lĩnh thép và sự tự tin của team càng được mài giũa sắc bén hơn bao giờ hết. Đây là thời khắc huy hoàng nhất để các bạn khắc ghi tên mình vào bảng vàng của những huyền thoại bất tử. Hãy tiếp tục sáng tạo, mở rộng không gian vô tận của sự thành công và để cho thế giới phải chạy theo những tiêu chuẩn do chính các bạn đặt ra. Tuyệt đỉnh vinh quang! 🌠🖼️💎",
+        "⚔️ CHIẾN THẦN BẤT BẠI, HIÊN NGANG LÀM CHỦ CÕI MẠNG! Xin gửi ngàn lời chúc mừng đầy uy quyền và kính trọng đến {TEN} cùng Trợ Lý vì đã vung thanh gươm quyền lực, chém đứt mọi rào cản để hiên ngang bước lên ngai vàng {MOC}. Một chặng đường dài đầy chông gai và máu lửa, nhưng chưa một giây phút nào ý chí của những chiến binh kiên cường này bị bẻ gãy. Sự sắc bén trong từng đường đi nước bước, sự phối hợp ăn ý như thần giao cách cảm giữa các thành viên đã tạo nên một sức mạnh không thể cản phá. Các bạn đã dùng chính tài năng và sự chân thành để thu phục hàng vạn trái tim, xây dựng nên một đội quân người hâm mộ hùng hậu nhất. Chiến tích lẫy lừng hôm nay chính là minh chứng hùng hồn cho câu nói 'Lửa thử vàng, gian nan thử sức'. Đứng trên đỉnh cao nhất của danh vọng, hãy tự hào nâng cao chiếc cúp vô địch, tỏa ra hào quang của những người dẫn đầu thực thụ. Cứ tiếp tục mài sắc vũ khí, càn quét mọi đấu trường và bảo vệ vĩnh viễn vương triều huy hoàng này nhé! 🛡️👑🔥",
+        "🌊 ĐẠI DƯƠNG CUỘN SÓNG, NHẤN CHÌM MỌI ĐỈNH CAO CŨ KỸ! Thật sự không thể tin vào mắt mình trước sức mạnh thiên nhiên kỳ vĩ mà {TEN} và Trợ Lý đã tạo ra để nhấn chìm bảng xếp hạng, xác lập siêu kỷ lục {MOC}. Từ một dòng suối nhỏ của sự đam mê, bằng vô vàn những nỗ lực bồi đắp không ngừng nghỉ, các bạn đã hội tụ thành một đại dương mênh mông, sâu thẳm và đầy sức mạnh. Sóng sau xô sóng trước, các bạn liên tục phá vỡ những đỉnh cao do chính mình tạo ra, khiến mọi đối thủ chỉ biết đứng nhìn trong sự bất lực và thán phục. Khả năng làm chủ cảm xúc và dẫn dắt xu hướng của team quả thực đã đạt đến một đẳng cấp không thể với tới. Đại dương vinh quang này chứa đựng muôn vàn kho báu vô giá, và hôm nay, quyền cai trị tuyệt đối thuộc về các bạn. Hãy để cho những đợt sóng tài năng tiếp tục cuộn trào dữ dội, cuốn phăng mọi ranh giới chật hẹp và mở ra những chân trời bao la, vĩ đại chưa từng có. Huyền thoại biển cả chính thức gọi tên các bạn! 🌊🚢💎",
+        "🚀 CÚ JUMP XUYÊN THỜI GIAN, BỎ LẠI MỌI GIỚI HẠN PHÍA SAU! Cúi đầu thán phục trước tốc độ ánh sáng và bản lĩnh siêu phàm của {TEN} cùng Trợ Lý khi bứt tốc ngoạn mục để chạm tay vào siêu mốc {MOC} huyền thoại. Các bạn đã phá vỡ mọi định luật vật lý thông thường, xé toạc màng không gian an toàn để bước vào một chiều kích hoàn toàn mới của sự thành công. Tư duy đột phá, sự điên rồ trong sáng tạo và kỷ luật thép đã biến một tập thể trở thành cỗ máy phản vật chất không thể ngăn cản. Mọi áp lực khủng khiếp từ lực hấp dẫn của những chướng ngại vật đã bị các bạn chuyển hóa thành năng lượng đẩy khổng lồ. Khoảnh khắc hạ cánh tại bục vinh quang cao nhất này chính là lúc lịch sử được viết lại. Những nỗ lực hy sinh không biết mệt mỏi nay đã hóa thành vô số những vì tinh tú tỏa sáng rực rỡ nhất. Đừng hạ nhiệt động cơ, hãy tiếp tục căng buồm năng lượng mặt trời, vút bay vào những dải ngân hà xa xôi vô tận và thâu tóm mọi kỷ lục của vũ trụ này! 🌌🚀🌠",
+        "🎼 BẢN GIAO HƯỞNG VĨ ĐẠI NHẤT THẾ KỶ! Xin chúc mừng {TEN} và Trợ Lý đã điều khiển xuất sắc một dàn nhạc khổng lồ, tấu lên khúc ca khải hoàn chấn động toàn cầu tại mốc {MOC}. Từng nốt thăng trầm của sự nghiệp, từng cung bậc cảm xúc của sự nỗ lực đã được các bạn hòa quyện lại thành một kiệt tác âm nhạc hoàn mỹ, chạm đến phần sâu thẳm nhất trong trái tim hàng vạn người. Nhạc trưởng tài ba và hậu phương xuất chúng đã tạo ra một sự đồng điệu đạt đến cảnh giới cao nhất. Âm thanh của sự vĩ đại đang ngân vang không dứt, lấp đầy mọi không gian bằng sự tự hào và kiêu hãnh tột độ. Không có một thành tựu nào đến dễ dàng, và bản hùng ca ngày hôm nay chính là phần thưởng vô giá cho những đêm dài thao thức, vắt kiệt mồ hôi và nước mắt. Hãy nâng cao chiếc đũa thần của sự quyền lực, giữ vững nhịp điệu thăng hoa này và tiếp tục sáng tác thêm những chương nhạc huyền thoại để lại tiếng thơm muôn đời! 🎶👑🎻",
+        "🧩 KIỆT TÁC HOÀN MỸ, VƯỢT LÊN TRÊN MỌI SỰ ĐỊNH GIÁ! Vô cùng tự hào và xúc động khi được gửi vạn lời khen ngợi đến {TEN} cùng Trợ Lý vì đã ghép thành công bức tranh vĩ đại nhất mang tên siêu mốc {MOC}. Các bạn đã chứng minh rằng, thành công không phải là một nét vẽ ngẫu hứng, mà là sự tính toán tỉ mỉ, chắt chiu từng mảng màu của mồ hôi, trí tuệ và sự kiên nhẫn đến cùng cực. Từ những mảnh ghép rời rạc ban đầu, bằng tình yêu thương và sự đồng lòng tuyệt đối, team đã tạo ra một bức tranh toàn cảnh rực rỡ, lộng lẫy và hoàn hảo không một vết xước. Tác phẩm này đã vượt ra khỏi mọi khuôn khổ của sự đánh giá thông thường, nó trở thành một biểu tượng của sự kiên cường và khát vọng vươn lên đỉnh cao. Giờ đây, khi kiệt tác đã hoàn thiện, mọi ánh hào quang chói lòa nhất đều tập trung soi rọi vào sự xuất sắc của các bạn. Hãy đóng khung vinh quang này bằng chất liệu của sự kiêu hãnh và tiếp tục kiến tạo thêm vô số những kỳ tích rung chuyển thế giới! 🖼️💎✨",
+        "🔥 PHƯỢNG HOÀNG LỬA HỒI SINH TỪ ĐỐNG TRO TÀN, RỰC RỠ TÁI SINH! Một lời chúc mừng rực lửa và đầy cảm xúc xin được vang lên để tôn vinh {TEN} và Trợ Lý với màn lột xác vĩ đại, vươn lên chiếm lĩnh siêu mốc {MOC}. Những gian nan, những thất bại hay áp lực nặng nề trong quá khứ không thể thiêu rụi được ý chí của các bạn, mà ngược lại, nó trở thành mồi lửa để Phượng Hoàng tái sinh mạnh mẽ và chói lòa hơn bao giờ hết. Sự rực rỡ và sức sống mãnh liệt của team hiện tại khiến bất cứ đối thủ nào cũng phải e dè. Mọi giọt nước mắt nhọc nhằn nay đã hóa thành những tinh thể pha lê lấp lánh trang điểm cho chiếc vương miện quyền lực. Đừng đứng trên đỉnh cao nhất, sải đôi cánh lửa khổng lồ bao trùm toàn bộ bầu trời, các bạn chính là hiện thân của sức mạnh bất tử và niềm tin sắt đá. Hãy để ngọn lửa thần thánh này tiếp tục lan tỏa, sưởi ấm những ước mơ lớn lao và thiêu rụi mọi rào cản cản bước. Huyền thoại bất tử gọi tên các bạn! 🦅🔥👑",
+        "🏰 ĐẾ CHẾ VĨ ĐẠI NHẤT ĐÃ ĐƯỢC THIẾT LẬP! Xin kính cẩn ngả mũ trước tài mưu lược và sức mạnh dời non lấp biển của {TEN} cùng Trợ Lý khi chính thức đóng đinh cột mốc {MOC} sừng sững giữa cõi mạng. Không phải là một cuộc xâm lăng ồn ào, các bạn đã dùng chính sự tận tâm, chuyên nghiệp và tình yêu thương vô bờ bến để thu phục nhân tâm, kiến tạo nên một vương triều hùng mạnh nhất lịch sử. Nền móng của đế chế này được đổ bằng mồ hôi, nước mắt và cả máu của những chiến binh kiên cường nhất. Sự vững chãi và quyền lực của nó là thứ không một thế lực nào có thể làm lung lay. Từ những vị vua không ngai, các bạn đã đường hoàng bước lên bảo tọa, đội vương miện danh giá và nhận lấy sự tung hô của vạn người. Khoảnh khắc lịch sử này sẽ mãi mãi được lưu truyền như một bản hùng ca bất diệt. Hãy tiếp tục cai trị bằng sự sáng suốt, tài năng thiên bẩm và để đế chế rực rỡ này mãi mãi trường tồn cùng thời gian. Vô cùng tự hào! 👑🏰💎"
+      ];
+
+      function getTemplatesForTier(tier) {
+        let numStr = (tier || "").replace(/[^0-9]/g, '');
+        let val = parseInt(numStr);
+        if (isNaN(val)) return msgsStart;
+
+        if (val >= 300) return msgsLegend;  
+        if (val >= 100) return msgsVip;     
+        if (val >= 50)  return msgsMid;     
+        return msgsStart;                   
+      }
+
+      function assignUniqueMessage(item) {
+        let templates = getTemplatesForTier(item.tier);
+        let usedIndices = currentData
+          .filter(i => i.id !== item.id && getTemplatesForTier(i.tier) === templates && i.templateIndex !== undefined)
+          .map(i => i.templateIndex);
+
+        let availableIndices = [];
+        for (let idx = 0; idx < templates.length; idx++) {
+          if (!usedIndices.includes(idx)) availableIndices.push(idx);
+        }
+
+        let chosenIndex;
+        if (availableIndices.length > 0) {
+          chosenIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+        } else {
+          let otherIndices = Array.from({length: templates.length}, (_, k) => k).filter(k => k !== item.templateIndex);
+          chosenIndex = otherIndices.length > 0 ? otherIndices[Math.floor(Math.random() * otherIndices.length)] : 0;
+        }
+
+        item.templateIndex = chosenIndex;
+        let baseMsg = templates[chosenIndex].replace(/{TEN}/g, item.name).replace(/{MOC}/g, item.tier);
+        item.baseMessage = baseMsg;
+        if (item.withAssistant === undefined) item.withAssistant = true; 
+        item.message = item.withAssistant ? item.baseMessage : item.baseMessage.replace(/( và| cùng) Trợ Lý/g, "");
+      }
+
+      function toggleAssistant(id, isChecked) {
+        let item = currentData.find(i => i.id === id);
+        if (!item) return;
+
+        item.withAssistant = isChecked;
+        item.message = item.withAssistant ? item.baseMessage : item.baseMessage.replace(/( và| cùng) Trợ Lý/g, "");
+
+        let textarea = document.getElementById(`msg-${item.id}`);
+        if (textarea) textarea.value = item.message;
+      }
+
+      function changeMessage(id) {
+        let item = currentData.find(i => i.id === id);
+        if (!item) return;
+
+        assignUniqueMessage(item);
+        let textarea = document.getElementById(`msg-${id}`);
+        if (textarea) textarea.value = item.message;
+        showToast(`Đã đổi lời chúc mới cho ${item.name}!`);
+      }
+
+      // ==============================================
+      // QUẢN LÝ THẺ TẠO NHANH (QUICK CREATE CARD)
+      // ==============================================
+      let manualState = {
+          templateIndex: null,
+          baseMessage: "",
+          lastTierLevel: null 
+      };
+
+      function handleTierInput(el) {
+          el.value = el.value.replace(/[^0-9]/g, '');
+          updateManualMessage();
+      }
+
+      function handleTierChange(el) {
+          let val = parseInt(el.value.replace(/[^0-9]/g, ''));
+          if (!isNaN(val)) {
+              let tierK = val >= 1000 ? Math.floor(val / 1000) : val;
+              el.value = tierK + "K";
+          } else {
+              el.value = "";
+          }
+          updateManualMessage();
+      }
+
+      function updateManualMessage() {
+          let name = document.getElementById('manual-name').value.trim() || "{TEN}";
+          let rawTier = document.getElementById('manual-tier').value.replace(/[^0-9]/g, '');
+          
+          let tierStr = "{MOC}";
+          if (rawTier !== "") {
+              let val = parseInt(rawTier);
+              let tierK = val >= 1000 ? Math.floor(val / 1000) : val;
+              tierStr = tierK + "K";
+          }
+
+          let templates = getTemplatesForTier(tierStr);
+          if (manualState.lastTierLevel !== templates || manualState.templateIndex === null) {
+              manualState.templateIndex = Math.floor(Math.random() * templates.length);
+              manualState.lastTierLevel = templates;
+          }
+
+          let baseMsg = templates[manualState.templateIndex].replace(/{TEN}/g, name).replace(/{MOC}/g, tierStr);
+          manualState.baseMessage = baseMsg;
+
+          let withAssistant = document.getElementById('manual-assistant').checked;
+          let finalMsg = withAssistant ? baseMsg : baseMsg.replace(/( và| cùng) Trợ Lý/g, "");
+          document.getElementById('manual-msg').value = finalMsg;
+
+          // Đồng bộ Đổi màu Thẻ & Badge
+          let st = getTierStyle(tierStr);
+          let card = document.getElementById('quick-create-card');
+          let title = document.getElementById('manual-title');
+          let badge = document.getElementById('manual-badge');
+
+          if(card && title && badge) {
+              card.style.borderColor = st.a;
+              card.style.boxShadow = `0 0 15px ${st.a}50`;
+              card.style.background = `linear-gradient(145deg, var(--bg-panel), ${st.b})`;
+              title.style.color = st.a;
+              title.style.textShadow = `0 0 10px ${st.a}40`;
+
+              if (tierStr !== "{MOC}") {
+                  badge.style.display = 'inline-flex';
+                  badge.style.alignItems = 'center';
+                  badge.style.background = st.b;
+                  badge.style.color = st.a;
+                  badge.style.border = `1px solid ${st.a}`;
+                  badge.style.boxShadow = `0 2px 10px ${st.b}`;
+                  badge.innerHTML = `${st.i} ${tierStr}`;
+              } else {
+                  badge.style.display = 'none';
+              }
+          }
+      }
+
+      function forceChangeManual() {
+          let rawTier = document.getElementById('manual-tier').value.replace(/[^0-9]/g, '');
+          let tierStr = "{MOC}";
+          if (rawTier !== "") {
+              let val = parseInt(rawTier);
+              let tierK = val >= 1000 ? Math.floor(val / 1000) : val;
+              tierStr = tierK + "K";
+          }
+          let templates = getTemplatesForTier(tierStr);
+          manualState.templateIndex = Math.floor(Math.random() * templates.length);
+          updateManualMessage();
+          showToast("Đã đổi lời chúc tạo nhanh!");
+      }
+
+      function copyManual() {
+          let msg = document.getElementById('manual-msg').value;
+          if (!msg) return;
+          navigator.clipboard.writeText(msg);
+          
+          let rawTier = document.getElementById('manual-tier').value.replace(/[^0-9]/g, '');
+          let tierStr = "";
+          if (rawTier !== "") {
+              let val = parseInt(rawTier);
+              let tierK = val >= 1000 ? Math.floor(val / 1000) : val;
+              tierStr = tierK + "K";
+          }
+          let st = getTierStyle(tierStr);
+          
+          if (st.c === 'epic-100k') confetti({ particleCount: 50, spread: 80, colors: ['#fef08a'], shapes: ['star'] });
+          else if (st.c === 'epic-500k') confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
+          else confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: [st.a, '#ffffff'] });
+          
+          showToast("Đã copy lời chúc tạo nhanh!");
+      }
+
+      // ==============================================
+
+      let currentData = [];
+      let currentTab = 'pending';
+      let dpInstance; let lastRequestedDate = ""; let isInitializing = false;
+      let focusedIndex = -1; 
+
+      runScript('getInitialData')
+        .then(initApp)
+        .catch(err => {
+            document.getElementById('app').innerHTML = '<div style="padding: 20px; color: #ef4444; font-weight: bold; text-align: center;">Lỗi kết nối hoặc chưa đúng tên Sheet.</div>';
+        });
+
+      function initApp(response) {
+        if (!response) { document.getElementById('app').innerHTML = '<div style="padding: 20px; color: #ef4444; font-weight: bold; text-align: center;">Lỗi kết nối hoặc chưa đúng tên Sheet.</div>'; return; }
+        isInitializing = true;
+        
+        const localeVi = { days: ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'], daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], daysMin: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'], months: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'], monthsShort: ['Thg 1', 'Thg 2', 'Thg 3', 'Thg 4', 'Thg 5', 'Thg 6', 'Thg 7', 'Thg 8', 'Thg 9', 'Thg 10', 'Thg 11', 'Thg 12'], today: 'Hôm nay', clear: 'Xóa', dateFormat: 'yyyy-MM-dd', firstDay: 0 };
+
+        if (!dpInstance) {
+          dpInstance = new AirDatepicker('#datePicker', {
+            locale: localeVi, autoClose: true, dateFormat: 'yyyy-MM-dd',
+            onSelect: function({formattedDate}) {
+              if(formattedDate && !isInitializing && formattedDate !== lastRequestedDate) { requestChangeDate(formattedDate); }
+            }
+          });
+        }
+        if(response.currentDate) {
+          lastRequestedDate = response.currentDate;
+          let p = response.currentDate.split('-');
+          dpInstance.selectDate(new Date(p[0], p[1]-1, p[2]), {silent: true}); 
+        }
+        isInitializing = false;
+        
+        currentData = response.messages;
+        currentData.forEach(item => {
+           if (item.status === 'pending') {
+               assignUniqueMessage(item);
+           }
+        });
+
+        populateFilters();
+        renderCards();
+        
+        setInterval(silentRefresh, 300000); 
+      }
+
+      function showToast(msg) {
+        let container = document.getElementById('toast-container');
+        let toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `✅ ${msg}`;
+        container.appendChild(toast);
+        setTimeout(() => { toast.classList.add('fade-out'); setTimeout(()=> toast.remove(), 400); }, 3000);
+      }
+
+      function toggleTheme() { document.body.classList.toggle('light-mode'); }
+
+      function requestChangeDate(selectedDate) {
+        if(!selectedDate || selectedDate === lastRequestedDate) return; 
+        lastRequestedDate = selectedDate; 
+        document.getElementById('app').innerHTML = `<div class="card skeleton"><div class="skel-title"></div><div class="skel-box"></div><div style="display:flex; gap:10px;"><div class="skel-btn"></div><div class="skel-btn"></div></div></div>`;
+        
+        runScript('changeDateAndFetchData', { dateString: selectedDate })
+          .then(initApp)
+          .catch(error => {
+             document.getElementById('app').innerHTML = `<div style="padding: 20px; color: #ef4444; font-weight: bold; text-align: center;">Lỗi tải dữ liệu: ${error.message}. Vui lòng kiểm tra lại tên Sheet.</div>`;
+          });
+      }
+
+      function silentRefresh() {
+        runScript('pollCurrentData')
+            .then(res => {
+                if(res && res.length > currentData.length) {
+                    document.getElementById('dot-new').style.display = 'block'; 
+                    showToast("Có dữ liệu Idol mới vừa cán mốc!");
+                }
+            })
+            .catch(e => console.log(e));
+      }
+
+      function changeTab(tabName) {
+        currentTab = tabName;
+        document.getElementById('tab-pending').classList.toggle('active', tabName === 'pending');
+        document.getElementById('tab-done').classList.toggle('active', tabName === 'done');
+        if(tabName === 'pending') document.getElementById('dot-new').style.display = 'none'; 
+        
+        let manualContainer = document.getElementById('manual-card-container');
+        if(manualContainer) manualContainer.style.display = (tabName === 'pending') ? 'grid' : 'none';
+        
+        renderCards();
+      }
+
+      function populateFilters() {
+        let uniqueTiers = [...new Set(currentData.map(item => item.tier))].filter(Boolean);
+        let filterSelect = document.getElementById('tierFilter');
+        filterSelect.innerHTML = '<option value="all">Tất cả</option>';
+        
+        uniqueTiers.sort((a, b) => {
+            let numA = parseInt((a || "").replace(/[^0-9]/g, '')) || 0;
+            let numB = parseInt((b || "").replace(/[^0-9]/g, '')) || 0;
+            return numA - numB;
+        }).forEach(tier => { 
+            filterSelect.innerHTML += `<option value="${tier}">${tier}</option>`; 
+        });
+      }
+
+      function getTierStyle(t) {
+        let numStr = (t || "").replace(/[^0-9]/g, '');
+        let val = parseInt(numStr);
+        
+        if (isNaN(val)) return { a:'#64748b', b:'rgba(100,116,139,0.1)', c:'', i:'🎯' };
+
+        if (val >= 500) return { a:'#ec4899', b:'rgba(236,72,153,0.15)', c:'epic-500k', i:'👑' };
+        if (val >= 300) return { a:'#ef4444', b:'rgba(239,68,68,0.15)', c:'epic-300k', i:'🔥' };
+        if (val >= 200) return { a:'#a855f7', b:'rgba(168,85,247,0.15)', c:'epic-200k', i:'💎' };
+        if (val >= 100) return { a:'#fbbf24', b:'rgba(251,191,36,0.15)', c:'epic-100k', i:'⭐' };
+        if (val >= 60)  return { a:'#0ea5e9', b:'rgba(14,165,233,0.15)', c:'epic-60k', i:'✨' };
+        if (val >= 50)  return { a:'#3b82f6', b:'rgba(59,130,246,0.15)', c:'epic-50k', i:'🚀' };
+        if (val >= 40)  return { a:'#3b82f6', b:'rgba(59,130,246,0.1)', c:'', i:'🚀' };
+        if (val >= 30)  return { a:'#10b981', b:'rgba(16,185,129,0.1)', c:'', i:'🌱' };
+        
+        return { a:'#64748b', b:'rgba(100,116,139,0.1)', c:'', i:'🎯' };
+      }
+
+      function renderCards() {
+        focusedIndex = -1; 
+        const appDiv = document.getElementById('app');
+        
+        document.getElementById('count-pending').innerText = currentData.filter(i => i.status === 'pending').length;
+        document.getElementById('count-done').innerText = currentData.filter(i => i.status === 'done').length;
+
+        let displayData = currentData.filter(i => i.status === currentTab);
+        let selTier = document.getElementById('tierFilter').value;
+        if(selTier !== 'all') displayData = displayData.filter(i => i.tier === selTier);
+        let sortMode = document.getElementById('sortSelect').value;
+        displayData.sort((a,b) => sortMode === 'asc' ? a.coinRaw - b.coinRaw : b.coinRaw - a.coinRaw);
+
+        if(displayData.length === 0) { appDiv.innerHTML = '<div class="loader" style="grid-column: 1/-1; padding-top: 50px;">Không có dữ liệu.</div>'; document.body.style.setProperty('--ambient-color', 'transparent'); return; }
+
+        let html = '';
+        let highestAmbient = '#131722'; 
+        let delayCounter = 0; 
+
+        displayData.forEach((item, idx) => {
+          let st = getTierStyle(item.tier);
+          let delay = delayCounter * 0.06;
+          delayCounter++;
+
+          if(idx === displayData.length - 1 && sortMode === 'asc') highestAmbient = st.a; 
+          else if (idx === 0 && sortMode === 'desc') highestAmbient = st.a;
+
+          if(currentTab === 'pending') {
+          html += `
+            <div class="card ${st.c} card-nav" id="card-${item.id}" style="--accent:${st.a}; --accent-bg:${st.b}; --accent-border:${st.a}55; animation-delay: ${delay}s;" data-idx="${idx}">
+              
+              <div class="card-header">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <h3 class="idol-name">${item.name}</h3><span class="badge">${st.i} ${item.tier}</span>
+                </div>
+                
+                <label class="toggle-switch" title="Bật/Tắt Trợ Lý">
+                  <span class="toggle-label">Trợ lý</span>
+                  <input type="checkbox" ${item.withAssistant !== false ? 'checked' : ''} onchange="toggleAssistant('${item.id}', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="coin-info"><span style="opacity:0.7">Điểm: </span> <span class="coin-val" style="margin-left:4px;">${item.coin}</span></div>
+              <textarea id="msg-${item.id}" class="msg-box" spellcheck="false">${item.message}</textarea>
+              
+              <div class="action-group">
+                <button class="btn btn-main btn-do-copy" onclick="handleCopy('${item.id}', ${item.row}, ${item.col}, '${st.c}', '${st.a}')">📋 Copy</button>
+                <button class="btn btn-sec" onclick="changeMessage('${item.id}')">🔀 Đổi chúc</button>
+              </div>
+              
+            </div>`;
+          } else {
+            html += `
+              <div class="card done card-nav" style="animation-delay: ${delay}s;" data-idx="${idx}">
+                <div class="card-header">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <h3 class="idol-name">${item.name}</h3>
+                        <span class="badge" style="color:#94a3b8; border-color:#475569">${st.i} ${item.tier}</span>
+                    </div>
+                </div>
+                <textarea id="msg-${item.id}" class="msg-box" readonly>${item.message}</textarea>
+                <div class="action-group">
+                  <button class="btn btn-sec" onclick="copyOnly('${item.id}')">🔄 Copy Lại</button>
+                  <button class="btn btn-sec" onclick="handleUndo('${item.id}', ${item.row}, ${item.col})">↩ Hoàn tác</button>
+                </div>
+              </div>`;
+          }
+        });
+        appDiv.innerHTML = html;
+        
+        if (currentTab === 'pending') {
+            document.body.style.setProperty('--ambient-color', highestAmbient);
+        } else {
+            document.body.style.setProperty('--ambient-color', 'transparent');
+        }
+      }
+
+      document.addEventListener('keydown', (e) => {
+         if(currentTab !== 'pending') return;
+         let cards = document.querySelectorAll('.card-nav');
+         if(cards.length === 0) return;
+         if(document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return; 
+
+         if(e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+             e.preventDefault();
+             if(focusedIndex > -1) cards[focusedIndex].classList.remove('key-focus');
+             focusedIndex = (focusedIndex + 1) % cards.length;
+             cards[focusedIndex].classList.add('key-focus');
+             cards[focusedIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+         } 
+         else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+             e.preventDefault();
+             if(focusedIndex > -1) cards[focusedIndex].classList.remove('key-focus');
+             focusedIndex = (focusedIndex - 1 + cards.length) % cards.length;
+             cards[focusedIndex].classList.add('key-focus');
+             cards[focusedIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+         }
+         else if (e.key === 'Enter') {
+             e.preventDefault();
+             if(focusedIndex > -1) { cards[focusedIndex].querySelector('.btn-do-copy').click(); }
+         }
+      });
+
+      function handleCopy(id, sheetRow, sheetCol, tierClass, particleColor) {
+        let textarea = document.getElementById(`msg-${id}`);
+        let finalMessage = textarea.value; 
+        
+        navigator.clipboard.writeText(finalMessage);
+        
+        if (tierClass === 'epic-100k') confetti({ particleCount: 50, spread: 80, colors: ['#fef08a'], shapes: ['star'] });
+        else if (tierClass === 'epic-500k') confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
+        else confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: [particleColor, '#ffffff'] });
+        
+        showToast("Đã lưu vào bộ nhớ tạm!");
+
+        let itemIndex = currentData.findIndex(item => item.id === id);
+        if(itemIndex > -1) {
+            currentData[itemIndex].status = 'done'; 
+            currentData[itemIndex].message = finalMessage; 
+        }
+        renderCards(); 
+        
+        runScript('markAsCopied', { row: sheetRow, col: sheetCol }).catch(e => console.log(e));
+      }
+
+      function copyOnly(id) {
+        let val = document.getElementById(`msg-${id}`).value;
+        navigator.clipboard.writeText(val);
+        showToast("Đã copy lại!");
+      }
+
+      function handleUndo(id, sheetRow, sheetCol) {
+        let idx = currentData.findIndex(i => i.id === id);
+        if(idx > -1) currentData[idx].status = 'pending'; 
+        renderCards(); 
+        runScript('unmarkAsCopied', { row: sheetRow, col: sheetCol }).catch(e => console.log(e)); 
+      }
+    </script>
+  </body>
+</html>
