@@ -117,37 +117,25 @@
     .vip-badge::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); animation: shine-badge 2s infinite; }
     @keyframes shine-badge { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
 
-    /* ========================================= */
-    /* CHIẾN LƯỢC MOBILE CHO ADMIN FORM          */
-    /* ========================================= */
+    /* CSS MOBILE */
     @media (max-width: 768px) {
-      /* Toolbar và các nút bấm gập lại cho gọn */
       .toolbar { flex-direction: column; gap: 15px; padding: 15px 10px; align-items: stretch; }
       .tool-btns { flex-wrap: wrap; justify-content: center; gap: 6px; }
       .tool-btns button { padding: 8px 12px; font-size: 0.75rem; margin-left: 0; flex: 1 1 30%; text-align: center;}
       .tool-btns select { width: 100% !important; margin-bottom: 5px; }
-      
       .main-content { padding: 0 5px; }
       .table-container { max-height: 70vh; border-width: 1px; border-radius: 8px; -webkit-overflow-scrolling: touch; }
-      
-      /* Thu nhỏ kích thước cột */
       .group-cell { width: 55px !important; min-width: 55px !important; max-width: 55px !important; font-size: 0.6rem; padding: 0 2px; }
       .name-cell { width: 110px !important; min-width: 110px !important; max-width: 110px !important; font-size: 0.7rem; }
       th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
-      
-      /* Cố định cột Nhóm và Tên (Hỗ trợ cả Dark Mode) */
       thead th.group-cell, tbody td.group-cell { position: sticky; left: 0; z-index: 11; background: var(--card-bg); border-right: 1px solid var(--border-color) !important; }
       thead th.name-cell, tbody td.name-cell { position: sticky; left: 55px; z-index: 11; background: var(--card-bg); border-right: 1px solid var(--border-color) !important; box-shadow: 3px 0 5px rgba(0,0,0,0.1); }
       thead th.group-cell, thead th.name-cell { background: var(--table-header); z-index: 12; }
-      
-      /* Popup Modals */
       .modal-box { width: 92%; padding: 15px; box-sizing: border-box; }
       .modal-actions { flex-direction: column-reverse; gap: 8px; }
       .modal-actions button { width: 100%; text-align: center; }
       #toast { left: 50%; transform: translateX(-50%) translateY(20px); right: auto; bottom: 20px; width: 90%; text-align: center; }
       #toast.show { transform: translateX(-50%) translateY(0); }
-      
-      /* Trình chọn ngày tháng Flatpickr (Nếu bị tràn) */
       .flatpickr-calendar { width: 300px !important; transform: scale(0.9); transform-origin: top center; }
     }
   </style>
@@ -290,6 +278,9 @@
   </div>
 
   <script>
+    // BẮT BUỘC ĐIỀN LINK GOOGLE APPS SCRIPT WEB APP VÀO ĐÂY
+    const API_URL = "___ĐIỀN_LINK_WEB_APP_CỦA_BẠN_VÀO_ĐÂY___"; 
+
     let employeesData = [], leavesData = [], badgesData = {};
     let isSyncing = false; 
     let today = new Date();
@@ -299,6 +290,24 @@
     const MAX_QUOTA = 5; 
     let fpInstance = null; 
     let draftQueue = []; 
+
+    // HÀM GỌI API CHUNG CHO TẤT CẢ
+    async function callAPI(action, payload = {}) {
+      try {
+        const response = await fetch(API_URL, {
+          redirect: "follow",
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: action, payload: payload })
+        });
+        const result = await response.json();
+        if (result.status === 'success') return result.data;
+        throw new Error(result.message || "Lỗi máy chủ");
+      } catch (error) {
+        console.error("API Error:", error);
+        throw error;
+      }
+    }
 
     document.addEventListener("DOMContentLoaded", () => { updateMonthLabel(); refreshData(); });
 
@@ -342,16 +351,12 @@
       if(document.getElementById('btnSaveChanges')) document.getElementById('btnSaveChanges').style.display = 'none'; 
       showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
       
-      google.script.run.withSuccessHandler(data => { 
-          try {
-             if (data && data.error) throw new Error(data.error);
-             if (!data) throw new Error("Dữ liệu rỗng");
-             employeesData = data.employees || []; leavesData = data.leaves || []; badgesData = data.badges || {}; 
-             isSyncing = false; renderTable(); populatePersonSelect(); showToast("✅ Đã cập nhật xong!"); 
-          } catch(e) {
-             showToast("Lỗi Data: " + e.message, false, true); isSyncing = false;
-          }
-      }).withFailureHandler(err => { showToast("Lỗi Script: " + err.message, false, true); isSyncing = false; }).getInitialData();
+      callAPI('getInitialData')
+        .then(data => { 
+          if(data && data.employees) { employeesData = data.employees; leavesData = data.leaves || []; badgesData = data.badges || {}; renderTable(); populatePersonSelect(); }
+          isSyncing = false; showToast("✅ Đã cập nhật xong!"); 
+        })
+        .catch(err => { showToast("Lỗi Data: " + err.message, false, true); isSyncing = false; });
     }
 
     function openBadgeLibraryModal() {
@@ -366,7 +371,10 @@
       let badgeName = document.getElementById("newCustomBadgeName").value.trim();
       if (!badgeName) return showToast("Vui lòng nhập tên Badge!", false, true);
       closeBadgeLibraryModal(); showToast("⏳ Đang tạo Badge ngẫu nhiên...", true);
-      google.script.run.withSuccessHandler(res => { if (res === "SUCCESS") { showToast("✅ Tạo Badge thành công!"); refreshData(); } else showToast(res, false, true); }).createNewBadge(badgeName);
+      
+      callAPI('createNewBadge', { badgeName: badgeName })
+        .then(res => { if (res === "SUCCESS") { showToast("✅ Tạo Badge thành công!"); refreshData(); } else showToast(res, false, true); })
+        .catch(err => { showToast("Lỗi API", false, true); });
     }
 
     function populatePersonSelect() {
@@ -466,11 +474,14 @@
     function saveBulkChanges() {
       if (draftQueue.length === 0) return;
       isSyncing = true; showToast("⏳ Đang đẩy dữ liệu lên Google Sheet...", true);
-      google.script.run.withSuccessHandler(res => {
+      
+      callAPI('processBatchChanges', { payloadStr: JSON.stringify(draftQueue) })
+        .then(res => {
           isSyncing = false;
           if (res === "SUCCESS") { showToast("✅ Đã lưu thành công!"); draftQueue = []; document.getElementById('btnSaveChanges').style.display = 'none'; refreshData(); } 
           else { showToast("Lỗi Data: " + res, false, true); refreshData(); }
-      }).withFailureHandler(err => { isSyncing = false; showToast("LỖI KẾT NỐI", false, true); }).processBatchChanges(JSON.stringify(draftQueue));
+        })
+        .catch(err => { isSyncing = false; showToast("LỖI KẾT NỐI", false, true); });
     }
 
     function drag(ev, name, date) { ev.dataTransfer.setData("dragName", name); ev.dataTransfer.setData("oldDate", date); }
@@ -492,7 +503,10 @@
         let lIdx = leavesData.findIndex(l => l.name === dragName && l.date === oldDate);
         if (lIdx > -1) leavesData[lIdx].date = newDate;
         renderTable(); showToast("⏳ Đang đổi ngày ngầm...", true);
-        google.script.run.withSuccessHandler(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã đổi ngày thành công!"); else refreshData(); }).adminMoveLeave(dragName, oldDate, newDate);
+        
+        callAPI('adminMoveLeave', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
+            .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã đổi ngày thành công!"); else refreshData(); })
+            .catch(err => { isSyncing = false; refreshData(); });
       }; document.getElementById('customModal').classList.add('active');
     }
 
@@ -515,7 +529,10 @@
       document.getElementById('modalRejectBtn').style.display = 'none'; const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Duyệt Ngay";
       btn.onclick = () => { 
         closeModal(); isSyncing = true; leavesData.forEach(l => { if(l.status === "Pending") { l.status = "Approved"; l.swapFrom = ""; } }); renderTable(); showToast("⏳ Đang duyệt toàn bộ ngầm...", true);
-        google.script.run.withSuccessHandler(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã duyệt tất cả!"); else refreshData(); }).approveAllPendingLeaves();
+        
+        callAPI('approveAllPendingLeaves')
+            .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã duyệt tất cả!"); else refreshData(); })
+            .catch(err => { isSyncing = false; refreshData(); });
       }; document.getElementById('customModal').classList.add('active');
     }
 
@@ -525,7 +542,10 @@
       else if (action === "DUYỆT") { let idx = leavesData.findIndex(l => l.name === name && l.date === dateStr); if (idx > -1) { leavesData[idx].status = "Approved"; leavesData[idx].swapFrom = ""; } } 
       else if (action === "TỪ CHỐI ĐỔI") { let idx = leavesData.findIndex(l => l.name === name && l.swapFrom === dateStr && l.status === "Pending"); if(idx > -1) leavesData.splice(idx, 1); }
       renderTable(); showToast("⏳ Đang xử lý ngầm...", true);
-      google.script.run.withSuccessHandler(res => { isSyncing = false; if (res === "SUCCESS") showToast("✅ Thành công!"); else refreshData(); }).toggleLeaveAdmin(role, name, dateStr, action);
+      
+      callAPI('toggleLeaveAdmin', { role: role, name: name, dateStr: dateStr, actionName: action })
+        .then(res => { isSyncing = false; if (res === "SUCCESS") showToast("✅ Thành công!"); else refreshData(); })
+        .catch(err => { isSyncing = false; refreshData(); });
     }
 
     function closeModal() { document.getElementById('customModal').classList.remove('active'); }
@@ -536,7 +556,11 @@
       const val = document.getElementById("personSelect").value;
       if (!val) return showToast("⚠️ Vui lòng chọn cá nhân/nhóm trước khi tạo link!", false, true);
       showToast("⏳ Đang tạo link...", true); 
-      google.script.run.withSuccessHandler(url => { const fullUrl = url + "?page=mc&target=" + encodeURIComponent(val); navigator.clipboard.writeText(fullUrl).then(() => { showToast("🔗 Đã copy link đăng ký thành công!"); }); }).getAppUrl();
+      
+      // Thay đổi đường dẫn gốc cho phù hợp với tên file MCForm trên Vercel của bạn
+      let baseUrl = window.location.origin + "/MCForm.html"; // Tuỳ chỉnh tên file nếu cần
+      const fullUrl = baseUrl + "?target=" + encodeURIComponent(val); 
+      navigator.clipboard.writeText(fullUrl).then(() => { showToast("🔗 Đã copy link đăng ký thành công!"); });
     }
     
     function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); document.getElementById('newEmpName').value = ''; document.getElementById('newEmpRole').value = 'LIVESTEAM'; updateGroupDropdown(); }
@@ -554,7 +578,10 @@
       if (group === 'CUSTOM') group = document.getElementById('newEmpGroupCustom').value.trim();
       if (!name || !group) return showToast("Vui lòng điền đủ Tên và Nhóm!", false, true);
       closeAddEmployeeModal(); showToast("⏳ Đang lưu nhân sự...", true);
-      google.script.run.withSuccessHandler(res => { if (res === "SUCCESS") { showToast("✅ Đã thêm nhân sự thành công!"); refreshData(); } else { showToast(res, false, true); } }).addEmployee(role, group, name);
+      
+      callAPI('addEmployee', { role: role, group: group, name: name })
+        .then(res => { if (res === "SUCCESS") { showToast("✅ Đã thêm nhân sự thành công!"); refreshData(); } else { showToast(res, false, true); } })
+        .catch(err => { showToast("Lỗi kết nối", false, true); });
     }
 
     function toggleExportMode() {
@@ -705,7 +732,6 @@
           }
       }
       
-      // Đổi width: ${totalWidth}px thành width: max-content
       let html = `<div style="background: #ffffff; padding: 20px; width: max-content; font-family: 'Inter', sans-serif; box-sizing: border-box;">`;
       
       if(matchCount === 0) {
