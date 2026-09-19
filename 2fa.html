@@ -20,7 +20,7 @@
         .password-text { transition: opacity 0.12s ease-in-out; opacity: 1; }
         .password-text.fade-out { opacity: 0; }
         
-        /* Cố định Sidebar trên Mobile */
+        /* Cố định Sidebar trên PC */
         @media (min-width: 768px) {
             aside.collapsed { width: 76px !important; min-width: 76px !important; }
             aside.collapsed .collapse-text, aside.collapsed .section-title, aside.collapsed .user-info-text { display: none !important; }
@@ -30,38 +30,56 @@
             aside.collapsed .logo-box { margin: 0 auto; }
         }
 
-        /* --- LOGIC HIỆU ỨNG TRƯỢT MƯỢT MÀ (ACCORDION) TRÊN MOBILE --- */
+        /* --- LOGIC HIỆU ỨNG BOTTOM SHEET (KHUNG RIÊNG MỜ NỀN) TRÊN MOBILE --- */
         @media (max-width: 767px) {
-            .mobile-collapsible {
-                display: flex !important;
-                flex-direction: column;
-                max-height: 0;
-                padding-top: 0 !important;
-                padding-bottom: 0 !important;
-                margin: 0 !important;
-                border: none !important;
-                overflow: hidden;
-                opacity: 0;
-                transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out, padding 0.4s ease;
+            .mobile-collapsible { display: none !important; }
+            
+            tr.mobile-expanded {
+                position: fixed; inset: 0; z-index: 99999;
+                background: rgba(15, 23, 42, 0.6) !important; 
+                backdrop-filter: blur(5px);
+                flex-direction: column; justify-content: flex-end;
+                overflow-y: auto; padding: 0 !important; border: none !important;
+                animation: fadeInOverlay 0.25s ease-out forwards;
+                border-radius: 0 !important;
             }
+            
+            @keyframes fadeInOverlay {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            tr.mobile-expanded .mobile-header-row { display: none !important; }
+            tr.mobile-expanded .mobile-close-area { display: block !important; flex: 1 1 auto; min-height: 40px; }
+            
+            tr.mobile-expanded .mobile-sheet-header { 
+                display: flex !important; 
+                transform: translateY(100%); opacity: 0;
+                animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+            
             tr.mobile-expanded .mobile-collapsible {
-                max-height: 600px; 
-                padding-top: 0.75rem !important; 
-                padding-bottom: 0.75rem !important;
-                opacity: 1;
-                border-bottom: 1px solid #f1f5f9 !important; 
+                display: flex !important; flex-direction: column;
+                background: white; padding: 1rem 1.25rem !important;
+                border-bottom: 1px solid #f1f5f9 !important; border-top: none !important;
+                transform: translateY(100%); opacity: 0;
+                animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             }
+            
             html.dark tr.mobile-expanded .mobile-collapsible {
-                border-bottom-color: #334155 !important;
+                background: #1e293b; border-bottom: 1px solid #334155 !important;
             }
+            
             tr.mobile-expanded .mobile-collapsible:last-child {
-                border-bottom: none !important;
+                padding-bottom: 2rem !important; border-bottom: none !important;
+            }
+
+            @keyframes slideUpSheet {
+                from { transform: translateY(100%); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
             }
         }
         
-        /* Đệm cuộn để Header không bị khuất dưới thanh tìm kiếm trên mobile */
-        tr { scroll-margin-top: 90px; }
-
         @keyframes custom-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-custom-spin { animation: custom-spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
         
@@ -445,6 +463,7 @@
         let pendingRevealAction = null;
         let configDevices = [];
         let originalDevicesForLog = []; 
+        let currentlyExpandedRowIndex = -1; // Theo dõi dòng đang mở trên mobile
 
         function fetchConfigDevices() {
             if (!sessionPass) return;
@@ -784,29 +803,28 @@
             }
         }
         
-        // CẬP NHẬT: Xử lý tập trung và đóng các tab khác mượt mà
+        // CẬP NHẬT: Trình diễn Khung Modal Bottom Sheet
         function toggleMobileRow(index) {
             const allRows = document.querySelectorAll('tr[data-index]');
+            let hasExpanded = false;
+            
             allRows.forEach(row => {
                 const rIndex = row.getAttribute('data-index');
-                const icon = document.getElementById(`icon-expand-${rIndex}`);
-                
                 if (rIndex == index) {
-                    const isOpening = !row.classList.contains('mobile-expanded');
                     row.classList.toggle('mobile-expanded');
-                    if (icon) icon.classList.toggle('rotate-180');
-                    
-                    if (isOpening) {
-                        setTimeout(() => {
-                            // Chuyển block: 'center' thành 'start' để căn khớp đỉnh màn hình
-                            row.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 350); 
+                    if (row.classList.contains('mobile-expanded')) {
+                        hasExpanded = true;
+                        currentlyExpandedRowIndex = index;
+                    } else {
+                        if (currentlyExpandedRowIndex == index) currentlyExpandedRowIndex = -1;
                     }
                 } else {
                     row.classList.remove('mobile-expanded');
-                    if (icon) icon.classList.remove('rotate-180');
                 }
             });
+            
+            // Tắt cuộn thân trang web khi bật Bottom Sheet
+            document.body.style.overflow = hasExpanded ? 'hidden' : '';
         }
 
         function renderTable(data) {
@@ -918,8 +936,8 @@
                 html += `
                     <tr class="hover:bg-indigo-50/40 transition stagger-row flex flex-col md:table-row bg-white dark:bg-slate-800 md:bg-transparent border border-slate-200 dark:border-slate-700 md:border-none md:border-b rounded-xl md:rounded-none shadow-sm md:shadow-none mb-4 md:mb-0 relative" data-index="${index}" style="animation-delay: ${loopIndex * 0.04}s">
                         
-                        <!-- 1. MOBILE HEADER (Luôn hiện trên mobile) -->
-                        <div class="md:hidden order-1 flex items-center justify-between p-3.5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 rounded-t-xl cursor-pointer sticky top-[60px] z-10 backdrop-blur-md" onclick="toggleMobileRow(${index})">
+                        <!-- 1. MOBILE HEADER (Sẽ ẨN khi ấn bung Modal) -->
+                        <td class="mobile-header-row md:hidden p-3.5 flex items-center justify-between cursor-pointer rounded-t-xl" onclick="toggleMobileRow(${index})">
                             <div class="flex items-center gap-3">
                                 <input type="checkbox" class="cyber-checkbox row-checkbox shrink-0" value="${index}" onclick="event.stopPropagation(); updateBatchSelection()">
                                 <div class="flex flex-col">
@@ -934,7 +952,22 @@
                                     <i id="icon-expand-${index}" class="fa-solid fa-chevron-down text-[11px] transition-transform duration-300"></i>
                                 </div>
                             </div>
-                        </div>
+                        </td>
+
+                        <!-- 1.5. MOBILE BACKDROP (Lớp mờ click tắt, CHỈ HIỆN KHI BUNG MODAL) -->
+                        <td class="mobile-close-area hidden md:hidden flex-1 w-full cursor-pointer bg-transparent" onclick="event.stopPropagation(); toggleMobileRow(${index})"></td>
+
+                        <!-- 1.6. MOBILE SHEET HEADER (Thanh tiêu đề Modal nằm trên cùng) -->
+                        <td class="mobile-sheet-header hidden md:hidden w-full bg-white dark:bg-slate-800 rounded-t-[1.5rem] p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0 relative">
+                            <div class="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
+                            <div class="mt-2">
+                                <h3 class="font-bold text-indigo-600 dark:text-indigo-400 text-[11px] uppercase tracking-wider mb-0.5">${escapeHtml(item.team)}</h3>
+                                <p class="font-bold text-slate-800 dark:text-white text-lg">${escapeHtml(item.tenIdol) || 'Trống'}</p>
+                            </div>
+                            <button onclick="event.stopPropagation(); toggleMobileRow(${index})" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-rose-500 transition-colors shrink-0 mt-1">
+                                <i class="fa-solid fa-xmark text-sm"></i>
+                            </button>
+                        </td>
 
                         <!-- 2. CHECKBOX (Chỉ hiện trên PC) -->
                         <td class="hidden md:table-cell py-4 px-2 border border-slate-300 dark:border-slate-700 checkbox-cell align-middle bg-slate-50/30 dark:bg-slate-800/30">
@@ -944,8 +977,8 @@
                         <!-- 3. TEAM (Chỉ hiện trên PC) -->
                         <td class="hidden md:table-cell py-4 px-4 font-bold text-indigo-700 bg-slate-50/30 whitespace-nowrap">${escapeHtml(item.team)}</td>
 
-                        <!-- 4. EMAIL & CODE (Thứ tự 2 trên Mobile) -->
-                        <td class="mobile-collapsible order-2 md:order-none md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
+                        <!-- 4. EMAIL & CODE (Nằm trong Modal trên Mobile) -->
+                        <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-envelope"></i> Email & Lấy Code</div>
                             
                             <div class="font-medium text-slate-900 flex items-center justify-between gap-2 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 shadow-sm w-full md:w-[240px] mb-2">
@@ -977,8 +1010,8 @@
                             </div>
                         </td>
 
-                        <!-- 5. PASS TIKTOK (Thứ tự 3 trên Mobile) -->
-                        <td class="mobile-collapsible order-3 md:order-none md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
+                        <!-- 5. PASS TIKTOK -->
+                        <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-brands fa-tiktok"></i> Pass Tiktok</div>
                             
                             <div class="text-[13px] text-slate-700 flex items-center justify-between gap-2 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 w-full md:w-[200px]">
@@ -990,33 +1023,47 @@
                             </div>
                         </td>
 
-                        <!-- 6. IDOL / TIKTOK ID (Thứ tự 4 trên Mobile) -->
-                        <td class="mobile-collapsible order-4 md:order-none md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
+                        <!-- 6. IDOL / TIKTOK ID -->
+                        <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
                             <div class="hidden md:block font-medium text-slate-900 break-words">${escapeHtml(item.tenIdol)}</div>
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5"><i class="fa-solid fa-at"></i> TikTok ID</div>
                             ${tiktokIdHtml || '<span class="text-[12px] text-slate-400 italic">Trống</span>'}
                         </td>
 
-                        <!-- 7. THIẾT BỊ (Thứ tự 5 trên Mobile) -->
-                        <td class="mobile-collapsible order-5 md:order-none md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top md:min-w-[250px]">
+                        <!-- 7. THIẾT BỊ -->
+                        <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top md:min-w-[250px]">
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-mobile-screen-button"></i> Thiết bị</div>
                             ${thietBiHtml}
                         </td>
 
-                        <!-- 8. ĐẠI LÍ (Thứ tự 6 trên Mobile) -->
-                        <td class="mobile-collapsible order-6 md:order-none md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top rounded-b-xl md:rounded-none">
+                        <!-- 8. ĐẠI LÍ -->
+                        <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top rounded-b-xl md:rounded-none">
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-sitemap"></i> Đại lí</div>
                             <div class="text-[13px] font-medium text-slate-600 align-top break-words sensitive-data">${escapeHtml(item.daiLi)}</div>
                         </td>
 
-                        <!-- 9. OTP (Thứ tự 7 trên Mobile, luôn nằm dưới cùng khung khi trượt xuống) -->
-                        <td class="mobile-collapsible order-7 md:order-none flex flex-col md:table-cell p-3 md:py-4 md:px-4 md:bg-indigo-50/10 border-b md:border-b-0 border-slate-100 dark:border-slate-700 md:border-none align-top rounded-b-xl md:rounded-none" data-key="${escapeHtml(item.key2fa)}" data-index="${index}" data-otp-active="false">
+                        <!-- 9. OTP (Nằm dưới cùng trên Mobile) -->
+                        <td class="mobile-collapsible flex flex-col md:table-cell p-3 md:py-4 md:px-4 md:bg-indigo-50/10 border-b md:border-b-0 border-slate-100 dark:border-slate-700 md:border-none align-top rounded-b-xl md:rounded-none" data-key="${escapeHtml(item.key2fa)}" data-index="${index}" data-otp-active="false">
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-shield-halved"></i> Mã 2FA (Live OTP)</div>
                             ${otpHtml}
                         </td>
                     </tr>`;
             });
             tbody.innerHTML = html;
+            
+            // Xử lý giữ lại Bottom Sheet đang mở sau khi thao tác Lưu / Sửa
+            if (currentlyExpandedRowIndex !== -1 && window.innerWidth <= 767) {
+                const rowToExpand = document.querySelector(`tr[data-index="${currentlyExpandedRowIndex}"]`);
+                if (rowToExpand) {
+                    rowToExpand.classList.add('mobile-expanded');
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    currentlyExpandedRowIndex = -1;
+                    document.body.style.overflow = '';
+                }
+            } else {
+                document.body.style.overflow = '';
+            }
         }
 
         function handlePeekMove(e, container) { 
@@ -1187,14 +1234,14 @@
             }); 
         }
         
-        // CẬP NHẬT: Tính năng Polling 30s để đợi mã Email
+        // CẬP NHẬT: Quét tự động Code (Polling)
         function fetchEmailCodeUI(email, index, btn) {
             const box = document.getElementById(`code-box-${index}`);
             const valSpan = document.getElementById(`code-val-${index}`);
             const badge = document.getElementById(`mail-badge-${index}`);
             
             if (!email || email === "") { showToast('Không có Email', 'error'); return; }
-            if (btn.getAttribute('data-polling') === 'true') return; // Chặn bấm liên tục
+            if (btn.getAttribute('data-polling') === 'true') return; 
             
             checkPinRequired(() => {
                 btn.setAttribute('data-polling', 'true');
@@ -1204,44 +1251,40 @@
                 box.classList.remove('hidden'); 
                 setTimeout(()=>box.classList.remove('opacity-0', '-translate-y-2'), 10);
                 
-                if (badge) badge.classList.add('hidden'); // Ẩn badge cũ nếu có
+                if (badge) badge.classList.add('hidden'); 
                 
                 let attempts = 0;
-                const maxAttempts = 6; // 6 lần x 5s = 30s
-                const intervalTime = 5000; // 5 giây
+                const maxAttempts = 6; // Đợi tối đa 30s (6 lần quét mỗi 5s)
+                const intervalTime = 5000; 
 
                 function pollCode() {
                     attempts++;
                     
-                    valSpan.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i><span class="text-[10px] ml-2 text-indigo-300 font-medium">Đang đợi mã (${30 - (attempts-1)*5}s)...</span>`; 
+                    // CẬP NHẬT: Chữ ngắn gọn, không đếm giây làm dài khung
+                    valSpan.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i><span class="text-[11px] ml-1.5 text-indigo-300 font-medium">Đang đợi mã...</span>`; 
                     valSpan.classList.remove('text-rose-500'); 
                     
                     runScript('getEmailVerificationCode', { targetEmail: email, pass: sessionPass })
                         .then(code => {
-                            // Thành công: Tìm thấy code hợp lệ
                             if(!code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && !code.includes("nha")) { 
                                 btn.removeAttribute('data-polling');
                                 btn.innerHTML = originalHTML; 
                                 valSpan.innerText = code; 
                                 
-                                // Hiện Badge báo thư tới
                                 if (badge) {
                                     badge.classList.remove('hidden');
                                     badge.innerText = "1";
                                 }
 
-                                // Báo Toast nếu là PC
                                 if (window.innerWidth >= 768) {
                                     showToast(`Có mã mới từ Email: ${code}`, 'success', 5000); 
                                 } else {
                                     showToast('Đã lấy được mã!', 'success'); 
                                 }
                             } 
-                            // Nếu vẫn báo không có và chưa hết giờ: Quét tiếp
                             else if (attempts < maxAttempts) {
                                 setTimeout(pollCode, intervalTime);
                             }
-                            // Hết 30 giây: Hủy
                             else {
                                 btn.removeAttribute('data-polling');
                                 btn.innerHTML = originalHTML; 
@@ -1259,7 +1302,7 @@
                         });
                 }
                 
-                pollCode(); // Khởi chạy lần 1
+                pollCode(); 
             });
         }
 
@@ -1506,11 +1549,11 @@
             let oldDevice = mangThietBi[tbIndex];
 
             if (!newVal) {
-                // Xóa máy
+                // Xóa máy - Gọi hàm Log
                 mangThietBi.splice(tbIndex, 1); 
                 runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: oldDevice, pass: sessionPass }).catch(e=>console.log(e));
             } else {
-                // Sửa tên máy
+                // Sửa tên máy -> Không gọi Log theo yêu cầu
                 mangThietBi[tbIndex] = newVal;
             }
             
@@ -1567,6 +1610,7 @@
             
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').filter(tb => tb.trim() !== '');
             
+            // Lưu lại state ban đầu để so sánh khi thêm mới / xoá
             originalDevicesForLog = mangThietBi.map(x => x.trim());
 
             if (mangThietBi.length === 0) {
