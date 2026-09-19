@@ -233,24 +233,6 @@
         </div>
     </div>
 
-    <!-- MÀN HÌNH MÃ PIN -->
-    <div id="pinModal" class="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-        <div class="bg-white p-6 rounded-2xl shadow-xl w-[320px] border border-slate-200 text-center transform scale-95 transition-transform duration-300" id="pinModalContent">
-            <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
-                <i class="fa-solid fa-lock"></i>
-            </div>
-            <h3 class="text-lg font-bold text-slate-800 mb-1">Xác thực mã PIN</h3>
-            <p class="text-xs text-slate-500 mb-4">Nhập mã PIN 4 số để thao tác</p>
-            
-            <input type="password" id="pinInput" maxlength="4" placeholder="••••" class="w-full text-center tracking-[1em] text-2xl font-bold px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2 transition-all" oninput="checkPinAuto()">
-            <p id="pinError" class="text-rose-500 text-xs font-bold mb-3 hidden">Mã PIN không đúng!</p>
-            
-            <div class="mt-2">
-                <button onclick="closePinModal()" class="btn-ripple w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl transition text-sm cursor-pointer">Hủy thao tác (Esc)</button>
-            </div>
-        </div>
-    </div>
-
     <!-- MÀN HÌNH QUẢN LÝ THIẾT BỊ (DEVICE MODAL) -->
     <div id="deviceModal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-xl w-[500px] max-w-[95%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="deviceModalContent">
@@ -453,14 +435,10 @@
             });
         }
 
-        const REVEAL_PIN = "0908"; 
-
         let allData = [];
         let currentSheetName = 'Idol Team';
         let sessionPass = "";
         let inactivityTimer;
-        let pinUnlockExpiry = 0; 
-        let pendingRevealAction = null;
         let configDevices = [];
         let originalDevicesForLog = []; 
         let currentlyExpandedRowIndex = -1; // Theo dõi dòng đang mở trên mobile
@@ -476,7 +454,7 @@
             if (e.key === 'Escape') {
                 if (!document.getElementById('deviceModal').classList.contains('hidden')) closeDeviceEditor();
                 if (!document.getElementById('scanModal').classList.contains('hidden')) closeScanModal();
-                if (!document.getElementById('pinModal').classList.contains('hidden')) closePinModal();
+                
                 const activeInlineInputs = document.querySelectorAll('input[id^="inline-edit-"]');
                 if(activeInlineInputs.length > 0) renderTable(allData); 
                 document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden'));
@@ -629,7 +607,6 @@
 
         function lockApp() {
             sessionPass = ""; 
-            pinUnlockExpiry = 0; 
             document.getElementById('loginScreen').classList.remove('hidden');
             setTimeout(() => {
                 document.getElementById('loginScreen').classList.remove('opacity-0', 'pointer-events-none');
@@ -639,60 +616,6 @@
             document.getElementById('dataTableBody').innerHTML = '';
             allData = []; 
             clearTimeout(inactivityTimer);
-        }
-
-        function checkPinRequired(actionCallback) {
-            if (Date.now() < pinUnlockExpiry) {
-                actionCallback();
-            } else { 
-                pendingRevealAction = actionCallback; 
-                showPinModal(); 
-            }
-        }
-
-        function showPinModal() {
-            const modal = document.getElementById('pinModal');
-            const content = document.getElementById('pinModalContent');
-            const input = document.getElementById('pinInput');
-            
-            document.getElementById('pinError').classList.add('hidden');
-            input.classList.remove('animate-shake', 'input-error'); 
-            input.value = '';
-            
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); input.focus(); }, 10);
-        }
-
-        function closePinModal(isSuccess = false) {
-            const modal = document.getElementById('pinModal');
-            const content = document.getElementById('pinModalContent');
-            modal.classList.add('opacity-0'); 
-            content.classList.add('scale-95');
-            setTimeout(() => { modal.classList.add('hidden'); if (!isSuccess) pendingRevealAction = null; }, 300);
-        }
-
-        function checkPinAuto() {
-            const input = document.getElementById('pinInput');
-            const val = input.value;
-            input.classList.remove('animate-shake', 'input-error'); 
-            document.getElementById('pinError').classList.add('hidden');
-            
-            if (val.length === 4) {
-                if (val === REVEAL_PIN) {
-                    pinUnlockExpiry = Date.now() + 15 * 60 * 1000; 
-                    closePinModal(true); 
-                    showToast('Xác thực thành công. Đã mở khoá các chức năng!', 'success');
-                    
-                    if (pendingRevealAction) { 
-                        pendingRevealAction(); 
-                        pendingRevealAction = null; 
-                    }
-                } else {
-                    document.getElementById('pinError').classList.remove('hidden'); 
-                    input.classList.add('animate-shake', 'input-error');
-                    setTimeout(() => { input.value = ''; input.focus(); }, 400); 
-                }
-            }
         }
 
         function loadData() {
@@ -900,10 +823,10 @@
                             </div>
                             
                             <div class="absolute right-0 top-0 bottom-0 pr-1 pl-5 flex items-center gap-0.5 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 bg-gradient-to-r from-transparent via-white to-white dark:via-[#1e293b] dark:to-[#1e293b] rounded-r-full">
-                                <button onclick="let btn = this; checkPinRequired(() => editDeviceInline(${index}, ${tbIndex}, btn))" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-slate-500 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors shadow-sm" title="Sửa nhanh">
+                                <button onclick="let btn = this; editDeviceInline(${index}, ${tbIndex}, btn)" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-slate-500 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors shadow-sm" title="Sửa nhanh">
                                     <i class="fa-solid fa-pen text-[10px]"></i>
                                 </button>
-                                <button onclick="let btn = this; checkPinRequired(() => deleteDeviceInline(${index}, ${tbIndex}, btn))" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-slate-500 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 rounded-full transition-colors shadow-sm" title="Xóa">
+                                <button onclick="let btn = this; deleteDeviceInline(${index}, ${tbIndex}, btn)" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-slate-500 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 rounded-full transition-colors shadow-sm" title="Xóa">
                                     <i class="fa-solid fa-xmark text-[11px]"></i>
                                 </button>
                             </div>
@@ -912,7 +835,7 @@
                     
                     if (hiddenCount > 0) {
                         thietBiHtml += `
-                        <div onclick="checkPinRequired(() => openDeviceEditor(${index}))" class="inline-flex items-center justify-center px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full text-[11px] font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 cursor-pointer transition-colors min-h-[32px] shrink-0 shadow-sm" title="Nhấn để xem toàn bộ ${mangThietBi.length} thiết bị">
+                        <div onclick="openDeviceEditor(${index})" class="inline-flex items-center justify-center px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full text-[11px] font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 cursor-pointer transition-colors min-h-[32px] shrink-0 shadow-sm" title="Nhấn để xem toàn bộ ${mangThietBi.length} thiết bị">
                             +${hiddenCount}
                         </div>`;
                     }
@@ -925,7 +848,7 @@
                 }
 
                 thietBiHtml += `</div>
-                    <button onclick="checkPinRequired(() => openDeviceEditor(${index}))" 
+                    <button onclick="openDeviceEditor(${index})" 
                             class="w-8 h-8 flex items-center justify-center shrink-0 rounded-full text-slate-400 hover:text-indigo-600 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 transition-all shadow-sm focus:outline-none" 
                             title="Mở bảng Quản lý chi tiết">
                         <i class="fa-solid fa-plus text-xs"></i>
@@ -1082,11 +1005,7 @@
             const el = document.getElementById(elementId); 
             if (!el) return;
             const isHidden = el.innerText === '******';
-            if (!isHidden) {
-                executeTogglePlainText(elementId, realValue, btn, isHidden); 
-            } else {
-                checkPinRequired(() => executeTogglePlainText(elementId, realValue, btn, isHidden));
-            }
+            executeTogglePlainText(elementId, realValue, btn, isHidden); 
         }
         
         function executeTogglePlainText(elementId, realValue, btn, isHidden) {
@@ -1111,11 +1030,7 @@
             const el = document.getElementById(elementId); 
             if (!el) return;
             const isPeekMode = el.querySelector('.peek-container') !== null;
-            if (isPeekMode || el.innerText !== '******') {
-                executeTogglePassword(elementId, realValue, btn, isPeekMode); 
-            } else {
-                checkPinRequired(() => executeTogglePassword(elementId, realValue, btn, isPeekMode));
-            }
+            executeTogglePassword(elementId, realValue, btn, isPeekMode); 
         }
         
         function executeTogglePassword(elementId, realValue, btn, isPeekMode) {
@@ -1159,11 +1074,7 @@
             const cell = document.querySelector(`td[data-index="${index}"]`); 
             if (!cell) return;
             const isActive = cell.getAttribute('data-otp-active') === 'true';
-            if (isActive) {
-                executeToggleOTP(index, btn, cell, isActive); 
-            } else {
-                checkPinRequired(() => executeToggleOTP(index, btn, cell, isActive));
-            }
+            executeToggleOTP(index, btn, cell, isActive); 
         }
         
         async function executeToggleOTP(index, btn, cell, isActive) {
@@ -1217,21 +1128,17 @@
 
         async function copyOTP(key, btn) { 
             if(!key) return; 
-            checkPinRequired(async () => { 
-                const code = await generateTOTP(key); 
-                if(code) { 
-                    navigator.clipboard.writeText(code).then(()=>showToast('Đã copy mã Live OTP','success')); 
-                } else {
-                    showToast('Key 2FA Lỗi','error'); 
-                }
-            }); 
+            const code = await generateTOTP(key); 
+            if(code) { 
+                navigator.clipboard.writeText(code).then(()=>showToast('Đã copy mã Live OTP','success')); 
+            } else {
+                showToast('Key 2FA Lỗi','error'); 
+            }
         }
         
         function copySecureText(text, label="Dữ liệu") { 
             if(!text) return; 
-            checkPinRequired(() => { 
-                navigator.clipboard.writeText(text).then(()=>showToast(`Đã copy ${label}`,'success')); 
-            }); 
+            navigator.clipboard.writeText(text).then(()=>showToast(`Đã copy ${label}`,'success')); 
         }
         
         // CẬP NHẬT: Quét tự động Code (Polling)
@@ -1243,67 +1150,65 @@
             if (!email || email === "") { showToast('Không có Email', 'error'); return; }
             if (btn.getAttribute('data-polling') === 'true') return; 
             
-            checkPinRequired(() => {
-                btn.setAttribute('data-polling', 'true');
-                const originalHTML = btn.innerHTML; 
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>'; 
-                
-                box.classList.remove('hidden'); 
-                setTimeout(()=>box.classList.remove('opacity-0', '-translate-y-2'), 10);
-                
-                if (badge) badge.classList.add('hidden'); 
-                
-                let attempts = 0;
-                const maxAttempts = 6; // Đợi tối đa 30s (6 lần quét mỗi 5s)
-                const intervalTime = 5000; 
+            btn.setAttribute('data-polling', 'true');
+            const originalHTML = btn.innerHTML; 
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>'; 
+            
+            box.classList.remove('hidden'); 
+            setTimeout(()=>box.classList.remove('opacity-0', '-translate-y-2'), 10);
+            
+            if (badge) badge.classList.add('hidden'); 
+            
+            let attempts = 0;
+            const maxAttempts = 6; // Đợi tối đa 30s (6 lần quét mỗi 5s)
+            const intervalTime = 5000; 
 
-                function pollCode() {
-                    attempts++;
-                    
-                    // CẬP NHẬT: Chữ ngắn gọn, không đếm giây làm dài khung
-                    valSpan.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i><span class="text-[11px] ml-1.5 text-indigo-300 font-medium">Đang đợi mã...</span>`; 
-                    valSpan.classList.remove('text-rose-500'); 
-                    
-                    runScript('getEmailVerificationCode', { targetEmail: email, pass: sessionPass })
-                        .then(code => {
-                            if(!code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && !code.includes("nha")) { 
-                                btn.removeAttribute('data-polling');
-                                btn.innerHTML = originalHTML; 
-                                valSpan.innerText = code; 
-                                
-                                if (badge) {
-                                    badge.classList.remove('hidden');
-                                    badge.innerText = "1";
-                                }
-
-                                if (window.innerWidth >= 768) {
-                                    showToast(`Có mã mới từ Email: ${code}`, 'success', 5000); 
-                                } else {
-                                    showToast('Đã lấy được mã!', 'success'); 
-                                }
-                            } 
-                            else if (attempts < maxAttempts) {
-                                setTimeout(pollCode, intervalTime);
-                            }
-                            else {
-                                btn.removeAttribute('data-polling');
-                                btn.innerHTML = originalHTML; 
-                                valSpan.innerText = "KHÔNG CÓ MÃ"; 
-                                valSpan.classList.add('text-rose-500'); 
-                                showToast('Hết thời gian chờ (30s). Vui lòng thử lại sau.', 'error'); 
-                            }
-                        })
-                        .catch(err => {
+            function pollCode() {
+                attempts++;
+                
+                // CẬP NHẬT: Chữ ngắn gọn, không đếm giây làm dài khung
+                valSpan.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i><span class="text-[11px] ml-1.5 text-indigo-300 font-medium">Đang đợi mã...</span>`; 
+                valSpan.classList.remove('text-rose-500'); 
+                
+                runScript('getEmailVerificationCode', { targetEmail: email, pass: sessionPass })
+                    .then(code => {
+                        if(!code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && !code.includes("nha")) { 
                             btn.removeAttribute('data-polling');
                             btn.innerHTML = originalHTML; 
-                            valSpan.innerText = "LỖI QUÉT"; 
+                            valSpan.innerText = code; 
+                            
+                            if (badge) {
+                                badge.classList.remove('hidden');
+                                badge.innerText = "1";
+                            }
+
+                            if (window.innerWidth >= 768) {
+                                showToast(`Có mã mới từ Email: ${code}`, 'success', 5000); 
+                            } else {
+                                showToast('Đã lấy được mã!', 'success'); 
+                            }
+                        } 
+                        else if (attempts < maxAttempts) {
+                            setTimeout(pollCode, intervalTime);
+                        }
+                        else {
+                            btn.removeAttribute('data-polling');
+                            btn.innerHTML = originalHTML; 
+                            valSpan.innerText = "KHÔNG CÓ MÃ"; 
                             valSpan.classList.add('text-rose-500'); 
-                            showToast('Lỗi kết nối hòm thư', 'error'); 
-                        });
-                }
-                
-                pollCode(); 
-            });
+                            showToast('Hết thời gian chờ (30s). Vui lòng thử lại sau.', 'error'); 
+                        }
+                    })
+                    .catch(err => {
+                        btn.removeAttribute('data-polling');
+                        btn.innerHTML = originalHTML; 
+                        valSpan.innerText = "LỖI QUÉT"; 
+                        valSpan.classList.add('text-rose-500'); 
+                        showToast('Lỗi kết nối hòm thư', 'error'); 
+                    });
+            }
+            
+            pollCode(); 
         }
 
         function copyRawText(text, label="Dữ liệu") { 
@@ -1435,44 +1340,40 @@
         }
         
         function batchExport() {
-            checkPinRequired(() => {
-                let exportText = "";
-                document.querySelectorAll('.row-checkbox:checked').forEach(cb => { 
-                    const item = allData[parseInt(cb.value)]; 
-                    if(item) exportText += `[${item.team}] Idol: ${item.tenIdol} | Tiktok: ${item.tiktokId} | Email: ${item.email} | Pass Email: ${item.passEmail} | Pass Tiktok: ${item.passTiktok}\n`; 
-                });
-                navigator.clipboard.writeText(exportText).then(() => { 
-                    showToast(`Đã Import Clipboard ${document.querySelectorAll('.row-checkbox:checked').length} Tài khoản`, 'success'); 
-                    clearBatchSelection(); 
-                });
+            let exportText = "";
+            document.querySelectorAll('.row-checkbox:checked').forEach(cb => { 
+                const item = allData[parseInt(cb.value)]; 
+                if(item) exportText += `[${item.team}] Idol: ${item.tenIdol} | Tiktok: ${item.tiktokId} | Email: ${item.email} | Pass Email: ${item.passEmail} | Pass Tiktok: ${item.passTiktok}\n`; 
+            });
+            navigator.clipboard.writeText(exportText).then(() => { 
+                showToast(`Đã Import Clipboard ${document.querySelectorAll('.row-checkbox:checked').length} Tài khoản`, 'success'); 
+                clearBatchSelection(); 
             });
         }
         
         function scanDuplicates() {
             if (!allData || allData.length === 0) { showToast('Chưa có dữ liệu để quét. Vui lòng tải lại trang!', 'error'); return; }
-            checkPinRequired(() => {
-                openScanModal('Quét Trùng Lặp Dữ Liệu', 'Đang phân tích các trường Email, TikTok ID và Key 2FA...', '<div class="text-center py-8"><i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-600"></i></div>', 'fa-clone text-amber-500');
-                setTimeout(() => {
-                    let emailMap = {}, tiktokMap = {}, duplicatesFound = [];
-                    allData.forEach((item, index) => {
-                        if (item.email && item.email.trim() !== '') { 
-                            let em = item.email.toLowerCase().trim(); 
-                            if (!emailMap[em]) emailMap[em] = []; 
-                            emailMap[em].push({ index: index+1, team: item.team, name: item.tenIdol, type: 'Email' }); 
-                        }
-                        if (item.tiktokId && item.tiktokId.trim() !== '') { 
-                            let tk = item.tiktokId.toLowerCase().trim(); 
-                            if (!tiktokMap[tk]) tiktokMap[tk] = []; 
-                            tiktokMap[tk].push({ index: index+1, team: item.team, name: item.tenIdol, type: 'TikTok ID' }); 
-                        }
-                    });
-                    
-                    for (let em in emailMap) { if (emailMap[em].length > 1) duplicatesFound.push({ value: em, category: 'Email', items: emailMap[em] }); }
-                    for (let tk in tiktokMap) { if (tiktokMap[tk].length > 1) duplicatesFound.push({ value: '@'+tk, category: 'TikTok ID', items: tiktokMap[tk] }); }
-                    
-                    renderDuplicatesResult(duplicatesFound);
-                }, 600);
-            });
+            openScanModal('Quét Trùng Lặp Dữ Liệu', 'Đang phân tích các trường Email, TikTok ID và Key 2FA...', '<div class="text-center py-8"><i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-600"></i></div>', 'fa-clone text-amber-500');
+            setTimeout(() => {
+                let emailMap = {}, tiktokMap = {}, duplicatesFound = [];
+                allData.forEach((item, index) => {
+                    if (item.email && item.email.trim() !== '') { 
+                        let em = item.email.toLowerCase().trim(); 
+                        if (!emailMap[em]) emailMap[em] = []; 
+                        emailMap[em].push({ index: index+1, team: item.team, name: item.tenIdol, type: 'Email' }); 
+                    }
+                    if (item.tiktokId && item.tiktokId.trim() !== '') { 
+                        let tk = item.tiktokId.toLowerCase().trim(); 
+                        if (!tiktokMap[tk]) tiktokMap[tk] = []; 
+                        tiktokMap[tk].push({ index: index+1, team: item.team, name: item.tenIdol, type: 'TikTok ID' }); 
+                    }
+                });
+                
+                for (let em in emailMap) { if (emailMap[em].length > 1) duplicatesFound.push({ value: em, category: 'Email', items: emailMap[em] }); }
+                for (let tk in tiktokMap) { if (tiktokMap[tk].length > 1) duplicatesFound.push({ value: '@'+tk, category: 'TikTok ID', items: tiktokMap[tk] }); }
+                
+                renderDuplicatesResult(duplicatesFound);
+            }, 600);
         }
 
         function renderDuplicatesResult(duplicates) {
@@ -1549,11 +1450,9 @@
             let oldDevice = mangThietBi[tbIndex];
 
             if (!newVal) {
-                // Xóa máy - Gọi hàm Log
                 mangThietBi.splice(tbIndex, 1); 
                 runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: oldDevice, pass: sessionPass }).catch(e=>console.log(e));
             } else {
-                // Sửa tên máy -> Không gọi Log theo yêu cầu
                 mangThietBi[tbIndex] = newVal;
             }
             
@@ -1610,7 +1509,6 @@
             
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').filter(tb => tb.trim() !== '');
             
-            // Lưu lại state ban đầu để so sánh khi thêm mới / xoá
             originalDevicesForLog = mangThietBi.map(x => x.trim());
 
             if (mangThietBi.length === 0) {
