@@ -2,11 +2,11 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <base target="_top">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <title>Off Schedule Passion Star</title>
-  <link rel="icon" href="./icon/off.svg" type="image/svg+xml">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/airbnb.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -116,6 +116,40 @@
     .vip-badge { position: relative; color: #ffffff; padding: 3px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 800; margin: 0; border: 1px solid rgba(255,255,255,0.3); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); display: inline-flex; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; vertical-align: middle; box-shadow: 0 2px 5px rgba(0,0,0,0.2); white-space: nowrap;}
     .vip-badge::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); animation: shine-badge 2s infinite; }
     @keyframes shine-badge { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+
+    /* ========================================= */
+    /* CHIẾN LƯỢC MOBILE CHO ADMIN FORM          */
+    /* ========================================= */
+    @media (max-width: 768px) {
+      /* Toolbar và các nút bấm gập lại cho gọn */
+      .toolbar { flex-direction: column; gap: 15px; padding: 15px 10px; align-items: stretch; }
+      .tool-btns { flex-wrap: wrap; justify-content: center; gap: 6px; }
+      .tool-btns button { padding: 8px 12px; font-size: 0.75rem; margin-left: 0; flex: 1 1 30%; text-align: center;}
+      .tool-btns select { width: 100% !important; margin-bottom: 5px; }
+      
+      .main-content { padding: 0 5px; }
+      .table-container { max-height: 70vh; border-width: 1px; border-radius: 8px; -webkit-overflow-scrolling: touch; }
+      
+      /* Thu nhỏ kích thước cột */
+      .group-cell { width: 55px !important; min-width: 55px !important; max-width: 55px !important; font-size: 0.6rem; padding: 0 2px; }
+      .name-cell { width: 110px !important; min-width: 110px !important; max-width: 110px !important; font-size: 0.7rem; }
+      th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
+      
+      /* Cố định cột Nhóm và Tên (Hỗ trợ cả Dark Mode) */
+      thead th.group-cell, tbody td.group-cell { position: sticky; left: 0; z-index: 11; background: var(--card-bg); border-right: 1px solid var(--border-color) !important; }
+      thead th.name-cell, tbody td.name-cell { position: sticky; left: 55px; z-index: 11; background: var(--card-bg); border-right: 1px solid var(--border-color) !important; box-shadow: 3px 0 5px rgba(0,0,0,0.1); }
+      thead th.group-cell, thead th.name-cell { background: var(--table-header); z-index: 12; }
+      
+      /* Popup Modals */
+      .modal-box { width: 92%; padding: 15px; box-sizing: border-box; }
+      .modal-actions { flex-direction: column-reverse; gap: 8px; }
+      .modal-actions button { width: 100%; text-align: center; }
+      #toast { left: 50%; transform: translateX(-50%) translateY(20px); right: auto; bottom: 20px; width: 90%; text-align: center; }
+      #toast.show { transform: translateX(-50%) translateY(0); }
+      
+      /* Trình chọn ngày tháng Flatpickr (Nếu bị tràn) */
+      .flatpickr-calendar { width: 300px !important; transform: scale(0.9); transform-origin: top center; }
+    }
   </style>
 </head>
 <body>
@@ -256,23 +290,6 @@
   </div>
 
   <script>
-    // --- THAY LINK API CỦA BẠN VÀO ĐÂY ---
-    const API_URL = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec";
-
-    function runScript(action, payload = {}) {
-      return fetch(API_URL, {
-        method: 'POST',
-        redirect: 'follow', 
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: action, payload: payload })
-      })
-      .then(res => res.json())
-      .then(res => {
-        if (res.status === 'error') throw new Error(res.message);
-        return res.data;
-      });
-    }
-  
     let employeesData = [], leavesData = [], badgesData = {};
     let isSyncing = false; 
     let today = new Date();
@@ -313,7 +330,7 @@
     }
 
     function changeMonth(offset) { displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } updateMonthLabel(); renderTable(); }
-    function updateMonthLabel() { document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`; }
+    function updateMonthLabel() { document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} /${displayYear}`; }
     function toggleMonthPicker(event) { document.getElementById('monthDropdown').classList.toggle('active'); tempPickerYear = displayYear; renderPickerGrid(); if(event) event.stopPropagation(); }
     function changeTempYear(offset, event) { if(event) event.stopPropagation(); tempPickerYear += offset; renderPickerGrid(); }
     function renderPickerGrid() { document.getElementById('pickerYearLabel').innerText = tempPickerYear; const grid = document.getElementById('monthGrid'); grid.innerHTML = ''; const months = ["Thg 1", "Thg 2", "Thg 3", "Thg 4", "Thg 5", "Thg 6", "Thg 7", "Thg 8", "Thg 9", "Thg 10", "Thg 11", "Thg 12"]; months.forEach((m, idx) => { let isCurrent = (idx === displayMonth && tempPickerYear === displayYear); grid.innerHTML += `<button type="button" class="month-btn ${isCurrent ? 'active' : ''}" onclick="selectSpecificMonth(${idx})">${m}</button>`; }); }
@@ -325,8 +342,7 @@
       if(document.getElementById('btnSaveChanges')) document.getElementById('btnSaveChanges').style.display = 'none'; 
       showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
       
-      runScript('getInitialData')
-        .then(data => { 
+      google.script.run.withSuccessHandler(data => { 
           try {
              if (data && data.error) throw new Error(data.error);
              if (!data) throw new Error("Dữ liệu rỗng");
@@ -335,8 +351,7 @@
           } catch(e) {
              showToast("Lỗi Data: " + e.message, false, true); isSyncing = false;
           }
-        })
-        .catch(err => { showToast("Lỗi Script: " + err.message, false, true); isSyncing = false; });
+      }).withFailureHandler(err => { showToast("Lỗi Script: " + err.message, false, true); isSyncing = false; }).getInitialData();
     }
 
     function openBadgeLibraryModal() {
@@ -351,10 +366,7 @@
       let badgeName = document.getElementById("newCustomBadgeName").value.trim();
       if (!badgeName) return showToast("Vui lòng nhập tên Badge!", false, true);
       closeBadgeLibraryModal(); showToast("⏳ Đang tạo Badge ngẫu nhiên...", true);
-      
-      runScript('createNewBadge', { badgeName: badgeName })
-        .then(res => { if (res === "SUCCESS") { showToast("✅ Tạo Badge thành công!"); refreshData(); } else showToast(res, false, true); })
-        .catch(err => { showToast("Lỗi kết nối", false, true); });
+      google.script.run.withSuccessHandler(res => { if (res === "SUCCESS") { showToast("✅ Tạo Badge thành công!"); refreshData(); } else showToast(res, false, true); }).createNewBadge(badgeName);
     }
 
     function populatePersonSelect() {
@@ -454,14 +466,11 @@
     function saveBulkChanges() {
       if (draftQueue.length === 0) return;
       isSyncing = true; showToast("⏳ Đang đẩy dữ liệu lên Google Sheet...", true);
-      
-      runScript('processBatchChanges', { payloadStr: JSON.stringify(draftQueue) })
-        .then(res => {
+      google.script.run.withSuccessHandler(res => {
           isSyncing = false;
           if (res === "SUCCESS") { showToast("✅ Đã lưu thành công!"); draftQueue = []; document.getElementById('btnSaveChanges').style.display = 'none'; refreshData(); } 
           else { showToast("Lỗi Data: " + res, false, true); refreshData(); }
-        })
-        .catch(err => { isSyncing = false; showToast("LỖI KẾT NỐI", false, true); });
+      }).withFailureHandler(err => { isSyncing = false; showToast("LỖI KẾT NỐI", false, true); }).processBatchChanges(JSON.stringify(draftQueue));
     }
 
     function drag(ev, name, date) { ev.dataTransfer.setData("dragName", name); ev.dataTransfer.setData("oldDate", date); }
@@ -483,10 +492,7 @@
         let lIdx = leavesData.findIndex(l => l.name === dragName && l.date === oldDate);
         if (lIdx > -1) leavesData[lIdx].date = newDate;
         renderTable(); showToast("⏳ Đang đổi ngày ngầm...", true);
-        
-        runScript('adminMoveLeave', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
-          .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã đổi ngày thành công!"); else refreshData(); })
-          .catch(err => { refreshData(); });
+        google.script.run.withSuccessHandler(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã đổi ngày thành công!"); else refreshData(); }).adminMoveLeave(dragName, oldDate, newDate);
       }; document.getElementById('customModal').classList.add('active');
     }
 
@@ -509,10 +515,7 @@
       document.getElementById('modalRejectBtn').style.display = 'none'; const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Duyệt Ngay";
       btn.onclick = () => { 
         closeModal(); isSyncing = true; leavesData.forEach(l => { if(l.status === "Pending") { l.status = "Approved"; l.swapFrom = ""; } }); renderTable(); showToast("⏳ Đang duyệt toàn bộ ngầm...", true);
-        
-        runScript('approveAllPendingLeaves')
-          .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã duyệt tất cả!"); else refreshData(); })
-          .catch(err => { refreshData(); });
+        google.script.run.withSuccessHandler(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã duyệt tất cả!"); else refreshData(); }).approveAllPendingLeaves();
       }; document.getElementById('customModal').classList.add('active');
     }
 
@@ -522,10 +525,7 @@
       else if (action === "DUYỆT") { let idx = leavesData.findIndex(l => l.name === name && l.date === dateStr); if (idx > -1) { leavesData[idx].status = "Approved"; leavesData[idx].swapFrom = ""; } } 
       else if (action === "TỪ CHỐI ĐỔI") { let idx = leavesData.findIndex(l => l.name === name && l.swapFrom === dateStr && l.status === "Pending"); if(idx > -1) leavesData.splice(idx, 1); }
       renderTable(); showToast("⏳ Đang xử lý ngầm...", true);
-      
-      runScript('toggleLeaveAdmin', { role: role, name: name, dateStr: dateStr, actionName: action })
-        .then(res => { isSyncing = false; if (res === "SUCCESS") showToast("✅ Thành công!"); else refreshData(); })
-        .catch(err => { refreshData(); });
+      google.script.run.withSuccessHandler(res => { isSyncing = false; if (res === "SUCCESS") showToast("✅ Thành công!"); else refreshData(); }).toggleLeaveAdmin(role, name, dateStr, action);
     }
 
     function closeModal() { document.getElementById('customModal').classList.remove('active'); }
@@ -536,9 +536,7 @@
       const val = document.getElementById("personSelect").value;
       if (!val) return showToast("⚠️ Vui lòng chọn cá nhân/nhóm trước khi tạo link!", false, true);
       showToast("⏳ Đang tạo link...", true); 
-      
-      const fullUrl = window.location.origin + window.location.pathname.replace('admin.html', '') + "mcform.html?target=" + encodeURIComponent(val); 
-      navigator.clipboard.writeText(fullUrl).then(() => { showToast("🔗 Đã copy link đăng ký thành công!"); }); 
+      google.script.run.withSuccessHandler(url => { const fullUrl = url + "?page=mc&target=" + encodeURIComponent(val); navigator.clipboard.writeText(fullUrl).then(() => { showToast("🔗 Đã copy link đăng ký thành công!"); }); }).getAppUrl();
     }
     
     function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); document.getElementById('newEmpName').value = ''; document.getElementById('newEmpRole').value = 'LIVESTEAM'; updateGroupDropdown(); }
@@ -551,16 +549,12 @@
       options += '<option value="CUSTOM">➕ Khác (Thêm nhóm mới)...</option>'; groupSelect.innerHTML = options; checkCustomGroup();
     }
     function checkCustomGroup() { let val = document.getElementById('newEmpGroup').value; document.getElementById('newEmpGroupCustom').style.display = (val === 'CUSTOM') ? 'block' : 'none'; }
-    
     function submitNewEmployee() {
       let name = document.getElementById('newEmpName').value.trim(), role = document.getElementById('newEmpRole').value, group = document.getElementById('newEmpGroup').value;
       if (group === 'CUSTOM') group = document.getElementById('newEmpGroupCustom').value.trim();
       if (!name || !group) return showToast("Vui lòng điền đủ Tên và Nhóm!", false, true);
       closeAddEmployeeModal(); showToast("⏳ Đang lưu nhân sự...", true);
-      
-      runScript('addEmployee', { role: role, group: group, name: name })
-        .then(res => { if (res === "SUCCESS") { showToast("✅ Đã thêm nhân sự thành công!"); refreshData(); } else { showToast(res, false, true); } })
-        .catch(err => { showToast("Lỗi kết nối", false, true); });
+      google.script.run.withSuccessHandler(res => { if (res === "SUCCESS") { showToast("✅ Đã thêm nhân sự thành công!"); refreshData(); } else { showToast(res, false, true); } }).addEmployee(role, group, name);
     }
 
     function toggleExportMode() {
@@ -622,7 +616,7 @@
       exportContainer.style.top = "-9999px";
       exportContainer.style.left = "-9999px";
       exportContainer.style.zIndex = "-9999";
-      exportContainer.style.width = "max-content";
+      exportContainer.style.width = "max-content"; /* Thêm dòng này để khung chụp tự động giãn hết bảng */
       document.body.appendChild(exportContainer);
 
       if (groupFilter === "CUSTOM" && customNames.length === 1) {
@@ -711,6 +705,7 @@
           }
       }
       
+      // Đổi width: ${totalWidth}px thành width: max-content
       let html = `<div style="background: #ffffff; padding: 20px; width: max-content; font-family: 'Inter', sans-serif; box-sizing: border-box;">`;
       
       if(matchCount === 0) {
