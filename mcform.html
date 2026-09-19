@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <base target="_top">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -61,6 +62,41 @@
     /* CSS ĐỒNG BỘ LỊCH TƯƠNG TÁC VỚI ẢNH XUẤT */
     .mc-calendar-view { table-layout: fixed; width: 100%; min-width: 600px; max-width: 680px; margin: 0 auto; border-collapse: separate; border-spacing: 0; border: 2px solid #cbd5e1; border-radius: 16px; overflow: hidden; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);}
     .mc-calendar-view th, .mc-calendar-view td { border: none; }
+
+    /* ========================================= */
+    /* CHIẾN LƯỢC MOBILE CHO MC FORM             */
+    /* ========================================= */
+    @media (max-width: 768px) {
+      /* Chỉnh lại thanh Toolbar */
+      .toolbar { flex-direction: column; gap: 12px; padding: 15px 10px; text-align: center; margin-bottom: 10px;}
+      .toolbar h2 { font-size: 1.1rem; }
+      
+      /* Chỉnh lại khung bảng */
+      .table-container { margin: 0 5px 120px 5px; max-height: 70vh; -webkit-overflow-scrolling: touch; }
+      
+      /* Thu nhỏ kích thước ô */
+      .group-cell { width: 55px !important; min-width: 55px !important; max-width: 55px !important; font-size: 0.6rem; }
+      .name-cell { width: 110px !important; min-width: 110px !important; max-width: 110px !important; font-size: 0.7rem; padding-left: 4px; }
+      th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
+      
+      /* Cố định cột Nhóm và Tên khi vuốt ngang */
+      thead th:nth-child(1), tbody td:nth-child(1) { position: sticky; left: 0; z-index: 11; background: var(--card-bg); outline: 1px solid var(--border-color); }
+      thead th:nth-child(2), tbody td:nth-child(2) { position: sticky; left: 55px; z-index: 11; background: var(--card-bg); outline: 1px solid var(--border-color); box-shadow: 3px 0 5px rgba(0,0,0,0.05); }
+      thead th:nth-child(1), thead th:nth-child(2) { background: var(--table-header); z-index: 12; }
+      
+      /* Responsive cho Lịch Cá Nhân (View Interactive) */
+      .mc-calendar-view { min-width: 100%; border: 1px solid #cbd5e1; }
+      .mc-calendar-view td { height: 60px !important; padding: 4px !important; }
+      .mc-calendar-view td > div:first-child { font-size: 0.9rem !important; }
+      
+      /* Thanh Action Bar bên dưới */
+      #actionBar { flex-direction: column; gap: 10px; padding: 10px; text-align: center; }
+      #actionBar > div { width: 100%; justify-content: center; }
+      
+      /* Kích thước popup Modal */
+      .modal-box { width: 90%; padding: 20px; }
+      .badge { width: 30px; height: 22px; font-size: 0.55rem; }
+    }
   </style>
 </head>
 <body>
@@ -106,26 +142,7 @@
   </div>
 
   <script>
-    // --- THAY LINK API CỦA BẠN VÀO ĐÂY ---
-    const API_URL = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec";
-
-    function runScript(action, payload = {}) {
-      return fetch(API_URL, {
-        method: 'POST',
-        redirect: 'follow', 
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: action, payload: payload })
-      })
-      .then(res => res.json())
-      .then(res => {
-        if (res.status === 'error') throw new Error(res.message);
-        return res.data;
-      });
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const TARGET_GROUP = urlParams.get('target') || ""; 
-    
+    const TARGET_GROUP = "<?= target ?>"; 
     let employeesData = [], leavesData = [], badgesData = {};
     let isSyncing = false; 
     let selectedCells = []; 
@@ -170,12 +187,12 @@
     function refreshData() {
       if(isSyncing) return showToast("Đang đồng bộ...", false, true);
       isSyncing = true; clearSelection(); showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
-      runScript('getInitialData')
-        .then(data => { 
+      google.script.run
+        .withSuccessHandler(data => { 
           if(data && data.employees) { employeesData = data.employees; leavesData = data.leaves || []; badgesData = data.badges || {}; renderTable(); }
           isSyncing = false; showToast("✅ Đã làm mới xong!");
         })
-        .catch(err => { showToast("Lỗi lấy dữ liệu!", false, true); isSyncing = false; });
+        .withFailureHandler(err => { showToast("Lỗi lấy dữ liệu!", false, true); isSyncing = false; }).getInitialData();
     }
 
     function renderTable() {
@@ -391,10 +408,7 @@
       let payload = selectedCells.map(c => ({ role: c.role, name: c.name, dateStr: c.date }));
       payload.forEach(req => { leavesData.push({ name: req.name, date: req.dateStr, status: "Pending", swapFrom: "", reason: "Đăng ký nghỉ tháng" }); });
       clearSelection(); renderTable(); showToast("⏳ Đang lưu dữ liệu ngầm...", true);
-      
-      runScript('registerMultipleMCLeaves', { leaveRequests: payload })
-        .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("🎉 ĐÃ LƯU THÀNH CÔNG!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } })
-        .catch(err => { isSyncing = false; refreshData(); });
+      google.script.run.withSuccessHandler(res => { isSyncing = false; if(res === "SUCCESS") showToast("🎉 ĐÃ LƯU THÀNH CÔNG!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } }).withFailureHandler(err => { isSyncing = false; refreshData(); }).registerMultipleMCLeaves(payload);
     }
 
     function drag(ev, name, date) { ev.dataTransfer.setData("dragName", name); ev.dataTransfer.setData("oldDate", date); }
@@ -417,10 +431,7 @@
         if(lIndex > -1) { leavesData[lIndex].date = newDate; leavesData[lIndex].status = "Pending"; leavesData[lIndex].swapFrom = oldDate; } 
         else { leavesData.push({name: dragName, date: newDate, status: "Pending", swapFrom: oldDate}); }
         renderTable(); showToast("⏳ Đang dời ngày ngầm...", true);
-        
-        runScript('processMCDragDrop', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
-          .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã dời ngày!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } })
-          .catch(err => { isSyncing = false; refreshData(); });
+        google.script.run.withSuccessHandler(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã dời ngày!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } }).withFailureHandler(err => { isSyncing = false; refreshData(); }).processMCDragDrop(dragName, oldDate, newDate);
       }; document.getElementById('customModal').classList.add('active');
     }
 
@@ -433,16 +444,13 @@
         let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === date && l.status === "Pending");
         if(lIndex > -1) leavesData.splice(lIndex, 1);
         renderTable(); showToast("⏳ Đang hủy đơn ngầm...", true);
-        
-        runScript('cancelPendingMC', { name: name, dateStr: date })
-          .then(res => { isSyncing = false; btn.style = ""; if(res === "SUCCESS") showToast("🗑️ Đã hủy đơn!", false, false, true); else { showToast("❌ Lỗi!", false, true); refreshData(); } })
-          .catch(err => { isSyncing = false; refreshData(); });
+        google.script.run.withSuccessHandler(res => { isSyncing = false; btn.style = ""; if(res === "SUCCESS") showToast("🗑️ Đã hủy đơn!", false, false, true); else { showToast("❌ Lỗi!", false, true); refreshData(); } }).withFailureHandler(err => { isSyncing = false; refreshData(); }).cancelPendingMC(name, date);
       }; document.getElementById('customModal').classList.add('active');
     }
 
     function closeModal() { document.getElementById('customModal').classList.remove('active'); }
     let toastTimer; function showToast(msg, keep = false, isError = false, isBoom = false) { const toast = document.getElementById('toast'); toast.innerHTML = msg; toast.className = ''; if (isError) toast.classList.add('error'); if (isBoom) toast.classList.add('success-boom'); void toast.offsetWidth; toast.classList.add('show'); clearTimeout(toastTimer); if(!keep) toastTimer = setTimeout(() => toast.classList.remove('show', 'success-boom', 'error'), 3500); }
-    function changeMonth(offset) { if(isSyncing) return showToast("Hệ thống đang đồng bộ, vui lòng đợi...", false, true); displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`; clearSelection(); renderTable(); }
+    function changeMonth(offset) { if(isSyncing) return showToast("Hệ thống đang đồng bộ, vui lòng đợi...", false, true); displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} /${displayYear}`; clearSelection(); renderTable(); }
 
     function exportPersonalCalendar() {
       if(isSyncing) return showToast("Đang đồng bộ dữ liệu, vui lòng đợi...", false, true);
