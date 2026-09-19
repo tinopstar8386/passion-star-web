@@ -20,7 +20,7 @@
         .password-text { transition: opacity 0.12s ease-in-out; opacity: 1; }
         .password-text.fade-out { opacity: 0; }
         
-        /* Mobile Sidebar adjustments */
+        /* Mobile Sidebar & Layout adjustments */
         @media (min-width: 768px) {
             aside.collapsed { width: 76px !important; min-width: 76px !important; }
             aside.collapsed .collapse-text, aside.collapsed .section-title, aside.collapsed .user-info-text { display: none !important; }
@@ -28,6 +28,12 @@
             aside.collapsed .menu-item:hover { transform: none !important; }
             aside.collapsed nav { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
             aside.collapsed .logo-box { margin: 0 auto; }
+        }
+
+        /* --- LOGIC ĐÓNG/MỞ ROW TRÊN MOBILE --- */
+        @media (max-width: 767px) {
+            .mobile-collapsible { display: none !important; }
+            tr.mobile-expanded .mobile-collapsible { display: flex !important; flex-direction: column; }
         }
         
         @keyframes custom-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -169,6 +175,7 @@
 
             <div class="relative group">
                 <input type="password" id="passcodeInput" 
+                       autofocus
                        placeholder="Nhập mã bảo mật..." 
                        class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-5 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300 font-mono tracking-widest text-center shadow-inner relative z-10"
                        onkeypress="if(event.key === 'Enter') checkLogin()">
@@ -362,7 +369,7 @@
             <div id="tableContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 hidden flex-1 min-h-0 flex flex-col relative overflow-hidden w-full max-w-full">
                 <div class="overflow-x-auto overflow-y-auto custom-scrollbar h-full rounded-2xl relative w-full" style="padding-bottom: 200px;">
                     <table class="w-full text-left border-collapse relative" id="mainTable">
-                        <thead class="sticky top-0 z-30 backdrop-blur-md">
+                        <thead class="sticky top-0 z-30 backdrop-blur-md hidden md:table-header-group">
                             <tr class="text-sm font-bold text-slate-800 uppercase tracking-widest shadow-md">
                                 <th class="py-4 px-2 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 checkbox-cell"><input type="checkbox" id="selectAllCheckbox" class="cyber-checkbox" onclick="toggleSelectAll()"></th>
                                 <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[100px]">Team</th>
@@ -410,7 +417,7 @@
         let pinUnlockExpiry = 0; 
         let pendingRevealAction = null;
         let configDevices = [];
-        let originalDevicesForLog = []; // Khai báo phục vụ ghi log khi mở Modal 
+        let originalDevicesForLog = []; 
 
         function fetchConfigDevices() {
             if (!sessionPass) return;
@@ -480,6 +487,14 @@
         );
 
         window.onload = function() {
+            // Tự động focus vào ô password khi tải trang
+            setTimeout(() => {
+                const passInput = document.getElementById('passcodeInput');
+                if (passInput && !document.getElementById('loginScreen').classList.contains('hidden')) {
+                    passInput.focus();
+                }
+            }, 100);
+
             setInterval(updateTOTPs, 1000);
             initResizableColumns(); 
             runScript('getColumnWidths')
@@ -552,7 +567,10 @@
                     btn.disabled = false;
                     err.classList.remove('hidden');
                     document.getElementById('passcodeInput').classList.add('animate-shake');
-                    setTimeout(() => document.getElementById('passcodeInput').classList.remove('animate-shake'), 400);
+                    setTimeout(() => {
+                        document.getElementById('passcodeInput').classList.remove('animate-shake');
+                        document.getElementById('passcodeInput').focus();
+                    }, 400);
                     
                     if (error.message === "AUTH_FAILED") { 
                         err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
@@ -567,7 +585,10 @@
             sessionPass = ""; 
             pinUnlockExpiry = 0; 
             document.getElementById('loginScreen').classList.remove('hidden');
-            setTimeout(() => document.getElementById('loginScreen').classList.remove('opacity-0', 'pointer-events-none'), 10);
+            setTimeout(() => {
+                document.getElementById('loginScreen').classList.remove('opacity-0', 'pointer-events-none');
+                document.getElementById('passcodeInput').focus();
+            }, 10);
             document.getElementById('tableContainer').classList.add('hidden');
             document.getElementById('dataTableBody').innerHTML = '';
             allData = []; 
@@ -725,7 +746,6 @@
             loadData();
         }
 
-        // Đã Update thuật toán cho phép trượt Mobile
         function toggleSidebar() { 
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobileOverlay');
@@ -734,6 +754,15 @@
                 overlay.classList.toggle('hidden');
             } else {
                 sidebar.classList.toggle('collapsed'); 
+            }
+        }
+        
+        function toggleMobileRow(index) {
+            const row = document.querySelector(`tr[data-index="${index}"]`);
+            const icon = document.getElementById(`icon-expand-${index}`);
+            if (row && icon) {
+                row.classList.toggle('mobile-expanded');
+                icon.classList.toggle('rotate-180');
             }
         }
 
@@ -843,26 +872,54 @@
                 </div>`;
 
                 html += `
-                    <tr class="hover:bg-indigo-50/40 transition stagger-row" data-index="${index}" style="animation-delay: ${loopIndex * 0.04}s">
-                        <td class="py-4 px-2 border border-slate-300 dark:border-slate-700 checkbox-cell align-middle bg-slate-50/30 dark:bg-slate-800/30"><input type="checkbox" class="cyber-checkbox row-checkbox" value="${index}" onclick="updateBatchSelection()"></td>
-                        <td class="py-4 px-4 font-bold text-indigo-700 bg-slate-50/30 whitespace-nowrap">${escapeHtml(item.team)}</td>
-                        <td class="py-4 px-4 align-top">
-                            <div class="font-medium text-slate-900 flex items-center justify-between gap-2 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 shadow-sm w-[250px] mb-2">
-                                <span class="select-all font-mono font-medium whitespace-nowrap flex items-center w-[140px] overflow-hidden relative"><span id="email-text-${index}" class="password-text inline-block w-full truncate text-slate-500 dark:text-slate-400 sensitive-data">******</span></span>
+                    <tr class="hover:bg-indigo-50/40 transition stagger-row flex flex-col md:table-row bg-white dark:bg-slate-800 md:bg-transparent border border-slate-200 dark:border-slate-700 md:border-none md:border-b rounded-xl md:rounded-none shadow-sm md:shadow-none mb-4 md:mb-0 relative" data-index="${index}" style="animation-delay: ${loopIndex * 0.04}s">
+                        
+                        <!-- 1. MOBILE HEADER (order-1) -->
+                        <div class="md:hidden order-1 flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 rounded-t-xl cursor-pointer" onclick="toggleMobileRow(${index})">
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" class="cyber-checkbox row-checkbox" value="${index}" onclick="event.stopPropagation(); updateBatchSelection()">
+                                <div class="flex flex-col">
+                                    <div class="font-bold text-indigo-700 dark:text-indigo-400 text-[14px] leading-tight flex items-center gap-2">
+                                        ${escapeHtml(item.team)}
+                                    </div>
+                                    <div class="text-[12px] font-medium text-slate-700 dark:text-slate-300 mt-0.5">
+                                        <i class="fa-regular fa-user text-[10px] text-slate-400 mr-1"></i>${escapeHtml(item.tenIdol) || 'Trống'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-700 rounded-full border border-slate-200 dark:border-slate-600 text-slate-500 transition-colors shadow-sm shrink-0">
+                                <i id="icon-expand-${index}" class="fa-solid fa-chevron-down text-xs transition-transform duration-300"></i>
+                            </div>
+                        </div>
+
+                        <!-- 2. CHECKBOX (Desktop only, order-2 on DOM) -->
+                        <td class="hidden md:table-cell py-4 px-2 border border-slate-300 dark:border-slate-700 checkbox-cell align-middle bg-slate-50/30 dark:bg-slate-800/30">
+                            <input type="checkbox" class="cyber-checkbox row-checkbox" value="${index}" onclick="updateBatchSelection()">
+                        </td>
+
+                        <!-- 3. TEAM (Desktop only) -->
+                        <td class="hidden md:table-cell py-4 px-4 font-bold text-indigo-700 bg-slate-50/30 whitespace-nowrap">${escapeHtml(item.team)}</td>
+
+                        <!-- 4. EMAIL & CODE (Collapsible) -->
+                        <td class="mobile-collapsible md:table-cell order-3 p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
+                            <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-envelope"></i> Email & Lấy Code</div>
+                            
+                            <div class="font-medium text-slate-900 flex items-center justify-between gap-2 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 shadow-sm w-full md:w-[250px] mb-2">
+                                <span class="select-all font-mono font-medium whitespace-nowrap flex items-center flex-1 overflow-hidden relative"><span id="email-text-${index}" class="password-text inline-block w-full truncate text-slate-500 dark:text-slate-400 sensitive-data">******</span></span>
                                 <div class="flex items-center gap-1.5 shrink-0 border-l border-slate-200 dark:border-slate-700 pl-1.5">
                                     <button onclick="let btn = this; copySecureText('${escapeHtml(item.email).replace(/'/g, "\\'")}', 'Email')" title="Sao chép email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
                                     <button onclick="let btn = this; togglePlainText('email-text-${index}', '${escapeHtml(item.email).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
                                     <button onclick="let btn = this; fetchEmailCodeUI('${escapeHtml(item.email)}', ${index}, btn)" title="Quét hộp thư lấy mã" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 transition cursor-pointer px-1.5 py-0.5 rounded shadow-sm"><i class="fa-solid fa-envelope-open-text text-xs"></i></button>
                                 </div>
                             </div>
-                            <div class="text-[13px] text-slate-500 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 w-[250px]">
-                                <span class="font-mono text-slate-700 dark:text-slate-300 select-all font-medium whitespace-nowrap flex items-center gap-1 w-[180px] overflow-hidden relative">Pass: <span id="pass-email-${index}" class="password-text inline-block w-full truncate sensitive-data">******</span></span>
+                            <div class="text-[13px] text-slate-500 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 w-full md:w-[250px]">
+                                <span class="font-mono text-slate-700 dark:text-slate-300 select-all font-medium whitespace-nowrap flex items-center gap-1 flex-1 overflow-hidden relative">Pass: <span id="pass-email-${index}" class="password-text inline-block w-full truncate sensitive-data">******</span></span>
                                 <div class="flex items-center gap-1 shrink-0">
                                     <button onclick="let btn = this; copySecureText('${escapeHtml(item.passEmail).replace(/'/g, "\\'")}', 'Password')" title="Sao chép mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
                                     <button onclick="let btn = this; togglePassword('pass-email-${index}', '${escapeHtml(item.passEmail).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
                                 </div>
                             </div>
-                            <div id="code-box-${index}" class="hidden w-[250px] mt-2 overflow-hidden transition-all duration-300 opacity-0 transform -translate-y-2">
+                            <div id="code-box-${index}" class="hidden w-full md:w-[250px] mt-2 overflow-hidden transition-all duration-300 opacity-0 transform -translate-y-2">
                                 <div class="bg-slate-900 border border-indigo-500/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between shadow-[0_0_12px_rgba(99,102,241,0.4)] relative overflow-hidden group">
                                     <div class="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-indigo-400/10 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]"></div>
                                     <div class="flex items-center gap-1.5 relative z-10"><div class="w-5 h-5 rounded bg-indigo-900/50 flex items-center justify-center"><i class="fa-solid fa-shield-halved text-indigo-400 text-[9px]"></i></div><span class="text-[9px] font-bold text-indigo-300 uppercase tracking-widest">OTP</span></div>
@@ -870,19 +927,44 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="py-4 px-4">
-                            <div class="text-[13px] text-slate-700 flex items-center justify-between gap-2 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 w-[230px]">
-                                <span class="font-mono select-all font-medium whitespace-nowrap flex items-center w-full relative"><span id="pass-tiktok-${index}" class="password-text inline-block w-full sensitive-data">******</span></span>
+
+                        <!-- 5. PASS TIKTOK (Collapsible) -->
+                        <td class="mobile-collapsible md:table-cell order-4 p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
+                            <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-brands fa-tiktok"></i> Pass Tiktok</div>
+                            
+                            <div class="text-[13px] text-slate-700 flex items-center justify-between gap-2 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 w-full md:w-[230px]">
+                                <span class="font-mono select-all font-medium whitespace-nowrap flex items-center flex-1 relative"><span id="pass-tiktok-${index}" class="password-text inline-block w-full sensitive-data">******</span></span>
                                 <div class="flex items-center gap-1 shrink-0">
                                     <button onclick="let btn = this; copySecureText('${escapeHtml(item.passTiktok).replace(/'/g, "\\'")}', 'Pass Tiktok')" title="Sao chép mật khẩu" class="text-slate-400 hover:text-indigo-600 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
                                     <button onclick="let btn = this; togglePassword('pass-tiktok-${index}', '${escapeHtml(item.passTiktok).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn mật khẩu" class="text-slate-400 hover:text-indigo-600 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
                                 </div>
                             </div>
                         </td>
-                        <td class="py-4 px-4 align-top"><div class="font-medium text-slate-900 break-words">${escapeHtml(item.tenIdol)}</div>${tiktokIdHtml}</td>
-                        <td class="py-4 px-4 text-[13px] align-top w-[350px] min-w-[350px]">${thietBiHtml}</td>
-                        <td class="py-4 px-4 text-[13px] font-medium text-slate-600 align-top break-words sensitive-data">${escapeHtml(item.daiLi)}</td>
-                        <td class="py-4 px-4 bg-indigo-50/10 align-top" data-key="${escapeHtml(item.key2fa)}" data-index="${index}" data-otp-active="false">${otpHtml}</td>
+
+                        <!-- 6. IDOL / TIKTOK ID (Desktop cell, Mobile Collapsible for Tiktok ID only) -->
+                        <td class="mobile-collapsible md:table-cell order-5 p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
+                            <div class="hidden md:block font-medium text-slate-900 break-words">${escapeHtml(item.tenIdol)}</div>
+                            <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5"><i class="fa-solid fa-at"></i> TikTok ID</div>
+                            ${tiktokIdHtml || '<span class="text-[12px] text-slate-400 italic">Trống</span>'}
+                        </td>
+
+                        <!-- 7. THIẾT BỊ (Collapsible) -->
+                        <td class="mobile-collapsible md:table-cell order-6 p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top md:w-[350px]">
+                            <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-mobile-screen-button"></i> Thiết bị</div>
+                            ${thietBiHtml}
+                        </td>
+
+                        <!-- 8. ĐẠI LÍ (Collapsible) -->
+                        <td class="mobile-collapsible md:table-cell order-7 p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top rounded-b-xl md:rounded-none">
+                            <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-sitemap"></i> Đại lí</div>
+                            <div class="text-[13px] font-medium text-slate-600 align-top break-words sensitive-data">${escapeHtml(item.daiLi)}</div>
+                        </td>
+
+                        <!-- 9. OTP (ALWAYS VISIBLE on Mobile, order-2) -->
+                        <td class="order-2 flex flex-col md:table-cell p-3 md:py-4 md:px-4 md:bg-indigo-50/10 border-b md:border-b-0 border-slate-100 dark:border-slate-700 md:border-none align-top rounded-b-xl md:rounded-none" data-key="${escapeHtml(item.key2fa)}" data-index="${index}" data-otp-active="false">
+                            <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-shield-halved"></i> Mã 2FA (Live OTP)</div>
+                            ${otpHtml}
+                        </td>
                     </tr>`;
             });
             tbody.innerHTML = html;
@@ -1300,7 +1382,7 @@
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
-        // ================= XỬ LÝ SỬA THIẾT BỊ TRỰC TIẾP INLINE (GHI LOG KHI XOÁ) =================
+        // ================= XỬ LÝ SỬA THIẾT BỊ TRỰC TIẾP INLINE =================
         function editDeviceInline(rowIndex, tbIndex, btnElem) {
             const item = allData[rowIndex];
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
@@ -1388,7 +1470,7 @@
                 });
         }
 
-        // ================= XỬ LÝ SỬA THIẾT BỊ BẰNG MODAL TỔNG (PHÂN LỌC ĐỂ GHI LOG) =================
+        // ================= XỬ LÝ SỬA THIẾT BỊ BẰNG MODAL TỔNG =================
         let currentEditIndex = -1;
 
         function openDeviceEditor(index) {
@@ -1547,7 +1629,6 @@
             const container = document.getElementById('deviceListContainer');
             const rowId = 'dev_row_' + Date.now() + Math.floor(Math.random()*1000);
             
-            // Thiết kế lại row thân thiện trên mobile
             let html = `
             <div id="${rowId}" class="device-row flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-50 dark:bg-slate-900/50 p-3 sm:p-2 rounded-lg border border-slate-200 dark:border-slate-700" data-isnew="${isNew}" data-original="${escapeHtml(originalFullText)}">
                 <input type="text" class="role-input w-[calc(40%-0.25rem)] sm:w-28 px-3 py-2 text-[13px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md outline-none focus:border-indigo-500 transition-colors" value="${escapeHtml(role)}" placeholder="Vai trò (VD: MC)">
@@ -1574,7 +1655,7 @@
 
             let resultArr = [];
             let logsToPush = [];
-            let currentOriginals = []; // Chứa danh sách các máy cũ đang sửa hoặc giữ nguyên 
+            let currentOriginals = []; 
 
             for(let row of document.getElementById('deviceListContainer').children) {
                 let role = row.querySelector('.role-input').value.trim();
@@ -1590,14 +1671,13 @@
                     if (isNew) {
                         logsToPush.push({ action: 'Thêm thiết bị', dev: fullText });
                     } else if (original !== fullText) {
-                        currentOriginals.push(original); // Sửa máy -> Bỏ qua không log
+                        currentOriginals.push(original); 
                     } else {
-                        currentOriginals.push(original); // Không đổi gì
+                        currentOriginals.push(original); 
                     }
                 }
             }
             
-            // Xử lý check các máy bị xóa
             originalDevicesForLog.forEach(orig => {
                 if (!currentOriginals.includes(orig)) {
                     logsToPush.push({ action: 'Xóa thiết bị', dev: orig });
@@ -1609,7 +1689,6 @@
 
             runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
                 .then(res => {
-                    // Sau khi cập nhật sheet Master thành công, tiến hành đẩy log ngầm
                     logsToPush.forEach(l => {
                         runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: l.action, device: l.dev, pass: sessionPass }).catch(e=>console.log(e));
                     });
