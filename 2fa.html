@@ -42,15 +42,14 @@
                 border: none !important;
                 overflow: hidden;
                 opacity: 0;
-                /* Hiệu ứng trượt và mờ cực mượt */
                 transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out, padding 0.4s ease;
             }
             tr.mobile-expanded .mobile-collapsible {
-                max-height: 600px; /* Độ cao an toàn để hiện đủ các trường */
+                max-height: 600px; 
                 padding-top: 0.75rem !important; 
                 padding-bottom: 0.75rem !important;
                 opacity: 1;
-                border-bottom: 1px solid #f1f5f9 !important; /* Dòng kẻ mờ phân cách giữa các mục */
+                border-bottom: 1px solid #f1f5f9 !important; 
             }
             html.dark tr.mobile-expanded .mobile-collapsible {
                 border-bottom-color: #334155 !important;
@@ -60,6 +59,9 @@
             }
         }
         
+        /* Đệm cuộn để Header không bị khuất dưới thanh tìm kiếm trên mobile */
+        tr { scroll-margin-top: 90px; }
+
         @keyframes custom-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-custom-spin { animation: custom-spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
         
@@ -796,8 +798,9 @@
                     
                     if (isOpening) {
                         setTimeout(() => {
-                            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 350); // Chờ hiệu ứng trượt hoàn thành
+                            // Chuyển block: 'center' thành 'start' để căn khớp đỉnh màn hình
+                            row.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 350); 
                     }
                 } else {
                     row.classList.remove('mobile-expanded');
@@ -916,7 +919,7 @@
                     <tr class="hover:bg-indigo-50/40 transition stagger-row flex flex-col md:table-row bg-white dark:bg-slate-800 md:bg-transparent border border-slate-200 dark:border-slate-700 md:border-none md:border-b rounded-xl md:rounded-none shadow-sm md:shadow-none mb-4 md:mb-0 relative" data-index="${index}" style="animation-delay: ${loopIndex * 0.04}s">
                         
                         <!-- 1. MOBILE HEADER (Luôn hiện trên mobile) -->
-                        <div class="md:hidden order-1 flex items-center justify-between p-3.5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 rounded-t-xl cursor-pointer" onclick="toggleMobileRow(${index})">
+                        <div class="md:hidden order-1 flex items-center justify-between p-3.5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 rounded-t-xl cursor-pointer sticky top-[60px] z-10 backdrop-blur-md" onclick="toggleMobileRow(${index})">
                             <div class="flex items-center gap-3">
                                 <input type="checkbox" class="cyber-checkbox row-checkbox shrink-0" value="${index}" onclick="event.stopPropagation(); updateBatchSelection()">
                                 <div class="flex flex-col">
@@ -950,7 +953,12 @@
                                 <div class="flex items-center gap-1.5 shrink-0 border-l border-slate-200 dark:border-slate-700 pl-1.5">
                                     <button onclick="let btn = this; copySecureText('${escapeHtml(item.email).replace(/'/g, "\\'")}', 'Email')" title="Sao chép email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
                                     <button onclick="let btn = this; togglePlainText('email-text-${index}', '${escapeHtml(item.email).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
-                                    <button onclick="let btn = this; fetchEmailCodeUI('${escapeHtml(item.email)}', ${index}, btn)" title="Quét hộp thư lấy mã" class="text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 transition cursor-pointer px-1.5 py-0.5 rounded shadow-sm"><i class="fa-solid fa-envelope-open-text text-xs"></i></button>
+                                    
+                                    <!-- Nút lấy code có thêm badge Notification -->
+                                    <button onclick="let btn = this; fetchEmailCodeUI('${escapeHtml(item.email)}', ${index}, btn)" title="Quét hộp thư lấy mã" class="relative text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 transition cursor-pointer px-1.5 py-0.5 rounded shadow-sm">
+                                        <i class="fa-solid fa-envelope-open-text text-xs"></i>
+                                        <span id="mail-badge-${index}" class="hidden absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce">1</span>
+                                    </button>
                                 </div>
                             </div>
                             <div class="text-[13px] text-slate-500 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 w-full md:w-[240px]">
@@ -1179,41 +1187,79 @@
             }); 
         }
         
+        // CẬP NHẬT: Tính năng Polling 30s để đợi mã Email
         function fetchEmailCodeUI(email, index, btn) {
             const box = document.getElementById(`code-box-${index}`);
             const valSpan = document.getElementById(`code-val-${index}`);
+            const badge = document.getElementById(`mail-badge-${index}`);
+            
             if (!email || email === "") { showToast('Không có Email', 'error'); return; }
+            if (btn.getAttribute('data-polling') === 'true') return; // Chặn bấm liên tục
             
             checkPinRequired(() => {
+                btn.setAttribute('data-polling', 'true');
                 const originalHTML = btn.innerHTML; 
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>'; 
-                btn.disabled = true; 
+                
                 box.classList.remove('hidden'); 
                 setTimeout(()=>box.classList.remove('opacity-0', '-translate-y-2'), 10);
                 
-                valSpan.innerHTML = '<i class="fa-solid fa-ellipsis fa-fade"></i>'; 
-                valSpan.classList.remove('text-rose-500'); 
+                if (badge) badge.classList.add('hidden'); // Ẩn badge cũ nếu có
                 
-                runScript('getEmailVerificationCode', { targetEmail: email, pass: sessionPass })
-                    .then(code => {
-                        btn.innerHTML = originalHTML; 
-                        btn.disabled = false;
-                        if(code.includes("Không tìm thấy") || code.includes("Không có") || code.includes("Lỗi")) { 
-                            valSpan.innerText = "KHÔNG CÓ MÃ"; 
+                let attempts = 0;
+                const maxAttempts = 6; // 6 lần x 5s = 30s
+                const intervalTime = 5000; // 5 giây
+
+                function pollCode() {
+                    attempts++;
+                    
+                    valSpan.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i><span class="text-[10px] ml-2 text-indigo-300 font-medium">Đang đợi mã (${30 - (attempts-1)*5}s)...</span>`; 
+                    valSpan.classList.remove('text-rose-500'); 
+                    
+                    runScript('getEmailVerificationCode', { targetEmail: email, pass: sessionPass })
+                        .then(code => {
+                            // Thành công: Tìm thấy code hợp lệ
+                            if(!code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && !code.includes("nha")) { 
+                                btn.removeAttribute('data-polling');
+                                btn.innerHTML = originalHTML; 
+                                valSpan.innerText = code; 
+                                
+                                // Hiện Badge báo thư tới
+                                if (badge) {
+                                    badge.classList.remove('hidden');
+                                    badge.innerText = "1";
+                                }
+
+                                // Báo Toast nếu là PC
+                                if (window.innerWidth >= 768) {
+                                    showToast(`Có mã mới từ Email: ${code}`, 'success', 5000); 
+                                } else {
+                                    showToast('Đã lấy được mã!', 'success'); 
+                                }
+                            } 
+                            // Nếu vẫn báo không có và chưa hết giờ: Quét tiếp
+                            else if (attempts < maxAttempts) {
+                                setTimeout(pollCode, intervalTime);
+                            }
+                            // Hết 30 giây: Hủy
+                            else {
+                                btn.removeAttribute('data-polling');
+                                btn.innerHTML = originalHTML; 
+                                valSpan.innerText = "KHÔNG CÓ MÃ"; 
+                                valSpan.classList.add('text-rose-500'); 
+                                showToast('Hết thời gian chờ (30s). Vui lòng thử lại sau.', 'error'); 
+                            }
+                        })
+                        .catch(err => {
+                            btn.removeAttribute('data-polling');
+                            btn.innerHTML = originalHTML; 
+                            valSpan.innerText = "LỖI QUÉT"; 
                             valSpan.classList.add('text-rose-500'); 
-                            showToast('Không có mã', 'error'); 
-                        } else { 
-                            valSpan.innerText = code; 
-                            showToast('Lấy mã thành công', 'success'); 
-                        }
-                    })
-                    .catch(err => {
-                        btn.innerHTML = originalHTML; 
-                        btn.disabled = false; 
-                        valSpan.innerText = "LỖI QUÉT"; 
-                        valSpan.classList.add('text-rose-500'); 
-                        showToast('Lỗi máy chủ', 'error'); 
-                    });
+                            showToast('Lỗi kết nối hòm thư', 'error'); 
+                        });
+                }
+                
+                pollCode(); // Khởi chạy lần 1
             });
         }
 
@@ -1460,11 +1506,11 @@
             let oldDevice = mangThietBi[tbIndex];
 
             if (!newVal) {
-                // Xóa máy - Gọi hàm Log
+                // Xóa máy
                 mangThietBi.splice(tbIndex, 1); 
                 runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: oldDevice, pass: sessionPass }).catch(e=>console.log(e));
             } else {
-                // Sửa tên máy -> Không gọi Log theo yêu cầu
+                // Sửa tên máy
                 mangThietBi[tbIndex] = newVal;
             }
             
@@ -1521,7 +1567,6 @@
             
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').filter(tb => tb.trim() !== '');
             
-            // Lưu lại state ban đầu để so sánh khi thêm mới / xoá
             originalDevicesForLog = mangThietBi.map(x => x.trim());
 
             if (mangThietBi.length === 0) {
