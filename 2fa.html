@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tra cứu Tài khoản & 2FA System</title>
     <link rel="icon" href="./icon/2fa.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,16 +16,19 @@
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .password-text { transition: opacity 0.12s ease-in-out; opacity: 1; }
         .password-text.fade-out { opacity: 0; }
-        .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        aside.collapsed { width: 76px !important; min-width: 76px !important; }
-        aside.collapsed .collapse-text, aside.collapsed .section-title, aside.collapsed .user-info-text { display: none !important; }
-        aside.collapsed .menu-item { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-        aside.collapsed .menu-item:hover { transform: none !important; }
-        aside.collapsed nav { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-        aside.collapsed .logo-box { margin: 0 auto; }
+        
+        /* Mobile Sidebar adjustments */
+        @media (min-width: 768px) {
+            aside.collapsed { width: 76px !important; min-width: 76px !important; }
+            aside.collapsed .collapse-text, aside.collapsed .section-title, aside.collapsed .user-info-text { display: none !important; }
+            aside.collapsed .menu-item { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+            aside.collapsed .menu-item:hover { transform: none !important; }
+            aside.collapsed nav { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+            aside.collapsed .logo-box { margin: 0 auto; }
+        }
         
         @keyframes custom-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-custom-spin { animation: custom-spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
@@ -82,8 +85,10 @@
         .input-error { border-color: #f43f5e !important; color: #f43f5e !important; background-color: #fff1f2 !important; }
 
         .menu-item { transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1); will-change: transform, filter, opacity; position: relative; overflow: hidden; }
-        #sidebar:not(.collapsed) nav:has(.menu-item:hover) .menu-item:not(:hover) { filter: blur(3px); opacity: 0.35; transform: scale(0.95); }
-        #sidebar:not(.collapsed) nav .menu-item:hover { filter: blur(0px) !important; opacity: 1 !important; transform: scale(1.03) translateX(6px) !important; box-shadow: 0 4px 20px -2px rgba(79, 70, 229, 0.25); z-index: 10; position: relative; }
+        @media (min-width: 768px) {
+            #sidebar:not(.collapsed) nav:has(.menu-item:hover) .menu-item:not(:hover) { filter: blur(3px); opacity: 0.35; transform: scale(0.95); }
+            #sidebar:not(.collapsed) nav .menu-item:hover { filter: blur(0px) !important; opacity: 1 !important; transform: scale(1.03) translateX(6px) !important; box-shadow: 0 4px 20px -2px rgba(79, 70, 229, 0.25); z-index: 10; position: relative; }
+        }
         html.dark #sidebar:not(.collapsed) nav .menu-item:hover { box-shadow: 0 4px 20px -2px rgba(129, 140, 248, 0.2); }
         .menu-item::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle 55px at var(--mouse-x, 0) var(--mouse-y, 0), rgba(79, 70, 229, 0.18), transparent 100%); opacity: 0; transition: opacity 0.3s ease; pointer-events: none; z-index: 0; }
         html.dark .menu-item::before { background: radial-gradient(circle 55px at var(--mouse-x, 0) var(--mouse-y, 0), rgba(129, 140, 248, 0.25), transparent 100%); }
@@ -97,7 +102,9 @@
         .animate-vault-enter { animation: vaultEnter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
-        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; max-width: 90%; }
+        @media (max-width: 768px) { .toast-container { bottom: 16px; right: 16px; } }
+        
         .cyber-toast { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 12px 16px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2); font-family: 'Inter', monospace; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 12px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; backdrop-filter: blur(8px); }
         .cyber-toast.show { transform: translateX(0) scale(1); opacity: 1; }
         .cyber-toast.success { border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.2); }
@@ -120,7 +127,6 @@
         html.dark .ripple { background-color: rgba(255, 255, 255, 0.2); }
         @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
 
-        /* Dropdown Active/Highlight State */
         .dropdown-item-active { background-color: #e0e7ff !important; color: #4f46e5 !important; }
         html.dark .dropdown-item-active { background-color: #334155 !important; color: #818cf8 !important; }
 
@@ -130,6 +136,9 @@
 
     <!-- TOAST NOTIFICATION -->
     <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- LỚP PHỦ CHO MOBILE SIDEBAR -->
+    <div id="mobileOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
     
     <!-- MULTI-SELECT BATCH ACTION BAR -->
     <div id="batchActionBar">
@@ -147,7 +156,7 @@
     <div id="loginScreen" class="fixed inset-0 z-[100] bg-[#050505] flex items-center justify-center transition-all duration-500" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background-color: #050505;">
         <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#4f46e5 1px, transparent 1px); background-size: 30px 30px;"></div>
         
-        <div class="w-[400px] max-w-[90%] bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/10 p-10 rounded-3xl shadow-[0_0_50px_rgba(79,70,229,0.15)] relative overflow-hidden animate-vault-enter">
+        <div class="w-[400px] max-w-[90%] bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/10 p-6 md:p-10 rounded-3xl shadow-[0_0_50px_rgba(79,70,229,0.15)] relative overflow-hidden animate-vault-enter">
             <div class="absolute top-0 left-0 w-full h-[2px] bg-indigo-500/80 shadow-[0_0_15px_#6366f1] animate-[shimmer_2.5s_infinite]"></div>
             
             <div class="text-center mb-8">
@@ -193,7 +202,7 @@
 
     <!-- MÀN HÌNH QUẢN LÝ THIẾT BỊ (DEVICE MODAL) -->
     <div id="deviceModal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl w-[500px] max-w-[95%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="deviceModalContent">
+        <div class="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-xl w-[500px] max-w-[95%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="deviceModalContent">
             <div class="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
                 <div>
                     <h3 class="text-lg font-bold text-slate-800 dark:text-white">Quản lý Thiết bị</h3>
@@ -209,14 +218,14 @@
             </div>
             
             <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700 mt-auto">
-                <button onclick="addDeviceRow('', '')" class="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium rounded-xl text-sm transition-colors flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Thêm máy
+                <button onclick="addDeviceRow('', '', true, '')" class="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium rounded-xl text-sm transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Thêm máy</span><span class="sm:hidden">Thêm</span>
                 </button>
                 <div class="flex gap-2">
                     <button onclick="closeDeviceEditor()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-medium rounded-xl text-sm transition-colors">
-                        Hủy bỏ
+                        Hủy
                     </button>
-                    <button id="btnSaveDevice" onclick="saveDeviceData()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors shadow-md flex items-center gap-2">
+                    <button id="btnSaveDevice" onclick="saveDeviceData()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors shadow-md flex items-center gap-2">
                         <i class="fa-solid fa-floppy-disk"></i> Lưu
                     </button>
                 </div>
@@ -248,8 +257,8 @@
         </div>
     </div>
 
-    <!-- SIDEBAR -->
-    <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 min-h-screen sidebar-transition relative z-20 shadow-sm">
+    <!-- SIDEBAR TỐI ƯU CHO MOBILE VÀ PC -->
+    <aside id="sidebar" class="fixed md:relative z-50 md:z-20 w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 min-h-screen sidebar-transition shadow-sm transform -translate-x-full md:translate-x-0 transition-transform duration-300">
         <div class="p-5 border-b border-slate-100 flex items-center justify-between">
             <div class="flex items-center gap-3 overflow-hidden">
                 <div class="logo-box w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200 shrink-0">
@@ -260,6 +269,7 @@
                     <p class="text-[11px] text-slate-400 font-medium">Hệ thống tra cứu account</p>
                 </div>
             </div>
+            <button onclick="toggleSidebar()" class="md:hidden w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
         <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3 overflow-hidden">
@@ -307,50 +317,50 @@
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0 h-screen bg-slate-100 relative">
-        <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm z-10 shrink-0">
-            <div class="flex items-center gap-4">
+    <main class="flex-1 flex flex-col min-w-0 h-screen bg-slate-100 relative overflow-y-auto overflow-x-hidden">
+        <header class="bg-white border-b border-slate-200 px-4 md:px-6 py-4 flex items-center justify-between shadow-sm z-10 shrink-0">
+            <div class="flex items-center gap-3 md:gap-4">
                 <button onclick="toggleSidebar()" class="btn-ripple p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition cursor-pointer" title="Thu gọn/Mở rộng Menu">
                     <i class="fa-solid fa-bars-staggered text-lg"></i>
                 </button>
                 <div>
-                    <h1 id="currentTabTitle" class="text-xl font-bold text-slate-900">Idol Team</h1>
-                    <p class="text-xs text-slate-500">Hệ thống đang được bảo mật</p>
+                    <h1 id="currentTabTitle" class="text-lg md:text-xl font-bold text-slate-900 leading-tight">Idol Team</h1>
+                    <p class="text-[10px] md:text-xs text-slate-500">Hệ thống đang được bảo mật</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 md:gap-3">
                 <button onclick="toggleTheme()" id="themeToggleBtn" class="btn-ripple w-9 h-9 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition shadow-sm cursor-pointer" title="Đổi Giao Diện Sáng/Tối">
                     <i class="fa-solid fa-moon"></i>
                 </button>
                 
-                <button onclick="forceRefreshData()" class="btn-ripple px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer">
-                    <i class="fa-solid fa-rotate"></i> Làm mới
+                <button onclick="forceRefreshData()" class="btn-ripple px-3 py-2 md:px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer" title="Làm mới">
+                    <i class="fa-solid fa-rotate"></i> <span class="hidden sm:inline">Làm mới</span>
                 </button>
                 
-                <button onclick="lockApp()" class="btn-ripple px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer" title="Khóa màn hình ngay lập tức">
-                    <i class="fa-solid fa-lock"></i> Khóa
+                <button onclick="lockApp()" class="btn-ripple px-3 py-2 md:px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer" title="Khóa màn hình">
+                    <i class="fa-solid fa-lock"></i> <span class="hidden sm:inline">Khóa</span>
                 </button>
                 
-                <button onclick="scanDuplicates()" class="btn-ripple px-4 py-2 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer" title="Tìm dữ liệu trùng lặp">
-                    <i class="fa-solid fa-clone"></i> Quét Trùng Lặp
+                <button onclick="scanDuplicates()" class="btn-ripple px-3 py-2 md:px-4 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer" title="Quét Dữ Liệu">
+                    <i class="fa-solid fa-clone"></i> <span class="hidden sm:inline">Quét</span>
                 </button>
             </div>
         </header>
 
-        <div class="p-6 w-full flex-1 flex flex-col min-h-0">
+        <div class="p-4 md:p-6 w-full flex-1 flex flex-col min-h-0 max-w-full">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-col sm:flex-row gap-4 shrink-0">
                 <div class="relative flex-1">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                    <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Tìm kiếm theo Team, Email, Tên Idol, TikTok ID, Thiết bị..." class="w-full pl-11 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                    <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Tìm kiếm theo Team, Email, Tên Idol..." class="w-full pl-11 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                 </div>
-                <div class="flex items-center gap-2 text-sm text-slate-500 px-2">
+                <div class="flex items-center gap-2 text-sm text-slate-500 px-2 justify-end">
                     <span id="recordCount" class="font-semibold text-slate-700">0</span> kết quả
                 </div>
             </div>
 
-            <div id="tableContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 hidden flex-1 min-h-0 flex flex-col relative overflow-hidden">
-                <div class="overflow-x-auto overflow-y-auto custom-scrollbar h-full rounded-2xl relative" style="padding-bottom: 200px;">
+            <div id="tableContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 hidden flex-1 min-h-0 flex flex-col relative overflow-hidden w-full max-w-full">
+                <div class="overflow-x-auto overflow-y-auto custom-scrollbar h-full rounded-2xl relative w-full" style="padding-bottom: 200px;">
                     <table class="w-full text-left border-collapse relative" id="mainTable">
                         <thead class="sticky top-0 z-30 backdrop-blur-md">
                             <tr class="text-sm font-bold text-slate-800 uppercase tracking-widest shadow-md">
@@ -400,6 +410,7 @@
         let pinUnlockExpiry = 0; 
         let pendingRevealAction = null;
         let configDevices = [];
+        let originalDevicesForLog = []; // Khai báo phục vụ ghi log khi mở Modal 
 
         function fetchConfigDevices() {
             if (!sessionPass) return;
@@ -693,7 +704,7 @@
                     document.removeEventListener('mousemove', mouseMoveHandler); 
                     document.removeEventListener('mouseup', mouseUpHandler);
                     const widthsArray = []; 
-                    document.querySelectorAll('#mainTable th').forEach(h => widthsArray.push(parseInt(window.getComputedStyle(h).width, 10)));
+                    document.querySelectorAll('#mainTable th').forEach(h => widthsArray.push(parseInt(window.getComputedStyle(h).width, 10))));
                     runScript('saveColumnWidths', { widths: widthsArray }).catch(e=>console.log(e));
                 };
                 resizer.addEventListener('mousedown', mouseDownHandler);
@@ -714,8 +725,16 @@
             loadData();
         }
 
+        // Đã Update thuật toán cho phép trượt Mobile
         function toggleSidebar() { 
-            document.getElementById('sidebar').classList.toggle('collapsed'); 
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('-translate-x-full');
+                overlay.classList.toggle('hidden');
+            } else {
+                sidebar.classList.toggle('collapsed'); 
+            }
         }
 
         function renderTable(data) {
@@ -1281,7 +1300,7 @@
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
-        // ================= XỬ LÝ SỬA THIẾT BỊ TRỰC TIẾP INLINE (NGAY TRÊN BẢNG) =================
+        // ================= XỬ LÝ SỬA THIẾT BỊ TRỰC TIẾP INLINE (GHI LOG KHI XOÁ) =================
         function editDeviceInline(rowIndex, tbIndex, btnElem) {
             const item = allData[rowIndex];
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
@@ -1315,9 +1334,14 @@
             const item = allData[rowIndex];
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
             
+            let oldDevice = mangThietBi[tbIndex];
+
             if (!newVal) {
+                // Xóa máy - Gọi hàm Log
                 mangThietBi.splice(tbIndex, 1); 
+                runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: oldDevice, pass: sessionPass }).catch(e=>console.log(e));
             } else {
+                // Sửa tên máy -> Không gọi Log theo yêu cầu
                 mangThietBi[tbIndex] = newVal;
             }
             
@@ -1340,6 +1364,8 @@
         function deleteDeviceInline(rowIndex, tbIndex, btnElem) {
             const item = allData[rowIndex];
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
+            
+            let deletedDevice = mangThietBi[tbIndex];
             mangThietBi.splice(tbIndex, 1);
             const finalString = mangThietBi.join(', ');
             
@@ -1348,6 +1374,9 @@
             
             runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
                 .then(() => { 
+                    // Gọi API Log xóa
+                    runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: deletedDevice, pass: sessionPass }).catch(e=>console.log(e));
+                    
                     allData[rowIndex].thietBiIdol = finalString; 
                     allData[rowIndex].thietBiTroLi = ""; 
                     renderTable(allData); 
@@ -1359,7 +1388,7 @@
                 });
         }
 
-        // ================= XỬ LÝ SỬA THIẾT BỊ BẰNG MODAL TỔNG =================
+        // ================= XỬ LÝ SỬA THIẾT BỊ BẰNG MODAL TỔNG (PHÂN LỌC ĐỂ GHI LOG) =================
         let currentEditIndex = -1;
 
         function openDeviceEditor(index) {
@@ -1369,8 +1398,12 @@
             document.getElementById('deviceListContainer').innerHTML = '';
             
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').filter(tb => tb.trim() !== '');
+            
+            // Lưu lại state ban đầu để so sánh khi thêm mới / xoá
+            originalDevicesForLog = mangThietBi.map(x => x.trim());
+
             if (mangThietBi.length === 0) {
-                addDeviceRow('', ''); 
+                addDeviceRow('', '', true, ''); 
             } else {
                 mangThietBi.forEach(tb => {
                     let text = tb.trim(), role = "", device = text;
@@ -1383,7 +1416,7 @@
                         role = parts[0].trim(); 
                         device = parts.slice(1).join('-').trim(); 
                     }
-                    addDeviceRow(role, device);
+                    addDeviceRow(role, device, false, text);
                 });
             }
             
@@ -1510,25 +1543,26 @@
             if(drop) drop.classList.add('hidden');
         }
 
-        function addDeviceRow(role, device) {
+        function addDeviceRow(role, device, isNew = true, originalFullText = "") {
             const container = document.getElementById('deviceListContainer');
             const rowId = 'dev_row_' + Date.now() + Math.floor(Math.random()*1000);
             
+            // Thiết kế lại row thân thiện trên mobile
             let html = `
-            <div id="${rowId}" class="flex gap-2 items-center bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                <input type="text" class="role-input w-28 px-3 py-2 text-[13px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md outline-none focus:border-indigo-500 transition-colors" value="${escapeHtml(role)}" placeholder="Vai trò (VD: MC)">
-                <span class="font-bold text-slate-400">:</span>
+            <div id="${rowId}" class="device-row flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-50 dark:bg-slate-900/50 p-3 sm:p-2 rounded-lg border border-slate-200 dark:border-slate-700" data-isnew="${isNew}" data-original="${escapeHtml(originalFullText)}">
+                <input type="text" class="role-input w-[calc(40%-0.25rem)] sm:w-28 px-3 py-2 text-[13px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md outline-none focus:border-indigo-500 transition-colors" value="${escapeHtml(role)}" placeholder="Vai trò (VD: MC)">
+                <span class="font-bold text-slate-400 hidden sm:block">:</span>
                 
-                <div class="relative flex-1">
+                <div class="relative w-[calc(60%-0.25rem)] sm:flex-1">
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
                     </div>
                     <input type="text" class="device-input w-full pl-3 pr-8 py-2 text-[13px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md outline-none focus:border-indigo-500 transition-colors" 
-                           value="${escapeHtml(device)}" placeholder="Chọn hoặc gõ tên thiết bị..." 
+                           value="${escapeHtml(device)}" placeholder="Tên thiết bị..." 
                            onfocus="showCustomDropdown(this)" oninput="filterCustomDropdown(this)" onkeydown="handleDropdownKey(event, this)">
                 </div>
                 
-                <button onclick="document.getElementById('${rowId}').remove()" class="w-9 h-9 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-rose-400 hover:text-white hover:bg-rose-500 hover:border-rose-500 rounded-md transition-colors shadow-sm"><i class="fa-solid fa-trash text-xs"></i></button>
+                <button onclick="document.getElementById('${rowId}').remove()" class="w-full mt-1 sm:mt-0 sm:w-9 sm:h-9 py-2 sm:py-0 flex items-center justify-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-rose-400 hover:text-white hover:bg-rose-500 hover:border-rose-500 rounded-md transition-colors shadow-sm"><i class="fa-solid fa-trash text-xs"></i><span class="sm:hidden text-xs font-semibold">Xoá thiết bị này</span></button>
             </div>`;
             container.insertAdjacentHTML('beforeend', html);
         }
@@ -1539,17 +1573,47 @@
             btn.disabled = true;
 
             let resultArr = [];
+            let logsToPush = [];
+            let currentOriginals = []; // Chứa danh sách các máy cũ đang sửa hoặc giữ nguyên 
+
             for(let row of document.getElementById('deviceListContainer').children) {
                 let role = row.querySelector('.role-input').value.trim();
                 let device = row.querySelector('.device-input').value.trim();
-                if(device) resultArr.push(role ? `${role}: ${device}` : device);
+                let fullText = role ? `${role}: ${device}` : device;
+                
+                let isNew = row.getAttribute('data-isnew') === "true";
+                let original = row.getAttribute('data-original');
+                
+                if(fullText) {
+                    resultArr.push(fullText);
+                    
+                    if (isNew) {
+                        logsToPush.push({ action: 'Thêm thiết bị', dev: fullText });
+                    } else if (original !== fullText) {
+                        currentOriginals.push(original); // Sửa máy -> Bỏ qua không log
+                    } else {
+                        currentOriginals.push(original); // Không đổi gì
+                    }
+                }
             }
             
+            // Xử lý check các máy bị xóa
+            originalDevicesForLog.forEach(orig => {
+                if (!currentOriginals.includes(orig)) {
+                    logsToPush.push({ action: 'Xóa thiết bị', dev: orig });
+                }
+            });
+
             const finalString = resultArr.join(', ');
             const item = allData[currentEditIndex]; 
 
             runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
                 .then(res => {
+                    // Sau khi cập nhật sheet Master thành công, tiến hành đẩy log ngầm
+                    logsToPush.forEach(l => {
+                        runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: l.action, device: l.dev, pass: sessionPass }).catch(e=>console.log(e));
+                    });
+                    
                     allData[currentEditIndex].thietBiIdol = finalString; 
                     allData[currentEditIndex].thietBiTroLi = ""; 
                     renderTable(allData); 
