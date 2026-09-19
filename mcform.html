@@ -28,7 +28,6 @@
     .day-cell { cursor: pointer; transition: all 0.2s;}
     .day-cell:hover:not(.cell-selected) { background-color: var(--row-hover); }
     
-    /* STYLE KHI CLICK VÀO Ô TRỐNG (MÔ PHỎNG BADGE OFF) */
     .cell-selected { background-color: #fef2f2 !important; position: relative;}
     .cell-selected::after { content: "OFF"; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);}
     
@@ -58,42 +57,25 @@
     #toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0) scale(1); }
     #toast.error { background: #ef4444; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4); }
     #toast.success-boom { background: #059669; box-shadow: 0 0 50px rgba(16, 185, 129, 0.9); transform: translate(-50%, 0) scale(1.15); }
-
-    /* CSS ĐỒNG BỘ LỊCH TƯƠNG TÁC VỚI ẢNH XUẤT */
     .mc-calendar-view { table-layout: fixed; width: 100%; min-width: 600px; max-width: 680px; margin: 0 auto; border-collapse: separate; border-spacing: 0; border: 2px solid #cbd5e1; border-radius: 16px; overflow: hidden; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);}
     .mc-calendar-view th, .mc-calendar-view td { border: none; }
 
-    /* ========================================= */
-    /* CHIẾN LƯỢC MOBILE CHO MC FORM             */
-    /* ========================================= */
+    /* CSS MOBILE */
     @media (max-width: 768px) {
-      /* Chỉnh lại thanh Toolbar */
       .toolbar { flex-direction: column; gap: 12px; padding: 15px 10px; text-align: center; margin-bottom: 10px;}
       .toolbar h2 { font-size: 1.1rem; }
-      
-      /* Chỉnh lại khung bảng */
       .table-container { margin: 0 5px 120px 5px; max-height: 70vh; -webkit-overflow-scrolling: touch; }
-      
-      /* Thu nhỏ kích thước ô */
       .group-cell { width: 55px !important; min-width: 55px !important; max-width: 55px !important; font-size: 0.6rem; }
       .name-cell { width: 110px !important; min-width: 110px !important; max-width: 110px !important; font-size: 0.7rem; padding-left: 4px; }
       th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
-      
-      /* Cố định cột Nhóm và Tên khi vuốt ngang */
       thead th:nth-child(1), tbody td:nth-child(1) { position: sticky; left: 0; z-index: 11; background: var(--card-bg); outline: 1px solid var(--border-color); }
       thead th:nth-child(2), tbody td:nth-child(2) { position: sticky; left: 55px; z-index: 11; background: var(--card-bg); outline: 1px solid var(--border-color); box-shadow: 3px 0 5px rgba(0,0,0,0.05); }
       thead th:nth-child(1), thead th:nth-child(2) { background: var(--table-header); z-index: 12; }
-      
-      /* Responsive cho Lịch Cá Nhân (View Interactive) */
       .mc-calendar-view { min-width: 100%; border: 1px solid #cbd5e1; }
       .mc-calendar-view td { height: 60px !important; padding: 4px !important; }
       .mc-calendar-view td > div:first-child { font-size: 0.9rem !important; }
-      
-      /* Thanh Action Bar bên dưới */
       #actionBar { flex-direction: column; gap: 10px; padding: 10px; text-align: center; }
       #actionBar > div { width: 100%; justify-content: center; }
-      
-      /* Kích thước popup Modal */
       .modal-box { width: 90%; padding: 20px; }
       .badge { width: 30px; height: 22px; font-size: 0.55rem; }
     }
@@ -127,9 +109,7 @@
       <button class="btn-ok" onclick="showConfirmModal()">Gửi Đơn Xin Nghỉ</button>
     </div>
   </div>
-
   <div id="toast">Đang đồng bộ...</div>
-
   <div class="modal-overlay" id="customModal">
     <div class="modal-box">
       <h3 id="modalTitle" style="margin-top:0;">Xác nhận</h3>
@@ -142,7 +122,13 @@
   </div>
 
   <script>
-    const TARGET_GROUP = "<?= target ?>"; 
+    // BẮT BUỘC ĐIỀN LINK GOOGLE APPS SCRIPT WEB APP VÀO ĐÂY
+    const API_URL = "___ĐIỀN_LINK_WEB_APP_CỦA_BẠN_VÀO_ĐÂY___"; 
+
+    // Lấy target từ URL cho Vercel/Netlify
+    const urlParams = new URLSearchParams(window.location.search);
+    const TARGET_GROUP = urlParams.get('target') || ""; 
+
     let employeesData = [], leavesData = [], badgesData = {};
     let isSyncing = false; 
     let selectedCells = []; 
@@ -150,6 +136,24 @@
     let displayMonth = today.getMonth();
     let displayYear = today.getFullYear();
     if (displayMonth > 11) { displayMonth = 0; displayYear++; }
+
+    // HÀM GỌI API CHUNG CHO TẤT CẢ
+    async function callAPI(action, payload = {}) {
+      try {
+        const response = await fetch(API_URL, {
+          redirect: "follow",
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: action, payload: payload })
+        });
+        const result = await response.json();
+        if (result.status === 'success') return result.data;
+        throw new Error(result.message || "Lỗi máy chủ");
+      } catch (error) {
+        console.error("API Error:", error);
+        throw error;
+      }
+    }
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`;
@@ -187,12 +191,12 @@
     function refreshData() {
       if(isSyncing) return showToast("Đang đồng bộ...", false, true);
       isSyncing = true; clearSelection(); showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
-      google.script.run
-        .withSuccessHandler(data => { 
+      callAPI('getInitialData')
+        .then(data => { 
           if(data && data.employees) { employeesData = data.employees; leavesData = data.leaves || []; badgesData = data.badges || {}; renderTable(); }
           isSyncing = false; showToast("✅ Đã làm mới xong!");
         })
-        .withFailureHandler(err => { showToast("Lỗi lấy dữ liệu!", false, true); isSyncing = false; }).getInitialData();
+        .catch(err => { showToast("Lỗi lấy dữ liệu!", false, true); isSyncing = false; });
     }
 
     function renderTable() {
@@ -408,7 +412,10 @@
       let payload = selectedCells.map(c => ({ role: c.role, name: c.name, dateStr: c.date }));
       payload.forEach(req => { leavesData.push({ name: req.name, date: req.dateStr, status: "Pending", swapFrom: "", reason: "Đăng ký nghỉ tháng" }); });
       clearSelection(); renderTable(); showToast("⏳ Đang lưu dữ liệu ngầm...", true);
-      google.script.run.withSuccessHandler(res => { isSyncing = false; if(res === "SUCCESS") showToast("🎉 ĐÃ LƯU THÀNH CÔNG!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } }).withFailureHandler(err => { isSyncing = false; refreshData(); }).registerMultipleMCLeaves(payload);
+      
+      callAPI('registerMultipleMCLeaves', { leaveRequests: payload })
+        .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("🎉 ĐÃ LƯU THÀNH CÔNG!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } })
+        .catch(err => { isSyncing = false; refreshData(); });
     }
 
     function drag(ev, name, date) { ev.dataTransfer.setData("dragName", name); ev.dataTransfer.setData("oldDate", date); }
@@ -431,7 +438,10 @@
         if(lIndex > -1) { leavesData[lIndex].date = newDate; leavesData[lIndex].status = "Pending"; leavesData[lIndex].swapFrom = oldDate; } 
         else { leavesData.push({name: dragName, date: newDate, status: "Pending", swapFrom: oldDate}); }
         renderTable(); showToast("⏳ Đang dời ngày ngầm...", true);
-        google.script.run.withSuccessHandler(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã dời ngày!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } }).withFailureHandler(err => { isSyncing = false; refreshData(); }).processMCDragDrop(dragName, oldDate, newDate);
+        
+        callAPI('processMCDragDrop', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
+            .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã dời ngày!", false, false, true); else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } })
+            .catch(err => { isSyncing = false; refreshData(); });
       }; document.getElementById('customModal').classList.add('active');
     }
 
@@ -444,7 +454,10 @@
         let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === date && l.status === "Pending");
         if(lIndex > -1) leavesData.splice(lIndex, 1);
         renderTable(); showToast("⏳ Đang hủy đơn ngầm...", true);
-        google.script.run.withSuccessHandler(res => { isSyncing = false; btn.style = ""; if(res === "SUCCESS") showToast("🗑️ Đã hủy đơn!", false, false, true); else { showToast("❌ Lỗi!", false, true); refreshData(); } }).withFailureHandler(err => { isSyncing = false; refreshData(); }).cancelPendingMC(name, date);
+        
+        callAPI('cancelPendingMC', { name: name, dateStr: date })
+            .then(res => { isSyncing = false; btn.style = ""; if(res === "SUCCESS") showToast("🗑️ Đã hủy đơn!", false, false, true); else { showToast("❌ Lỗi!", false, true); refreshData(); } })
+            .catch(err => { isSyncing = false; refreshData(); });
       }; document.getElementById('customModal').classList.add('active');
     }
 
@@ -546,7 +559,6 @@
       
       html += tr + "</table>" + legendHtml + "</div>"; container.innerHTML = html;
       
-      // Khóa cứng màu nền trắng khi render
       setTimeout(() => { 
           html2canvas(container, { scale: 3, useCORS: true, backgroundColor: "#ffffff" }).then(canvas => { 
               let link = document.createElement('a'); link.download = `LichNghi_${empName}_Thang${displayMonth+1}.png`; 
