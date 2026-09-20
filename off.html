@@ -409,7 +409,7 @@
          });
       }
 
-      let swappingDates = leavesData.filter(l => l.status === "Pending" && l.swapFrom).map(l => l.name + "_" + l.swapFrom);
+      let swappingDates = leavesData.filter(l => l.swapFrom).map(l => l.name + "_" + l.swapFrom);
 
       for (let deptKey in depts) {
           let displayRole = String(deptKey).toUpperCase();
@@ -436,19 +436,22 @@
 
                 for (let i = 1; i <= daysInMonth; i++) {
                   let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`; let isToday = (i === today.getDate() && displayMonth === today.getMonth() && displayYear === today.getFullYear()); let tdClass = `day-cell ${isToday ? 'today-col' : ''}`;
-                  let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending")); let isSwappingOut = swappingDates.includes(name + "_" + checkDate); let inDraft = draftQueue.find(d => d.type !== 'BADGE' && d.name === name && d.date === checkDate);
+                  let isSwappingOut = swappingDates.includes(name + "_" + checkDate);
+                  let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isSwappingOut);
+                  let inDraft = draftQueue.find(d => d.type !== 'BADGE' && d.name === name && d.date === checkDate);
 
-                  if (leave) {
-                    let tooltip = `Lý do: ${leave.reason || 'Không có'}`; if (leave.swapFrom) tooltip += `\n(Sẽ hủy ngày ${leave.swapFrom} nếu duyệt)`;
-                    if (leave.status === "Pending") tr += `<td data-col="${i}" class="${tdClass} cell-pending" onclick="requestAction('${role}', '${name}', '${checkDate}', 'XỬ LÝ PENDING')"><div class="badge badge-pending" title="${tooltip}">PEND</div></td>`;
-                    else if (isSwappingOut) tr += `<td data-col="${i}" class="${tdClass} cell-off" onclick="requestAction('${role}', '${name}', '${checkDate}', 'TỪ CHỐI ĐỔI')"><div class="badge badge-swap" title="Ngày này đang chờ đổi">ĐỔI</div></td>`;
-                    else {
-                        if (inDraft && inDraft.action === 'XÓA') tr += `<td data-col="${i}" class="${tdClass} cell-off cell-draft" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')"><div class="badge badge-draft-remove" title="Sẽ xóa lịch này">XÓA</div></td>`;
-                        else tr += `<td data-col="${i}" class="${tdClass} cell-off" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')"><div class="badge badge-off" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')">OFF</div></td>`;
-                    }
+                  if (isSwappingOut) {
+                      tr += `<td data-col="${i}" class="${tdClass} cell-off" onclick="requestAction('${role}', '${name}', '${checkDate}', 'TỪ CHỐI ĐỔI')"><div class="badge badge-swap" title="Ngày này đang chờ đổi hoặc đã đổi">ĐỔI</div></td>`;
+                  } else if (leave) {
+                      let tooltip = `Lý do: ${leave.reason || 'Không có'}`; if (leave.swapFrom) tooltip += `\n(Sẽ hủy ngày ${leave.swapFrom} nếu duyệt)`;
+                      if (leave.status === "Pending") tr += `<td data-col="${i}" class="${tdClass} cell-pending" onclick="requestAction('${role}', '${name}', '${checkDate}', 'XỬ LÝ PENDING')"><div class="badge badge-pending" title="${tooltip}">PEND</div></td>`;
+                      else {
+                          if (inDraft && inDraft.action === 'XÓA') tr += `<td data-col="${i}" class="${tdClass} cell-off cell-draft" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')"><div class="badge badge-draft-remove" title="Sẽ xóa lịch này">XÓA</div></td>`;
+                          else tr += `<td data-col="${i}" class="${tdClass} cell-off" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')"><div class="badge badge-off" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')">OFF</div></td>`;
+                      }
                   } else {
-                     if (inDraft && inDraft.action === 'THÊM') tr += `<td data-col="${i}" class="${tdClass} cell-draft" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')"><div class="badge badge-draft-add" title="Sẽ thêm lịch này">THÊM</div></td>`;
-                     else tr += `<td data-col="${i}" class="${tdClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')"></td>`;
+                       if (inDraft && inDraft.action === 'THÊM') tr += `<td data-col="${i}" class="${tdClass} cell-draft" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')"><div class="badge badge-draft-add" title="Sẽ thêm lịch này">THÊM</div></td>`;
+                       else tr += `<td data-col="${i}" class="${tdClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')"></td>`;
                   }
                 }
                 tbody.innerHTML += tr + `</tr>`;
@@ -691,7 +694,7 @@
           let nUp = String(emp.name).toUpperCase(); let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
           if (isTeacher) depts[roleStr][groupStr].unshift(emp); else depts[roleStr][groupStr].push(emp);
       });
-      let swappingDates = leavesData.filter(l => l.status === "Pending" && l.swapFrom).map(l => l.name + "_" + l.swapFrom);
+      let swappingDates = leavesData.filter(l => l.swapFrom).map(l => l.name + "_" + l.swapFrom);
       
       let tbodyHtml = "";
       for (let deptKey in depts) {
@@ -713,14 +716,15 @@
                   
                   dateArray.forEach(d => {
                       let checkDate = d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2,'0') + '-' + d.getDate().toString().padStart(2,'0');
-                      let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending")); let isSwappingOut = swappingDates.includes(name + "_" + checkDate);
+                      let isSwappingOut = swappingDates.includes(name + "_" + checkDate);
+                      let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isSwappingOut);
                       let tdStyle = "border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 2px; height: 46px;";
                       
-                      if (leave) { 
+                      if (isSwappingOut) {
+                          tr += `<td style="${tdStyle} background-color: #e2e8f0;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #475569;">ĐỔI</div></td>`; 
+                      } else if (leave) { 
                           if (leave.status === "Pending") {
                               tr += `<td style="${tdStyle} background-color: #fef3c7;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #f59e0b;">PEND</div></td>`; 
-                          } else if (isSwappingOut) {
-                              tr += `<td style="${tdStyle} background-color: #e2e8f0;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #475569;">ĐỔI</div></td>`; 
                           } else {
                               tr += `<td style="${tdStyle} background-color: #fee2e2;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #ef4444;">OFF</div></td>`; 
                           }
@@ -776,10 +780,10 @@
           let dColor = isOutOfRange ? '#cbd5e1' : '#0f172a';
           let mColor = isOutOfRange ? '#e2e8f0' : '#94a3b8';
           
-          let leave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.date === dateStr && (l.status === "Approved" || l.status === "Pending"));
           let movedToLeave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.swapFrom === dateStr);
           let draft = draftQueue.find(d => d.type !== 'BADGE' && d.name === empName && d.date === dateStr);
           let isPendingSwapOut = leavesData.some(l => String(l.name).trim() === String(empName).trim() && l.status === "Pending" && l.swapFrom === dateStr);
+          let leave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.date === dateStr && (l.status === "Approved" || l.status === "Pending") && !movedToLeave);
           
           let isSelected = false;
           if (leave && (!draft || draft.action !== 'XÓA')) isSelected = true; 
@@ -806,7 +810,7 @@
                   }
               } else if (isPendingSwapOut) {
                   cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #475569; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1.2;">CHỜ DỜI<br>ĐI</div>`;
-              } else if (movedToLeave && movedToLeave.status === "Approved") {
+              } else if (movedToLeave) {
                   let newD = new Date(movedToLeave.date); let newDStr = newD.getDate() + "/" + (newD.getMonth()+1);
                   cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #94a3b8; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); line-height: 1.2;">ĐÃ DỜI<br>RA ${newDStr}</div>`;
               }
