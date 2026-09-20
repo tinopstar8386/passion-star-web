@@ -258,7 +258,8 @@
                 for (let i = 1; i <= daysInMonth; i++) {
                   let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
                   let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`;
-                  let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending"));
+                  let isMoved = leavesData.some(l => String(l.name).trim() === String(name).trim() && l.swapFrom === checkDate);
+                  let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isMoved);
                   let baseStyle = "border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);";
                   
                   if (leave) {
@@ -334,7 +335,8 @@
         let checkDate = loopDate.getFullYear() + '-' + mNum.toString().padStart(2, '0') + '-' + dNum.toString().padStart(2, '0');
         let isOutOfRange = (loopDate.getMonth() !== displayMonth);
 
-        let leave = leavesData.find(l => String(l.name).trim() === String(emp.name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending"));
+        let isMoved = leavesData.some(l => String(l.name).trim() === String(emp.name).trim() && l.swapFrom === checkDate);
+        let leave = leavesData.find(l => String(l.name).trim() === String(emp.name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isMoved);
         let isSelected = selectedCells.some(c => c.name === emp.name && c.date === checkDate);
 
         let rightBorder = (cellCount % 7 === 6) ? "" : "border-right: 1px solid #e2e8f0;";
@@ -514,8 +516,8 @@
           let dColor = isOutOfRange ? '#cbd5e1' : '#0f172a';
           let mColor = isOutOfRange ? '#e2e8f0' : '#94a3b8';
           
-          let leave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.date === dateStr && (l.status === "Approved" || l.status === "Pending"));
           let movedToLeave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.swapFrom === dateStr);
+          let leave = leavesData.find(l => String(l.name).trim() === String(empName).trim() && l.date === dateStr && (l.status === "Approved" || l.status === "Pending") && !movedToLeave);
           let isSelected = selectedCells.some(c => c.date === dateStr);
           let isPendingSwapOut = leavesData.some(l => String(l.name).trim() === String(empName).trim() && l.status === "Pending" && l.swapFrom === dateStr);
 
@@ -540,7 +542,7 @@
                   }
               } else if (isPendingSwapOut) {
                   cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #475569; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1.2;">NGÀY<br>THAY ĐỔI</div>`;
-              } else if (movedToLeave && movedToLeave.status === "Approved") {
+              } else if (movedToLeave) {
                   let newD = new Date(movedToLeave.date); let newDStr = newD.getDate() + "/" + (newD.getMonth()+1);
                   cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #94a3b8; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-decoration: line-through; line-height: 1.2;">ĐÃ DỜI<br>RA ${newDStr}</div>`;
               }
