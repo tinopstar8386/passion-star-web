@@ -510,6 +510,90 @@
             document.addEventListener(evt, resetTimer, true)
         );
 
+
+        // ================= LOGIC BÁO ĐỘNG PRIME RADIANT =================
+        function triggerPrimeRadiantAlarm(accountIdentifier, deviceName) {
+            if (currentSheetName !== 'Prime Radiant') return;
+            
+            let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
+            if (!alarms.find(a => a.account === accountIdentifier && a.device === deviceName)) {
+                // Lấy ngày hiện tại tại thời điểm THÊM thiết bị
+                let today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Ho_Chi_Minh'});
+                alarms.push({ account: accountIdentifier, device: deviceName, dateAdded: today });
+                localStorage.setItem('prime_radiant_alarms', JSON.stringify(alarms));
+            }
+        }
+
+        function checkPrimeRadiantAlarms() {
+            document.querySelectorAll('.alarm-toast').forEach(el => el.remove());
+            
+            if (currentSheetName !== 'Prime Radiant') return;
+            
+            let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
+            if (alarms.length === 0) return;
+
+            let remainingAlarms = [];
+            let today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Ho_Chi_Minh'});
+            
+            alarms.forEach(alarm => {
+                let accountData = allData.find(item => (item.tenIdol || item.email) === alarm.account);
+                if (accountData) {
+                    let mangThietBi = [accountData.thietBiIdol, accountData.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim());
+                    
+                    // Nếu thiết bị vẫn còn trong danh sách -> Thiết bị chưa bị xóa thật
+                    if (mangThietBi.includes(alarm.device)) {
+                        remainingAlarms.push(alarm);
+                        
+                        // Kiểm tra nếu ngày hôm nay KHÁC ngày lúc thêm (tức là đã qua 12h đêm)
+                        if (alarm.dateAdded !== today) {
+                            showPersistentAlarmToast(alarm);
+                        }
+                    }
+                }
+            });
+            
+            localStorage.setItem('prime_radiant_alarms', JSON.stringify(remainingAlarms));
+        }
+
+        function showPersistentAlarmToast(alarm) {
+            const container = document.getElementById('toastContainer');
+            const toastId = 'alarm_' + Date.now() + Math.floor(Math.random() * 1000);
+            const toast = document.createElement('div');
+            
+            toast.className = `cyber-toast error alarm-toast !border-rose-500 !shadow-[0_0_15px_rgba(244,63,94,0.3)]`;
+            toast.id = toastId;
+            toast.innerHTML = `
+                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-2xl animate-pulse"></i>
+                <div class="flex flex-col gap-1 w-full">
+                    <span class="font-bold text-rose-500 uppercase text-[11px] tracking-wider">Báo động Prime Radiant</span>
+                    <span class="text-xs text-white">Tài khoản: <b class="text-indigo-300">${escapeHtml(alarm.account)}</b></span>
+                    <span class="text-xs text-white">Thiết bị mới: <b class="text-rose-300">${escapeHtml(alarm.device)}</b></span>
+                    <span class="text-[10px] text-rose-400 italic mt-0.5">⚠️ Yêu cầu logout thiết bị trong vòng 1 ngày!</span>
+                    <div class="flex items-center gap-2 mt-2 pt-2 border-t border-rose-500/30">
+                        <input type="checkbox" id="chk_${toastId}" class="cyber-checkbox shrink-0" onchange="acknowledgeAlarm('${escapeHtml(alarm.account).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}','${escapeHtml(alarm.device).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}', '${toastId}')">
+                        <label for="chk_${toastId}" class="text-[11px] text-slate-300 cursor-pointer select-none">Đã xử lý / Tắt cảnh báo này</label>
+                    </div>
+                </div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+        }
+
+        function acknowledgeAlarm(account, device, toastId) {
+            let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
+            alarms = alarms.filter(a => !(a.account === account && a.device === device));
+            localStorage.setItem('prime_radiant_alarms', JSON.stringify(alarms));
+
+            const toast = document.getElementById(toastId);
+            if(toast) {
+                toast.classList.remove('show');
+                toast.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => toast.remove(), 400);
+                showToast('Đã ghi nhận tắt cảnh báo thiết bị', 'success');
+            }
+        }
+        // ================= KẾT THÚC LOGIC BÁO ĐỘNG =================
+
         window.onload = function() {
             // Tự động focus vào ô password khi tải trang
             setTimeout(() => {
@@ -585,6 +669,7 @@
                     resetTimer(); 
                     fetchConfigDevices();
                     showToast('Đăng nhập thành công', 'success');
+                    checkPrimeRadiantAlarms();
                 })
                 .catch(error => {
                     btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>'; 
@@ -635,6 +720,7 @@
                     renderTable(allData); 
                     resetTimer();
                     localStorage.setItem('vault_cache_' + currentSheetName, JSON.stringify(data));
+                    checkPrimeRadiantAlarms();
                 })
                 .catch(error => { 
                     if(error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); 
@@ -655,6 +741,7 @@
                         resetTimer();
                         localStorage.setItem('vault_cache_' + currentSheetName, JSON.stringify(data));
                         showToast('Dữ liệu đã được cập nhật', 'success');
+                        checkPrimeRadiantAlarms();
                     }, 1500); 
                 })
                 .catch(error => { 
@@ -1384,7 +1471,7 @@
             }
             let html = `<div class="mb-3 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 p-3 rounded-xl border border-amber-200 dark:border-amber-500/20 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-base"></i> Phát hiện ${duplicates.length} trường hợp bị trùng lặp trong hệ thống:</div>`;
             duplicates.forEach(dup => {
-                html += `<div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 mb-2.5"><div class="flex items-center justify-between mb-2"><span class="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">${escapeHtml(dup.value)}</span><span class="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">${dup.category} trùng</span></div><div class="space-y-1">`;
+                html += `<div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 mb-2.5"><div class="flex items-center justify-between mb-2"><span class="font-bold text-indigo-600 dark:text-indigo-400 text-sm">${escapeHtml(dup.value)}</span><span class="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">${dup.category} trùng</span></div><div class="space-y-1">`;
                 dup.items.forEach(sub => { 
                     html += `<div class="text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between bg-white dark:bg-slate-800 px-2.5 py-1 rounded border border-slate-100 dark:border-slate-700"><span><b>Team:</b> ${escapeHtml(sub.team)} | <b>Idol:</b> ${escapeHtml(sub.name || 'Chưa rõ')}</span><span class="font-mono text-slate-400">Dòng ${sub.index}</span></div>`; 
                 });
@@ -1697,6 +1784,7 @@
                     
                     if (isNew) {
                         logsToPush.push({ action: 'Thêm thiết bị', dev: fullText });
+                        triggerPrimeRadiantAlarm(allData[currentEditIndex].tenIdol || allData[currentEditIndex].email, fullText);
                     } else if (original !== fullText) {
                         currentOriginals.push(original); 
                     } else {
