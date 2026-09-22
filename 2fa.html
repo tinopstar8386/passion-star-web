@@ -517,7 +517,6 @@
             
             let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
             if (!alarms.find(a => a.account === accountIdentifier && a.device === deviceName)) {
-                // Lấy ngày hiện tại tại thời điểm THÊM thiết bị
                 let today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Ho_Chi_Minh'});
                 alarms.push({ account: accountIdentifier, device: deviceName, dateAdded: today });
                 localStorage.setItem('prime_radiant_alarms', JSON.stringify(alarms));
@@ -540,11 +539,8 @@
                 if (accountData) {
                     let mangThietBi = [accountData.thietBiIdol, accountData.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim());
                     
-                    // Nếu thiết bị vẫn còn trong danh sách -> Thiết bị chưa bị xóa thật
                     if (mangThietBi.includes(alarm.device)) {
                         remainingAlarms.push(alarm);
-                        
-                        // Kiểm tra nếu ngày hôm nay KHÁC ngày lúc thêm (tức là đã qua 12h đêm)
                         if (alarm.dateAdded !== today) {
                             showPersistentAlarmToast(alarm);
                         }
@@ -560,19 +556,24 @@
             const toastId = 'alarm_' + Date.now() + Math.floor(Math.random() * 1000);
             const toast = document.createElement('div');
             
-            toast.className = `cyber-toast error alarm-toast !border-rose-500 !shadow-[0_0_15px_rgba(244,63,94,0.3)]`;
+            toast.className = `cyber-toast error alarm-toast !border-rose-500 !shadow-[0_0_15px_rgba(244,63,94,0.3)] pointer-events-auto`;
             toast.id = toastId;
             toast.innerHTML = `
-                <i class="fa-solid fa-triangle-exclamation text-rose-500 text-2xl animate-pulse"></i>
-                <div class="flex flex-col gap-1 w-full">
-                    <span class="font-bold text-rose-500 uppercase text-[11px] tracking-wider">Báo động Prime Radiant</span>
-                    <span class="text-xs text-white">Tài khoản: <b class="text-indigo-300">${escapeHtml(alarm.account)}</b></span>
-                    <span class="text-xs text-white">Thiết bị mới: <b class="text-rose-300">${escapeHtml(alarm.device)}</b></span>
-                    <span class="text-[10px] text-rose-400 italic mt-0.5">⚠️ Yêu cầu logout thiết bị trong vòng 1 ngày!</span>
-                    <div class="flex items-center gap-2 mt-2 pt-2 border-t border-rose-500/30">
-                        <input type="checkbox" id="chk_${toastId}" class="cyber-checkbox shrink-0" onchange="acknowledgeAlarm('${escapeHtml(alarm.account).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}','${escapeHtml(alarm.device).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}', '${toastId}')">
-                        <label for="chk_${toastId}" class="text-[11px] text-slate-300 cursor-pointer select-none">Đã xử lý / Tắt cảnh báo này</label>
+                <div class="flex items-start gap-3 w-full relative">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-500 text-2xl animate-pulse mt-1"></i>
+                    <div class="flex flex-col gap-1 w-full pr-4">
+                        <span class="font-bold text-rose-500 uppercase text-[11px] tracking-wider">Báo động Prime Radiant</span>
+                        <span class="text-xs text-white">Tài khoản: <b class="text-indigo-300">${escapeHtml(alarm.account)}</b></span>
+                        <span class="text-xs text-white">Thiết bị mới: <b class="text-rose-300">${escapeHtml(alarm.device)}</b></span>
+                        <span class="text-[10px] text-rose-400 italic mt-0.5">⚠️ Yêu cầu logout thiết bị trong vòng 1 ngày!</span>
+                        <div class="flex items-center gap-2 mt-2 pt-2 border-t border-rose-500/30">
+                            <input type="checkbox" id="chk_${toastId}" class="cyber-checkbox shrink-0" onchange="acknowledgeAlarm('${escapeHtml(alarm.account).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}','${escapeHtml(alarm.device).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}', '${toastId}')">
+                            <label for="chk_${toastId}" class="text-[11px] text-slate-300 cursor-pointer select-none hover:text-white transition-colors">Đã xử lý / Tắt</label>
+                        </div>
                     </div>
+                    <button onclick="acknowledgeAlarm('${escapeHtml(alarm.account).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}','${escapeHtml(alarm.device).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}', '${toastId}')" class="absolute -right-1 -top-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 border border-slate-600 shadow-md">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
                 </div>
             `;
             container.appendChild(toast);
