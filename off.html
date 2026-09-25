@@ -405,7 +405,11 @@
       thead.innerHTML = ""; tbody.innerHTML = "";
       
       let monthPrefixGlobal = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
-      let currentQuotaGlobal = quotasData[monthPrefixGlobal] || 4; // Mặc định là 4 ngày nếu tháng đó chưa từng được cài
+      
+      // Lấy chính xác Quota của tháng đó từ Database, nếu không có thì mặc định là 4
+      let currentQuotaGlobal = quotasData[monthPrefixGlobal];
+      if (currentQuotaGlobal === undefined || currentQuotaGlobal === null) currentQuotaGlobal = 4;
+      
       if (document.getElementById('currentMonthQuota')) {
           document.getElementById('currentMonthQuota').value = currentQuotaGlobal;
       }
@@ -853,7 +857,9 @@
 
     function saveQuota() {
       if (isSyncing) return showToast("Hệ thống đang bận, đợi chút...", false, true);
-      let val = document.getElementById('currentMonthQuota').value;
+      
+      // Ép kiểu val sang dạng Số (Number)
+      let val = Number(document.getElementById('currentMonthQuota').value);
       let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
       
       isSyncing = true; 
@@ -863,7 +869,8 @@
         .then(res => {
           isSyncing = false;
           if (res === "SUCCESS") { 
-             showToast("✅ Đã cập nhật Quota: " + val + " ngày cho tháng " + monthPrefix); 
+             showToast(`✅ Đã cập nhật Quota: ${val} ngày cho tháng ${monthPrefix}`); 
+             // Cập nhật ngay vào kho tạm ở Frontend và vẽ lại bảng
              quotasData[monthPrefix] = val; 
              renderTable(); 
           } else { 
