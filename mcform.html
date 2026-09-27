@@ -185,6 +185,19 @@
       refreshData();
     });
 
+    // HÀM BẬT/TẮT MÀNG CHẮN CHỜ XỬ LÝ API
+    function toggleBlocker(show, msg) {
+        let blocker = document.getElementById('clickBlocker');
+        if(!blocker) {
+            blocker = document.createElement('div');
+            blocker.id = 'clickBlocker';
+            blocker.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 999999; background: rgba(248, 250, 252, 0.6); backdrop-filter: blur(3px);';
+            document.body.appendChild(blocker);
+        }
+        blocker.style.display = show ? 'block' : 'none';
+        if(show && msg) showToast(msg, true);
+    }
+    
     function generateBadgeHTML(emp) {
       if (emp.customBadge && badgesData[emp.customBadge]) {
          return `<span class="vip-badge" style="background: ${badgesData[emp.customBadge]}; border: 1px solid rgba(255,255,255,0.4);">${emp.customBadge}</span>`;
@@ -445,36 +458,33 @@
       const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng ý Gửi"; btn.style = ""; btn.onclick = executeMultipleLeaves; document.getElementById('customModal').classList.add('active');
     }
 
+    // 1. HÀM GỬI ĐƠN MỚI
     function executeMultipleLeaves() {
-      closeModal(); 
+      closeModal(); if(isSyncing) return; isSyncing = true;
+      toggleBlocker(true, "⏳ Đang chốt đơn, vui lòng giữ màn hình..."); 
       
-      // 1. CẬP NHẬT DATA & GIAO DIỆN NGAY LẬP TỨC (Không cần chờ)
       let payload = selectedCells.map(c => ({ role: c.role, name: c.name, dateStr: c.date }));
-      payload.forEach(req => { 
-          leavesData.push({ name: req.name, date: req.dateStr, status: "Pending", swapFrom: "", reason: "Đăng ký nghỉ tháng" }); 
-      });
-      clearSelection(); 
-      renderTable(); 
       
-      // 2. BÁO THÀNH CÔNG TỨC THÌ ĐỂ USER YÊN TÂM THOÁT APP
-      showToast("🎉 ĐÃ LƯU THÀNH CÔNG!", false, false, true);
-      
-      // 3. ĐÓNG GÓI DATA VÀ ỦY QUYỀN CHO HỆ ĐIỀU HÀNH GỬI NGẦM
-      let requestData = JSON.stringify({ action: 'registerMultipleMCLeaves', payload: { leaveRequests: payload } });
-      
-      if (navigator.sendBeacon) {
-          navigator.sendBeacon(API_URL, requestData); // Đảm bảo gửi kể cả khi tắt tab
-      } else {
-          fetch(API_URL, { method: 'POST', body: requestData, keepalive: true }).catch(e=>{});
-      }
+      callAPI('registerMultipleMCLeaves', { leaveRequests: payload })
+        .then(res => { 
+            isSyncing = false; toggleBlocker(false);
+            if(res === "SUCCESS") { 
+                payload.forEach(req => { leavesData.push({ name: req.name, date: req.dateStr, status: "Pending", swapFrom: "", reason: "Đăng ký nghỉ tháng" }); });
+                clearSelection(); renderTable(); 
+                showToast("🎉 ĐÃ LƯU THÀNH CÔNG!", false, false, true); 
+            } else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } 
+        })
+        .catch(err => { isSyncing = false; toggleBlocker(false); refreshData(); });
     }
 
     function drag(ev, name, date) { ev.dataTransfer.setData("dragName", name); ev.dataTransfer.setData("oldDate", date); }
     function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add("drag-over"); }
     function dragLeave(ev) { ev.currentTarget.classList.remove("drag-over"); }
     
-   function drop(ev, targetName, newDate) {
+  // 2. HÀM KÉO THẢ DỜI NGÀY
+    function drop(ev, targetName, newDate) {
       ev.preventDefault(); ev.currentTarget.classList.remove("drag-over"); ev.stopPropagation(); 
+      if(isSyncing) return;
       
       let dragName = ev.dataTransfer.getData("dragName"); let oldDate = ev.dataTransfer.getData("oldDate");
       if (!dragName || dragName !== targetName || oldDate === newDate) return;
@@ -486,47 +496,47 @@
       const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng Ý"; btn.style = "";
       
       btn.onclick = () => { 
-        closeModal(); 
+        closeModal(); isSyncing = true;
+        toggleBlocker(true, "⏳ Đang dời ngày, vui lòng đợi...");
         
-        // 1. DỜI NGÀY TRÊN GIAO DIỆN LẬP TỨC
-        let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(dragName).trim() && l.date === oldDate);
-        if(lIndex > -1) { leavesData[lIndex].date = newDate; leavesData[lIndex].status = "Pending"; leavesData[lIndex].swapFrom = oldDate; } 
-        else { leavesData.push({name: dragName, date: newDate, status: "Pending", swapFrom: oldDate}); }
-        renderTable(); 
-        
-        // 2. BÁO THÀNH CÔNG
-        showToast("✅ Đã dời ngày!", false, false, true);
-        
-        // 3. ĐẨY DATA NGẦM
-        let requestData = JSON.stringify({ action: 'processMCDragDrop', payload: { name: dragName, oldDateStr: oldDate, newDateStr: newDate } });
-        if (navigator.sendBeacon) navigator.sendBeacon(API_URL, requestData);
-        else fetch(API_URL, { method: 'POST', body: requestData, keepalive: true }).catch(e=>{});
+        callAPI('processMCDragDrop', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
+            .then(res => { 
+                isSyncing = false; toggleBlocker(false);
+                if(res === "SUCCESS") { 
+                    let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(dragName).trim() && l.date === oldDate);
+                    if(lIndex > -1) { leavesData[lIndex].date = newDate; leavesData[lIndex].status = "Pending"; leavesData[lIndex].swapFrom = oldDate; } 
+                    else { leavesData.push({name: dragName, date: newDate, status: "Pending", swapFrom: oldDate}); }
+                    renderTable(); 
+                    showToast("✅ Đã dời ngày!", false, false, true); 
+                } else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } 
+            })
+            .catch(err => { isSyncing = false; toggleBlocker(false); refreshData(); });
       }; 
       document.getElementById('customModal').classList.add('active');
     }
 
+    // 3. HÀM HỦY ĐƠN
     function confirmCancelPending(name, date) {
+      if(isSyncing) return;
       document.getElementById('modalTitle').innerHTML = "Hủy Đơn"; 
       document.getElementById('modalMsg').innerHTML = `Hủy đơn xin nghỉ ngày <b style="color:#ef4444;">${date}</b> của <b>${name}</b>?`;
-      const btn = document.getElementById('modalOkBtn'); 
-      btn.className = "btn-cancel"; btn.innerText = "Đồng ý Hủy"; btn.style.background = "#ef4444"; btn.style.color = "white"; 
+      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-cancel"; btn.innerText = "Đồng ý Hủy"; btn.style.background = "#ef4444"; btn.style.color = "white"; 
       
       btn.onclick = () => { 
-        closeModal(); 
+        closeModal(); isSyncing = true;
+        toggleBlocker(true, "⏳ Đang hủy đơn, vui lòng đợi...");
         
-        // 1. XÓA TRÊN GIAO DIỆN NGAY LẬP TỨC
-        let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === date && l.status === "Pending");
-        if(lIndex > -1) leavesData.splice(lIndex, 1);
-        renderTable(); 
-        
-        // 2. BÁO THÀNH CÔNG TỨC THÌ
-        showToast("🗑️ Đã hủy đơn!", false, false, true); 
-        btn.style = "";
-        
-        // 3. GỬI LỆNH HỦY NGẦM
-        let requestData = JSON.stringify({ action: 'cancelPendingMC', payload: { name: name, dateStr: date } });
-        if (navigator.sendBeacon) navigator.sendBeacon(API_URL, requestData);
-        else fetch(API_URL, { method: 'POST', body: requestData, keepalive: true }).catch(e=>{});
+        callAPI('cancelPendingMC', { name: name, dateStr: date })
+            .then(res => { 
+                isSyncing = false; toggleBlocker(false); btn.style = ""; 
+                if(res === "SUCCESS") { 
+                    let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === date && l.status === "Pending");
+                    if(lIndex > -1) leavesData.splice(lIndex, 1);
+                    renderTable(); 
+                    showToast("🗑️ Đã hủy đơn!", false, false, true); 
+                } else { showToast("❌ Lỗi!", false, true); refreshData(); } 
+            })
+            .catch(err => { isSyncing = false; toggleBlocker(false); refreshData(); });
       }; 
       document.getElementById('customModal').classList.add('active');
     }
