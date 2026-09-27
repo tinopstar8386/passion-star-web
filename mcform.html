@@ -80,15 +80,14 @@
       .mc-calendar-view { min-width: 100%; border: 1px solid #cbd5e1; }
       .mc-calendar-view td { height: 60px !important; padding: 4px !important; }
       .mc-calendar-view td > div:first-child { font-size: 0.9rem !important; }
-      .month-text { display: none !important; } /* Ẩn chữ tháng trên mobile cho gọn */
+      .month-text { display: none !important; }
 
       #actionBar { flex-direction: column; gap: 10px; padding: 10px; text-align: center; }
       #actionBar > div { width: 100%; justify-content: center; }
       .modal-box { width: 90%; padding: 20px; }
       .badge { width: 30px; height: 22px; font-size: 0.55rem; }
       
-      /* Toast mobile: Góc trên phải, kích thước nhỏ nhất có thể */
-      #toast { top: 15px !important; bottom: auto !important; right: 15px !important; left: auto !important; padding: 6px 12px !important; font-size: 0.7rem !important; min-width: auto !important; width: max-content !important; border-radius: 6px !important; transform: translateY(-15px) scale(0.9) !important; }
+      #toast { top: 15px !important; bottom: auto !important; right: 15px !important; left: auto !important; padding: 6px 12px !important; font-size: 0.75rem !important; min-width: auto !important; width: max-content !important; border-radius: 6px !important; transform: translateY(-15px) scale(0.9) !important; z-index: 9999999 !important; }
       #toast.show { transform: translateY(0) scale(1) !important; }
       #toast.success-boom { transform: translateY(0) scale(1.05) !important; }
     }
@@ -116,7 +115,7 @@
   </div>
   
   <div id="actionBar">
-    <div>Đã chọn <span id="selectedCount" style="font-weight: 800; color: #3b82f6; font-size: 1.4rem; margin: 0 5px;">0</span> ngày nghỉ</div>
+    <div id="actionBarTextWrapper">Đã chọn <span id="selectedCount" style="font-weight: 800; color: #3b82f6; font-size: 1.4rem; margin: 0 5px;">0</span> ngày nghỉ</div>
     <div style="display: flex; gap: 12px;">
       <button class="btn-cancel" onclick="clearSelection()">Hủy bỏ</button>
       <button class="btn-ok" id="actionBarOkBtn" onclick="showConfirmModal()">Gửi Đơn Xin Nghỉ</button>
@@ -231,7 +230,7 @@
 
     function refreshData() {
       if(isSyncing) return showToast("Đang đồng bộ...", false, true);
-      isSyncing = true; clearSelection(); showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
+      isSyncing = true; clearSelection(); showToast("⏳ Đang tải dữ liệu...", true); 
       callAPI('getInitialData')
         .then(data => { 
           if(data && data.employees) { 
@@ -385,6 +384,7 @@
         let isMoved = leavesData.some(l => String(l.name).trim() === String(emp.name).trim() && l.swapFrom === checkDate);
         let leave = leavesData.find(l => String(l.name).trim() === String(emp.name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isMoved);
         let isSelected = selectedCells.some(c => c.name === emp.name && c.date === checkDate);
+        let isCancelSelected = selectedCancelCells.some(c => c.name === emp.name && c.date === checkDate);
 
         let rightBorder = (cellCount % 7 === 6) ? "" : "border-right: 1px solid #e2e8f0;";
         let bottomBorder = "border-bottom: 1px solid #e2e8f0;";
@@ -392,7 +392,9 @@
 
         if (isOutOfRange) {
              cellStyle += ` background-color: #f8fafc;`;
-        } else if (leave || isSelected) {
+        } else if (leave && !isCancelSelected) {
+             cellStyle += ` background-color: #fef2f2;`;
+        } else if (isSelected) {
              cellStyle += ` background-color: #fef2f2;`;
         } else {
              cellStyle += ` background-color: #ffffff;`;
@@ -407,8 +409,9 @@
         if (!isOutOfRange) {
           if (leave) {
             if (leave.status === "Pending") {
+               let sClass = isCancelSelected ? 'cell-cancel-selected' : '';
                cellContent += `<div class="badge badge-pending" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; pointer-events: none; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">⏳ PEND</div>`;
-               tdAttrs += ` class="day-cell cell-pending" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="toggleCancelSelection(this, '${emp.name}', '${checkDate}'); event.stopPropagation();" title="Kéo thả ĐỂ ĐỔI NGÀY, Nhấn ĐỂ HỦY"`;
+               tdAttrs += ` class="day-cell cell-pending ${sClass}" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="toggleCancelSelection(this, '${emp.name}', '${checkDate}'); event.stopPropagation();" title="Kéo thả ĐỂ ĐỔI NGÀY, Nhấn ĐỂ CHỌN HỦY"`;
             } else {
                cellContent += `<div class="badge badge-off" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">OFF</div>`;
                tdAttrs += ` class="day-cell cell-off" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" title="Kéo thả sang ô trống để đổi"`;
@@ -461,28 +464,27 @@
       } else {
           selectedCancelCells.push({name: name, date: checkDate, td: tdElement}); 
           tdElement.classList.add('cell-cancel-selected');
+          showToast("Đã chọn! Bấm nút HỦY ĐƠN ở thanh dưới cùng", true); // Hướng dẫn User
       }
       updateActionBar();
     }
 
     function updateActionBar() {
       const bar = document.getElementById('actionBar');
-      const countSpan = document.getElementById('selectedCount');
+      const textWrapper = document.getElementById('actionBarTextWrapper');
       const okBtn = document.getElementById('actionBarOkBtn');
 
       if (selectedCells.length > 0) {
-        countSpan.innerText = selectedCells.length;
-        countSpan.style.color = "#3b82f6";
+        textWrapper.innerHTML = `Đã chọn <span style="font-weight: 800; color: #3b82f6; font-size: 1.4rem; margin: 0 5px;">${selectedCells.length}</span> ngày nghỉ`;
         okBtn.innerText = "Gửi Đơn Xin Nghỉ";
         okBtn.style.background = "#3b82f6";
-        okBtn.onclick = showConfirmModal;
+        okBtn.onclick = () => { showConfirmModal(); };
         bar.classList.add('show');
       } else if (selectedCancelCells.length > 0) {
-        countSpan.innerText = selectedCancelCells.length;
-        countSpan.style.color = "#ef4444";
+        textWrapper.innerHTML = `Đã chọn <span style="font-weight: 800; color: #ef4444; font-size: 1.4rem; margin: 0 5px;">${selectedCancelCells.length}</span> đơn để hủy`;
         okBtn.innerText = "Hủy Các Đơn Đã Chọn";
         okBtn.style.background = "#ef4444";
-        okBtn.onclick = showConfirmCancelModal;
+        okBtn.onclick = () => { showConfirmCancelModal(); };
         bar.classList.add('show');
       } else {
         bar.classList.remove('show');
@@ -503,7 +505,9 @@
       let msgHtml = "Gửi đơn xin nghỉ cho:<br><ul style='text-align:left; margin-top:10px; padding-left: 20px;'>";
       for(let name in grouped) { grouped[name].sort((a,b) => parseInt(a.split('/')[0]) - parseInt(b.split('/')[0])); msgHtml += `<li><b>${name}</b>: Ngày ${grouped[name].join(", ")}</li>`; }
       document.getElementById('modalMsg').innerHTML = msgHtml + "</ul>";
-      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng ý Gửi"; btn.style = ""; btn.onclick = executeMultipleLeaves; document.getElementById('customModal').classList.add('active');
+      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng ý Gửi"; btn.style = ""; 
+      btn.onclick = () => { executeMultipleLeaves(); }; 
+      document.getElementById('customModal').classList.add('active');
     }
 
     function showConfirmCancelModal() {
@@ -513,7 +517,7 @@
       document.getElementById('modalMsg').innerHTML = msgHtml + "</ul>";
       const btn = document.getElementById('modalOkBtn');
       btn.className = "btn-ok"; btn.innerText = "Đồng ý Hủy"; btn.style.background = "#ef4444";
-      btn.onclick = executeMultipleCancels;
+      btn.onclick = () => { executeMultipleCancels(); };
       document.getElementById('customModal').classList.add('active');
     }
 
