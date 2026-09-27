@@ -134,7 +134,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const TARGET_GROUP = urlParams.get('target') || ""; 
 
-    let employeesData = [], leavesData = [], badgesData = {};
+    let employeesData = [], leavesData = [], badgesData = {}, quotasData = {};
     let isSyncing = false; 
     let selectedCells = []; 
     let today = new Date();
@@ -194,16 +194,21 @@
     }
 
     function refreshData() {
-      if(isSyncing) return showToast("Đang đồng bộ...", false, true);
-      isSyncing = true; clearSelection(); showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
-      callAPI('getInitialData')
-        .then(data => { 
-          if(data && data.employees) { employeesData = data.employees; leavesData = data.leaves || []; badgesData = data.badges || {}; renderTable(); }
-          isSyncing = false; showToast("✅ Đã làm mới xong!");
-        })
-        .catch(err => { showToast("Lỗi lấy dữ liệu!", false, true); isSyncing = false; });
-    }
-
+  if(isSyncing) return showToast("Đang đồng bộ...", false, true);
+  isSyncing = true; clearSelection(); showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
+  callAPI('getInitialData')
+    .then(data => { 
+      if(data && data.employees) { 
+          employeesData = data.employees; 
+          leavesData = data.leaves || []; 
+          badgesData = data.badges || {}; 
+          quotasData = data.quotas || {}; // <-- THÊM DÒNG NÀY ĐỂ HỨNG QUOTA
+          renderTable(); 
+      }
+      isSyncing = false; showToast("✅ Đã làm mới xong!");
+    })
+    .catch(err => { showToast("Lỗi lấy dữ liệu!", false, true); isSyncing = false; });
+}
     function renderTable() {
       try {
         if (TARGET_GROUP && TARGET_GROUP.startsWith("PERSON:")) {
@@ -386,18 +391,29 @@
     }
 
     function toggleCellSelection(tdElement, role, name, checkDate) {
-      if(isSyncing) return showToast("Hệ thống đang lưu, vui lòng đợi giây lát...", false, true);
-      let idx = selectedCells.findIndex(c => c.name === name && c.date === checkDate);
-      if(idx > -1) { selectedCells.splice(idx, 1); tdElement.classList.remove('cell-selected'); } 
-      else {
-         let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
-         let existingLeaves = leavesData.filter(l => String(l.name).trim() === String(name).trim() && l.date.startsWith(monthPrefix) && (l.status === "Approved" || l.status === "Pending")).length;
-         let currentlySelected = selectedCells.filter(c => c.name === name).length;
-         if (existingLeaves + currentlySelected >= 5) return showToast(`⚠️ Lỗi: ${name} đã hết Quota (5 ngày/tháng)!`, false, true);
-         selectedCells.push({role: role, name: name, date: checkDate, td: tdElement}); tdElement.classList.add('cell-selected');
-      }
-      updateActionBar();
-    }
+  if(isSyncing) return showToast("Hệ thống đang lưu, vui lòng đợi giây lát...", false, true);
+  let idx = selectedCells.findIndex(c => c.name === name && c.date === checkDate);
+  if(idx > -1) { selectedCells.splice(idx, 1); tdElement.classList.remove('cell-selected'); } 
+  else {
+     let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+     
+     // --- BẮT ĐẦU LOGIC QUOTA ĐỘNG ---
+     let currentQuota = quotasData[monthPrefix];
+     if (currentQuota === undefined || currentQuota === null) currentQuota = 4; // Mặc định là 4 nếu chưa set
+     // ---------------------------------
+
+     let existingLeaves = leavesData.filter(l => String(l.name).trim() === String(name).trim() && l.date.startsWith(monthPrefix) && (l.status === "Approved" || l.status === "Pending")).length;
+     let currentlySelected = selectedCells.filter(c => c.name === name).length;
+     
+     // Kiểm tra tổng số ngày nghỉ đã có + số ngày đang chọn có vượt Quota không
+     if (existingLeaves + currentlySelected >= currentQuota) {
+         return showToast(`⚠️ Lỗi: ${name} đã hết Quota (${currentQuota} ngày/tháng)!`, false, true);
+     }
+
+     selectedCells.push({role: role, name: name, date: checkDate, td: tdElement}); tdElement.classList.add('cell-selected');
+  }
+  updateActionBar();
+}
 
     function updateActionBar() {
       const bar = document.getElementById('actionBar'); document.getElementById('selectedCount').innerText = selectedCells.length;
