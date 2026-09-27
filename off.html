@@ -392,27 +392,74 @@
     }
 
   function populatePersonSelect() {
-  const select = document.getElementById("personSelect"); select.innerHTML = '<option value="">- Chọn Người/Nhóm -</option>';
-  let optgroupPerson = document.createElement('optgroup'); optgroupPerson.label = "👤 CÁ NHÂN (1 link 1 người)";
+  const select = document.getElementById("personSelect"); 
+  select.innerHTML = '<option value="">- Chọn Người/Nhóm -</option>';
+  let optgroupPerson = document.createElement('optgroup'); 
+  optgroupPerson.label = "👤 CÁ NHÂN (1 link 1 người)";
   
-  // LOGIC MỚI: Ưu tiên nhóm (group) trước, rồi mới đến tên (name)
-  let sortedEmps = [...employeesData].sort((a,b) => {
-      let gA = (a.group || "Khác").trim().toUpperCase();
-      let gB = (b.group || "Khác").trim().toUpperCase();
-      if (gA !== gB) return gA.localeCompare(gB);
-      return String(a.name).trim().localeCompare(String(b.name).trim());
-  }); 
-  
-  sortedEmps.forEach(emp => { 
-      let opt = document.createElement('option'); 
-      opt.value = "PERSON:" + emp.name; 
-      opt.innerText = emp.name + " (" + (emp.group || emp.role) + ")"; 
-      optgroupPerson.appendChild(opt); 
-  }); 
+  // LOGIC NHÓM: Phân cấp theo Bộ Phận -> Nhóm
+  let depts = {};
+  employeesData.forEach(emp => {
+      let r = emp.role ? String(emp.role).trim().toUpperCase() : "KHÁC";
+      let g = emp.group ? String(emp.group).trim() : "KHÁC";
+      if (!depts[r]) depts[r] = {};
+      if (!depts[r][g]) depts[r][g] = [];
+      depts[r][g].push(emp);
+  });
+
+  for (let deptKey in depts) {
+      let displayRole = deptKey;
+      if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+      else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; 
+      else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+      else displayRole = "BỘ PHẬN " + displayRole;
+
+      // 1. Header Bộ Phận & Dải phân cách
+      let deptOpt = document.createElement('option');
+      deptOpt.disabled = true;
+      deptOpt.innerText = displayRole;
+      deptOpt.style.fontWeight = "bold";
+      deptOpt.style.color = "#0f172a";
+      optgroupPerson.appendChild(deptOpt);
+
+      let sepOpt = document.createElement('option');
+      sepOpt.disabled = true;
+      sepOpt.innerText = "----------------------";
+      optgroupPerson.appendChild(sepOpt);
+
+      // 2. Lặp qua từng Team trong Bộ Phận
+      let sortedGroups = Object.keys(depts[deptKey]).sort();
+      sortedGroups.forEach(group => {
+          
+          // Header Tên Team để ngăn cách
+          let teamSep = document.createElement('option');
+          teamSep.disabled = true;
+          teamSep.innerText = `--- ${group} ---`;
+          optgroupPerson.appendChild(teamSep);
+
+          // Sắp xếp nhân sự: Teacher/Trưởng team lên đầu, sau đó theo ABC
+          depts[deptKey][group].sort((a, b) => {
+              let nUpA = String(a.name).toUpperCase();
+              let nUpB = String(b.name).toUpperCase();
+              let isTeacherA = (nUpA === "KEN" || nUpA === "U" || nUpA === "DINO" || nUpA.includes("TEACHER"));
+              let isTeacherB = (nUpB === "KEN" || nUpB === "U" || nUpB === "DINO" || nUpB.includes("TEACHER"));
+              if (isTeacherA && !isTeacherB) return -1;
+              if (!isTeacherA && isTeacherB) return 1;
+              return String(a.name).localeCompare(String(b.name));
+          });
+
+          depts[deptKey][group].forEach(emp => {
+              let opt = document.createElement('option');
+              opt.value = "PERSON:" + emp.name;
+              opt.innerText = "\u00A0\u00A0\u00A0\u00A0" + emp.name; // Thụt lề cho tên nhân sự
+              optgroupPerson.appendChild(opt);
+          });
+      });
+  }
   select.appendChild(optgroupPerson);
   
+  // Phần Xuất Link Nhóm giữ nguyên
   let optgroupDept = document.createElement('optgroup'); optgroupDept.label = "👥 THEO BỘ PHẬN / NHÓM";
-  // Thêm .sort() để danh sách nhóm cũng hiển thị theo thứ tự ABC cho gọn gàng
   let uniqueGroups = [...new Set(employeesData.map(e => e.group))].filter(g => g && g.trim() !== "").sort(); 
   uniqueGroups.forEach(g => { 
       let opt = document.createElement('option'); 
@@ -422,7 +469,6 @@
   }); 
   select.appendChild(optgroupDept);
 }
-
     function renderTable() {
       const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
       const thead = document.getElementById("tableHead"), tbody = document.getElementById("tableBody"); 
@@ -641,39 +687,62 @@
       else { document.getElementById('groupSelectContainer').style.display = 'none'; document.getElementById('customPeopleContainer').style.display = 'block'; }
     }
     
-    function populateExportPeople() {
-  let container = document.getElementById('exportPeopleList'); container.innerHTML = '';
+  function populateExportPeople() {
+  let container = document.getElementById('exportPeopleList'); 
+  container.innerHTML = '';
   
-  // LOGIC MỚI: Ưu tiên nhóm (group) trước, rồi mới đến tên (name)
-  let sortedEmps = [...employeesData].sort((a,b) => {
-      let gA = (a.group || "Khác").trim().toUpperCase();
-      let gB = (b.group || "Khác").trim().toUpperCase();
-      if (gA !== gB) return gA.localeCompare(gB);
-      return String(a.name).trim().localeCompare(String(b.name).trim());
+  // Tái sử dụng logic nhóm Bộ Phận -> Nhóm
+  let depts = {};
+  employeesData.forEach(emp => {
+      let r = emp.role ? String(emp.role).trim().toUpperCase() : "KHÁC";
+      let g = emp.group ? String(emp.group).trim() : "KHÁC";
+      if (!depts[r]) depts[r] = {};
+      if (!depts[r][g]) depts[r][g] = [];
+      depts[r][g].push(emp);
   });
-  
-  sortedEmps.forEach(emp => { 
-      let groupLabel = emp.group ? emp.group : 'Khác'; 
-      container.innerHTML += `<label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><input type="checkbox" class="export-person-cb" value="${emp.name}"> <span title="${emp.name} (${groupLabel})"><b>${emp.name}</b> <span style="color:#64748b; font-size:0.7rem">(${groupLabel})</span></span></label>`; 
-  });
+
+  for (let deptKey in depts) {
+      let displayRole = deptKey;
+      if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+      else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; 
+      else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+      else displayRole = "BỘ PHẬN " + displayRole;
+
+      // Header bộ phận cho UI xuất ảnh
+      container.innerHTML += `<div style="grid-column: 1 / -1; font-weight: 800; color: #0f172a; margin-top: 10px; font-size: 0.9rem;">${displayRole}</div>`;
+      container.innerHTML += `<div style="grid-column: 1 / -1; color: #cbd5e1; margin-bottom: 5px; margin-top: -5px;">----------------------</div>`;
+
+      let sortedGroups = Object.keys(depts[deptKey]).sort();
+      sortedGroups.forEach(group => {
+          // Header ngăn cách Team
+          container.innerHTML += `<div style="grid-column: 1 / -1; color: #64748b; margin-top: 5px; font-size: 0.75rem; font-weight: bold;">--- ${group} ---</div>`;
+
+          depts[deptKey][group].sort((a, b) => {
+              let nUpA = String(a.name).toUpperCase(); let nUpB = String(b.name).toUpperCase();
+              let isTeacherA = (nUpA === "KEN" || nUpA === "U" || nUpA === "DINO" || nUpA.includes("TEACHER"));
+              let isTeacherB = (nUpB === "KEN" || nUpB === "U" || nUpB === "DINO" || nUpB.includes("TEACHER"));
+              if (isTeacherA && !isTeacherB) return -1;
+              if (!isTeacherA && isTeacherB) return 1;
+              return String(a.name).localeCompare(String(b.name));
+          });
+
+          depts[deptKey][group].forEach(emp => {
+              container.innerHTML += `<label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 15px;"><input type="checkbox" class="export-person-cb" value="${emp.name}"> <span title="${emp.name} (${group})"><b>${emp.name}</b></span></label>`; 
+          });
+      });
+  }
   
   const exportFilter = document.getElementById('exportGroupFilter');
   let optHTML = `<option value="ALL">🌟 Tất cả các bộ phận</option>`;
-  let roleMap = {};
-  employeesData.forEach(emp => {
-      let r = emp.role ? String(emp.role).trim() : "KHÁC"; let g = emp.group ? String(emp.group).trim() : "KHÁC";
-      if (!roleMap[r]) roleMap[r] = new Set();
-      if (g && g !== "KHÁC") roleMap[r].add(g);
-  });
-
-  for (let r in roleMap) {
-      let displayR = r.toUpperCase();
+  for (let r in depts) {
+      let displayR = r;
       if (displayR === "LIVESTEAM" || displayR === "LIVESTREAM") displayR = "BỘ PHẬN LIVESTREAM";
-      else if (displayR === "MANAGER") displayR = "BỘ PHẬN MANAGER"; else if (displayR === "ACCOUNTANT") displayR = "BỘ PHẬN ACCOUNTANT";
+      else if (displayR === "MANAGER") displayR = "BỘ PHẬN MANAGER"; 
+      else if (displayR === "ACCOUNTANT") displayR = "BỘ PHẬN ACCOUNTANT";
       else displayR = "BỘ PHẬN " + displayR;
       
       optHTML += `<option value="ROLE:${r}">🏢 ${displayR}</option>`;
-      let groups = Array.from(roleMap[r]).sort();
+      let groups = Object.keys(depts[r]).sort();
       groups.forEach(g => { optHTML += `<option value="GROUP:${g}">-- Nhóm: ${g}</option>`; });
   }
   exportFilter.innerHTML = optHTML;
