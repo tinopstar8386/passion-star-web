@@ -391,13 +391,37 @@
         .catch(err => { showToast("Lỗi API", false, true); });
     }
 
-    function populatePersonSelect() {
-      const select = document.getElementById("personSelect"); select.innerHTML = '<option value="">- Chọn Người/Nhóm -</option>';
-      let optgroupPerson = document.createElement('optgroup'); optgroupPerson.label = "👤 CÁ NHÂN (1 link 1 người)";
-      let sortedEmps = [...employeesData].sort((a,b) => a.name.localeCompare(b.name)); sortedEmps.forEach(emp => { let opt = document.createElement('option'); opt.value = "PERSON:" + emp.name; opt.innerText = emp.name + " (" + (emp.group || emp.role) + ")"; optgroupPerson.appendChild(opt); }); select.appendChild(optgroupPerson);
-      let optgroupDept = document.createElement('optgroup'); optgroupDept.label = "👥 THEO BỘ PHẬN / NHÓM";
-      let uniqueGroups = [...new Set(employeesData.map(e => e.group))].filter(g => g && g.trim() !== ""); uniqueGroups.forEach(g => { let opt = document.createElement('option'); opt.value = "GROUP:" + g; opt.innerText = "Nhóm: " + g; optgroupDept.appendChild(opt); }); select.appendChild(optgroupDept);
-    }
+  function populatePersonSelect() {
+  const select = document.getElementById("personSelect"); select.innerHTML = '<option value="">- Chọn Người/Nhóm -</option>';
+  let optgroupPerson = document.createElement('optgroup'); optgroupPerson.label = "👤 CÁ NHÂN (1 link 1 người)";
+  
+  // LOGIC MỚI: Ưu tiên nhóm (group) trước, rồi mới đến tên (name)
+  let sortedEmps = [...employeesData].sort((a,b) => {
+      let gA = (a.group || "Khác").trim().toUpperCase();
+      let gB = (b.group || "Khác").trim().toUpperCase();
+      if (gA !== gB) return gA.localeCompare(gB);
+      return String(a.name).trim().localeCompare(String(b.name).trim());
+  }); 
+  
+  sortedEmps.forEach(emp => { 
+      let opt = document.createElement('option'); 
+      opt.value = "PERSON:" + emp.name; 
+      opt.innerText = emp.name + " (" + (emp.group || emp.role) + ")"; 
+      optgroupPerson.appendChild(opt); 
+  }); 
+  select.appendChild(optgroupPerson);
+  
+  let optgroupDept = document.createElement('optgroup'); optgroupDept.label = "👥 THEO BỘ PHẬN / NHÓM";
+  // Thêm .sort() để danh sách nhóm cũng hiển thị theo thứ tự ABC cho gọn gàng
+  let uniqueGroups = [...new Set(employeesData.map(e => e.group))].filter(g => g && g.trim() !== "").sort(); 
+  uniqueGroups.forEach(g => { 
+      let opt = document.createElement('option'); 
+      opt.value = "GROUP:" + g; 
+      opt.innerText = "Nhóm: " + g; 
+      optgroupDept.appendChild(opt); 
+  }); 
+  select.appendChild(optgroupDept);
+}
 
     function renderTable() {
       const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
@@ -618,31 +642,42 @@
     }
     
     function populateExportPeople() {
-      let container = document.getElementById('exportPeopleList'); container.innerHTML = '';
-      let sortedEmps = [...employeesData].sort((a, b) => a.name.localeCompare(b.name));
-      sortedEmps.forEach(emp => { let groupLabel = emp.group ? emp.group : 'Khác'; container.innerHTML += `<label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><input type="checkbox" class="export-person-cb" value="${emp.name}"> <span title="${emp.name} (${groupLabel})"><b>${emp.name}</b> <span style="color:#64748b; font-size:0.7rem">(${groupLabel})</span></span></label>`; });
-      
-      const exportFilter = document.getElementById('exportGroupFilter');
-      let optHTML = `<option value="ALL">🌟 Tất cả các bộ phận</option>`;
-      let roleMap = {};
-      employeesData.forEach(emp => {
-          let r = emp.role ? String(emp.role).trim() : "KHÁC"; let g = emp.group ? String(emp.group).trim() : "KHÁC";
-          if (!roleMap[r]) roleMap[r] = new Set();
-          if (g && g !== "KHÁC") roleMap[r].add(g);
-      });
+  let container = document.getElementById('exportPeopleList'); container.innerHTML = '';
+  
+  // LOGIC MỚI: Ưu tiên nhóm (group) trước, rồi mới đến tên (name)
+  let sortedEmps = [...employeesData].sort((a,b) => {
+      let gA = (a.group || "Khác").trim().toUpperCase();
+      let gB = (b.group || "Khác").trim().toUpperCase();
+      if (gA !== gB) return gA.localeCompare(gB);
+      return String(a.name).trim().localeCompare(String(b.name).trim());
+  });
+  
+  sortedEmps.forEach(emp => { 
+      let groupLabel = emp.group ? emp.group : 'Khác'; 
+      container.innerHTML += `<label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><input type="checkbox" class="export-person-cb" value="${emp.name}"> <span title="${emp.name} (${groupLabel})"><b>${emp.name}</b> <span style="color:#64748b; font-size:0.7rem">(${groupLabel})</span></span></label>`; 
+  });
+  
+  const exportFilter = document.getElementById('exportGroupFilter');
+  let optHTML = `<option value="ALL">🌟 Tất cả các bộ phận</option>`;
+  let roleMap = {};
+  employeesData.forEach(emp => {
+      let r = emp.role ? String(emp.role).trim() : "KHÁC"; let g = emp.group ? String(emp.group).trim() : "KHÁC";
+      if (!roleMap[r]) roleMap[r] = new Set();
+      if (g && g !== "KHÁC") roleMap[r].add(g);
+  });
 
-      for (let r in roleMap) {
-          let displayR = r.toUpperCase();
-          if (displayR === "LIVESTEAM" || displayR === "LIVESTREAM") displayR = "BỘ PHẬN LIVESTREAM";
-          else if (displayR === "MANAGER") displayR = "BỘ PHẬN MANAGER"; else if (displayR === "ACCOUNTANT") displayR = "BỘ PHẬN ACCOUNTANT";
-          else displayR = "BỘ PHẬN " + displayR;
-          
-          optHTML += `<option value="ROLE:${r}">🏢 ${displayR}</option>`;
-          let groups = Array.from(roleMap[r]).sort();
-          groups.forEach(g => { optHTML += `<option value="GROUP:${g}">-- Nhóm: ${g}</option>`; });
-      }
-      exportFilter.innerHTML = optHTML;
-    }
+  for (let r in roleMap) {
+      let displayR = r.toUpperCase();
+      if (displayR === "LIVESTEAM" || displayR === "LIVESTREAM") displayR = "BỘ PHẬN LIVESTREAM";
+      else if (displayR === "MANAGER") displayR = "BỘ PHẬN MANAGER"; else if (displayR === "ACCOUNTANT") displayR = "BỘ PHẬN ACCOUNTANT";
+      else displayR = "BỘ PHẬN " + displayR;
+      
+      optHTML += `<option value="ROLE:${r}">🏢 ${displayR}</option>`;
+      let groups = Array.from(roleMap[r]).sort();
+      groups.forEach(g => { optHTML += `<option value="GROUP:${g}">-- Nhóm: ${g}</option>`; });
+  }
+  exportFilter.innerHTML = optHTML;
+}
 
     function selectAllExport(selectAll) { document.querySelectorAll('.export-person-cb').forEach(cb => cb.checked = selectAll); }
     function exportImage() {
