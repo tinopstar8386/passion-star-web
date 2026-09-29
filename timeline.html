@@ -510,7 +510,7 @@
             else { body.setAttribute('data-theme', 'dark'); showToast("Đã chuyển giao diện Tối", "info", 1500); }
         }
 
-       function updateDailyDateDisplay() {
+      function updateDailyDateDisplay() {
     const selection = document.getElementById('dailyDateSelect').value;
     const dDate = new Date();
     if (selection === 'tomorrow') dDate.setDate(dDate.getDate() + 1);
@@ -521,11 +521,13 @@
     
     document.getElementById('display-date').innerText = `Ngày ${d}/${m}/${y}`;
     
-    // Tự động Tắt/Bật dựa trên cờ Off do Backend trả về
     if (teams.length > 0) {
         teams.forEach((team, index) => {
-            // Team Royen:one không bao giờ OFF, luôn giữ nguyên trạng thái gốc
-            if (team.name.toLowerCase() === "royen:one") {
+            // Xóa khoảng trắng để chống lỗi gõ phím (vd: "Royen: one" thành "royen:one")
+            let safeName = team.name.replace(/\s+/g, '').toLowerCase();
+
+            if (safeName === "royen:one") {
+                // Team Royen:one không bao giờ OFF
                 activeStatus[index] = team.isActiveOriginal;
             } else {
                 if (selection === 'today' && team.isOffToday) {
@@ -950,31 +952,31 @@
         updateDailyFooter();
 
         // === 2. ĐỢI DỮ LIỆU TỪ SHEET CHỈ DÀNH CHO TAB 1 ===
-        document.addEventListener("DOMContentLoaded", function() {
-            const container = document.getElementById('togglesContainer');
-            if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải cấu hình & Đồng bộ Lịch Nghỉ...</div>";
+document.addEventListener("DOMContentLoaded", function() {
+    const container = document.getElementById('togglesContainer');
+    if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải cấu hình & Đồng bộ Lịch Nghỉ...</div>";
+    
+    runScript('getTeamsFromSheet')
+        .then(data => {
+            // Lấy dữ liệu và có cơ chế bảo vệ nếu Backend chưa update
+            teams = data.map(t => ({ 
+                name: t.name, shift: t.shift, duration: t.duration, liveDelay: t.liveDelay,
+                isActiveOriginal: t.isActiveOriginal !== undefined ? t.isActiveOriginal : t.isActive,
+                isOffToday: t.isOffToday || false,
+                isOffTomorrow: t.isOffTomorrow || false
+            }));
+            activeStatus = data.map(t => t.isActive); 
             
-            runScript('getTeamsFromSheet')
-                .then(data => {
-                    // Nhận thêm 3 thuộc tính mới từ Backend
-                    teams = data.map(t => ({ 
-                        name: t.name, shift: t.shift, duration: t.duration, liveDelay: t.liveDelay,
-                        isActiveOriginal: t.isActiveOriginal,
-                        isOffToday: t.isOffToday,
-                        isOffTomorrow: t.isOffTomorrow
-                    }));
-                    activeStatus = data.map(t => t.isActive); // Gán tạm ban đầu
-                    
-                    // Khởi chạy hàm cập nhật để tự động lọc OFF
-                    updateDailyDateDisplay(); 
-                    
-                    showToast("Đã tải & Đồng bộ Lịch Nghỉ thành công!", "success", 3000);
-                })
-                .catch(error => {
-                    if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Lỗi tải dữ liệu</div>";
-                    showToast("Lỗi tải dữ liệu từ Sheet: " + error.message, "error", 5000);
-                });
+            // Khởi chạy hàm cập nhật để tự động lọc OFF
+            updateDailyDateDisplay(); 
+            
+            showToast("Đã tải & Đồng bộ Lịch Nghỉ thành công!", "success", 3000);
+        })
+        .catch(error => {
+            if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Lỗi tải dữ liệu</div>";
+            showToast("Lỗi tải dữ liệu từ Sheet: " + error.message, "error", 5000);
         });
+});
 
         window.exportMusicSheet = function() {
             const btn = document.getElementById('btnExportMusic');
