@@ -20,7 +20,7 @@
     .toolbar h2 { margin: 0; font-size: 1.25rem; font-weight: 700; color: #3b82f6; }
     
     table { border: 2px solid var(--border-color); border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.85rem; text-align: center; background: white;}
-    th, td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); height: 46px; padding: 2px; vertical-align: middle; }
+    th, td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); height: 46px; padding: 2px; vertical-align: middle; position: relative; }
     .table-container { max-height: 85vh; overflow-y: auto; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); margin: 0 30px 100px 30px;}
     thead th { position: sticky; top: 0; z-index: 10; background-color: var(--table-header); }
     
@@ -31,7 +31,7 @@
     .teacher-highlight { color: var(--teacher-color) !important; font-weight: 800; }
     .dept-divider { font-weight: 800; text-align: center; background: #334155; color: #ffffff; }
     
-    /* CHỈNH CSS ĐỂ KÉO THẢ MƯỢT HƠN TRÊN MOBILE */
+    /* CSS CHO KÉO THẢ */
     .day-cell { cursor: pointer; transition: all 0.2s; -webkit-user-select: none; user-select: none; }
     [draggable="true"] { touch-action: none; -webkit-user-drag: element; }
     
@@ -43,7 +43,13 @@
     .cell-cancel-selected { background-color: #fee2e2 !important; position: relative; border: 2px solid #ef4444 !important; box-sizing: border-box; }
     .cell-cancel-selected::after { content: "HỦY"; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 70%; height: 20px; font-size: 0.65rem; border-radius: 4px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; z-index: 5;}
 
-    .day-cell.drag-over { background-color: rgba(59, 130, 246, 0.2); border: 2px dashed #3b82f6; }
+    /* FIX LỖI HIỂN THỊ VIỀN KHI DRAG OVER (BẰNG PSEUDO-ELEMENT) */
+    .day-cell.drag-over { background-color: rgba(59, 130, 246, 0.2) !important; position: relative; }
+    .day-cell.drag-over::before {
+      content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      box-sizing: border-box; border: 2px dashed #3b82f6; pointer-events: none; z-index: 20;
+    }
+    
     .cell-off { background-color: var(--cell-off); }
     .cell-pending { background-color: var(--cell-pend); }
     
@@ -323,7 +329,6 @@
                   let isDraggable = false;
                   let tdAttrs = "";
                   let sClass = "";
-                  // SỰ KIỆN DROP (THẢ) CHO TẤT CẢ CÁC Ô ĐỂ NHẬN DỮ LIỆU KÉO
                   let dropEvents = `ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"`;
 
                   if (leave) {
@@ -350,7 +355,6 @@
                     }
                   }
 
-                  // BỌC DIV DRAGGABLE GIỐNG LỊCH CÁ NHÂN KHI Ô ĐÓ CÓ THỂ KÉO (ĐÃ DUYỆT / PENDING)
                   if (isDraggable) {
                       innerContent = `<div draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" style="width: 100%; height: 100%; min-height: 42px; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; -webkit-user-drag: element;">${innerContent}</div>`;
                   }
@@ -478,7 +482,6 @@
             }
         }
 
-        // BỌC THẺ DIV VỚI TÍNH NĂNG KÉO THẢ TRÁNH LỖI HTML5 TRÊN THẺ <td>
         if (isDraggable) {
             innerContent = `<div draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" style="width: 100%; height: 100%; min-height: 60px; cursor: grab; touch-action: none; -webkit-user-drag: element;" title="Kéo thả để dời ngày">${innerContent}</div>`;
         }
@@ -492,7 +495,6 @@
       tbody.innerHTML = html + tr;
     }
 
-    // DÙNG CHUẨN text/plain ĐỂ KHÔNG BỊ SAFARI / FIREFOX CHẶN
     function drag(ev, name, date) { 
         ev.dataTransfer.setData("text/plain", name + "|" + date);
         ev.dataTransfer.effectAllowed = "move"; 
@@ -521,7 +523,6 @@
       let dragName = parts[0]; 
       let oldDate = parts[1];
       
-      // BẢO MẬT: CHỈ ĐƯỢC KÉO VÀO Ô TRỐNG CỦA CHÍNH NGƯỜI ĐÓ
       if (!dragName || dragName !== targetName || oldDate === newDate) return;
       
       let existingTarget = leavesData.find(l => String(l.name).trim() === String(targetName).trim() && l.date === newDate);
