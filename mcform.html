@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <base target="_top">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- THƯ VIỆN KÉO THẢ CHO MOBILE -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.css">
+  <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     :root { --bg-color: #f8fafc; --card-bg: #ffffff; --border-color: #cbd5e1; --text-main: #0f172a; --off-bg: #ef4444; --pending-bg: #d97706; --table-header: #f1f5f9; --row-hover: #e2e8f0; --cell-off: #fee2e2; --cell-pend: #fef3c7; --teacher-color: #d97706;}
@@ -25,13 +30,16 @@
     
     .teacher-highlight { color: var(--teacher-color) !important; font-weight: 800; }
     .dept-divider { font-weight: 800; text-align: center; background: #334155; color: #ffffff; }
-    .day-cell { cursor: pointer; transition: all 0.2s;}
+    
+    /* CSS CHO KÉO THẢ VÀ CHỐNG CHỌN TEXT TRÊN MOBILE */
+    .day-cell { cursor: pointer; transition: all 0.2s; -webkit-user-select: none; user-select: none; }
+    .day-cell[draggable="true"] { touch-action: pan-y; } /* Cho phép cuộn dọc nhưng giữ để kéo */
+    
     .day-cell:hover:not(.cell-selected):not(.cell-cancel-selected) { background-color: var(--row-hover); }
     
     .cell-selected { background-color: #fef2f2 !important; position: relative;}
     .cell-selected::after { content: "OFF"; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);}
     
-    /* STYLE CHO Ô CHỌN HỦY */
     .cell-cancel-selected { background-color: #fee2e2 !important; position: relative; border: 2px solid #ef4444 !important; box-sizing: border-box; }
     .cell-cancel-selected::after { content: "HỦY"; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 70%; height: 20px; font-size: 0.65rem; border-radius: 4px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; z-index: 5;}
 
@@ -196,6 +204,12 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      // KÍCH HOẠT THƯ VIỆN KÉO THẢ CHO ĐIỆN THOẠI
+      MobileDragDrop.polyfill({
+          holdToDrag: 300 // Nhấn giữ 0.3s để bắt đầu kéo
+      });
+      window.addEventListener('touchmove', function() {}, {passive: false});
+
       document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`;
       if (TARGET_GROUP) {
         let displayTitle = TARGET_GROUP.replace("PERSON:", "").replace("GROUP:", "");
@@ -414,7 +428,7 @@
                tdAttrs += ` class="day-cell cell-pending ${sClass}" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="toggleCancelSelection(this, '${emp.name}', '${checkDate}'); event.stopPropagation();" title="Kéo thả ĐỂ ĐỔI NGÀY, Nhấn ĐỂ CHỌN HỦY"`;
             } else {
                cellContent += `<div class="badge badge-off" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">OFF</div>`;
-               tdAttrs += ` class="day-cell cell-off" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" title="Kéo thả sang ô trống để đổi"`;
+               tdAttrs += ` class="day-cell cell-off" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="showToast('💡 ĐỂ DỜI NGÀY: NHẤN GIỮ 1 giây rồi KÉO thả sang ô trống!', true);" title="Kéo thả sang ô trống để đổi"`;
             }
           } else {
             let sClass = isSelected ? 'cell-selected' : '';
