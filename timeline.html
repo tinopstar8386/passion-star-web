@@ -510,18 +510,39 @@
             else { body.setAttribute('data-theme', 'dark'); showToast("Đã chuyển giao diện Tối", "info", 1500); }
         }
 
-        function updateDailyDateDisplay() {
-            const selection = document.getElementById('dailyDateSelect').value;
-            const dDate = new Date();
-            if (selection === 'tomorrow') dDate.setDate(dDate.getDate() + 1);
-            
-            const d = dDate.getDate().toString().padStart(2, '0');
-            const m = (dDate.getMonth() + 1).toString().padStart(2, '0');
-            const y = dDate.getFullYear();
-            
-            document.getElementById('display-date').innerText = `Ngày ${d}/${m}/${y}`;
-            checkLiveStatus();
-        }
+       function updateDailyDateDisplay() {
+    const selection = document.getElementById('dailyDateSelect').value;
+    const dDate = new Date();
+    if (selection === 'tomorrow') dDate.setDate(dDate.getDate() + 1);
+    
+    const d = dDate.getDate().toString().padStart(2, '0');
+    const m = (dDate.getMonth() + 1).toString().padStart(2, '0');
+    const y = dDate.getFullYear();
+    
+    document.getElementById('display-date').innerText = `Ngày ${d}/${m}/${y}`;
+    
+    // Tự động Tắt/Bật dựa trên cờ Off do Backend trả về
+    if (teams.length > 0) {
+        teams.forEach((team, index) => {
+            // Team Royen:one không bao giờ OFF, luôn giữ nguyên trạng thái gốc
+            if (team.name.toLowerCase() === "royen:one") {
+                activeStatus[index] = team.isActiveOriginal;
+            } else {
+                if (selection === 'today' && team.isOffToday) {
+                    activeStatus[index] = false;
+                } else if (selection === 'tomorrow' && team.isOffTomorrow) {
+                    activeStatus[index] = false;
+                } else {
+                    activeStatus[index] = team.isActiveOriginal;
+                }
+            }
+        });
+        renderToggles();
+        renderDailyTable();
+    }
+    
+    checkLiveStatus();
+}
 
         function formatTime(totalMinutes) {
             if(isNaN(totalMinutes)) return "0:00";
