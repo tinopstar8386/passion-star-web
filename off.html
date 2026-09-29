@@ -787,19 +787,18 @@
       }, 800);
     }
 
-    function buildTableExportHTML(startDate, endDate, targetGroup, customNames) {
+   function buildTableExportHTML(startDate, endDate, targetGroup, customNames) {
       let dayCount = 0; let dateArray = [];
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
           dateArray.push(new Date(d)); dayCount++;
       }
       
-      let totalWidth = 85 + 170 + (dayCount * 44);
-      let headerRow = '<tr><th style="font-weight: 800; text-transform: uppercase; width: 85px; min-width: 85px; max-width: 85px; font-size: 0.7rem; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 8px 4px; background: #f8fafc; color: #0f172a; white-space: normal; word-wrap: break-word; line-height: 1.2;">NHÓM</th><th style="text-align: left; padding-left: 6px; width: 170px; min-width: 170px; max-width: 170px; font-weight: 600; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 8px 4px; background: #f8fafc; color: #0f172a; white-space: normal; word-wrap: break-word; line-height: 1.2;">TÊN / 姓名</th>';
+      let headerRow = '<tr><th style="font-weight: 800; text-transform: uppercase; width: 85px; min-width: 85px; max-width: 85px; font-size: 0.7rem; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 8px 4px; background: #f1f5f9; color: #0f172a; white-space: normal; word-wrap: break-word; line-height: 1.2;">NHÓM</th><th style="text-align: left; padding-left: 6px; width: 170px; min-width: 170px; max-width: 170px; font-weight: 600; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 8px 4px; background: #f1f5f9; color: #0f172a; white-space: normal; word-wrap: break-word; line-height: 1.2;">TÊN / 姓名</th>';
       
       dateArray.forEach(d => {
           let dayNames = ["CN/日", "T2/一", "T3/二", "T4/三", "T5/四", "T6/五", "T7/六"]; let dNum = d.getDate(); let mNum = d.getMonth() + 1;
           let color = d.getDay() === 0 ? '#ef4444' : '#0f172a';
-          headerRow += `<th style="width: 44px; min-width: 44px; max-width: 44px; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 4px; background: #f8fafc; color: ${color};">${(dNum<10?'0'+dNum:dNum)}/${(mNum<10?'0'+mNum:mNum)}<br><span style="font-weight:400; font-size:0.65rem">${dayNames[d.getDay()]}</span></th>`;
+          headerRow += `<th style="width: 44px; min-width: 44px; max-width: 44px; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 4px; background: #f1f5f9; color: ${color};">${(dNum<10?'0'+dNum:dNum)}/${(mNum<10?'0'+mNum:mNum)}<br><span style="font-weight:400; font-size:0.65rem">${dayNames[d.getDay()]}</span></th>`;
       });
       headerRow += "</tr>";
       
@@ -818,25 +817,29 @@
       });
       let swappingDates = leavesData.filter(l => l.swapFrom).map(l => l.name + "_" + l.swapFrom);
       
-     let tbodyHtml = "";
-     for (let deptKey in depts) {
+      let tbodyHtml = "";
+      for (let deptKey in depts) {
           let displayRole = String(deptKey).toUpperCase();
           
-          // --- THÊM HEADER CHO BỘ PHẬN MANAGER ---
           if (displayRole === "MANAGER" || displayRole.includes("MANAGER")) {
               tbodyHtml += headerRow; 
           }
-          // ----------------------------------------
 
           if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM / 直播部";
           else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER / 管理部"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT / 财务部";
-          tbodyHtml += `<tr><td colspan="${dayCount + 2}" style="font-weight: 800; text-align: center; background: #334155; color: #ffffff; border-bottom: 2px solid #cbd5e1; padding: 12px 0;">${displayRole}</td></tr>`;
+          tbodyHtml += `<tr><td colspan="${dayCount + 2}" style="font-weight: 800; text-align: center; background: #1e293b; color: #ffffff; border-bottom: 2px solid #cbd5e1; padding: 12px 0;">${displayRole}</td></tr>`;
           
           for (let group in depts[deptKey]) {
               depts[deptKey][group].forEach((emp, idx) => {
                   let name = emp.name; let userBadge = generateBadgeHTML(emp);
-                  let tr = `<tr>`; if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" style="font-weight: 800; text-transform: uppercase; font-size: 0.7rem; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 0 4px; color: #0f172a; width: 85px; max-width: 85px; white-space: normal; word-wrap: break-word; line-height: 1.2;">${group}</td>`;
-                  tr += `<td style="text-align: left; padding: 6px; font-weight: 600; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; width: 170px; max-width: 170px; font-size: 0.75rem; white-space: normal; word-wrap: break-word; line-height: 1.2;">
+                  
+                  // GỢI Ý 2: Zebra Striping (Dòng chẵn nền trắng, dòng lẻ nền xám nhạt #f8fafc)
+                  let rowBgColor = (idx % 2 !== 0) ? "#f8fafc" : "#ffffff"; 
+
+                  let tr = `<tr>`; 
+                  if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" style="font-weight: 800; text-transform: uppercase; font-size: 0.7rem; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 0 4px; color: #0f172a; width: 85px; max-width: 85px; background-color: #ffffff; white-space: normal; word-wrap: break-word; line-height: 1.2;">${group}</td>`;
+                  
+                  tr += `<td style="text-align: left; padding: 6px; font-weight: 600; border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; width: 170px; max-width: 170px; font-size: 0.75rem; white-space: normal; word-wrap: break-word; line-height: 1.2; background-color: ${rowBgColor};">
                            <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 100%;">
                              <span>${name}</span> 
                              <div style="display: flex; align-items: center;">${userBadge}</div>
@@ -847,15 +850,20 @@
                       let checkDate = d.getFullYear() + '-' + (d.getMonth()+1).toString().padStart(2,'0') + '-' + d.getDate().toString().padStart(2,'0');
                       let isSwappingOut = swappingDates.includes(name + "_" + checkDate);
                       let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isSwappingOut);
-                      let tdStyle = "border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 2px; height: 46px;";
+                      
+                      // GỢI Ý 1: Highlight ngày cuối tuần đậm màu hơn một chút
+                      let isWeekend = (d.getDay() === 0 || d.getDay() === 6);
+                      let cellBgColor = isWeekend ? (idx % 2 !== 0 ? "#e2e8f0" : "#f1f5f9") : rowBgColor;
+                      
+                      let tdStyle = `border-bottom: 2px solid #cbd5e1; border-right: 2px solid #cbd5e1; padding: 2px; height: 46px; background-color: ${cellBgColor};`;
                       
                       if (isSwappingOut) {
-                          tr += `<td style="${tdStyle} background-color: #e2e8f0;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #475569;">ĐỔI</div></td>`; 
+                          tr += `<td style="${tdStyle}"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #475569; box-shadow: 0 1px 2px rgba(0,0,0,0.2);">ĐỔI</div></td>`; 
                       } else if (leave) { 
                           if (leave.status === "Pending") {
-                              tr += `<td style="${tdStyle} background-color: #fef3c7;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #f59e0b;">PEND</div></td>`; 
+                              tr += `<td style="${tdStyle}"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #f59e0b; box-shadow: 0 1px 2px rgba(245, 158, 11, 0.3);">PEND</div></td>`; 
                           } else {
-                              tr += `<td style="${tdStyle} background-color: #fee2e2;"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #ef4444;">OFF</div></td>`; 
+                              tr += `<td style="${tdStyle}"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #ef4444; box-shadow: 0 1px 2px rgba(239, 68, 68, 0.3);">OFF</div></td>`; 
                           }
                       } 
                       else { tr += `<td style="${tdStyle}"></td>`; }
@@ -865,21 +873,32 @@
           }
       }
       
-      let html = `<div style="background: #ffffff; padding: 20px; width: max-content; font-family: 'Inter', sans-serif; box-sizing: border-box;">`;
+      // GỢI Ý 10: Nền xám nhạt và Card Shadow Box cho khung viền bảng
+      let html = `<div style="background: #f8fafc; padding: 40px; width: max-content; font-family: 'Inter', sans-serif; box-sizing: border-box;">`;
       
       if(matchCount === 0) {
-          html += `<div style="padding: 40px; color: #ef4444; text-align: center; font-weight: 700; font-size: 1.1rem;">⚠️ Không có dữ liệu nào khớp với người bạn chọn!</div>`;
+          html += `<div style="padding: 40px; color: #ef4444; text-align: center; font-weight: 700; font-size: 1.1rem; background: white; border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">⚠️ Không có dữ liệu nào khớp với người bạn chọn!</div>`;
       } else {
-          // Lấy tháng và năm từ ngày bắt đầu
           let exportMonth = startDate.getMonth() + 1;
           let exportYear = startDate.getFullYear();
 
-          html += `<div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px dashed #cbd5e1;">
-                      <div style="font-size: 1.8rem; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">LỊCH NGHỈ DỰ KIẾN THÁNG ${exportMonth}/${exportYear}</div>
-                      <div style="font-size: 1.1rem; font-weight: 600; color: #64748b; margin-top: 5px;">Expected Leave Schedule ${exportMonth}/${exportYear} / 预计休假表 ${exportMonth}/${exportYear}</div>
+          html += `<div style="background: white; border-radius: 16px; padding: 25px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); position: relative; z-index: 1; overflow: hidden;">
+                      
+                      <!-- GỢI Ý 7: Lớp Watermark Logo Passion Star nổi nhẹ phía trên bảng -->
+                      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; pointer-events: none; opacity: 0.12; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                          <img src="passionstarwatermark.png" style="width: 800px; max-width: 90%; object-fit: contain;">
+                      </div>
+
+                      <div style="text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px dashed #cbd5e1; position: relative; z-index: 2;">
+                          <div style="font-size: 2rem; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">LỊCH NGHỈ DỰ KIẾN THÁNG ${exportMonth}/${exportYear}</div>
+                          <div style="font-size: 1.15rem; font-weight: 600; color: #64748b; margin-top: 6px;">Expected Leave Schedule ${exportMonth}/${exportYear} / 预计休假表 ${exportMonth}/${exportYear}</div>
+                      </div>
+                      
+                      <table style="border-collapse: separate; border-spacing: 0; text-align: center; background: transparent; font-size: 0.85rem; border: 2px solid #cbd5e1; border-radius: 12px; overflow: hidden; width: 100%; position: relative; z-index: 2;">
+                          <thead><tr>${headerRow}</tr></thead>
+                          <tbody>${tbodyHtml}</tbody>
+                      </table>
                    </div>`;
-          
-          html += `<table style="border-collapse: separate; border-spacing: 0; text-align: center; background: white; font-size: 0.85rem; border: 2px solid #cbd5e1; border-radius: 12px; overflow: hidden; width: 100%;"><thead><tr>${headerRow}</tr></thead><tbody>${tbodyHtml}</tbody></table>`;
       }
       return html + `</div>`;
     }
