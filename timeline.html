@@ -1005,32 +1005,80 @@
         checkLiveStatus();     
         updateDailyFooter();
 
-        // === 2. ĐỢI DỮ LIỆU TỪ SHEET CHỈ DÀNH CHO TAB 1 ===
-document.addEventListener("DOMContentLoaded", function() {
-    const container = document.getElementById('togglesContainer');
-    if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải cấu hình & Đồng bộ Lịch Nghỉ...</div>";
-    
-    runScript('getTeamsFromSheet')
-        .then(data => {
-            // Lấy dữ liệu và có cơ chế bảo vệ nếu Backend chưa update
-            teams = data.map(t => ({ 
-                name: t.name, shift: t.shift, duration: t.duration, liveDelay: t.liveDelay,
-                isActiveOriginal: t.isActiveOriginal !== undefined ? t.isActiveOriginal : t.isActive,
-                isOffToday: t.isOffToday || false,
-                isOffTomorrow: t.isOffTomorrow || false
-            }));
-            activeStatus = data.map(t => t.isActive); 
+      // === 2. ĐỢI DỮ LIỆU TỪ SHEET CHỈ DÀNH CHO TAB 1 ===
+        document.addEventListener("DOMContentLoaded", function() {
+            const container = document.getElementById('togglesContainer');
+            if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải tốc độ cao...</div>";
             
-            // Khởi chạy hàm cập nhật để tự động lọc OFF
-            updateDailyDateDisplay(); 
-            
-            showToast("Đã tải & Đồng bộ Lịch Nghỉ thành công!", "success", 3000);
-        })
-        .catch(error => {
-            if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Lỗi tải dữ liệu</div>";
-            showToast("Lỗi tải dữ liệu từ Sheet: " + error.message, "error", 5000);
+            const API_URL_OFF = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec";
+
+            // Hàm tạo format yyyy-mm-dd chuẩn xác
+            function getFormattedDate(d) {
+                let month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
+                if (month.length < 2) month = '0' + month;
+                if (day.length < 2) day = '0' + day;
+                return [year, month, day].join('-');
+            }
+            let todayStr = getFormattedDate(new Date());
+            let tom = new Date(); tom.setDate(tom.getDate() + 1);
+            let tomorrowStr = getFormattedDate(tom);
+
+            // Chạy song song 2 API cùng lúc (Timeline và Lịch OFF)
+            Promise.all([
+                runScript('getTeamsFromSheet'), 
+                fetch(API_URL_OFF, { 
+                    method: 'POST', redirect: 'follow',
+                    body: JSON.stringify({ action: 'getInitialData', payload: {} })
+                }).then(res => res.json()).then(res => res.data)
+            ])
+            .then(results => {
+                let timelineData = results[0];
+                let offData = results[1];
+
+                let offLeaves = offData.leaves || [];
+                let offEmployees = offData.employees || [];
+
+                // Lọc những ai thuộc bộ phận Livestream
+                let lsEmps = offEmployees
+                    .filter(e => e.role.toUpperCase() === 'LIVESTREAM' || e.role.toUpperCase() === 'LIVESTEAM')
+                    .map(e => e.name.toLowerCase());
+
+                // Ghép và đối chiếu data
+                teams = timelineData.map(t => {
+                    let tName = t.name.toLowerCase();
+                    let safeName = tName.replace(/\s+/g, '');
+                    let isOffToday = false;
+                    let isOffTomorrow = false;
+
+                    // Nếu thuộc Livestream và không phải Royen:one
+                    if (safeName !== "royen:one" && lsEmps.includes(tName)) {
+                        isOffToday = offLeaves.some(l => l.name.toLowerCase() === tName && l.date === todayStr && l.swapFrom !== todayStr && (l.status === 'Approved' || l.status === 'Pending'));
+                        isOffTomorrow = offLeaves.some(l => l.name.toLowerCase() === tName && l.date === tomorrowStr && l.swapFrom !== tomorrowStr && (l.status === 'Approved' || l.status === 'Pending'));
+                    }
+
+                    // Chốt trạng thái gốc
+                    let baseActive = t.isActiveOriginal !== undefined ? t.isActiveOriginal : t.isActive;
+
+                    return {
+                        name: t.name, shift: t.shift, duration: t.duration, liveDelay: t.liveDelay,
+                        isActiveOriginal: baseActive,
+                        isOffToday: isOffToday,
+                        isOffTomorrow: isOffTomorrow
+                    };
+                });
+                
+                activeStatus = teams.map(t => t.isActiveOriginal); 
+                
+                // Khởi chạy hàm cập nhật giao diện
+                updateDailyDateDisplay(); 
+                
+                showToast("Đã tải & Đồng bộ xog!", "success", 3000);
+            })
+            .catch(error => {
+                if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Lỗi tải dữ liệu</div>";
+                showToast("Lỗi tải dữ liệu: " + error.message, "error", 5000);
+            });
         });
-});
 
         window.exportMusicSheet = function() {
             const btn = document.getElementById('btnExportMusic');
