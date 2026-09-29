@@ -818,8 +818,16 @@
       let swappingDates = leavesData.filter(l => l.swapFrom).map(l => l.name + "_" + l.swapFrom);
       
       let tbodyHtml = "";
-      for (let deptKey in depts) {
+     for (let deptKey in depts) {
           let displayRole = String(deptKey).toUpperCase();
+          
+          // --- THÊM HEADER CHO BỘ PHẬN MANAGER ---
+          // Nếu bộ phận là MANAGER, ta chèn lại dòng ngày tháng (headerRow) vào bảng
+          if (displayRole === "MANAGER" || displayRole.includes("MANAGER")) {
+              tbodyHtml += headerRow; 
+          }
+          // ----------------------------------------
+
           if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM / 直播部";
           else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER / 管理部"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT / 财务部";
           tbodyHtml += `<tr><td colspan="${dayCount + 2}" style="font-weight: 800; text-align: center; background: #334155; color: #ffffff; border-bottom: 2px solid #cbd5e1; padding: 12px 0;">${displayRole}</td></tr>`;
@@ -857,13 +865,21 @@
           }
       }
       
+     // Lấy tháng và năm từ ngày bắt đầu để làm tiêu đề động
+      let exportMonth = startDate.getMonth() + 1;
+      let exportYear = startDate.getFullYear();
+
       let html = `<div style="background: #ffffff; padding: 20px; width: max-content; font-family: 'Inter', sans-serif; box-sizing: border-box;">`;
       
       if(matchCount === 0) {
           html += `<div style="padding: 40px; color: #ef4444; text-align: center; font-weight: 700; font-size: 1.1rem;">⚠️ Không có dữ liệu nào khớp với người bạn chọn!</div>`;
       } else {
-          html += `<table style="border-collapse: separate; border-spacing: 0; text-align: center; background: white; font-size: 0.85rem; border: 2px solid #cbd5e1; border-radius: 12px; overflow: hidden; width: 100%;"><thead><tr>${headerRow}</tr></thead><tbody>${tbodyHtml}</tbody></table>`;
-      }
+          // --- THÊM TIÊU ĐỀ SONG NGỮ (VIỆT / ANH / TRUNG) ---
+          html += `<div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px dashed #cbd5e1;">
+                      <div style="font-size: 1.8rem; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;">LỊCH NGHỈ DỰ KIẾN THÁNG ${exportMonth}/${exportYear}</div>
+                      <div style="font-size: 1.1rem; font-weight: 600; color: #64748b; margin-top: 5px;">Expected Leave Schedule ${exportMonth}/${exportYear} / 预计休假表 ${exportMonth}/${exportYear}</div>
+                   </div>`;
+     }
       return html + `</div>`;
     }
 
