@@ -285,17 +285,27 @@
                 </div>
                 
                 <div id="togglesContainer"></div>
-        <!-- CHẾ ĐỘ TÍNH GIỜ MAKEUP -->
+      <!-- CHẾ ĐỘ TÍNH GIỜ MAKEUP -->
 <div style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px dashed var(--border-dark); margin-top: 15px;">
     <span style="font-size: 11px; font-weight: 800; color: #6366f1; text-transform: uppercase; margin-bottom: 10px; display: block;">⚙️ Chế độ tính giờ Makeup</span>
+    
     <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; cursor: pointer; margin-bottom: 8px; color: var(--text-main);">
         <input type="checkbox" id="chkPairMakeup" onchange="renderDailyTable()" style="width: 16px; height: 16px; accent-color: #6366f1;" checked>
         Nhóm Royen:one & Orion chung giờ
     </label>
-    <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-main);">
-        <input type="checkbox" id="chkAllParallel" onchange="renderDailyTable()" style="width: 16px; height: 16px; accent-color: #10b981;">
-        Tất cả Makeup song song (Không cộng dồn)
-    </label>
+    
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-main);">
+            <input type="checkbox" id="chkAllParallel" onchange="toggleAllParallelInput()" style="width: 16px; height: 16px; accent-color: #10b981;">
+            Tất cả Makeup song song
+        </label>
+        
+        <!-- Ô nhập giờ dùng chung (Mặc định ẩn, chỉ hiện khi bật tick ở trên) -->
+        <div id="allParallelTimeContainer" style="display: none; padding-left: 24px; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Mốc giờ chung:</span>
+            <input type="text" id="allParallelTime" value="8:00" onchange="renderDailyTable()" style="width: 60px; padding: 4px; text-align: center; border-radius: 4px; border: 1px solid var(--border); font-weight: bold; background: var(--bg-card); color: var(--text-main);">
+        </div>
+    </div>
 </div>
                 
                 <details style="margin-top: 10px;">
@@ -629,15 +639,29 @@
         }
         function endDragDailyTable(e) { e.target.classList.remove('dragging'); }
 
-        function renderDailyTable() {
+      // Hàm phụ trợ để ẩn/hiện ô nhập giờ chung
+window.toggleAllParallelInput = function() {
+    const chk = document.getElementById('chkAllParallel');
+    const container = document.getElementById('allParallelTimeContainer');
+    if (chk && container) {
+        container.style.display = chk.checked ? 'flex' : 'none';
+    }
+    renderDailyTable();
+}
+
+// Cập nhật hàm vẽ bảng
+function renderDailyTable() {
     const tbody = document.getElementById('timelineBody'); 
     tbody.innerHTML = ''; 
     
-    // ĐỌC TRẠNG THÁI TỪ 2 NÚT BẤM (BẬT/TẮT)
+    // ĐỌC TRẠNG THÁI TỪ 2 NÚT BẤM VÀ Ô NHẬP GIỜ
     const chkPair = document.getElementById('chkPairMakeup');
     const chkAll = document.getElementById('chkAllParallel');
+    const timeInputAll = document.getElementById('allParallelTime');
+    
     let isPairParallel = chkPair ? chkPair.checked : false;
     let isAllParallel = chkAll ? chkAll.checked : false;
+    let allParallelMinutes = isAllParallel && timeInputAll ? timeToMinutes(timeInputAll.value) : 0;
 
     let currentTime = 0; 
     let sharedStart = null; 
@@ -648,12 +672,16 @@
             const safeName = team.name.replace(/\s+/g, '').toLowerCase();
             const shiftMinutes = timeToMinutes(team.shift);
             let startMakeup;
+            let displayShiftMinutes; // Biến quyết định hiển thị giờ vô ca trên bảng
 
             if (isAllParallel) {
-                // CHẾ ĐỘ 2: TẤT CẢ SONG SONG (Bắt đầu makeup = Giờ vô ca, không ai đợi ai)
-                startMakeup = shiftMinutes; 
+                // CHẾ ĐỘ 2: TẤT CẢ SONG SONG TẠI 1 MỐC GIỜ CHUNG DO NGƯỜI DÙNG NHẬP
+                startMakeup = allParallelMinutes; 
+                displayShiftMinutes = allParallelMinutes; // Đổi luôn giờ vô ca trên bảng thành giờ chung
             } else {
-                // CHẾ ĐỘ 1: CHỈ CẶP ĐÔI SONG SONG
+                // CHẾ ĐỘ 1: CHỈ CẶP ĐÔI SONG SONG VÀ CỘNG DỒN THEO THỨ TỰ
+                displayShiftMinutes = shiftMinutes; // Giữ nguyên giờ vô ca gốc
+                
                 let isPaired = isPairParallel && (safeName === "royen:one" || safeName === "orion");
 
                 if (isPaired) {
@@ -672,7 +700,6 @@
             const liveTime = endMakeup + team.liveDelay;
             
             // TÍNH TOÁN GIỜ CHỜ CHO NHÓM TIẾP THEO 
-            // (Chỉ tính chờ nếu KHÔNG bật "Tất cả song song")
             if (!isAllParallel) {
                 let isPaired = isPairParallel && (safeName === "royen:one" || safeName === "orion");
                 if (isPaired) {
@@ -687,7 +714,7 @@
                 <tr class="animate-row time-row-daily drag-row" data-start="${startMakeup}" data-end="${endMakeup}" data-live="${liveTime}" style="animation-delay: ${index * 0.05}s" draggable="true" ondragstart="startDragDailyTable(event, ${index})" ondragover="allowDropDailyTable(event)" ondragleave="dragLeaveDailyTable(event)" ondrop="dropDailyTable(event, ${index})" ondragend="endDragDailyTable(event)">
                     <td class="hide-on-capture" style="color: var(--text-muted); cursor: grab; font-size: 20px;">⋮⋮</td>
                     <td style="text-align: left; color: var(--text-main); font-weight: bold;">${team.name}</td>
-                    <td><span class="badge badge-shift">${formatTime(shiftMinutes)}</span></td>
+                    <td><span class="badge badge-shift">${formatTime(displayShiftMinutes)}</span></td>
                     <td><span class="badge badge-makeup">${formatTime(startMakeup)} - ${formatTime(endMakeup)}</span></td>
                     <td><span class="badge badge-live">${formatTime(liveTime)}</span></td>
                 </tr>`;
