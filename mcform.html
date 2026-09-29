@@ -31,9 +31,9 @@
     .teacher-highlight { color: var(--teacher-color) !important; font-weight: 800; }
     .dept-divider { font-weight: 800; text-align: center; background: #334155; color: #ffffff; }
     
-    /* CSS CHO KÉO THẢ VÀ CHỐNG CHỌN TEXT TRÊN MOBILE */
+    /* CHỈNH CSS ĐỂ KÉO THẢ MƯỢT HƠN TRÊN MOBILE */
     .day-cell { cursor: pointer; transition: all 0.2s; -webkit-user-select: none; user-select: none; }
-    .day-cell[draggable="true"] { touch-action: pan-y; } /* Cho phép cuộn dọc nhưng giữ để kéo */
+    [draggable="true"] { touch-action: none; -webkit-user-drag: element; }
     
     .day-cell:hover:not(.cell-selected):not(.cell-cancel-selected) { background-color: var(--row-hover); }
     
@@ -159,7 +159,6 @@
     let displayYear = today.getFullYear();
     if (displayMonth > 11) { displayMonth = 0; displayYear++; }
 
-    // HÀM GỌI API CHUNG CHO TẤT CẢ
     async function callAPI(action, payload = {}) {
       try {
         const response = await fetch(API_URL, {
@@ -177,7 +176,6 @@
       }
     }
 
-    // HÀM BẬT/TẮT MÀNG CHẮN KÈM POPUP VÒNG XOAY ĐANG XỬ LÝ
     function toggleBlocker(show, msg) {
         let blocker = document.getElementById('clickBlocker');
         if(!blocker) {
@@ -205,10 +203,7 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       // KÍCH HOẠT THƯ VIỆN KÉO THẢ CHO ĐIỆN THOẠI
-      MobileDragDrop.polyfill({
-          holdToDrag: 300 // Nhấn giữ 0.3s để bắt đầu kéo
-      });
-      window.addEventListener('touchmove', function() {}, {passive: false});
+      MobileDragDrop.polyfill({ holdToDrag: 300 });
 
       document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`;
       if (TARGET_GROUP) {
@@ -320,15 +315,47 @@
                   let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`;
                   let isMoved = leavesData.some(l => String(l.name).trim() === String(name).trim() && l.swapFrom === checkDate);
                   let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isMoved);
-                  let baseStyle = "border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);";
+                  let baseStyle = "border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 0; margin: 0; position: relative;";
                   
+                  let isSelected = selectedCells.some(c => c.name === name && c.date === checkDate);
+                  let isCancelSelected = selectedCancelCells.some(c => c.name === name && c.date === checkDate);
+
+                  let isDraggable = false;
+                  let tdAttrs = "";
+                  let sClass = "";
+                  // SỰ KIỆN DROP (THẢ) CHO TẤT CẢ CÁC Ô ĐỂ NHẬN DỮ LIỆU KÉO
+                  let dropEvents = `ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"`;
+
                   if (leave) {
                     if (leave.status === "Pending") {
-                       tr += `<td class="day-cell cell-pending" style="${baseStyle}" onclick="toggleCancelSelection(this, '${name}', '${checkDate}')"><div class="badge badge-pending" title="Đang chờ duyệt (Nhấn vào để chọn hủy)">⏳</div></td>`;
+                       sClass = isCancelSelected ? 'cell-pending cell-cancel-selected' : 'cell-pending';
+                       isDraggable = true;
+                       tdAttrs = `style="${baseStyle}" class="day-cell ${sClass}" onclick="toggleCancelSelection(this, '${name}', '${checkDate}'); event.stopPropagation();" ${dropEvents}`;
                     } else {
-                       tr += `<td class="day-cell cell-off" style="${baseStyle}"><div class="badge badge-off">OFF</div></td>`;
+                       sClass = 'cell-off';
+                       isDraggable = true;
+                       tdAttrs = `style="${baseStyle}" class="day-cell ${sClass}" onclick="showToast('💡 ĐỂ DỜI NGÀY: NHẤN GIỮ rồi KÉO thả sang ô trống!', true);" ${dropEvents}`;
                     }
-                  } else { tr += `<td class="day-cell" style="${baseStyle}" onclick="toggleCellSelection(this, '${deptKey}', '${name}', '${checkDate}')"></td>`; }
+                  } else {
+                    sClass = isSelected ? 'cell-selected' : '';
+                    tdAttrs = `style="${baseStyle}" class="day-cell ${sClass}" onclick="toggleCellSelection(this, '${deptKey}', '${name}', '${checkDate}')" ${dropEvents}`;
+                  }
+
+                  let innerContent = "";
+                  if (leave) {
+                    if (leave.status === "Pending") {
+                        innerContent = `<div class="badge badge-pending" title="Đang chờ duyệt">⏳</div>`;
+                    } else {
+                        innerContent = `<div class="badge badge-off" title="Kéo thả để dời ngày">OFF</div>`;
+                    }
+                  }
+
+                  // BỌC DIV DRAGGABLE GIỐNG LỊCH CÁ NHÂN KHI Ô ĐÓ CÓ THỂ KÉO (ĐÃ DUYỆT / PENDING)
+                  if (isDraggable) {
+                      innerContent = `<div draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" style="width: 100%; height: 100%; min-height: 42px; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; -webkit-user-drag: element;">${innerContent}</div>`;
+                  }
+
+                  tr += `<td ${tdAttrs}>${innerContent}</td>`;
                 }
                 tbodyHTML += tr + `</tr>`;
              });
@@ -372,7 +399,7 @@
              </div>
              <div style="font-size: 1.05rem; color: #475569; margin-top: 5px; font-weight: 600;">Bộ phận: ${emp.group || "Khác"}</div>
              <div style="font-size: 0.95rem; color: #ef4444; margin-top: 15px; background: #fee2e2; display: inline-block; padding: 6px 18px; border-radius: 20px; font-weight: 700;">Từ ${sdStr} đến ${edStr}</div>
-             <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 12px; font-style: italic;">* Nhấn vào một ngày trống bất kỳ để chọn ngày muốn nghỉ</div>
+             <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 12px; font-style: italic;">* KÉO THẢ ngày đã duyệt (OFF) sang ô trống để dời ngày</div>
           </td>
         </tr>
         <tr style="background: #ffffff;">
@@ -414,29 +441,50 @@
              cellStyle += ` background-color: #ffffff;`;
         }
 
-        let dColor = isOutOfRange ? '#cbd5e1' : '#0f172a';
-        let mColor = isOutOfRange ? '#e2e8f0' : '#94a3b8';
-
-        let cellContent = `<div style="font-weight: 800; font-size: 1.15rem; margin-bottom: 8px; color: ${dColor}; pointer-events: none;">${dNum} <span class="month-text" style="font-size: 0.75rem; font-weight: 600; color: ${mColor};">Thg${mNum}</span></div>`;
-        let tdAttrs = `style="${cellStyle}"`;
+        let isDraggable = false;
+        let tdAttrs = "";
+        let sClass = "";
+        let dropEvents = `ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"`;
 
         if (!isOutOfRange) {
           if (leave) {
             if (leave.status === "Pending") {
-               let sClass = isCancelSelected ? 'cell-cancel-selected' : '';
-               cellContent += `<div class="badge badge-pending" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; pointer-events: none; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">⏳ PEND</div>`;
-               tdAttrs += ` class="day-cell cell-pending ${sClass}" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="toggleCancelSelection(this, '${emp.name}', '${checkDate}'); event.stopPropagation();" title="Kéo thả ĐỂ ĐỔI NGÀY, Nhấn ĐỂ CHỌN HỦY"`;
+               sClass = isCancelSelected ? 'cell-pending cell-cancel-selected' : 'cell-pending';
+               isDraggable = true;
+               tdAttrs = `style="${cellStyle}" class="day-cell ${sClass}" onclick="toggleCancelSelection(this, '${emp.name}', '${checkDate}'); event.stopPropagation();" ${dropEvents}`;
             } else {
-               cellContent += `<div class="badge badge-off" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">OFF</div>`;
-               tdAttrs += ` class="day-cell cell-off" draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="showToast('💡 ĐỂ DỜI NGÀY: NHẤN GIỮ 1 giây rồi KÉO thả sang ô trống!', true);" title="Kéo thả sang ô trống để đổi"`;
+               sClass = 'cell-off';
+               isDraggable = true;
+               tdAttrs = `style="${cellStyle}" class="day-cell ${sClass}" onclick="showToast('💡 ĐỂ DỜI NGÀY: NHẤN GIỮ rồi KÉO thả sang ô trống!', true);" ${dropEvents}`;
             }
           } else {
-            let sClass = isSelected ? 'cell-selected' : '';
-            tdAttrs += ` class="day-cell ${sClass}" ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="toggleCellSelection(this, '${role}', '${emp.name}', '${checkDate}')"`;
+            sClass = isSelected ? 'cell-selected' : '';
+            tdAttrs = `style="${cellStyle}" class="day-cell ${sClass}" onclick="toggleCellSelection(this, '${role}', '${emp.name}', '${checkDate}')" ${dropEvents}`;
           }
+        } else {
+            tdAttrs = `style="${cellStyle}" class="day-cell"`;
         }
 
-        tr += `<td ${tdAttrs}>${cellContent}</td>`;
+        let dColor = isOutOfRange ? '#cbd5e1' : '#0f172a';
+        let mColor = isOutOfRange ? '#e2e8f0' : '#94a3b8';
+
+        let innerContent = `<div style="font-weight: 800; font-size: 1.15rem; margin-bottom: 8px; color: ${dColor}; pointer-events: none;">${dNum} <span class="month-text" style="font-size: 0.75rem; font-weight: 600; color: ${mColor};">Thg${mNum}</span></div>`;
+
+        if (!isOutOfRange && leave) {
+            if (leave.status === "Pending") {
+               innerContent += `<div class="badge badge-pending" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; pointer-events: none; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">⏳ PEND</div>`;
+            } else {
+               innerContent += `<div class="badge badge-off" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">OFF</div>`;
+            }
+        }
+
+        // BỌC THẺ DIV VỚI TÍNH NĂNG KÉO THẢ TRÁNH LỖI HTML5 TRÊN THẺ <td>
+        if (isDraggable) {
+            innerContent = `<div draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" style="width: 100%; height: 100%; min-height: 60px; cursor: grab; touch-action: none; -webkit-user-drag: element;" title="Kéo thả để dời ngày">${innerContent}</div>`;
+        }
+
+        tr += `<td ${tdAttrs}>${innerContent}</td>`;
+        
         cellCount++;
         if (cellCount % 7 === 0) { tr += "</tr>"; if (loopDate < endGrid) tr += "<tr>"; }
         loopDate.setDate(loopDate.getDate() + 1);
@@ -444,9 +492,68 @@
       tbody.innerHTML = html + tr;
     }
 
+    // DÙNG CHUẨN text/plain ĐỂ KHÔNG BỊ SAFARI / FIREFOX CHẶN
+    function drag(ev, name, date) { 
+        ev.dataTransfer.setData("text/plain", name + "|" + date);
+        ev.dataTransfer.effectAllowed = "move"; 
+    }
+    
+    function allowDrop(ev) { 
+        ev.preventDefault(); 
+        ev.dataTransfer.dropEffect = "move";
+        ev.currentTarget.classList.add("drag-over"); 
+    }
+    
+    function dragLeave(ev) { 
+        ev.currentTarget.classList.remove("drag-over"); 
+    }
+    
+    function drop(ev, targetName, newDate) {
+      ev.preventDefault(); 
+      ev.currentTarget.classList.remove("drag-over"); 
+      ev.stopPropagation(); 
+      if(isSyncing) return;
+      
+      let data = ev.dataTransfer.getData("text/plain");
+      if (!data || !data.includes("|")) return;
+      
+      let parts = data.split("|");
+      let dragName = parts[0]; 
+      let oldDate = parts[1];
+      
+      // BẢO MẬT: CHỈ ĐƯỢC KÉO VÀO Ô TRỐNG CỦA CHÍNH NGƯỜI ĐÓ
+      if (!dragName || dragName !== targetName || oldDate === newDate) return;
+      
+      let existingTarget = leavesData.find(l => String(l.name).trim() === String(targetName).trim() && l.date === newDate);
+      if(existingTarget) return showToast("⚠️ Ngày này đã có lịch!", false, true);
+      
+      document.getElementById('modalTitle').innerHTML = "Xác nhận Đổi Ngày";
+      document.getElementById('modalMsg').innerHTML = `Di chuyển ngày nghỉ của <b>${dragName}</b> sang <b style="color:#10b981;">${newDate}</b>?`;
+      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng Ý"; btn.style = "";
+      
+      btn.onclick = () => { 
+        closeModal(); isSyncing = true;
+        toggleBlocker(true, "⏳ Đang dời ngày, vui lòng đợi...");
+        
+        callAPI('processMCDragDrop', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
+            .then(res => { 
+                isSyncing = false; toggleBlocker(false);
+                if(res === "SUCCESS") { 
+                    let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(dragName).trim() && l.date === oldDate);
+                    if(lIndex > -1) { leavesData[lIndex].date = newDate; leavesData[lIndex].status = "Pending"; leavesData[lIndex].swapFrom = oldDate; } 
+                    else { leavesData.push({name: dragName, date: newDate, status: "Pending", swapFrom: oldDate}); }
+                    renderTable(); 
+                    showToast("✅ Đã dời ngày (Về trạng thái Chờ duyệt)!", false, false, true); 
+                } else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } 
+            })
+            .catch(err => { isSyncing = false; toggleBlocker(false); refreshData(); });
+      }; 
+      document.getElementById('customModal').classList.add('active');
+    }
+
     function toggleCellSelection(tdElement, role, name, checkDate) {
       if(isSyncing) return;
-      if(selectedCancelCells.length > 0) clearSelection(); // Reset nếu đang chọn Hủy
+      if(selectedCancelCells.length > 0) clearSelection();
 
       let idx = selectedCells.findIndex(c => c.name === name && c.date === checkDate);
       if(idx > -1) { 
@@ -455,7 +562,7 @@
       } else {
          let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
          let currentQuota = quotasData[monthPrefix];
-         if (currentQuota === undefined || currentQuota === null) currentQuota = 4; // Mặc định 4
+         if (currentQuota === undefined || currentQuota === null) currentQuota = 4;
 
          let existingLeaves = leavesData.filter(l => String(l.name).trim() === String(name).trim() && l.date.startsWith(monthPrefix) && (l.status === "Approved" || l.status === "Pending")).length;
          let currentlySelected = selectedCells.filter(c => c.name === name).length;
@@ -469,7 +576,7 @@
 
     function toggleCancelSelection(tdElement, name, checkDate) {
       if(isSyncing) return;
-      if(selectedCells.length > 0) clearSelection(); // Reset nếu đang chọn Đăng ký
+      if(selectedCells.length > 0) clearSelection();
 
       let idx = selectedCancelCells.findIndex(c => c.name === name && c.date === checkDate);
       if(idx > -1) { 
@@ -478,7 +585,7 @@
       } else {
           selectedCancelCells.push({name: name, date: checkDate, td: tdElement}); 
           tdElement.classList.add('cell-cancel-selected');
-          showToast("Đã chọn! Bấm nút HỦY ĐƠN ở thanh dưới cùng", true); // Hướng dẫn User
+          showToast("Đã chọn! Bấm nút HỦY ĐƠN ở thanh dưới cùng", true); 
       }
       updateActionBar();
     }
@@ -574,43 +681,6 @@
          isSyncing = false; toggleBlocker(false);
          showToast("❌ Có lỗi xảy ra, vui lòng tải lại!", false, true); refreshData();
       }
-    }
-
-    function drag(ev, name, date) { ev.dataTransfer.setData("dragName", name); ev.dataTransfer.setData("oldDate", date); }
-    function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add("drag-over"); }
-    function dragLeave(ev) { ev.currentTarget.classList.remove("drag-over"); }
-    
-    function drop(ev, targetName, newDate) {
-      ev.preventDefault(); ev.currentTarget.classList.remove("drag-over"); ev.stopPropagation(); 
-      if(isSyncing) return;
-      
-      let dragName = ev.dataTransfer.getData("dragName"); let oldDate = ev.dataTransfer.getData("oldDate");
-      if (!dragName || dragName !== targetName || oldDate === newDate) return;
-      let existingTarget = leavesData.find(l => String(l.name).trim() === String(targetName).trim() && l.date === newDate);
-      if(existingTarget) return showToast("⚠️ Ngày này đã có lịch!", false, true);
-      
-      document.getElementById('modalTitle').innerHTML = "Xác nhận Đổi Ngày";
-      document.getElementById('modalMsg').innerHTML = `Di chuyển ngày nghỉ của <b>${dragName}</b> sang <b style="color:#10b981;">${newDate}</b>?`;
-      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng Ý"; btn.style = "";
-      
-      btn.onclick = () => { 
-        closeModal(); isSyncing = true;
-        toggleBlocker(true, "⏳ Đang dời ngày, vui lòng đợi...");
-        
-        callAPI('processMCDragDrop', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
-            .then(res => { 
-                isSyncing = false; toggleBlocker(false);
-                if(res === "SUCCESS") { 
-                    let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(dragName).trim() && l.date === oldDate);
-                    if(lIndex > -1) { leavesData[lIndex].date = newDate; leavesData[lIndex].status = "Pending"; leavesData[lIndex].swapFrom = oldDate; } 
-                    else { leavesData.push({name: dragName, date: newDate, status: "Pending", swapFrom: oldDate}); }
-                    renderTable(); 
-                    showToast("✅ Đã dời ngày!", false, false, true); 
-                } else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } 
-            })
-            .catch(err => { isSyncing = false; toggleBlocker(false); refreshData(); });
-      }; 
-      document.getElementById('customModal').classList.add('active');
     }
 
     function closeModal() { document.getElementById('customModal').classList.remove('active'); }
