@@ -390,6 +390,12 @@
                 return "SUCCESS";
             }
 
+            if (action === 'deleteEmployee') {
+                const { name } = payload;
+                await fs.deleteDoc(fs.doc(db, "off_employees", safeID(name)));
+                return "SUCCESS";
+            }
+
             if (action === 'updateQuota') {
                 const { monthStr, quota } = payload;
                 await fs.setDoc(fs.doc(db, "system_config", "general"), { quotas: { [monthStr]: quota } }, { merge: true });
@@ -410,10 +416,15 @@
 
     document.addEventListener("DOMContentLoaded", () => { updateMonthLabel(); refreshData(); });
 
-    function openBadgeContextMenu(event, empName) {
+   function openBadgeContextMenu(event, empName) {
         event.preventDefault(); event.stopPropagation();
         let menu = document.getElementById('badgeContextMenu'); document.getElementById('contextMenuEmpName').value = empName;
-        let html = `<div class="context-menu-item text-danger" onclick="submitContextBadge('')">🗑️ Hủy / Xóa Badge</div><div class="context-menu-divider"></div>`;
+        
+        // Thêm nút Hủy Badge và nút XÓA NHÂN SỰ vào menu
+        let html = `<div class="context-menu-item text-danger" onclick="submitContextBadge('')">🗑️ Hủy / Xóa Badge</div>`;
+        html += `<div class="context-menu-item" style="color: #ef4444; font-weight: 800; background: #fee2e2;" onclick="requestDeleteEmployee('${empName}')">❌ XÓA NHÂN SỰ NÀY</div>`;
+        html += `<div class="context-menu-divider"></div>`;
+        
         for (let key in badgesData) { html += `<div class="context-menu-item" onclick="submitContextBadge('${key}')"><span class="vip-badge" style="background: ${badgesData[key]}; border:none; margin-left:0;">${key}</span></div>`; }
         menu.innerHTML = html; menu.style.display = 'block';
         let x = event.pageX; let y = event.pageY;
@@ -421,6 +432,37 @@
         if (y + menu.offsetHeight > window.innerHeight) y = window.innerHeight - menu.offsetHeight - 10;
         menu.style.left = x + 'px'; menu.style.top = y + 'px';
     }
+
+    // HÀM HIỂN THỊ CẢNH BÁO XÓA
+    window.requestDeleteEmployee = function(name) {
+        let menu = document.getElementById('badgeContextMenu'); if(menu) menu.style.display = 'none';
+        if(isSyncing) return showToast("Hệ thống đang bận...", false, true);
+        
+        document.getElementById('modalTitle').innerHTML = "❌ Xóa Nhân Sự";
+        document.getElementById('modalMsg').innerHTML = `Bạn có chắc chắn muốn xóa nhân sự <b>${name}</b> khỏi hệ thống không? Dữ liệu không thể khôi phục!`;
+        document.getElementById('modalRejectBtn').style.display = 'none';
+        
+        const btn = document.getElementById('modalOkBtn'); 
+        btn.className = "btn-danger"; 
+        btn.innerText = "Xóa vĩnh viễn";
+        btn.onclick = () => { 
+            closeModal(); 
+            executeDeleteEmployee(name); 
+        };
+        document.getElementById('customModal').classList.add('active');
+    };
+
+    // HÀM BẮN LỆNH XÓA LÊN FIREBASE
+    window.executeDeleteEmployee = function(name) {
+        isSyncing = true; showToast(`⏳ Đang xóa ${name}...`, true);
+        callAPI('deleteEmployee', { name: name })
+            .then(res => { 
+                isSyncing = false; 
+                if (res === "SUCCESS") { showToast(`✅ Đã xóa ${name} thành công!`); refreshData(); } 
+                else { showToast(res, false, true); refreshData(); } 
+            })
+            .catch(err => { isSyncing = false; showToast("Lỗi kết nối", false, true); refreshData(); });
+    };
 
     document.addEventListener("click", () => { let menu = document.getElementById('badgeContextMenu'); if(menu) menu.style.display = 'none'; });
 
