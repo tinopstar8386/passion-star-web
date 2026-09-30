@@ -140,25 +140,23 @@
       .flatpickr-calendar { width: 300px !important; transform: scale(0.9); transform-origin: top center; }
     }
   </style>
-  <!-- THÊM FIREBASE VÀO TRƯỚC THẺ </HEAD> -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
-            authDomain: "passionstar-2014d.firebaseapp.com",
-            projectId: "passionstar-2014d",
-            storageBucket: "passionstar-2014d.firebasestorage.app",
-            messagingSenderId: "1079694484883",
-            appId: "1:1079694484883:web:1d0d02f58723895cfef466"
-        };
-        const app = initializeApp(firebaseConfig);
-        window.db = getFirestore(app);
-        
-        // Gắn các hàm SDK vào window để dùng chung được ở script bên dưới
-        window.fs = { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot };
-    </script>
+<!-- THÊM FIREBASE SDK VÀO TRƯỚC THẺ </HEAD> -->
+  <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+      import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+      
+      const firebaseConfig = {
+          apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
+          authDomain: "passionstar-2014d.firebaseapp.com",
+          projectId: "passionstar-2014d",
+          storageBucket: "passionstar-2014d.firebasestorage.app",
+          messagingSenderId: "1079694484883",
+          appId: "1:1079694484883:web:1d0d02f58723895cfef466"
+      };
+      const app = initializeApp(firebaseConfig);
+      window.db = getFirestore(app);
+      window.fs = { collection, getDocs, doc, setDoc, deleteDoc, writeBatch };
+  </script>
 </head>
 <body>
   <div id="badgeContextMenu" class="context-menu"></div>
@@ -318,22 +316,96 @@
     let fpInstance = null; 
     let draftQueue = []; 
 
-    // HÀM GỌI API CHUNG CHO TẤT CẢ
+   // HÀM GỌI API BẰNG FIREBASE SIÊU TỐC
     async function callAPI(action, payload = {}) {
-      try {
-        const response = await fetch(API_URL, {
-          redirect: "follow",
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: action, payload: payload })
-        });
-        const result = await response.json();
-        if (result.status === 'success') return result.data;
-        throw new Error(result.message || "Lỗi máy chủ");
-      } catch (error) {
-        console.error("API Error:", error);
-        throw error;
-      }
+        // Hàm phụ trợ tạo ID an toàn
+        const safeID = (str) => str.replace(/\//g, '-');
+        
+        // Đợi Firebase nạp xong
+        while (!window.db || !window.fs) { await new Promise(r => setTimeout(r, 50)); }
+        const db = window.db; const fs = window.fs;
+
+        try {
+            if (action === 'getInitialData') {
+                let employees = [], leaves = [], badges = {}, quotas = {};
+                const empSnap = await fs.getDocs(fs.collection(db, "off_employees"));
+                empSnap.forEach(d => employees.push(d.data()));
+                
+                const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
+                leaveSnap.forEach(d => leaves.push(d.data()));
+                
+                const configSnap = await fs.getDocs(fs.collection(db, "system_config"));
+                configSnap.forEach(d => {
+                    if(d.id === 'general') { badges = d.data().badges || {}; quotas = d.data().quotas || {}; }
+                });
+                return { employees, leaves, badges, quotas };
+            }
+
+            if (action === 'processBatchChanges') {
+                const queue = JSON.parse(payload.payloadStr);
+                const batch = fs.writeBatch(db);
+                for(let d of queue) {
+                    if(d.type === 'BADGE') {
+                        batch.set(fs.doc(db, "off_employees", safeID(d.name)), { customBadge: d.badgeName }, { merge: true });
+                    } else if(d.action === 'XÓA') {
+                        batch.delete(fs.doc(db, "off_leaves", safeID(d.name) + "_" + d.date));
+                    } else if(d.action === 'THÊM') {
+                        batch.set(fs.doc(db, "off_leaves", safeID(d.name) + "_" + d.date), { name: d.name, role: d.role, date: d.date, status: "Approved" });
+                    }
+                }
+                await batch.commit(); return "SUCCESS";
+            }
+
+            if (action === 'toggleLeaveAdmin') {
+                const { name, dateStr, actionName } = payload;
+                const leaveRef = fs.doc(db, "off_leaves", safeID(name) + "_" + dateStr);
+                if (actionName === "TỪ CHỐI" || actionName === "TỪ CHỐI ĐỔI") { await fs.deleteDoc(leaveRef); } 
+                else if (actionName === "DUYỆT") { await fs.setDoc(leaveRef, { status: "Approved", swapFrom: "" }, { merge: true }); }
+                return "SUCCESS";
+            }
+
+            if (action === 'adminMoveLeave') {
+                const { name, oldDateStr, newDateStr } = payload;
+                const oldRef = fs.doc(db, "off_leaves", safeID(name) + "_" + oldDateStr);
+                const newRef = fs.doc(db, "off_leaves", safeID(name) + "_" + newDateStr);
+                const batch = fs.writeBatch(db);
+                batch.delete(oldRef);
+                batch.set(newRef, { name: name, date: newDateStr, status: "Approved" }, { merge: true });
+                await batch.commit(); return "SUCCESS";
+            }
+
+            if (action === 'approveAllPendingLeaves') {
+                const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
+                const batch = fs.writeBatch(db);
+                leaveSnap.forEach(d => {
+                    let data = d.data();
+                    if(data.status === "Pending") { batch.set(d.ref, { status: "Approved", swapFrom: "" }, { merge: true }); }
+                });
+                await batch.commit(); return "SUCCESS";
+            }
+
+            if (action === 'addEmployee') {
+                const { name, group, role } = payload;
+                await fs.setDoc(fs.doc(db, "off_employees", safeID(name)), { name, group, role });
+                return "SUCCESS";
+            }
+
+            if (action === 'updateQuota') {
+                const { monthStr, quota } = payload;
+                await fs.setDoc(fs.doc(db, "system_config", "general"), { quotas: { [monthStr]: quota } }, { merge: true });
+                return "SUCCESS";
+            }
+
+            if (action === 'createNewBadge') {
+                const { badgeName } = payload;
+                const colors = ['#f43f5e', '#8b5cf6', '#d946ef', '#0ea5e9', '#10b981', '#f59e0b'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                await fs.setDoc(fs.doc(db, "system_config", "general"), { badges: { [badgeName]: randomColor } }, { merge: true });
+                return "SUCCESS";
+            }
+
+            throw new Error("Action không tồn tại");
+        } catch (error) { console.error(error); throw error; }
     }
 
     document.addEventListener("DOMContentLoaded", () => { updateMonthLabel(); refreshData(); });
