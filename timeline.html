@@ -239,6 +239,25 @@
             filter: brightness(1.1);
         }
     </style>
+    <!-- THÊM FIREBASE VÀO TRƯỚC THẺ </HEAD> -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
+            authDomain: "passionstar-2014d.firebaseapp.com",
+            projectId: "passionstar-2014d",
+            storageBucket: "passionstar-2014d.firebasestorage.app",
+            messagingSenderId: "1079694484883",
+            appId: "1:1079694484883:web:1d0d02f58723895cfef466"
+        };
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app);
+        
+        // Gắn các hàm SDK vào window để dùng chung được ở script bên dưới
+        window.fs = { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot };
+    </script>
 </head>
 <body>
     
@@ -1032,83 +1051,75 @@ function renderDailyTable() {
         checkLiveStatus();     
         updateDailyFooter();
 
-    // === 2. ĐỢI DỮ LIỆU TỪ SHEET CHỈ DÀNH CHO TAB 1 ===
-        document.addEventListener("DOMContentLoaded", async function() {
-            const container = document.getElementById('togglesContainer');
-            if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải Timeline (1/2)...</div>";
-            
-            const API_URL_OFF = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec";
+    // === 2. LẤY DỮ LIỆU TỪ FIREBASE SIÊU TỐC ===
+    document.addEventListener("DOMContentLoaded", async function() {
+        const container = document.getElementById('togglesContainer');
+        if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải dữ liệu từ Firebase...</div>";
 
-            // Hàm tạo format yyyy-mm-dd chuẩn xác
-            function getFormattedDate(d) {
-                let month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
-                if (month.length < 2) month = '0' + month;
-                if (day.length < 2) day = '0' + day;
-                return [year, month, day].join('-');
+        function getFormattedDate(d) {
+            let month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+            return [year, month, day].join('-');
+        }
+        let todayStr = getFormattedDate(new Date());
+        let tom = new Date(); tom.setDate(tom.getDate() + 1);
+        let tomorrowStr = getFormattedDate(tom);
+
+        // Chờ Firebase nạp xong (vì dùng module)
+        let checkDb = setInterval(async () => {
+            if(window.db && window.fs) {
+                clearInterval(checkDb);
+                try {
+                    // Lấy Timeline Teams
+                    const teamSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "timeline_teams"));
+                    let timelineData = [];
+                    teamSnapshot.forEach((doc) => { timelineData.push(doc.data()); });
+                    
+                    // Lấy Danh sách nhân sự & Lịch nghỉ
+                    const empSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "off_employees"));
+                    let offEmployees = [];
+                    empSnapshot.forEach((doc) => { offEmployees.push(doc.data()); });
+
+                    const leaveSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "off_leaves"));
+                    let offLeaves = [];
+                    leaveSnapshot.forEach((doc) => { offLeaves.push(doc.data()); });
+
+                    // Lọc nhân sự Livestream
+                    let lsEmps = offEmployees
+                        .filter(e => e.role.toUpperCase() === 'LIVESTREAM' || e.role.toUpperCase() === 'LIVESTEAM')
+                        .map(e => e.name.toLowerCase());
+
+                    // Trộn data giống hệt logic cũ
+                    teams = timelineData.map(t => {
+                        let tName = t.name.toLowerCase();
+                        let safeName = tName.replace(/\s+/g, '');
+                        let isOffToday = false;
+                        let isOffTomorrow = false;
+
+                        if (safeName !== "royen:one" && lsEmps.includes(tName)) {
+                            isOffToday = offLeaves.some(l => l.name.toLowerCase() === tName && l.date === todayStr && l.swapFrom !== todayStr && (l.status === 'Approved' || l.status === 'Pending'));
+                            isOffTomorrow = offLeaves.some(l => l.name.toLowerCase() === tName && l.date === tomorrowStr && l.swapFrom !== tomorrowStr && (l.status === 'Approved' || l.status === 'Pending'));
+                        }
+                        return {
+                            name: t.name, shift: t.shift, duration: t.duration, liveDelay: t.liveDelay,
+                            isActiveOriginal: (t.isActiveOriginal !== undefined ? t.isActiveOriginal : t.isActive),
+                            isOffToday: isOffToday,
+                            isOffTomorrow: isOffTomorrow
+                        };
+                    });
+                    
+                    activeStatus = teams.map(t => t.isActiveOriginal); 
+                    updateDailyDateDisplay(); 
+                    showToast("Đã tải xong siêu tốc!", "success", 3000);
+
+                } catch (error) {
+                    if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Lỗi kết nối Firebase</div>";
+                    showToast("Lỗi: " + error.message, "error", 5000);
+                }
             }
-            let todayStr = getFormattedDate(new Date());
-            let tom = new Date(); tom.setDate(tom.getDate() + 1);
-            let tomorrowStr = getFormattedDate(tom);
-
-            try {
-                // 1. Tải dữ liệu Timeline trước
-                let timelineData = await runScript('getTeamsFromSheet');
-                
-                // Cập nhật giao diện báo hiệu đang qua bước 2
-                if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải Lịch nghỉ (2/2)...</div>";
-                
-                // 2. Tải dữ liệu Lịch Nghỉ TUẦN TỰ sau khi bước 1 xong
-                let responseOff = await fetch(API_URL_OFF, { 
-                    method: 'POST', redirect: 'follow',
-                    body: JSON.stringify({ action: 'getInitialData', payload: {} })
-                });
-                let jsonOff = await responseOff.json();
-                let offData = jsonOff.data;
-
-                let offLeaves = offData.leaves || [];
-                let offEmployees = offData.employees || [];
-
-                // Lọc những ai thuộc bộ phận Livestream
-                let lsEmps = offEmployees
-                    .filter(e => e.role.toUpperCase() === 'LIVESTREAM' || e.role.toUpperCase() === 'LIVESTEAM')
-                    .map(e => e.name.toLowerCase());
-
-                // Ghép và đối chiếu data
-                teams = timelineData.map(t => {
-                    let tName = t.name.toLowerCase();
-                    let safeName = tName.replace(/\s+/g, '');
-                    let isOffToday = false;
-                    let isOffTomorrow = false;
-
-                    // Nếu thuộc Livestream và không phải Royen:one
-                    if (safeName !== "royen:one" && lsEmps.includes(tName)) {
-                        isOffToday = offLeaves.some(l => l.name.toLowerCase() === tName && l.date === todayStr && l.swapFrom !== todayStr && (l.status === 'Approved' || l.status === 'Pending'));
-                        isOffTomorrow = offLeaves.some(l => l.name.toLowerCase() === tName && l.date === tomorrowStr && l.swapFrom !== tomorrowStr && (l.status === 'Approved' || l.status === 'Pending'));
-                    }
-
-                    // Chốt trạng thái gốc
-                    let baseActive = t.isActiveOriginal !== undefined ? t.isActiveOriginal : t.isActive;
-
-                    return {
-                        name: t.name, shift: t.shift, duration: t.duration, liveDelay: t.liveDelay,
-                        isActiveOriginal: baseActive,
-                        isOffToday: isOffToday,
-                        isOffTomorrow: isOffTomorrow
-                    };
-                });
-                
-                activeStatus = teams.map(t => t.isActiveOriginal); 
-                
-                // Khởi chạy hàm cập nhật giao diện
-                updateDailyDateDisplay(); 
-                
-                showToast("Đã tải & Đồng bộ xong!", "success", 3000);
-
-            } catch (error) {
-                if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Lỗi tải dữ liệu</div>";
-                showToast("Lỗi tải dữ liệu: " + error.message, "error", 5000);
-            }
-        });
+        }, 50);
+    });
 
         window.exportMusicSheet = function() {
             const btn = document.getElementById('btnExportMusic');
