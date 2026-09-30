@@ -1032,10 +1032,10 @@ function renderDailyTable() {
         checkLiveStatus();     
         updateDailyFooter();
 
-      // === 2. ĐỢI DỮ LIỆU TỪ SHEET CHỈ DÀNH CHO TAB 1 ===
-        document.addEventListener("DOMContentLoaded", function() {
+    // === 2. ĐỢI DỮ LIỆU TỪ SHEET CHỈ DÀNH CHO TAB 1 ===
+        document.addEventListener("DOMContentLoaded", async function() {
             const container = document.getElementById('togglesContainer');
-            if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải cấu hình lịch nghỉ...</div>";
+            if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải Timeline (1/2)...</div>";
             
             const API_URL_OFF = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec";
 
@@ -1050,17 +1050,20 @@ function renderDailyTable() {
             let tom = new Date(); tom.setDate(tom.getDate() + 1);
             let tomorrowStr = getFormattedDate(tom);
 
-            // Chạy song song 2 API cùng lúc (Timeline và Lịch OFF)
-            Promise.all([
-                runScript('getTeamsFromSheet'), 
-                fetch(API_URL_OFF, { 
+            try {
+                // 1. Tải dữ liệu Timeline trước
+                let timelineData = await runScript('getTeamsFromSheet');
+                
+                // Cập nhật giao diện báo hiệu đang qua bước 2
+                if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải Lịch nghỉ (2/2)...</div>";
+                
+                // 2. Tải dữ liệu Lịch Nghỉ TUẦN TỰ sau khi bước 1 xong
+                let responseOff = await fetch(API_URL_OFF, { 
                     method: 'POST', redirect: 'follow',
                     body: JSON.stringify({ action: 'getInitialData', payload: {} })
-                }).then(res => res.json()).then(res => res.data)
-            ])
-            .then(results => {
-                let timelineData = results[0];
-                let offData = results[1];
+                });
+                let jsonOff = await responseOff.json();
+                let offData = jsonOff.data;
 
                 let offLeaves = offData.leaves || [];
                 let offEmployees = offData.employees || [];
@@ -1100,11 +1103,11 @@ function renderDailyTable() {
                 updateDailyDateDisplay(); 
                 
                 showToast("Đã tải & Đồng bộ xong!", "success", 3000);
-            })
-            .catch(error => {
+
+            } catch (error) {
                 if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Lỗi tải dữ liệu</div>";
                 showToast("Lỗi tải dữ liệu: " + error.message, "error", 5000);
-            });
+            }
         });
 
         window.exportMusicSheet = function() {
