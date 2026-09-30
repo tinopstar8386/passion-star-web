@@ -272,9 +272,23 @@
         }
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", () => {
       // KÍCH HOẠT THƯ VIỆN KÉO THẢ CHO ĐIỆN THOẠI
       MobileDragDrop.polyfill({ holdToDrag: 300 });
+      
+      // --- BẮT ĐẦU ĐOẠN FIX LỖI MOBILE ---
+      
+      // 1. Cấm điện thoại tự cuộn trang khi đang nắm kéo cục OFF
+      window.addEventListener('touchmove', function() {}, {passive: false});
+      
+      // 2. Ép trình duyệt Mobile phải nhận diện các ô lịch là nơi được phép thả
+      document.addEventListener('dragenter', function(e) {
+         if (e.target.closest('.day-cell')) {
+             e.preventDefault();
+         }
+      }, false);
+      
+      // --- KẾT THÚC ĐOẠN FIX LỖI MOBILE ---
 
       document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`;
       if (TARGET_GROUP) {
@@ -284,7 +298,6 @@
       }
       refreshData();
     });
-
     function generateBadgeHTML(emp) {
       if (emp.customBadge && badgesData[emp.customBadge]) {
          return `<span class="vip-badge" style="background: ${badgesData[emp.customBadge]}; border: 1px solid rgba(255,255,255,0.4);">${emp.customBadge}</span>`;
