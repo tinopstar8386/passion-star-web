@@ -106,6 +106,24 @@
       #toast.success-boom { transform: translateY(0) scale(1.05) !important; }
     }
   </style>
+  <!-- THÊM FIREBASE SDK VÀO TRƯỚC THẺ </HEAD> -->
+  <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+      import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+      
+      const firebaseConfig = {
+          apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
+          authDomain: "passionstar-2014d.firebaseapp.com",
+          projectId: "passionstar-2014d",
+          storageBucket: "passionstar-2014d.firebasestorage.app",
+          messagingSenderId: "1079694484883",
+          appId: "1:1079694484883:web:1d0d02f58723895cfef466"
+      };
+      const app = initializeApp(firebaseConfig);
+      window.db = getFirestore(app);
+      window.fs = { collection, getDocs, doc, setDoc, deleteDoc, writeBatch };
+  </script>
+  
 </head>
 <body>
   <div class="toolbar">
@@ -165,21 +183,68 @@
     let displayYear = today.getFullYear();
     if (displayMonth > 11) { displayMonth = 0; displayYear++; }
 
+    // HÀM GỌI API BẰNG FIREBASE SIÊU TỐC
     async function callAPI(action, payload = {}) {
-      try {
-        const response = await fetch(API_URL, {
-          redirect: "follow",
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: action, payload: payload })
-        });
-        const result = await response.json();
-        if (result.status === 'success') return result.data;
-        throw new Error(result.message || "Lỗi máy chủ");
-      } catch (error) {
-        console.error("API Error:", error);
-        throw error;
-      }
+        const safeID = (str) => str.replace(/\//g, '-');
+        
+        // Đợi Firebase nạp xong
+        while (!window.db || !window.fs) { await new Promise(r => setTimeout(r, 50)); }
+        const db = window.db; const fs = window.fs;
+
+        try {
+            if (action === 'getInitialData') {
+                let employees = [], leaves = [], badges = {}, quotas = {};
+                const empSnap = await fs.getDocs(fs.collection(db, "off_employees"));
+                empSnap.forEach(d => employees.push(d.data()));
+                
+                const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
+                leaveSnap.forEach(d => leaves.push(d.data()));
+                
+                const configSnap = await fs.getDocs(fs.collection(db, "system_config"));
+                configSnap.forEach(d => {
+                    if(d.id === 'general') { badges = d.data().badges || {}; quotas = d.data().quotas || {}; }
+                });
+                return { employees, leaves, badges, quotas };
+            }
+
+            if (action === 'registerMultipleMCLeaves') {
+                const { leaveRequests } = payload;
+                const batch = fs.writeBatch(db);
+                for (let req of leaveRequests) {
+                    const docId = safeID(req.name) + "_" + req.dateStr;
+                    batch.set(fs.doc(db, "off_leaves", docId), {
+                        name: req.name,
+                        role: req.role,
+                        date: req.dateStr,
+                        status: "Pending", // Đơn mới MC gửi lên luôn ở trạng thái chờ duyệt
+                        swapFrom: "",
+                        reason: "Đăng ký nghỉ tháng"
+                    }, { merge: true });
+                }
+                await batch.commit(); return "SUCCESS";
+            }
+
+            if (action === 'processMCDragDrop') {
+                const { name, oldDateStr, newDateStr } = payload;
+                const docId = safeID(name) + "_" + newDateStr;
+                await fs.setDoc(fs.doc(db, "off_leaves", docId), {
+                    name: name,
+                    date: newDateStr,
+                    status: "Pending", // Kéo thả dời ngày cũng về trạng thái chờ duyệt
+                    swapFrom: oldDateStr
+                }, { merge: true });
+                return "SUCCESS";
+            }
+
+            if (action === 'cancelPendingMC') {
+                const { name, dateStr } = payload;
+                const docId = safeID(name) + "_" + dateStr;
+                await fs.deleteDoc(fs.doc(db, "off_leaves", docId));
+                return "SUCCESS";
+            }
+
+            throw new Error("Action không tồn tại");
+        } catch (error) { console.error(error); throw error; }
     }
 
     function toggleBlocker(show, msg) {
