@@ -181,6 +181,24 @@
         html.dark .dropdown-item-active { background-color: #334155 !important; color: #818cf8 !important; }
 
     </style>
+    <!-- THÊM FIREBASE VÀO TRƯỚC THẺ </HEAD> -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
+            authDomain: "passionstar-2014d.firebaseapp.com",
+            projectId: "passionstar-2014d",
+            storageBucket: "passionstar-2014d.firebasestorage.app",
+            messagingSenderId: "1079694484883",
+            appId: "1:1079694484883:web:1d0d02f58723895cfef466"
+        };
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app);
+        window.fs = { doc, setDoc, getDoc };
+    </script>
+    
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex overflow-hidden">
 
@@ -642,6 +660,8 @@
             return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+       // ================= CƠ CHẾ LAI: SHEET LÀ GỐC, FIREBASE LÀ BỘ NHỚ ĐỆM =================
+        
         async function checkLogin() {
             const rawInput = document.getElementById('passcodeInput').value;
             if(!rawInput) return;
@@ -649,13 +669,13 @@
             const err = document.getElementById('loginError');
             
             btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang giải mã...</span>';
-            btn.disabled = true; 
-            err.classList.add('hidden');
+            btn.disabled = true; err.classList.add('hidden');
             
             const input = await sha256(rawInput);
 
+            // BƯỚC 1: Xác thực mật khẩu qua Google Sheets (đảm bảo bảo mật tuyệt đối)
             runScript('getSheetData', { sheetName: currentSheetName, pass: input })
-                .then(data => {
+                .then(async (data) => {
                     sessionPass = input;
                     document.getElementById('passcodeInput').value = '';
                     document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
@@ -663,31 +683,27 @@
                     
                     btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
                     btn.disabled = false; 
+                    
+                    // BƯỚC 2: Cập nhật Firebase ngay lập tức với data mới lấy được
+                    if (window.db && window.fs) {
+                        const safeID = currentSheetName.replace(/\s+/g, '_');
+                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
+                    }
+
                     allData = data;
                     document.getElementById('tableContainer').classList.remove('hidden');
-                    
                     renderTable(allData); 
-                    resetTimer(); 
-                    fetchConfigDevices();
-                    showToast('Đăng nhập thành công', 'success');
-                    checkPrimeRadiantAlarms();
+                    resetTimer(); fetchConfigDevices();
+                    showToast('Đăng nhập thành công', 'success'); checkPrimeRadiantAlarms();
                 })
                 .catch(error => {
                     btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>'; 
-                    btn.disabled = false;
-                    err.classList.remove('hidden');
+                    btn.disabled = false; err.classList.remove('hidden');
                     document.getElementById('passcodeInput').classList.add('animate-shake');
-                    setTimeout(() => {
-                        document.getElementById('passcodeInput').classList.remove('animate-shake');
-                        document.getElementById('passcodeInput').focus();
-                    }, 400);
+                    setTimeout(() => { document.getElementById('passcodeInput').classList.remove('animate-shake'); document.getElementById('passcodeInput').focus(); }, 400);
                     
-                    if (error.message === "AUTH_FAILED") { 
-                        err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
-                        showToast('Từ chối: Sai mật khẩu', 'error'); 
-                    } else {
-                        err.innerText = "Lỗi kết nối máy chủ!";
-                    }
+                    if (error.message === "AUTH_FAILED") { err.innerText = "Từ chối truy cập: Sai mật khẩu"; showToast('Từ chối: Sai mật khẩu', 'error'); } 
+                    else { err.innerText = "Lỗi kết nối máy chủ!"; }
                 });
         }
 
@@ -704,54 +720,61 @@
             clearTimeout(inactivityTimer);
         }
 
-        function loadData() {
+       async function loadData() {
             if (!sessionPass) return;
             document.getElementById('tableContainer').classList.remove('hidden');
             document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
             document.getElementById('recordCount').innerText = '...';
             
-            const cachedData = localStorage.getItem('vault_cache_' + currentSheetName);
-            if (cachedData) {
-                try { allData = JSON.parse(cachedData); renderTable(allData); } catch(e) {}
-            }
+            // LẤY DỮ LIỆU SIÊU TỐC TỪ FIREBASE (0.1 Giây)
+            try {
+                if (window.db && window.fs) {
+                    const safeID = currentSheetName.replace(/\s+/g, '_');
+                    const docSnap = await window.fs.getDoc(window.fs.doc(window.db, "2fa_cache", safeID));
+                    if (docSnap.exists()) {
+                        allData = docSnap.data().dataArray;
+                        renderTable(allData); resetTimer(); checkPrimeRadiantAlarms();
+                        return; // Xong, không cần gọi Google Sheets nữa
+                    }
+                }
+            } catch (e) { console.log("Không đọc được Firebase cache, chuyển sang Sheets", e); }
             
+            // Nếu Firebase trống (lần đầu tiên), mới gọi Google Sheets
             runScript('getSheetData', { sheetName: currentSheetName, pass: sessionPass })
-                .then(data => {
-                    allData = data; 
-                    renderTable(allData); 
-                    resetTimer();
-                    localStorage.setItem('vault_cache_' + currentSheetName, JSON.stringify(data));
-                    checkPrimeRadiantAlarms();
+                .then(async (data) => {
+                    allData = data; renderTable(allData); resetTimer(); checkPrimeRadiantAlarms();
+                    // Lưu lại lên Firebase để lần sau đọc cho lẹ
+                    if (window.db && window.fs) {
+                        const safeID = currentSheetName.replace(/\s+/g, '_');
+                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
+                    }
                 })
-                .catch(error => { 
-                    if(error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); 
-                });
+                .catch(error => { if(error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); });
         }
         
-        function forceRefreshData() {
+    function forceRefreshData() {
             if (!sessionPass) return;
-            document.getElementById('tableContainer').classList.remove('hidden');
+            showToast('Đang tải dữ liệu mới từ máy chủ...', 'success');
             document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
-            document.getElementById('recordCount').innerText = '...';
             
+            // ÉP GỌI VÀO GOOGLE SHEETS ĐỂ LẤY DATA MỚI NHẤT
             runScript('getSheetData', { sheetName: currentSheetName, pass: sessionPass })
-                .then(data => {
-                    setTimeout(() => {
-                        allData = data; 
-                        renderTable(allData); 
-                        resetTimer();
-                        localStorage.setItem('vault_cache_' + currentSheetName, JSON.stringify(data));
-                        showToast('Dữ liệu đã được cập nhật', 'success');
-                        checkPrimeRadiantAlarms();
-                    }, 1500); 
+                .then(async (data) => {
+                    allData = data; 
+                    renderTable(allData); resetTimer(); checkPrimeRadiantAlarms();
+                    
+                    // Chép đè bản mới nhất này lên Firebase
+                    if (window.db && window.fs) {
+                        const safeID = currentSheetName.replace(/\s+/g, '_');
+                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
+                    }
+                    showToast('Đã đồng bộ với Google Sheets!', 'success');
                 })
-                .catch(error => { 
-                    if(error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); 
-                });
+                .catch(error => { if(error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); });
                 
             fetchConfigDevices();
         }
-
+        
         function applySavedWidths(savedWidths) {
             if (!savedWidths || savedWidths.length === 0) return;
             const headers = document.querySelectorAll('#mainTable th');
