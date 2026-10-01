@@ -240,9 +240,10 @@
         }
     </style>
     <!-- THÊM FIREBASE VÀO TRƯỚC THẺ </HEAD> -->
+   <!-- THÊM FIREBASE VÀO TRƯỚC THẺ </HEAD> -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
@@ -254,10 +255,7 @@
         };
         const app = initializeApp(firebaseConfig);
         window.db = getFirestore(app);
-        
-        import { getFirestore, collection, getDocs, doc, setDoc, query, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        // Nhớ cập nhật lại biến window.fs
-        window.fs = { collection, getDocs, doc, setDoc, query, orderBy, writeBatch };
+        window.fs = { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot, query, orderBy };
     </script>
     <!-- Thư viện hỗ trợ Kéo Thả trên màn hình cảm ứng -->
     <script src="https://unpkg.com/drag-drop-touch"></script>
@@ -648,17 +646,48 @@
         function startDragDailyTable(e, idx) { dragDailyIdx = idx; e.target.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
         function allowDropDailyTable(e) { e.preventDefault(); const row = e.target.closest('tr'); if(row) row.classList.add('drag-over'); }
         function dragLeaveDailyTable(e) { const row = e.target.closest('tr'); if(row) row.classList.remove('drag-over'); }
+      // ==========================================
+        // Hàm lưu thứ tự mới lên Firebase
+        async function saveNewOrderToFirebase(sortedTeamsArray) {
+            if(!window.db || !window.fs) return;
+            
+            const batch = window.fs.writeBatch(window.db);
+            sortedTeamsArray.forEach((team, index) => {
+                // team.name ở đây là ID của team (Angelik, BEE...)
+                const teamRef = window.fs.doc(window.db, "timeline_teams", team.name); 
+                batch.set(teamRef, { order: index + 1 }, { merge: true }); 
+            });
+            
+            try {
+                await batch.commit();
+                console.log("✅ Đã lưu thứ tự kéo thả lên Firebase!");
+            } catch (error) {
+                console.error("Lỗi lưu thứ tự: ", error);
+            }
+        }
+
+        // Hàm thả chuột trên bảng Timeline
         function dropDailyTable(e, targetIdx) {
             e.preventDefault();
             document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
             if (dragDailyIdx === null || dragDailyIdx === targetIdx) return;
+            
+            // Xử lý đổi vị trí mảng
             const movedTeam = teams.splice(dragDailyIdx, 1)[0];
             const movedStatus = activeStatus.splice(dragDailyIdx, 1)[0];
             teams.splice(targetIdx, 0, movedTeam);
             activeStatus.splice(targetIdx, 0, movedStatus);
-            dragDailyIdx = null; renderToggles(); renderDailyTable(); 
-            showToast("Đã thay đổi thứ tự Team!", "info", 2000);
+            dragDailyIdx = null; 
+            
+            // Vẽ lại bảng
+            renderToggles(); 
+            renderDailyTable(); 
+            
+            // Kích hoạt lưu Firebase với mảng teams vừa sắp xếp
+            saveNewOrderToFirebase(teams);
+            showToast("Đã lưu thứ tự mới!", "success", 2000);
         }
+        // ==========================================
         function endDragDailyTable(e) { e.target.classList.remove('dragging'); }
 
       // Hàm phụ trợ để ẩn/hiện ô nhập giờ chung
