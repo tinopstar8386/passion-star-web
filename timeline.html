@@ -255,8 +255,9 @@
         const app = initializeApp(firebaseConfig);
         window.db = getFirestore(app);
         
-        // Gắn các hàm SDK vào window để dùng chung được ở script bên dưới
-        window.fs = { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, onSnapshot };
+        import { getFirestore, collection, getDocs, doc, setDoc, query, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        // Nhớ cập nhật lại biến window.fs
+        window.fs = { collection, getDocs, doc, setDoc, query, orderBy, writeBatch };
     </script>
     <!-- Thư viện hỗ trợ Kéo Thả trên màn hình cảm ứng -->
     <script src="https://unpkg.com/drag-drop-touch"></script>
@@ -1074,7 +1075,8 @@ function renderDailyTable() {
                 clearInterval(checkDb);
                 try {
                     // Lấy Timeline Teams
-                    const teamSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "timeline_teams"));
+                   const q = window.fs.query(window.fs.collection(window.db, "timeline_teams"), window.fs.orderBy("order", "asc"));
+                    const teamSnapshot = await window.fs.getDocs(q);
                     let timelineData = [];
                     teamSnapshot.forEach((doc) => { timelineData.push(doc.data()); });
                     
