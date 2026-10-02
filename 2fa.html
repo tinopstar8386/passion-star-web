@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -446,10 +447,16 @@
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: action, payload: payload })
             })
-            .then(res => res.json())
-            .then(res => {
-                if (res.status === 'error') throw new Error(res.message);
-                return res.data;
+            .then(async res => {
+                const text = await res.text();
+                try {
+                    const jsonRes = JSON.parse(text);
+                    if (jsonRes.status === 'error') throw new Error(jsonRes.message);
+                    return jsonRes.data;
+                } catch (e) {
+                    if (e.name === 'SyntaxError') throw new Error("Lỗi phản hồi máy chủ.");
+                    throw e; 
+                }
             });
         }
 
@@ -518,6 +525,8 @@
             setTimeout(() => toast.classList.add('show'), 10);
             setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, duration);
         }
+
+        
 
         function resetTimer() {
             clearTimeout(inactivityTimer);
@@ -654,15 +663,14 @@
             return html;
         }
 
-        async function sha256(message) {
-            const msgBuffer = new TextEncoder().encode(message);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
+       async function sha256(message) {
+    // Sử dụng CryptoJS để băm chuỗi, tương thích mọi môi trường kể cả mở file local trên Mobile
+    return CryptoJS.SHA256(message).toString(CryptoJS.enc.Hex);
+}
 
        // ================= CƠ CHẾ LAI: SHEET LÀ GỐC, FIREBASE LÀ BỘ NHỚ ĐỆM =================
         
-        async function checkLogin() {
+       async function checkLogin() {
             const rawInput = document.getElementById('passcodeInput').value;
             if(!rawInput) return;
             const btn = document.getElementById('loginBtn');
@@ -702,8 +710,15 @@
                     document.getElementById('passcodeInput').classList.add('animate-shake');
                     setTimeout(() => { document.getElementById('passcodeInput').classList.remove('animate-shake'); document.getElementById('passcodeInput').focus(); }, 400);
                     
-                    if (error.message === "AUTH_FAILED") { err.innerText = "Từ chối truy cập: Sai mật khẩu"; showToast('Từ chối: Sai mật khẩu', 'error'); } 
-                    else { err.innerText = "Lỗi kết nối máy chủ!"; }
+                    // SỬA Ở ĐÂY: Dùng includes() thay vì === vì backend trả về "Error: AUTH_FAILED"
+                    if (error.message.includes("AUTH_FAILED")) { 
+                        err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
+                        showToast('Từ chối: Sai mật khẩu', 'error'); 
+                    } 
+                    else { 
+                        // Hiển thị trực tiếp lỗi để biết server bị vấn đề gì
+                        err.innerText = "Lỗi: " + error.message; 
+                    }
                 });
         }
 
