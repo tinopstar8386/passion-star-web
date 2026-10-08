@@ -670,11 +670,12 @@
 
        // ================= CƠ CHẾ LAI: SHEET LÀ GỐC, FIREBASE LÀ BỘ NHỚ ĐỆM =================
         
-    // HÀM PHỤ: Xử lý hiệu ứng tắt màn hình đăng nhập
-        function proceedToMainScreen(shimmer, btn) {
+  // HÀM PHỤ: Xử lý hiệu ứng tắt màn hình đăng nhập
+        function proceedToMainScreen(shimmer, btn, passInput) {
             shimmer.classList.add('opacity-0');
             shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
-            document.getElementById('passcodeInput').value = '';
+            passInput.value = '';
+            passInput.disabled = false; // Mở lại phòng hờ dù màn hình đã ẩn
             document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => document.getElementById('loginScreen').classList.add('hidden'), 500);
             btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
@@ -683,14 +684,20 @@
 
         // HÀM CHÍNH: KIỂM TRA ĐĂNG NHẬP SIÊU TỐC
         async function checkLogin() {
-            const rawInput = document.getElementById('passcodeInput').value;
+            const passInput = document.getElementById('passcodeInput');
+            const rawInput = passInput.value;
             if(!rawInput) return;
+            
             const btn = document.getElementById('loginBtn');
             const err = document.getElementById('loginError');
             const shimmer = document.getElementById('loginShimmer'); 
             
-            btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang đăng nhập...</span>';
-            btn.disabled = true; err.classList.add('hidden');
+            // 🔒 BẮT ĐẦU XỬ LÝ: KHOÁ NÚT VÀ KHOÁ CỨNG Ô NHẬP
+            btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang xác thực...</span>';
+            btn.disabled = true; 
+            passInput.disabled = true; // Không cho nhập thêm
+            passInput.classList.add('opacity-50', 'cursor-not-allowed'); // Làm mờ ô nhập
+            err.classList.add('hidden');
             
             shimmer.classList.remove('opacity-0');
             shimmer.classList.add('animate-[shimmer_1.5s_infinite]'); 
@@ -698,7 +705,7 @@
             const input = await sha256(rawInput);
             let isAuthSuccess = false;
 
-            // BƯỚC 1: KIỂM TRA MẬT KHẨU SIÊU TỐC QUA FIREBASE (0.1 giây)
+            // BƯỚC 1: KIỂM TRA MẬT KHẨU QUA FIREBASE (0.1 giây)
             try {
                 if (window.db && window.fs) {
                     const authSnap = await window.fs.getDoc(window.fs.doc(window.db, "2fa_cache", "auth_config"));
@@ -709,24 +716,23 @@
             } catch (e) { console.log("Lỗi check Firebase auth", e); }
 
             if (isAuthSuccess) {
-                // MỞ CỬA NGAY LẬP TỨC
+                // ĐÚNG PASS TỪ FIREBASE -> MỞ CỬA NGAY
                 sessionPass = input;
-                proceedToMainScreen(shimmer, btn);
+                proceedToMainScreen(shimmer, btn, passInput);
 
-                // Dùng loadData() để lấy data đệm Firebase lên ngay, sau đó sync ngầm với Sheets
                 loadData(); 
                 fetchConfigDevices();
-                showToast('Đăng nhập thành công', 'success');
+                showToast('Đăng nhập siêu tốc', 'success');
                 return;
             }
 
-            // BƯỚC 2: NẾU FIREBASE CHƯA LƯU HOẶC SAI PASS -> GỌI VỀ GỐC GOOGLE SHEETS ĐỂ CHECK
+            // BƯỚC 2: NẾU FIREBASE KHÔNG KHỚP -> ĐI HỎI GOOGLE SHEETS (Đề phòng vừa đổi Pass gốc)
             runScript('getSheetData', { sheetName: currentSheetName, pass: input })
                 .then(async (data) => {
                     sessionPass = input;
-                    proceedToMainScreen(shimmer, btn);
+                    proceedToMainScreen(shimmer, btn, passInput);
                     
-                    // LƯU HASH VÀO FIREBASE ĐỂ LẦN SAU ĐĂNG NHẬP SIÊU TỐC
+                    // Cập nhật lại mật khẩu mới cho Firebase học
                     if (window.db && window.fs) {
                         await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", "auth_config"), { validHash: input });
                         const safeID = currentSheetName.replace(/\s+/g, '_');
@@ -740,13 +746,25 @@
                     showToast('Đăng nhập thành công', 'success'); 
                 })
                 .catch(error => {
-                    // XỬ LÝ LỖI ĐĂNG NHẬP
+                    // 🔴 SAI MẬT KHẨU TỪ GỐC
                     shimmer.classList.add('opacity-0');
                     shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
+                    
                     btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>'; 
-                    btn.disabled = false; err.classList.remove('hidden');
-                    document.getElementById('passcodeInput').classList.add('animate-shake');
-                    setTimeout(() => { document.getElementById('passcodeInput').classList.remove('animate-shake'); document.getElementById('passcodeInput').focus(); }, 400);
+                    btn.disabled = false; 
+                    
+                    // 🔓 MỞ KHOÁ LẠI Ô NHẬP CHO NGƯỜI DÙNG NHẬP LẠI
+                    passInput.disabled = false;
+                    passInput.classList.remove('opacity-50', 'cursor-not-allowed');
+                    err.classList.remove('hidden');
+                    
+                    passInput.classList.add('animate-shake');
+                    
+                    setTimeout(() => { 
+                        passInput.classList.remove('animate-shake'); 
+                        passInput.focus(); 
+                        passInput.select(); // Tự động bôi đen pass cũ sai để gõ pass mới đè lên ngay
+                    }, 400);
                     
                     if (error.message.includes("AUTH_FAILED")) { 
                         err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
