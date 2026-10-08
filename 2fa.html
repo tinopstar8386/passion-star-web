@@ -1151,92 +1151,99 @@
             return result; 
         }
         
-        function togglePlainText(elementId, realValue, btn) {
+  function togglePlainText(elementId, realValue, btn) {
             const el = document.getElementById(elementId); 
             if (!el) return;
             const isHidden = el.innerText === '******';
             executeTogglePlainText(elementId, realValue, btn, isHidden); 
         }
-        
-  function executeTogglePlainText(elementId, realValue, btn, isHidden) {
-    const el = document.getElementById(elementId); 
-    const icon = btn.querySelector('i');
-    const wrapper = el.closest('.rounded-lg'); 
 
-    if (isHidden) { 
-        // TRẠNG THÁI MỞ BUNG RA
-        el.innerText = realValue; 
-        el.classList.remove('text-slate-500', 'dark:text-slate-400'); 
-        el.classList.add('text-indigo-700', 'dark:text-indigo-400'); 
-        icon.className = 'fa-solid fa-eye text-xs'; 
-        btn.classList.add('text-indigo-600', 'dark:text-indigo-400'); 
-        
-        // Tháo giới hạn cũ, đẩy max-width lên 500px để nó giãn như dây chun vừa khít chữ
-        if (wrapper) {
-            wrapper.classList.remove('md:max-w-[240px]');
-            wrapper.classList.add('md:max-w-[500px]');
+function togglePassword(elementId, realValue, btn) {
+            const el = document.getElementById(elementId); 
+            if (!el) return;
+            const isPeekMode = el.querySelector('.peek-container') !== null;
+            executeTogglePassword(elementId, realValue, btn, isPeekMode); 
         }
-    } else { 
-        // TRẠNG THÁI THU LẠI
-        el.classList.add('fade-out'); 
         
-        // Đưa giới hạn khung về lại mặc định
-        if (wrapper) {
-            wrapper.classList.remove('md:max-w-[500px]');
-            wrapper.classList.add('md:max-w-[240px]');
-        }
+        function executeTogglePlainText(elementId, realValue, btn, isHidden) {
+            const el = document.getElementById(elementId); 
+            const icon = btn.querySelector('i');
+            const wrapper = el.closest('.rounded-lg'); 
 
-        setTimeout(() => {
-            el.innerText = '******'; 
-            el.classList.add('text-slate-500', 'dark:text-slate-400'); 
-            el.classList.remove('text-indigo-700', 'dark:text-indigo-400'); 
-            icon.className = 'fa-solid fa-eye-slash text-xs'; 
-            btn.classList.remove('text-indigo-600', 'dark:text-indigo-400'); 
-            el.classList.remove('fade-out'); 
-        }, 300);
-    }
-}
+            if (isHidden) { 
+                // TRẠNG THÁI MỞ BUNG RA
+                el.innerText = realValue; 
+                el.classList.remove('text-slate-500', 'dark:text-slate-400'); 
+                el.classList.add('text-indigo-700', 'dark:text-indigo-400'); 
+                icon.className = 'fa-solid fa-eye text-xs'; 
+                btn.classList.add('text-indigo-600', 'dark:text-indigo-400'); 
+                
+                // Tháo giới hạn cũ, đẩy max-width lên 500px để nó giãn như dây chun vừa khít chữ
+                if (wrapper) {
+                    wrapper.classList.remove('md:max-w-[240px]');
+                    wrapper.classList.add('md:max-w-[500px]');
+                }
+            } else { 
+                // TRẠNG THÁI THU LẠI
+                el.classList.add('fade-out'); 
+                
+                // Đưa giới hạn khung về lại mặc định
+                if (wrapper) {
+                    wrapper.classList.remove('md:max-w-[500px]');
+                    wrapper.classList.add('md:max-w-[240px]');
+                }
 
-function executeTogglePassword(elementId, realValue, btn, isPeekMode) {
-    const el = document.getElementById(elementId); 
-    const icon = btn.querySelector('i');
-    const wrapper = el.closest('.rounded-lg');
-    
-    if (!isPeekMode && el.innerText === '******') {
-        // TRẠNG THÁI MỞ BUNG RA (SOI PASS)
-        icon.className = 'fa-solid fa-eye text-xs'; 
-        btn.classList.add('text-indigo-600', 'dark:text-indigo-400');
-        el.innerHTML = `<div class="peek-container" onmousemove="handlePeekMove(event, this)"><div class="peek-obfuscated">${generateRandomString(realValue.length)}</div><div class="peek-real">${escapeHtml(realValue)}</div></div>`;
-        
-        // Tháo giới hạn, bung rộng khung
-        if (wrapper) {
-            wrapper.classList.remove('md:max-w-[240px]', 'md:max-w-[200px]');
-            wrapper.classList.add('md:max-w-[500px]');
-        }
-    } else {
-        // TRẠNG THÁI THU LẠI
-        el.classList.add('fade-out'); 
-
-        // Kéo giới hạn khung về chuẩn tùy theo loại Pass
-        if (wrapper) {
-            wrapper.classList.remove('md:max-w-[500px]');
-            if (elementId.includes('email')) {
-                wrapper.classList.add('md:max-w-[240px]');
-            } else {
-                wrapper.classList.add('md:max-w-[200px]');
+                setTimeout(() => {
+                    el.innerText = '******'; 
+                    el.classList.add('text-slate-500', 'dark:text-slate-400'); 
+                    el.classList.remove('text-indigo-700', 'dark:text-indigo-400'); 
+                    icon.className = 'fa-solid fa-eye-slash text-xs'; 
+                    btn.classList.remove('text-indigo-600', 'dark:text-indigo-400'); 
+                    el.classList.remove('fade-out'); 
+                }, 300);
             }
         }
 
-        setTimeout(() => { 
-            el.innerText = '******'; 
-            el.classList.add('text-slate-500', 'dark:text-slate-400'); 
-            el.classList.remove('text-indigo-700', 'dark:text-indigo-400'); 
-            icon.className = 'fa-solid fa-eye-slash text-xs'; 
-            btn.classList.remove('text-indigo-600', 'dark:text-indigo-400'); 
-            el.classList.remove('fade-out'); 
-        }, 300);
-    }
-}
+        function executeTogglePassword(elementId, realValue, btn, isPeekMode) {
+            const el = document.getElementById(elementId); 
+            const icon = btn.querySelector('i');
+            const wrapper = el.closest('.rounded-lg');
+            
+            if (!isPeekMode && el.innerText === '******') {
+                // TRẠNG THÁI MỞ BUNG RA (SOI PASS)
+                icon.className = 'fa-solid fa-eye text-xs'; 
+                btn.classList.add('text-indigo-600', 'dark:text-indigo-400');
+                el.innerHTML = `<div class="peek-container" onmousemove="handlePeekMove(event, this)"><div class="peek-obfuscated">${generateRandomString(realValue.length)}</div><div class="peek-real">${escapeHtml(realValue)}</div></div>`;
+                
+                // Tháo giới hạn, bung rộng khung
+                if (wrapper) {
+                    wrapper.classList.remove('md:max-w-[240px]', 'md:max-w-[200px]');
+                    wrapper.classList.add('md:max-w-[500px]');
+                }
+            } else {
+                // TRẠNG THÁI THU LẠI
+                el.classList.add('fade-out'); 
+
+                // Kéo giới hạn khung về chuẩn tùy theo loại Pass
+                if (wrapper) {
+                    wrapper.classList.remove('md:max-w-[500px]');
+                    if (elementId.includes('email')) {
+                        wrapper.classList.add('md:max-w-[240px]');
+                    } else {
+                        wrapper.classList.add('md:max-w-[200px]');
+                    }
+                }
+
+                setTimeout(() => { 
+                    el.innerText = '******'; 
+                    el.classList.add('text-slate-500', 'dark:text-slate-400'); 
+                    el.classList.remove('text-indigo-700', 'dark:text-indigo-400'); 
+                    icon.className = 'fa-solid fa-eye-slash text-xs'; 
+                    btn.classList.remove('text-indigo-600', 'dark:text-indigo-400'); 
+                    el.classList.remove('fade-out'); 
+                }, 300);
+            }
+        }
 
         function updateTimerUI(index, remaining) {
             const timerBadge = document.getElementById(`timer-badge-${index}`);
