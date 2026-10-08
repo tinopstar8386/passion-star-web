@@ -1106,9 +1106,11 @@ function renderDailyTable() {
             }, 300);
         }
 
- function captureAndDownloadPDF(id, btnId, defaultText, isLandscape, isEcoMode) {
+function captureAndDownloadPDF(id, btnId, defaultText, isLandscape, isEcoMode) {
             const btn = document.getElementById(btnId);
-            btn.innerHTML = "⏳ Đang tạo PDF..."; btn.style.pointerEvents = 'none'; btn.style.opacity = '0.7';
+            btn.innerHTML = "⏳ Đang tạo PDF..."; 
+            btn.style.pointerEvents = 'none'; 
+            btn.style.opacity = '0.7';
             
             const targetEl = document.getElementById(id); // Khai báo đối tượng cần chụp
 
@@ -1118,12 +1120,12 @@ function renderDailyTable() {
                     scale: 4, 
                     useCORS: true, 
                     backgroundColor: isEcoMode ? '#ffffff' : null,
-                    // --- BỔ SUNG FIX LỖI HỤT HÌNH CỦA PDF ---
+                    // --- BỔ SUNG FIX LỖI HỤT HÌNH ---
                     scrollY: -window.scrollY,
                     windowWidth: targetEl.scrollWidth,
                     windowHeight: targetEl.scrollHeight,
                     width: targetEl.offsetWidth,
-                    height: targetEl.scrollHeight + 10, // Cộng thêm 10px để không lẹm viền dưới
+                    height: targetEl.scrollHeight + 10,
                     // ----------------------------------------
                     onclone: (doc) => { 
                         // Ép document và các khung cuộn mở rộng tối đa chiều cao
@@ -1146,25 +1148,44 @@ function renderDailyTable() {
                 }).then(canvas => {
                     const imgData = canvas.toDataURL('image/jpeg', 1.0);
                     const { jsPDF } = window.jspdf;
-                    const pdf = new jsPDF(isLandscape ? 'l' : 'p', 'mm', 'a4');
+                    
+                    // Khởi tạo jsPDF với hướng giấy dựa vào tham số isLandscape
+                    const orientation = isLandscape ? 'l' : 'p';
+                    const pdf = new jsPDF(orientation, 'mm', 'a4');
+                    
                     const pdfWidth = pdf.internal.pageSize.getWidth(); 
                     const pdfHeight = pdf.internal.pageSize.getHeight();
+                    
                     const imgProps = pdf.getImageProperties(imgData);
                     const imgRatio = imgProps.width / imgProps.height; 
                     const pdfRatio = pdfWidth / pdfHeight;
                     
                     let finalWidth, finalHeight;
-                    if (imgRatio > pdfRatio) { 
-                        finalWidth = pdfWidth; 
-                        finalHeight = pdfWidth / imgRatio; 
+                    
+                    // LOGIC TỰ ĐỘNG THU NHỎ ẢNH CHO VỪA TRANG
+                    if (imgRatio < pdfRatio) { 
+                        // Ảnh dài hơn so với tỷ lệ khổ giấy -> Ép chiều cao ảnh vừa với chiều cao PDF (trừ 10mm lề trên/dưới)
+                        finalHeight = pdfHeight - 10;
+                        finalWidth = finalHeight * imgRatio; 
                     } else { 
-                        finalHeight = pdfHeight; 
-                        finalWidth = pdfHeight * imgRatio; 
+                        // Ảnh rộng hơn so với tỷ lệ khổ giấy -> Ép chiều rộng ảnh vừa với chiều rộng PDF (trừ 10mm lề trái/phải)
+                        finalWidth = pdfWidth - 10; 
+                        finalHeight = finalWidth / imgRatio; 
                     }
                     
-                    pdf.addImage(imgData, 'JPEG', (pdfWidth - finalWidth) / 2, 5, finalWidth, finalHeight);
-                    pdf.save(`LichTrinh_A4_${isEcoMode ? 'TrangDen' : 'Mau'}_${new Date().getTime()}.pdf`);
-                    postCapture(id, isEcoMode); btn.innerHTML = defaultText; btn.style.pointerEvents = 'auto'; btn.style.opacity = '1';
+                    // Căn giữa hình ảnh trên trang PDF
+                    const xOffset = (pdfWidth - finalWidth) / 2;
+                    const yOffset = (pdfHeight - finalHeight) / 2; // Căn giữa theo chiều dọc luôn cho đẹp
+                    
+                    pdf.addImage(imgData, 'JPEG', xOffset, yOffset, finalWidth, finalHeight);
+                    
+                    const orientationText = isLandscape ? 'Ngang' : 'Doc';
+                    pdf.save(`LichTrinh_A4_${orientationText}_${isEcoMode ? 'TrangDen' : 'Mau'}_${new Date().getTime()}.pdf`);
+                    
+                    postCapture(id, isEcoMode); 
+                    btn.innerHTML = defaultText; 
+                    btn.style.pointerEvents = 'auto'; 
+                    btn.style.opacity = '1';
                     showToast("Đã tải PDF thành công!", "success");
                 });
             }, 300);
