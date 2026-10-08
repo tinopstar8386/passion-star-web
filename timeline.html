@@ -415,12 +415,6 @@
 
                 <div id="roomsConfigContainer"></div>
 
-                <div class="form-group" style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed var(--border);">
-                  <label>🎧 Cấu hình Sheet Nhạc (Cách nhau bằng dấu phẩy)</label>
-                  <input type="text" id="roundNamesInput" value="ROUND 2 SOLO, ROUND 4 SOLO, ROUND 5 SOLO">
-                  <button class="btn-action-event btn-primary" style="margin-top: 10px; width: 100%; font-size: 13px; padding: 14px;" onclick="exportMusicSheet()" id="btnExportMusic">🎧 TẠO GOOGLE SHEET NHẠC</button>
-                </div>
-
                 <div class="form-group" style="margin-top:15px;">
                     <label>Ghi chú chân bảng</label>
                     <textarea id="footerInput" style="height: 50px;" onchange="generateEventTable()">Toàn bộ MC trong thời gian thi đấu phải hoàn thành đầy đủ phần makeup...</textarea>
@@ -465,21 +459,7 @@
         // --- THAY LINK API CỦA BẠN VÀO ĐÂY ---
         const API_URL = "https://script.google.com/macros/s/AKfycbzcmLF9VvArtI_mp2hcCZnXXtgOOGUpDOZDe57pWfFCMJzU_jR7D7Qj99GJ7qTGDFy9qA/exec";
 
-        function runScript(action, payload = {}) {
-            return fetch(API_URL, {
-                method: 'POST',
-                redirect: 'follow', 
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: action, payload: payload })
-            })
-            .then(res => res.json())
-            .then(res => {
-                if (res.status === 'error') throw new Error(res.message);
-                return res.data;
-            });
-        }
-
-        // === HÀM HIỂN THỊ TOAST THÔNG BÁO ===
+       // === HÀM HIỂN THỊ TOAST THÔNG BÁO ===
         function showToast(message, type = 'success', duration = 3000) {
             const container = document.getElementById('toast-container');
             if (!container) return;
@@ -1298,35 +1278,6 @@ function captureAndDownloadPDF(id, btnId, defaultText, isLandscape, isEcoMode) {
             }
         }, 50);
     });
-
-        window.exportMusicSheet = function() {
-            const btn = document.getElementById('btnExportMusic');
-            const roundInput = document.getElementById('roundNamesInput').value;
-            const roundNames = roundInput.split(',').map(r => r.trim()).filter(r => r !== '');
-
-            if (roundNames.length === 0) {
-                return showToast("Vui lòng nhập ít nhất 1 tiêu đề vòng thi!", "error");
-            }
-
-            const modeVal = document.getElementById('modeSelect').value;
-            const count = parseInt(modeVal); 
-            const activeRooms = roomsData.slice(0, count);
-
-            btn.innerHTML = "⏳ Đang dựng khung Sheet...";
-            btn.style.pointerEvents = 'none';
-
-            runScript('generateMusicSheet', { activeRooms: activeRooms, roundNames: roundNames })
-                .then(res => {
-                    showToast(res, "success", 4000);
-                    btn.innerHTML = "🎧 TẠO GOOGLE SHEET NHẠC";
-                    btn.style.pointerEvents = 'auto';
-                })
-                .catch(err => {
-                    showToast("Lỗi: " + err.message, "error", 5000);
-                    btn.innerHTML = "🎧 TẠO GOOGLE SHEET NHẠC";
-                    btn.style.pointerEvents = 'auto';
-                });
-        }
     </script>
 </body>
 </html>
