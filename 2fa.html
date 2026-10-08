@@ -670,68 +670,92 @@
 
        // ================= CƠ CHẾ LAI: SHEET LÀ GỐC, FIREBASE LÀ BỘ NHỚ ĐỆM =================
         
-     async function checkLogin() {
-    const rawInput = document.getElementById('passcodeInput').value;
-    if(!rawInput) return;
-    const btn = document.getElementById('loginBtn');
-    const err = document.getElementById('loginError');
-    const shimmer = document.getElementById('loginShimmer'); // Gọi thanh chạy
-    
-    btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang đăng nhập...</span>';
-    btn.disabled = true; err.classList.add('hidden');
-    
-    // 🟢 Bật thanh chạy sáng lên khi bắt đầu load
-    shimmer.classList.remove('opacity-0');
-    shimmer.classList.add('animate-[shimmer_1.5s_infinite]'); // Ép chạy nhanh hơn (1.5s) cho mượt
-    
-    const input = await sha256(rawInput);
-
-    // BƯỚC 1: Xác thực mật khẩu qua Google Sheets (đảm bảo bảo mật tuyệt đối)
-    runScript('getSheetData', { sheetName: currentSheetName, pass: input })
-        .then(async (data) => {
-            // 🔴 Tắt thanh chạy khi đăng nhập thành công
+    // HÀM PHỤ: Xử lý hiệu ứng tắt màn hình đăng nhập
+        function proceedToMainScreen(shimmer, btn) {
             shimmer.classList.add('opacity-0');
             shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
-
-            sessionPass = input;
             document.getElementById('passcodeInput').value = '';
             document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => document.getElementById('loginScreen').classList.add('hidden'), 500);
-            
             btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
-            btn.disabled = false; 
+            btn.disabled = false;
+        }
+
+        // HÀM CHÍNH: KIỂM TRA ĐĂNG NHẬP SIÊU TỐC
+        async function checkLogin() {
+            const rawInput = document.getElementById('passcodeInput').value;
+            if(!rawInput) return;
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('loginError');
+            const shimmer = document.getElementById('loginShimmer'); 
             
-            // BƯỚC 2: Cập nhật Firebase ngay lập tức với data mới lấy được
-            if (window.db && window.fs) {
-                const safeID = currentSheetName.replace(/\s+/g, '_');
-                await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
+            btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang xác thực...</span>';
+            btn.disabled = true; err.classList.add('hidden');
+            
+            shimmer.classList.remove('opacity-0');
+            shimmer.classList.add('animate-[shimmer_1.5s_infinite]'); 
+            
+            const input = await sha256(rawInput);
+            let isAuthSuccess = false;
+
+            // BƯỚC 1: KIỂM TRA MẬT KHẨU SIÊU TỐC QUA FIREBASE (0.1 giây)
+            try {
+                if (window.db && window.fs) {
+                    const authSnap = await window.fs.getDoc(window.fs.doc(window.db, "2fa_cache", "auth_config"));
+                    if (authSnap.exists() && authSnap.data().validHash === input) {
+                        isAuthSuccess = true;
+                    }
+                }
+            } catch (e) { console.log("Lỗi check Firebase auth", e); }
+
+            if (isAuthSuccess) {
+                // MỞ CỬA NGAY LẬP TỨC
+                sessionPass = input;
+                proceedToMainScreen(shimmer, btn);
+
+                // Dùng loadData() để lấy data đệm Firebase lên ngay, sau đó sync ngầm với Sheets
+                loadData(); 
+                fetchConfigDevices();
+                showToast('Đăng nhập siêu tốc', 'success');
+                return;
             }
 
-            allData = data;
-            document.getElementById('tableContainer').classList.remove('hidden');
-            renderTable(allData); 
-            resetTimer(); fetchConfigDevices();
-            showToast('Đăng nhập thành công', 'success'); checkPrimeRadiantAlarms();
-        })
-        .catch(error => {
-            // 🔴 Tắt thanh chạy khi đăng nhập thất bại
-            shimmer.classList.add('opacity-0');
-            shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
+            // BƯỚC 2: NẾU FIREBASE CHƯA LƯU HOẶC SAI PASS -> GỌI VỀ GỐC GOOGLE SHEETS ĐỂ CHECK
+            runScript('getSheetData', { sheetName: currentSheetName, pass: input })
+                .then(async (data) => {
+                    sessionPass = input;
+                    proceedToMainScreen(shimmer, btn);
+                    
+                    // LƯU HASH VÀO FIREBASE ĐỂ LẦN SAU ĐĂNG NHẬP SIÊU TỐC
+                    if (window.db && window.fs) {
+                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", "auth_config"), { validHash: input });
+                        const safeID = currentSheetName.replace(/\s+/g, '_');
+                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
+                    }
 
-            btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>'; 
-            btn.disabled = false; err.classList.remove('hidden');
-            document.getElementById('passcodeInput').classList.add('animate-shake');
-            setTimeout(() => { document.getElementById('passcodeInput').classList.remove('animate-shake'); document.getElementById('passcodeInput').focus(); }, 400);
-            
-            if (error.message.includes("AUTH_FAILED")) { 
-                err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
-                showToast('Từ chối: Sai mật khẩu', 'error'); 
-            } 
-            else { 
-                err.innerText = "Lỗi: " + error.message; 
-            }
-        });
-}
+                    allData = data;
+                    document.getElementById('tableContainer').classList.remove('hidden');
+                    renderTable(allData); 
+                    resetTimer(); fetchConfigDevices(); checkPrimeRadiantAlarms();
+                    showToast('Đăng nhập thành công', 'success'); 
+                })
+                .catch(error => {
+                    // XỬ LÝ LỖI ĐĂNG NHẬP
+                    shimmer.classList.add('opacity-0');
+                    shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
+                    btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>'; 
+                    btn.disabled = false; err.classList.remove('hidden');
+                    document.getElementById('passcodeInput').classList.add('animate-shake');
+                    setTimeout(() => { document.getElementById('passcodeInput').classList.remove('animate-shake'); document.getElementById('passcodeInput').focus(); }, 400);
+                    
+                    if (error.message.includes("AUTH_FAILED")) { 
+                        err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
+                        showToast('Từ chối: Sai mật khẩu', 'error'); 
+                    } else { 
+                        err.innerText = "Lỗi kết nối máy chủ"; 
+                    }
+                });
+        }
 
         function lockApp() {
             sessionPass = ""; 
