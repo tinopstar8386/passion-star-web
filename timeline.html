@@ -1001,11 +1001,11 @@ function renderDailyTable() {
             el.querySelectorAll('.hide-on-capture').forEach(n => { n.style.display = n.dataset.display || ''; delete n.dataset.display; });
         }
 
-     function captureAndDownloadImage(id, btnId, defaultText) {
+   function captureAndDownloadImage(id, btnId, defaultText) {
             const btn = document.getElementById(btnId);
             btn.innerHTML = "⏳ Vui lòng chờ..."; btn.style.pointerEvents = 'none'; btn.style.opacity = '0.7';
             
-            const targetEl = document.getElementById(id); // Khai báo đối tượng cần chụp
+            const targetEl = document.getElementById(id); 
 
             preCapture(id, false);
             setTimeout(() => {
@@ -1013,26 +1013,36 @@ function renderDailyTable() {
                     scale: 3, 
                     useCORS: true, 
                     backgroundColor: null,
-                    // --- BỔ SUNG ĐỂ FIX LỖI HỤT HÌNH BÊN DƯỚI ---
-                    scrollY: -window.scrollY,
-                    windowWidth: targetEl.scrollWidth,
-                    windowHeight: targetEl.scrollHeight,
-                    width: targetEl.offsetWidth,
-                    height: targetEl.scrollHeight + 10, // Cộng thêm 10px để viền dưới không bị lẹm
-                    // ---------------------------------------------
+                    // Đã bỏ các thuộc tính scrollY, width, height tĩnh ở đây
                     onclone: (doc) => { 
-                        // Ép document và các khung cuộn mở rộng tối đa chiều cao
-                        doc.body.style.height = 'auto';
-                        doc.body.style.overflow = 'visible';
-                        doc.documentElement.style.height = 'auto';
-                        doc.documentElement.style.overflow = 'visible';
+                        const clonedTarget = doc.getElementById(id);
                         
-                        doc.querySelectorAll('.view-container, .event-main, .panel-right').forEach(el => {
-                            el.style.height = 'auto';
-                            el.style.overflow = 'visible';
-                        });
+                        // 1. Ép tất cả các thẻ cha từ target lên đến body phải giải phóng kích thước
+                        let currentEl = clonedTarget.parentElement;
+                        while(currentEl && currentEl !== doc.body) {
+                            currentEl.style.setProperty('height', 'auto', 'important');
+                            currentEl.style.setProperty('max-height', 'none', 'important');
+                            currentEl.style.setProperty('overflow', 'visible', 'important');
+                            currentEl.style.setProperty('display', 'block', 'important'); 
+                            currentEl = currentEl.parentElement;
+                        }
 
-                        // Tắt animation (giữ nguyên của code cũ)
+                        // 2. Ép body và html giãn tối đa
+                        doc.body.style.setProperty('height', 'auto', 'important');
+                        doc.body.style.setProperty('min-height', '100%', 'important');
+                        doc.body.style.setProperty('overflow', 'visible', 'important');
+                        doc.documentElement.style.setProperty('height', 'auto', 'important');
+                        doc.documentElement.style.setProperty('min-height', '100%', 'important');
+                        doc.documentElement.style.setProperty('overflow', 'visible', 'important');
+
+                        // 3. Tách đối tượng cần chụp ra khỏi luồng bố cục
+                        clonedTarget.style.setProperty('position', 'absolute', 'important');
+                        clonedTarget.style.setProperty('top', '0', 'important');
+                        clonedTarget.style.setProperty('left', '0', 'important');
+                        clonedTarget.style.setProperty('margin', '0', 'important');
+                        clonedTarget.style.setProperty('height', 'max-content', 'important');
+
+                        // Tắt animation 
                         doc.querySelectorAll('.animate-row').forEach(el => { 
                             el.style.setProperty('animation', 'none', 'important'); 
                             el.style.setProperty('opacity', '1', 'important'); 
@@ -1053,7 +1063,7 @@ function renderDailyTable() {
             const btn = document.getElementById(btnId);
             btn.innerHTML = "⏳ Đang Copy..."; btn.style.pointerEvents = 'none'; btn.style.opacity = '0.7';
             
-            const targetEl = document.getElementById(id); // Khai báo đối tượng cần chụp
+            const targetEl = document.getElementById(id);
 
             preCapture(id, false);
             setTimeout(() => {
@@ -1061,25 +1071,36 @@ function renderDailyTable() {
                     scale: 3, 
                     useCORS: true, 
                     backgroundColor: null,
-                    // --- BỔ SUNG ĐỂ FIX LỖI HỤT HÌNH BÊN DƯỚI ---
-                    scrollY: -window.scrollY,
-                    windowWidth: targetEl.scrollWidth,
-                    windowHeight: targetEl.scrollHeight,
-                    width: targetEl.offsetWidth,
-                    height: targetEl.scrollHeight + 10,
-                    // ---------------------------------------------
+                    // Đã bỏ các thuộc tính scrollY, width, height tĩnh ở đây
                     onclone: (doc) => { 
-                        // Ép document và các khung cuộn mở rộng tối đa chiều cao
-                        doc.body.style.height = 'auto';
-                        doc.body.style.overflow = 'visible';
-                        doc.documentElement.style.height = 'auto';
-                        doc.documentElement.style.overflow = 'visible';
+                        const clonedTarget = doc.getElementById(id);
                         
-                        doc.querySelectorAll('.view-container, .event-main, .panel-right').forEach(el => {
-                            el.style.height = 'auto';
-                            el.style.overflow = 'visible';
-                        });
+                        // 1. Ép tất cả các thẻ cha từ target lên đến body phải giải phóng kích thước
+                        let currentEl = clonedTarget.parentElement;
+                        while(currentEl && currentEl !== doc.body) {
+                            currentEl.style.setProperty('height', 'auto', 'important');
+                            currentEl.style.setProperty('max-height', 'none', 'important');
+                            currentEl.style.setProperty('overflow', 'visible', 'important');
+                            currentEl.style.setProperty('display', 'block', 'important'); 
+                            currentEl = currentEl.parentElement;
+                        }
 
+                        // 2. Ép body và html giãn tối đa
+                        doc.body.style.setProperty('height', 'auto', 'important');
+                        doc.body.style.setProperty('min-height', '100%', 'important');
+                        doc.body.style.setProperty('overflow', 'visible', 'important');
+                        doc.documentElement.style.setProperty('height', 'auto', 'important');
+                        doc.documentElement.style.setProperty('min-height', '100%', 'important');
+                        doc.documentElement.style.setProperty('overflow', 'visible', 'important');
+
+                        // 3. Tách đối tượng cần chụp ra khỏi luồng bố cục
+                        clonedTarget.style.setProperty('position', 'absolute', 'important');
+                        clonedTarget.style.setProperty('top', '0', 'important');
+                        clonedTarget.style.setProperty('left', '0', 'important');
+                        clonedTarget.style.setProperty('margin', '0', 'important');
+                        clonedTarget.style.setProperty('height', 'max-content', 'important');
+
+                        // Tắt animation
                         doc.querySelectorAll('.animate-row').forEach(el => { 
                             el.style.setProperty('animation', 'none', 'important'); 
                             el.style.setProperty('opacity', '1', 'important'); 
