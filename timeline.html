@@ -1001,14 +1001,44 @@ function renderDailyTable() {
             el.querySelectorAll('.hide-on-capture').forEach(n => { n.style.display = n.dataset.display || ''; delete n.dataset.display; });
         }
 
-        function captureAndDownloadImage(id, btnId, defaultText) {
+     function captureAndDownloadImage(id, btnId, defaultText) {
             const btn = document.getElementById(btnId);
             btn.innerHTML = "⏳ Vui lòng chờ..."; btn.style.pointerEvents = 'none'; btn.style.opacity = '0.7';
+            
+            const targetEl = document.getElementById(id); // Khai báo đối tượng cần chụp
+
             preCapture(id, false);
             setTimeout(() => {
-                html2canvas(document.getElementById(id), { 
-                    scale: 3, useCORS: true, backgroundColor: null,
-                    onclone: (doc) => { doc.querySelectorAll('.animate-row').forEach(el => { el.style.setProperty('animation', 'none', 'important'); el.style.setProperty('opacity', '1', 'important'); el.style.setProperty('transform', 'none', 'important'); }); }
+                html2canvas(targetEl, { 
+                    scale: 3, 
+                    useCORS: true, 
+                    backgroundColor: null,
+                    // --- BỔ SUNG ĐỂ FIX LỖI HỤT HÌNH BÊN DƯỚI ---
+                    scrollY: -window.scrollY,
+                    windowWidth: targetEl.scrollWidth,
+                    windowHeight: targetEl.scrollHeight,
+                    width: targetEl.offsetWidth,
+                    height: targetEl.scrollHeight + 10, // Cộng thêm 10px để viền dưới không bị lẹm
+                    // ---------------------------------------------
+                    onclone: (doc) => { 
+                        // Ép document và các khung cuộn mở rộng tối đa chiều cao
+                        doc.body.style.height = 'auto';
+                        doc.body.style.overflow = 'visible';
+                        doc.documentElement.style.height = 'auto';
+                        doc.documentElement.style.overflow = 'visible';
+                        
+                        doc.querySelectorAll('.view-container, .event-main, .panel-right').forEach(el => {
+                            el.style.height = 'auto';
+                            el.style.overflow = 'visible';
+                        });
+
+                        // Tắt animation (giữ nguyên của code cũ)
+                        doc.querySelectorAll('.animate-row').forEach(el => { 
+                            el.style.setProperty('animation', 'none', 'important'); 
+                            el.style.setProperty('opacity', '1', 'important'); 
+                            el.style.setProperty('transform', 'none', 'important'); 
+                        }); 
+                    }
                 }).then(canvas => {
                     const link = document.createElement('a'); 
                     link.download = `Timeline_${new Date().getTime()}.png`;
@@ -1022,11 +1052,40 @@ function renderDailyTable() {
         function copyToClipboard(id, btnId) {
             const btn = document.getElementById(btnId);
             btn.innerHTML = "⏳ Đang Copy..."; btn.style.pointerEvents = 'none'; btn.style.opacity = '0.7';
+            
+            const targetEl = document.getElementById(id); // Khai báo đối tượng cần chụp
+
             preCapture(id, false);
             setTimeout(() => {
-                html2canvas(document.getElementById(id), { 
-                    scale: 3, useCORS: true, backgroundColor: null,
-                    onclone: (doc) => { doc.querySelectorAll('.animate-row').forEach(el => { el.style.setProperty('animation', 'none', 'important'); el.style.setProperty('opacity', '1', 'important'); el.style.setProperty('transform', 'none', 'important'); }); }
+                html2canvas(targetEl, { 
+                    scale: 3, 
+                    useCORS: true, 
+                    backgroundColor: null,
+                    // --- BỔ SUNG ĐỂ FIX LỖI HỤT HÌNH BÊN DƯỚI ---
+                    scrollY: -window.scrollY,
+                    windowWidth: targetEl.scrollWidth,
+                    windowHeight: targetEl.scrollHeight,
+                    width: targetEl.offsetWidth,
+                    height: targetEl.scrollHeight + 10,
+                    // ---------------------------------------------
+                    onclone: (doc) => { 
+                        // Ép document và các khung cuộn mở rộng tối đa chiều cao
+                        doc.body.style.height = 'auto';
+                        doc.body.style.overflow = 'visible';
+                        doc.documentElement.style.height = 'auto';
+                        doc.documentElement.style.overflow = 'visible';
+                        
+                        doc.querySelectorAll('.view-container, .event-main, .panel-right').forEach(el => {
+                            el.style.height = 'auto';
+                            el.style.overflow = 'visible';
+                        });
+
+                        doc.querySelectorAll('.animate-row').forEach(el => { 
+                            el.style.setProperty('animation', 'none', 'important'); 
+                            el.style.setProperty('opacity', '1', 'important'); 
+                            el.style.setProperty('transform', 'none', 'important'); 
+                        }); 
+                    }
                 }).then(canvas => {
                     canvas.toBlob(blob => {
                         postCapture(id, false);
@@ -1047,25 +1106,61 @@ function renderDailyTable() {
             }, 300);
         }
 
-        function captureAndDownloadPDF(id, btnId, defaultText, isLandscape, isEcoMode) {
+ function captureAndDownloadPDF(id, btnId, defaultText, isLandscape, isEcoMode) {
             const btn = document.getElementById(btnId);
             btn.innerHTML = "⏳ Đang tạo PDF..."; btn.style.pointerEvents = 'none'; btn.style.opacity = '0.7';
+            
+            const targetEl = document.getElementById(id); // Khai báo đối tượng cần chụp
+
             preCapture(id, isEcoMode);
             setTimeout(() => {
-                html2canvas(document.getElementById(id), { 
-                    scale: 4, useCORS: true, backgroundColor: isEcoMode ? '#ffffff' : null,
-                    onclone: (doc) => { doc.querySelectorAll('.animate-row').forEach(el => { el.style.setProperty('animation', 'none', 'important'); el.style.setProperty('opacity', '1', 'important'); el.style.setProperty('transform', 'none', 'important'); }); }
+                html2canvas(targetEl, { 
+                    scale: 4, 
+                    useCORS: true, 
+                    backgroundColor: isEcoMode ? '#ffffff' : null,
+                    // --- BỔ SUNG FIX LỖI HỤT HÌNH CỦA PDF ---
+                    scrollY: -window.scrollY,
+                    windowWidth: targetEl.scrollWidth,
+                    windowHeight: targetEl.scrollHeight,
+                    width: targetEl.offsetWidth,
+                    height: targetEl.scrollHeight + 10, // Cộng thêm 10px để không lẹm viền dưới
+                    // ----------------------------------------
+                    onclone: (doc) => { 
+                        // Ép document và các khung cuộn mở rộng tối đa chiều cao
+                        doc.body.style.height = 'auto';
+                        doc.body.style.overflow = 'visible';
+                        doc.documentElement.style.height = 'auto';
+                        doc.documentElement.style.overflow = 'visible';
+                        
+                        doc.querySelectorAll('.view-container, .event-main, .panel-right').forEach(el => {
+                            el.style.height = 'auto';
+                            el.style.overflow = 'visible';
+                        });
+
+                        doc.querySelectorAll('.animate-row').forEach(el => { 
+                            el.style.setProperty('animation', 'none', 'important'); 
+                            el.style.setProperty('opacity', '1', 'important'); 
+                            el.style.setProperty('transform', 'none', 'important'); 
+                        }); 
+                    }
                 }).then(canvas => {
                     const imgData = canvas.toDataURL('image/jpeg', 1.0);
                     const { jsPDF } = window.jspdf;
                     const pdf = new jsPDF(isLandscape ? 'l' : 'p', 'mm', 'a4');
-                    const pdfWidth = pdf.internal.pageSize.getWidth(); const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const pdfWidth = pdf.internal.pageSize.getWidth(); 
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
                     const imgProps = pdf.getImageProperties(imgData);
-                    const imgRatio = imgProps.width / imgProps.height; const pdfRatio = pdfWidth / pdfHeight;
+                    const imgRatio = imgProps.width / imgProps.height; 
+                    const pdfRatio = pdfWidth / pdfHeight;
                     
                     let finalWidth, finalHeight;
-                    if (imgRatio > pdfRatio) { finalWidth = pdfWidth; finalHeight = pdfWidth / imgRatio; } 
-                    else { finalHeight = pdfHeight; finalWidth = pdfHeight * imgRatio; }
+                    if (imgRatio > pdfRatio) { 
+                        finalWidth = pdfWidth; 
+                        finalHeight = pdfWidth / imgRatio; 
+                    } else { 
+                        finalHeight = pdfHeight; 
+                        finalWidth = pdfHeight * imgRatio; 
+                    }
                     
                     pdf.addImage(imgData, 'JPEG', (pdfWidth - finalWidth) / 2, 5, finalWidth, finalHeight);
                     pdf.save(`LichTrinh_A4_${isEcoMode ? 'TrangDen' : 'Mau'}_${new Date().getTime()}.pdf`);
