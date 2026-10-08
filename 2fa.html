@@ -226,7 +226,7 @@
         <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#4f46e5 1px, transparent 1px); background-size: 30px 30px;"></div>
         
         <div class="w-[400px] max-w-[90%] bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/10 p-6 md:p-10 rounded-3xl shadow-[0_0_50px_rgba(79,70,229,0.15)] relative overflow-hidden animate-vault-enter">
-            <div class="absolute top-0 left-0 w-full h-[2px] bg-indigo-500/80 shadow-[0_0_15px_#6366f1] animate-[shimmer_2.5s_infinite]"></div>
+           <div id="loginShimmer" class="absolute top-0 left-0 w-full h-[2px] bg-indigo-500/80 shadow-[0_0_15px_#6366f1] opacity-0 transition-opacity duration-300"></div>
             
             <div class="text-center mb-8">
                 <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 shadow-inner">
@@ -670,57 +670,68 @@
 
        // ================= CƠ CHẾ LAI: SHEET LÀ GỐC, FIREBASE LÀ BỘ NHỚ ĐỆM =================
         
-       async function checkLogin() {
-            const rawInput = document.getElementById('passcodeInput').value;
-            if(!rawInput) return;
-            const btn = document.getElementById('loginBtn');
-            const err = document.getElementById('loginError');
-            
-            btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang đăng nhập...</span>';
-            btn.disabled = true; err.classList.add('hidden');
-            
-            const input = await sha256(rawInput);
+     async function checkLogin() {
+    const rawInput = document.getElementById('passcodeInput').value;
+    if(!rawInput) return;
+    const btn = document.getElementById('loginBtn');
+    const err = document.getElementById('loginError');
+    const shimmer = document.getElementById('loginShimmer'); // Gọi thanh chạy
+    
+    btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang giải mã...</span>';
+    btn.disabled = true; err.classList.add('hidden');
+    
+    // 🟢 Bật thanh chạy sáng lên khi bắt đầu load
+    shimmer.classList.remove('opacity-0');
+    shimmer.classList.add('animate-[shimmer_1.5s_infinite]'); // Ép chạy nhanh hơn (1.5s) cho mượt
+    
+    const input = await sha256(rawInput);
 
-            // BƯỚC 1: Xác thực mật khẩu qua Google Sheets (đảm bảo bảo mật tuyệt đối)
-            runScript('getSheetData', { sheetName: currentSheetName, pass: input })
-                .then(async (data) => {
-                    sessionPass = input;
-                    document.getElementById('passcodeInput').value = '';
-                    document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
-                    setTimeout(() => document.getElementById('loginScreen').classList.add('hidden'), 500);
-                    
-                    btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
-                    btn.disabled = false; 
-                    
-                    // BƯỚC 2: Cập nhật Firebase ngay lập tức với data mới lấy được
-                    if (window.db && window.fs) {
-                        const safeID = currentSheetName.replace(/\s+/g, '_');
-                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
-                    }
+    // BƯỚC 1: Xác thực mật khẩu qua Google Sheets (đảm bảo bảo mật tuyệt đối)
+    runScript('getSheetData', { sheetName: currentSheetName, pass: input })
+        .then(async (data) => {
+            // 🔴 Tắt thanh chạy khi đăng nhập thành công
+            shimmer.classList.add('opacity-0');
+            shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
 
-                    allData = data;
-                    document.getElementById('tableContainer').classList.remove('hidden');
-                    renderTable(allData); 
-                    resetTimer(); fetchConfigDevices();
-                    showToast('Đăng nhập thành công', 'success'); checkPrimeRadiantAlarms();
-                })
-                .catch(error => {
-                    btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>'; 
-                    btn.disabled = false; err.classList.remove('hidden');
-                    document.getElementById('passcodeInput').classList.add('animate-shake');
-                    setTimeout(() => { document.getElementById('passcodeInput').classList.remove('animate-shake'); document.getElementById('passcodeInput').focus(); }, 400);
-                    
-                    // SỬA Ở ĐÂY: Dùng includes() thay vì === vì backend trả về "Error: AUTH_FAILED"
-                    if (error.message.includes("AUTH_FAILED")) { 
-                        err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
-                        showToast('Từ chối: Sai mật khẩu', 'error'); 
-                    } 
-                    else { 
-                        // Hiển thị trực tiếp lỗi để biết server bị vấn đề gì
-                        err.innerText = "Lỗi: " + error.message; 
-                    }
-                });
-        }
+            sessionPass = input;
+            document.getElementById('passcodeInput').value = '';
+            document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => document.getElementById('loginScreen').classList.add('hidden'), 500);
+            
+            btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
+            btn.disabled = false; 
+            
+            // BƯỚC 2: Cập nhật Firebase ngay lập tức với data mới lấy được
+            if (window.db && window.fs) {
+                const safeID = currentSheetName.replace(/\s+/g, '_');
+                await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
+            }
+
+            allData = data;
+            document.getElementById('tableContainer').classList.remove('hidden');
+            renderTable(allData); 
+            resetTimer(); fetchConfigDevices();
+            showToast('Đăng nhập thành công', 'success'); checkPrimeRadiantAlarms();
+        })
+        .catch(error => {
+            // 🔴 Tắt thanh chạy khi đăng nhập thất bại
+            shimmer.classList.add('opacity-0');
+            shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
+
+            btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>'; 
+            btn.disabled = false; err.classList.remove('hidden');
+            document.getElementById('passcodeInput').classList.add('animate-shake');
+            setTimeout(() => { document.getElementById('passcodeInput').classList.remove('animate-shake'); document.getElementById('passcodeInput').focus(); }, 400);
+            
+            if (error.message.includes("AUTH_FAILED")) { 
+                err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
+                showToast('Từ chối: Sai mật khẩu', 'error'); 
+            } 
+            else { 
+                err.innerText = "Lỗi: " + error.message; 
+            }
+        });
+}
 
         function lockApp() {
             sessionPass = ""; 
