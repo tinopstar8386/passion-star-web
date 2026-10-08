@@ -1108,37 +1108,45 @@ function renderDailyTable() {
 
 function captureAndDownloadPDF(id, btnId, defaultText, isLandscape, isEcoMode) {
             const btn = document.getElementById(btnId);
-            btn.innerHTML = "⏳ Đang tạo PDF..."; 
-            btn.style.pointerEvents = 'none'; 
-            btn.style.opacity = '0.7';
+            btn.innerHTML = "⏳ Đang tạo PDF..."; btn.style.pointerEvents = 'none'; btn.style.opacity = '0.7';
             
-            const targetEl = document.getElementById(id); // Khai báo đối tượng cần chụp
+            const targetEl = document.getElementById(id);
 
             preCapture(id, isEcoMode);
             setTimeout(() => {
                 html2canvas(targetEl, { 
-                    scale: 4, 
+                    scale: 3, // Giữ scale 3 giống xuất ảnh để ảnh không quá nặng gây lag jsPDF
                     useCORS: true, 
                     backgroundColor: isEcoMode ? '#ffffff' : null,
-                    // --- BỔ SUNG FIX LỖI HỤT HÌNH ---
+                    // --- BẮT BUỘC ĐỂ KHÔNG BỊ CẮT BỞI CUỘN MÀN HÌNH ---
                     scrollY: -window.scrollY,
                     windowWidth: targetEl.scrollWidth,
                     windowHeight: targetEl.scrollHeight,
                     width: targetEl.offsetWidth,
-                    height: targetEl.scrollHeight + 10,
-                    // ----------------------------------------
+                    height: targetEl.scrollHeight + 15, // Dư giả 15px cho an toàn
+                    // --------------------------------------------------
                     onclone: (doc) => { 
-                        // Ép document và các khung cuộn mở rộng tối đa chiều cao
-                        doc.body.style.height = 'auto';
-                        doc.body.style.overflow = 'visible';
-                        doc.documentElement.style.height = 'auto';
-                        doc.documentElement.style.overflow = 'visible';
-                        
-                        doc.querySelectorAll('.view-container, .event-main, .panel-right').forEach(el => {
-                            el.style.height = 'auto';
-                            el.style.overflow = 'visible';
+                        // MỞ KHÓA MỌI GIỚI HẠN CHIỀU CAO (RẤT QUAN TRỌNG)
+                        const allElements = doc.querySelectorAll('*');
+                        allElements.forEach(el => {
+                            if (window.getComputedStyle(el).overflow === 'hidden' || window.getComputedStyle(el).overflow === 'auto' || window.getComputedStyle(el).overflow === 'scroll') {
+                                el.style.setProperty('overflow', 'visible', 'important');
+                            }
                         });
 
+                        // Gỡ bỏ giới hạn chiều cao cố định của container
+                        doc.querySelectorAll('.view-container, .event-main, .panel-right').forEach(el => {
+                            el.style.setProperty('height', 'auto', 'important');
+                            el.style.setProperty('max-height', 'none', 'important');
+                            el.style.setProperty('overflow', 'visible', 'important');
+                        });
+                        
+                        doc.body.style.setProperty('height', 'auto', 'important');
+                        doc.body.style.setProperty('overflow', 'visible', 'important');
+                        doc.documentElement.style.setProperty('height', 'auto', 'important');
+                        doc.documentElement.style.setProperty('overflow', 'visible', 'important');
+
+                        // Dừng animation
                         doc.querySelectorAll('.animate-row').forEach(el => { 
                             el.style.setProperty('animation', 'none', 'important'); 
                             el.style.setProperty('opacity', '1', 'important'); 
@@ -1149,7 +1157,7 @@ function captureAndDownloadPDF(id, btnId, defaultText, isLandscape, isEcoMode) {
                     const imgData = canvas.toDataURL('image/jpeg', 1.0);
                     const { jsPDF } = window.jspdf;
                     
-                    // Khởi tạo jsPDF với hướng giấy dựa vào tham số isLandscape
+                    // Khởi tạo PDF theo tuỳ chọn Ngang/Dọc từ giao diện
                     const orientation = isLandscape ? 'l' : 'p';
                     const pdf = new jsPDF(orientation, 'mm', 'a4');
                     
@@ -1162,30 +1170,27 @@ function captureAndDownloadPDF(id, btnId, defaultText, isLandscape, isEcoMode) {
                     
                     let finalWidth, finalHeight;
                     
-                    // LOGIC TỰ ĐỘNG THU NHỎ ẢNH CHO VỪA TRANG
+                    // Thu nhỏ ảnh cho vừa khít tờ A4 mà không bị cắt
                     if (imgRatio < pdfRatio) { 
-                        // Ảnh dài hơn so với tỷ lệ khổ giấy -> Ép chiều cao ảnh vừa với chiều cao PDF (trừ 10mm lề trên/dưới)
+                        // Ảnh rất dài (ưu tiên bóp chiều cao)
                         finalHeight = pdfHeight - 10;
                         finalWidth = finalHeight * imgRatio; 
                     } else { 
-                        // Ảnh rộng hơn so với tỷ lệ khổ giấy -> Ép chiều rộng ảnh vừa với chiều rộng PDF (trừ 10mm lề trái/phải)
+                        // Ảnh rất rộng (ưu tiên bóp chiều rộng)
                         finalWidth = pdfWidth - 10; 
                         finalHeight = finalWidth / imgRatio; 
                     }
                     
-                    // Căn giữa hình ảnh trên trang PDF
+                    // Căn giữa bảng trên tờ PDF
                     const xOffset = (pdfWidth - finalWidth) / 2;
-                    const yOffset = (pdfHeight - finalHeight) / 2; // Căn giữa theo chiều dọc luôn cho đẹp
+                    const yOffset = (pdfHeight - finalHeight) / 2;
                     
                     pdf.addImage(imgData, 'JPEG', xOffset, yOffset, finalWidth, finalHeight);
                     
                     const orientationText = isLandscape ? 'Ngang' : 'Doc';
                     pdf.save(`LichTrinh_A4_${orientationText}_${isEcoMode ? 'TrangDen' : 'Mau'}_${new Date().getTime()}.pdf`);
                     
-                    postCapture(id, isEcoMode); 
-                    btn.innerHTML = defaultText; 
-                    btn.style.pointerEvents = 'auto'; 
-                    btn.style.opacity = '1';
+                    postCapture(id, isEcoMode); btn.innerHTML = defaultText; btn.style.pointerEvents = 'auto'; btn.style.opacity = '1';
                     showToast("Đã tải PDF thành công!", "success");
                 });
             }, 300);
