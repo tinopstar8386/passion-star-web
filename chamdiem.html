@@ -5,7 +5,11 @@
   <title>Form Chấm điểm Tiếng Anh</title>
   <link rel="icon" href="./icon/chamdiem.svg" type="image/svg+xml">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Các thư viện hỗ trợ Chụp ảnh và Xuất PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
   <style>
     :root { --bg-color: #f8fafc; --card-bg: #ffffff; --border-color: #cbd5e1; --text-main: #0f172a; --table-header: #f1f5f9; --row-hover: #e2e8f0; }
     body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0;}
@@ -78,6 +82,37 @@
     
     body.export-compact .judge-1, body.export-compact .judge-2, body.export-compact .score-col { display: none !important; }
 
+    /* CSS CHO CHẾ ĐỘ TIẾT KIỆM MỰC (INK SAVER MODE) */
+    body.ink-saver-mode .table-container,
+    body.ink-saver-mode table,
+    body.ink-saver-mode th,
+    body.ink-saver-mode td,
+    body.ink-saver-mode .group-cell,
+    body.ink-saver-mode .name-cell {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border-color: #000000 !important;
+    }
+    body.ink-saver-mode .score-input,
+    body.ink-saver-mode .cn-text,
+    body.ink-saver-mode .total-cell,
+    body.ink-saver-mode .result-cell {
+        color: #000000 !important;
+    }
+    body.ink-saver-mode #exportHeader h1,
+    body.ink-saver-mode #exportHeader h2,
+    body.ink-saver-mode #exportDateLabel {
+        color: #000000 !important;
+    }
+    body.ink-saver-mode .pass-badge, 
+    body.ink-saver-mode .fail-badge, 
+    body.ink-saver-mode .vip-badge {
+        background: transparent !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+        box-shadow: none !important;
+    }
+
     #actionBar { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; padding: 15px 30px; box-shadow: 0 -10px 15px -3px rgba(0,0,0,0.1); display: flex; justify-content: flex-end; align-items: center; z-index: 100; border-top: 2px solid #3b82f6;}
     .btn-ok { background: #3b82f6; color: white; padding: 10px 24px; border-radius: 8px; font-weight: 700; font-size: 1rem;}
     .btn-cancel { background: #e2e8f0; color: #475569; padding: 10px 24px; border-radius: 8px; font-weight: 700; font-size: 1rem; }
@@ -101,7 +136,7 @@
       <button class="admin-only" style="padding: 8px 16px; background: #f59e0b; color: white; border-radius: 8px; font-weight: 700;" onclick="openLinkModal()">🔗 Tạo Link MC</button>
       <button class="admin-only" style="padding: 8px 16px; background: #8b5cf6; color: white; border-radius: 8px; font-weight: 700;" onclick="openAddIdolModal()">➕ Thêm Idol</button>
       <button class="admin-only" style="padding: 8px 16px; background: #ef4444; color: white; border-radius: 8px; font-weight: 700;" onclick="openClearAllModal()">🗑️ Làm Mới Tháng</button>
-      <button class="admin-only" style="padding: 8px 16px; background: #10b981; color: white; border-radius: 8px; font-weight: 700;" onclick="openExportModal()">📸 Xuất Ảnh</button>
+      <button class="admin-only" style="padding: 8px 16px; background: #10b981; color: white; border-radius: 8px; font-weight: 700;" onclick="openExportModal()">🖨 Xuất File / In</button>
       <button style="padding: 8px 16px; background: #e2e8f0; color: #475569; border-radius: 8px; font-weight: 700;" onclick="refreshData()">🔄 Tải lại DS</button>
     </div>
   </div>
@@ -183,13 +218,33 @@
   </div>
 
   <div class="modal-overlay admin-only" id="exportConfigModal">
-    <div class="modal-box" style="width: 480px;">
-      <h3 style="margin-top:0; color: #10b981;">📸 Tùy Chọn Xuất Ảnh</h3>
-      <div style="margin-bottom: 15px;">
-        <label style="cursor: pointer; font-weight: 600;"><input type="radio" name="exportType" value="full" checked> 📋 Xuất toàn bộ bảng (Đầy đủ 12 cột điểm)</label><br>
-        <label style="cursor: pointer; font-weight: 600; margin-top: 8px; display: inline-block;"><input type="radio" name="exportType" value="compact"> ✂️ Xuất Rút Gọn (Chỉ Tên, LS & Kết Quả Tổng)</label>
+    <div class="modal-box" style="width: 520px;">
+      <h3 style="margin-top:0; color: #10b981;">🖨 Tùy Chọn Xuất File & In</h3>
+      
+      <div style="margin-bottom: 15px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
+          <label style="cursor: pointer; font-weight: 600;"><input type="radio" name="exportType" value="full" checked> 📋 Xuất toàn bộ bảng (Đầy đủ 12 cột điểm)</label><br>
+          <label style="cursor: pointer; font-weight: 600; margin-top: 8px; display: inline-block;"><input type="radio" name="exportType" value="compact"> ✂️ Xuất Rút Gọn (Chỉ Tên, LS & Kết Quả Tổng)</label>
       </div>
-      <div style="margin-top: 15px; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; max-height: 250px; overflow-y: auto; background: #f8fafc;">
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+          <div>
+              <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 5px;">Định dạng Xuất:</label>
+              <select id="exportFormatStr" class="form-input" style="font-weight: 600;">
+                  <option value="png">📸 Ảnh PNG (Siêu nét)</option>
+                  <option value="pdf_color">📄 PDF (Bản Màu)</option>
+                  <option value="pdf_eco">🖨️ PDF (In Tiết Kiệm - Trắng Đen)</option>
+              </select>
+          </div>
+          <div>
+              <label style="font-weight: 600; font-size: 0.85rem; color: #475569; display: block; margin-bottom: 5px;">Khổ giấy (Nếu in PDF):</label>
+              <select id="exportOrientation" class="form-input" style="font-weight: 600;">
+                  <option value="landscape">Khổ Ngang (Landscape)</option>
+                  <option value="portrait">Khổ Dọc (Portrait)</option>
+              </select>
+          </div>
+      </div>
+
+      <div style="margin-top: 15px; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; max-height: 200px; overflow-y: auto; background: #f8fafc;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px;">
              <span style="font-size: 0.8rem; font-weight: 800; color: #475569;">CHỌN NGƯỜI CẦN XUẤT:</span>
              <div>
@@ -201,7 +256,7 @@
       </div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeExportConfig()">Hủy</button>
-        <button class="btn-ok" onclick="executeExport()">📸 Chụp Ảnh Ngay</button>
+        <button class="btn-ok" onclick="executeExport()">📥 Tiến Hành Xuất File</button>
       </div>
     </div>
   </div>
@@ -633,7 +688,12 @@
       if(selected.length === 0) return showToast("⚠️ Hãy chọn ít nhất 1 Idol để xuất!", false, true);
       
       let type = document.querySelector('input[name="exportType"]:checked').value;
-      closeExportConfig(); showToast("📸 Đang lấy nét ống kính...", true);
+      let format = document.getElementById('exportFormatStr').value;
+      let isEco = (format === 'pdf_eco');
+      let isLandscape = (document.getElementById('exportOrientation').value === 'landscape');
+
+      closeExportConfig(); 
+      showToast("📸 Đang tiến hành kết xuất file...", true);
 
       let today = new Date();
       let prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -642,8 +702,11 @@
       
       document.getElementById('exportDateLabel').innerText = `Tháng / 月份: ${pMonth}/${pYear}`;
 
+      // Bật chế độ xuất và chế độ tiết kiệm mực nếu có
       document.body.classList.add('export-mode');
       if (type === 'compact') document.body.classList.add('export-compact');
+      if (isEco) document.body.classList.add('ink-saver-mode');
+      
       document.getElementById('exportHeader').style.display = 'block';
 
       let rows = document.querySelectorAll("#tableBody tr");
@@ -669,9 +732,16 @@
       }
 
       setTimeout(() => {
-        html2canvas(document.getElementById('captureArea'), { backgroundColor: '#ffffff', scale: window.devicePixelRatio > 1 ? window.devicePixelRatio * 1.5 : 2, useCORS: true, logging: false 
+        html2canvas(document.getElementById('captureArea'), { 
+          backgroundColor: isEco ? '#ffffff' : '#ffffff', 
+          scale: window.devicePixelRatio > 1 ? window.devicePixelRatio * 1.5 : 2, 
+          useCORS: true, 
+          logging: false 
         }).then(canvas => {
-          document.body.classList.remove('export-mode', 'export-compact'); document.getElementById('exportHeader').style.display = 'none';
+          
+          // Trả lại giao diện bình thường
+          document.body.classList.remove('export-mode', 'export-compact', 'ink-saver-mode'); 
+          document.getElementById('exportHeader').style.display = 'none';
           
           for(let t in teamsMap) {
               let teamData = teamsMap[t];
@@ -682,15 +752,48 @@
               teamData.all.forEach(r => r.style.display = '');
           }
 
-          let link = document.createElement('a'); 
-          link.download = `BangDiemTiengAnh_Thang_${pMonth}_${pYear}.png`; 
-          link.href = canvas.toDataURL("image/png", 1.0); 
-          link.click();
+          if (format === 'png') {
+              // XUẤT ẢNH PNG
+              let link = document.createElement('a'); 
+              link.download = `BangDiemTiengAnh_Thang_${pMonth}_${pYear}.png`; 
+              link.href = canvas.toDataURL("image/png", 1.0); 
+              link.click();
+          } else {
+              // XUẤT PDF
+              const imgData = canvas.toDataURL('image/jpeg', 1.0);
+              const { jsPDF } = window.jspdf;
+              
+              const orientation = isLandscape ? 'l' : 'p';
+              const pdf = new jsPDF(orientation, 'mm', 'a4');
+              
+              const pdfWidth = pdf.internal.pageSize.getWidth(); 
+              const pdfHeight = pdf.internal.pageSize.getHeight();
+              
+              const imgProps = pdf.getImageProperties(imgData);
+              const imgRatio = imgProps.width / imgProps.height; 
+              const pdfRatio = pdfWidth / pdfHeight;
+              
+              let finalWidth, finalHeight;
+              
+              if (imgRatio < pdfRatio) { 
+                  finalHeight = pdfHeight - 10;
+                  finalWidth = finalHeight * imgRatio; 
+              } else { 
+                  finalWidth = pdfWidth - 10; 
+                  finalHeight = finalWidth / imgRatio; 
+              }
+              
+              const xOffset = (pdfWidth - finalWidth) / 2;
+              const yOffset = (pdfHeight - finalHeight) / 2;
+              
+              pdf.addImage(imgData, 'JPEG', xOffset, yOffset, finalWidth, finalHeight);
+              pdf.save(`BangDiemTiengAnh_Thang_${pMonth}_${pYear}_${isEco ? 'TietKiem' : 'BanMau'}.pdf`);
+          }
           
-          hideToast(); showToast("✅ Tách! Xuất ảnh thành công!"); 
+          hideToast(); showToast("✅ Xuất file thành công!"); 
         }).catch(err => { 
-          document.body.classList.remove('export-mode', 'export-compact'); document.getElementById('exportHeader').style.display = 'none';
-          rows.forEach(row => row.style.display = ''); showToast("❌ Lỗi chụp ảnh!", false, true); 
+          document.body.classList.remove('export-mode', 'export-compact', 'ink-saver-mode'); document.getElementById('exportHeader').style.display = 'none';
+          rows.forEach(row => row.style.display = ''); showToast("❌ Lỗi xuất file!", false, true); 
         });
       }, 800);
     }
