@@ -735,36 +735,43 @@
             clearTimeout(inactivityTimer);
         }
 
-       async function loadData() {
+   async function loadData() {
             if (!sessionPass) return;
             document.getElementById('tableContainer').classList.remove('hidden');
-            document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
-            document.getElementById('recordCount').innerText = '...';
             
-            // LẤY DỮ LIỆU SIÊU TỐC TỪ FIREBASE (0.1 Giây)
+            let hasLoadedFromCache = false;
+            
+            // BƯỚC 1: LẤY DỮ LIỆU SIÊU TỐC TỪ FIREBASE HIỂN THỊ TẠM TRƯỚC (0.1s)
             try {
                 if (window.db && window.fs) {
                     const safeID = currentSheetName.replace(/\s+/g, '_');
                     const docSnap = await window.fs.getDoc(window.fs.doc(window.db, "2fa_cache", safeID));
                     if (docSnap.exists()) {
                         allData = docSnap.data().dataArray;
-                        renderTable(allData); resetTimer(); checkPrimeRadiantAlarms();
-                        return; // Xong, không cần gọi Google Sheets nữa
+                        renderTable(allData); 
+                        resetTimer(); checkPrimeRadiantAlarms();
+                        hasLoadedFromCache = true;
                     }
                 }
-            } catch (e) { console.log("Không đọc được Firebase cache, chuyển sang Sheets", e); }
+            } catch (e) { console.log("Không đọc được Firebase cache", e); }
             
-            // Nếu Firebase trống (lần đầu tiên), mới gọi Google Sheets
+            if (!hasLoadedFromCache) {
+                document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
+            }
+
+            // BƯỚC 2: TỰ ĐỘNG GỌI GOOGLE SHEETS Ở CHẾ ĐỘ NỀN (SYNC CHUẨN)
             runScript('getSheetData', { sheetName: currentSheetName, pass: sessionPass })
                 .then(async (data) => {
-                    allData = data; renderTable(allData); resetTimer(); checkPrimeRadiantAlarms();
-                    // Lưu lại lên Firebase để lần sau đọc cho lẹ
+                    allData = data; 
+                    renderTable(allData); // Cập nhật lại UI nếu có dòng mới
+                    
+                    // Chép đè bản mới nhất lên Firebase
                     if (window.db && window.fs) {
                         const safeID = currentSheetName.replace(/\s+/g, '_');
                         await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
                     }
                 })
-                .catch(error => { if(error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); });
+                .catch(error => { if(error.message && error.message.includes("AUTH_FAILED")) lockApp(); });
         }
         
     function forceRefreshData() {
