@@ -87,7 +87,7 @@
                 box-shadow: 0 -10px 25px rgba(0,0,0,0.1) !important;
                 flex-shrink: 0 !important;
                 opacity: 1 !important;
-                transform: none !important; /* Tắt hiệu ứng transform làm lỗi Safari */
+                transform: none; 
                 animation: none !important;
             }
 
@@ -107,7 +107,7 @@
                 border-bottom: 1px solid #f1f5f9 !important;
                 border-top: none !important;
                 opacity: 1 !important;
-                transform: none !important; /* Tắt hiệu ứng transform làm lỗi Safari */
+                transform: none; 
                 animation: none !important;
             }
 
@@ -2010,24 +2010,33 @@
             }
         }, {passive: false});
 
-        document.addEventListener('touchend', function(e) {
+      document.addEventListener('touchend', function(e) {
             if (!activeSheet) return;
             
             let deltaY = touchCurrentY - touchStartY;
             sheetPanels.forEach(p => p.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)');
             
             if (isSwipingSheet && deltaY > 120) {
-                // Đẩy thẻ tuột hẳn xuống dưới
+                // Đẩy thẻ tuột hẳn xuống dưới VÀ làm mờ dần nền đen
                 sheetPanels.forEach(p => p.style.transform = 'translateY(100vh)');
+                activeSheet.style.transition = 'background-color 0.25s ease, backdrop-filter 0.25s ease';
+                activeSheet.style.backgroundColor = 'transparent';
+                activeSheet.style.backdropFilter = 'blur(0px)';
+                
                 const index = activeSheet.getAttribute('data-index');
                 setTimeout(() => {
                     toggleMobileRow(index); // Đóng thẻ
+                    
+                    // Reset lại trạng thái CSS sau khi đóng
                     sheetPanels.forEach(p => { p.style.transform = ''; p.style.transition = ''; });
+                    activeSheet.style.transition = '';
+                    activeSheet.style.backgroundColor = '';
+                    activeSheet.style.backdropFilter = '';
                     activeSheet = null;
                     sheetPanels = [];
-                }, 250);
+                }, 250); // Khớp chuẩn 250ms với hiệu ứng trượt
             } else {
-                // Nhả tay ra thì nảy trở lại vị trí cũ
+                // Nhả tay ra chưa đủ lực thì nảy trở lại vị trí cũ
                 sheetPanels.forEach(p => p.style.transform = 'translateY(0)');
                 setTimeout(() => {
                     if (activeSheet) {
@@ -2039,6 +2048,9 @@
             }
             isSwipingSheet = false;
         });
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>
