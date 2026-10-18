@@ -1970,6 +1970,73 @@
                     btn.disabled = false;
                 });
         }
+
+        // ================= CẢM ỨNG VUỐT ĐỂ ĐÓNG (SWIPE TO DISMISS) =================
+        let touchStartY = 0;
+        let touchCurrentY = 0;
+        let isSwipingSheet = false;
+        let activeSheet = null;
+
+        document.addEventListener('touchstart', function(e) {
+            const sheet = e.target.closest('tr.mobile-expanded');
+            if (!sheet) return;
+            
+            // Lấy vị trí ngón tay chạm vào. Chỉ kích hoạt vuốt khi nội dung đang cuộn ở tít trên cùng
+            if (sheet.scrollTop <= 0) {
+                activeSheet = sheet;
+                touchStartY = e.touches[0].clientY;
+                touchCurrentY = touchStartY;
+                isSwipingSheet = true;
+                activeSheet.style.transition = 'none'; // Tắt độ trễ để sheet bám sát ngón tay
+            }
+        }, {passive: true});
+
+        document.addEventListener('touchmove', function(e) {
+            if (!isSwipingSheet || !activeSheet) return;
+            
+            touchCurrentY = e.touches[0].clientY;
+            let deltaY = touchCurrentY - touchStartY;
+            
+            // Nếu phát hiện đang vuốt hướng xuống > 5px
+            if (deltaY > 5) {
+                activeSheet.style.transform = `translateY(${deltaY}px)`;
+                if (e.cancelable) e.preventDefault(); // Khóa cuộn màn hình để kéo sheet
+            } else {
+                activeSheet.style.transform = 'translateY(0)';
+            }
+        }, {passive: false});
+
+        document.addEventListener('touchend', function(e) {
+            if (!activeSheet) return;
+            
+            let deltaY = touchCurrentY - touchStartY;
+            activeSheet.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+            
+            if (isSwipingSheet && deltaY > 120) {
+                // Nếu vuốt xuống quá 120px -> Kéo tuột xuống và tự động đóng
+                activeSheet.style.transform = 'translateY(100%)';
+                const index = activeSheet.getAttribute('data-index');
+                setTimeout(() => {
+                    toggleMobileRow(index); // Kích hoạt hàm đóng có sẵn của anh
+                    if (activeSheet) {
+                        activeSheet.style.transform = '';
+                        activeSheet.style.transition = '';
+                        activeSheet = null;
+                    }
+                }, 250);
+            } else {
+                // Nếu vuốt nhẹ chưa đủ lực -> Nhả tay ra sheet nảy ngược lại lên
+                activeSheet.style.transform = 'translateY(0)';
+                setTimeout(() => {
+                    if (activeSheet) {
+                        activeSheet.style.transform = '';
+                        activeSheet.style.transition = '';
+                        activeSheet = null;
+                    }
+                }, 250);
+            }
+            isSwipingSheet = false;
+        });
     </script>
 </body>
 </html>
