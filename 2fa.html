@@ -39,24 +39,21 @@
             aside.collapsed .logo-box { margin: 0 auto; }
         }
 
-        /* --- LOGIC HIỆU ỨNG BOTTOM SHEET TRÊN MOBILE --- */
+      /* --- LOGIC HIỆU ỨNG BOTTOM SHEET TRÊN MOBILE --- */
         @media (max-width: 767px) {
             .mobile-collapsible { display: none !important; }
 
             tr.mobile-expanded {
                 position: fixed !important;
                 inset: 0 !important;
-                z-index: 99990 !important;
-                background: rgba(15, 23, 42, 0.65) !important;
+                z-index: 999999 !important; /* Tăng z-index đè lên thanh tìm kiếm */
+                background: rgba(15, 23, 42, 0.75) !important;
                 backdrop-filter: blur(5px);
                 -webkit-backdrop-filter: blur(5px);
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: flex-start !important;
+                display: block !important; /* Dùng block thay cho flex để iOS không bị đơ cuộn */
                 overflow-y: auto !important;
-                overscroll-behavior: contain;
-                -webkit-overflow-scrolling: touch;
-                padding: 0 !important;
+                -webkit-overflow-scrolling: touch !important;
+                padding-top: 80px !important; /* Chừa không gian phía trên để không bị che khuất */
                 margin: 0 !important;
                 border: none !important;
                 animation: fadeInOverlay 0.2s ease-out forwards;
@@ -66,33 +63,50 @@
             @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
 
             tr.mobile-expanded .mobile-header-row { display: none !important; }
+            
+            /* Lớp nền tàng hình để bấm tắt, phủ toàn màn hình */
             tr.mobile-expanded .mobile-close-area {
                 display: block !important;
-                flex: 1 0 auto !important;
-                margin-top: auto !important;
-                min-height: 48px !important;
+                position: fixed !important;
+                inset: 0 !important;
+                z-index: 0 !important;
+                background: transparent !important;
+                min-height: 100dvh !important;
                 width: 100% !important;
             }
 
+            /* Khung chứa tiêu đề và nút X */
             tr.mobile-expanded .mobile-sheet-header {
                 display: flex !important;
+                position: relative !important;
+                z-index: 10 !important;
+                background: white !important;
+                border-radius: 1.5rem 1.5rem 0 0 !important;
+                box-shadow: 0 -10px 25px rgba(0,0,0,0.1) !important;
                 flex-shrink: 0 !important;
-                transform: translateY(100%);
-                opacity: 0;
-                animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                opacity: 1 !important;
+                transform: none !important; /* Tắt hiệu ứng transform làm lỗi Safari */
+                animation: none !important;
             }
 
+            html.dark tr.mobile-expanded .mobile-sheet-header {
+                background: #1e293b !important;
+            }
+
+            /* Khung chứa các dòng thông tin (Email, Pass...) */
             tr.mobile-expanded .mobile-collapsible {
                 display: flex !important;
                 flex-direction: column !important;
+                position: relative !important;
+                z-index: 10 !important;
                 flex-shrink: 0 !important;
                 background: white;
                 padding: 0.9rem 1.25rem !important;
                 border-bottom: 1px solid #f1f5f9 !important;
                 border-top: none !important;
-                transform: translateY(100%);
-                opacity: 0;
-                animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                opacity: 1 !important;
+                transform: none !important; /* Tắt hiệu ứng transform làm lỗi Safari */
+                animation: none !important;
             }
 
             html.dark tr.mobile-expanded .mobile-collapsible {
@@ -104,11 +118,6 @@
                 padding-bottom: calc(2.25rem + env(safe-area-inset-bottom, 0px)) !important;
                 border-bottom: none !important;
                 border-radius: 0 !important;
-            }
-
-            @keyframes slideUpSheet {
-                from { transform: translateY(100%); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
             }
         }
 
@@ -415,7 +424,7 @@
 
             <!-- BẢNG DỮ LIỆU: VÙNG CUỘN DUY NHẤT -->
             <div id="tableContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 hidden flex-1 min-h-0 flex flex-col relative overflow-hidden w-full max-w-full">
-                <div id="tableScrollWrapper" class="overflow-x-auto overflow-y-auto custom-scrollbar flex-1 min-h-0 rounded-2xl relative w-full p-2.5 md:p-0 pb-28 md:pb-48" style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+                <div id="tableScrollWrapper" class="overflow-x-auto overflow-y-auto custom-scrollbar flex-1 min-h-0 rounded-2xl relative w-full p-2.5 md:p-0 pb-28 md:pb-48">
                     <table class="w-full text-left border-collapse relative" id="mainTable">
                         <thead class="sticky top-0 z-20 backdrop-blur-md hidden md:table-header-group">
                             <tr class="text-sm font-bold text-slate-800 uppercase tracking-widest shadow-md">
