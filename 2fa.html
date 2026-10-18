@@ -487,6 +487,17 @@
             });
         }
 
+      async function syncCurrentSheetToFirebase() {
+            try {
+                if (window.db && window.fs && currentSheetName) {
+                    const safeID = currentSheetName.replace(/\s+/g, '_');
+                    await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: allData });
+                }
+            } catch (e) {
+                console.error("Lỗi đồng bộ Firebase:", e);
+            }
+        }
+
         function runScript(action, payload = {}) {
             if (window.location.protocol === 'file:' || window.location.protocol === 'content:') {
                 return runScriptJSONP(action, payload);
@@ -499,12 +510,26 @@
             })
             .then(async res => {
                 const text = await res.text();
-                const jsonRes = JSON.parse(text);
-                if (jsonRes.status === 'error') throw new Error(jsonRes.message);
+                let jsonRes;
+                try {
+                    jsonRes = JSON.parse(text);
+                } catch (parseErr) {
+                    const snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+                    const err = new Error("Máy chủ trả về lỗi: " + (snippet || "Kiểm tra lại quyền Deploy API_URL"));
+                    err.isServerError = true;
+                    throw err;
+                }
+                if (jsonRes.status === 'error') {
+                    const err = new Error(jsonRes.message);
+                    err.isServerError = true;
+                    throw err;
+                }
                 return jsonRes.data;
             })
             .catch(err => {
-                if (err.message && err.message.includes("AUTH_FAILED")) throw err;
+                if (err.isServerError || (err.message && err.message.includes("AUTH_FAILED"))) {
+                    throw err;
+                }
                 return runScriptJSONP(action, payload);
             });
         }
@@ -1690,6 +1715,7 @@
                 .then(() => {
                     allData[rowIndex].thietBiIdol = finalString;
                     allData[rowIndex].thietBiTroLi = "";
+                    syncCurrentSheetToFirebase();
                     renderTable(allData);
                     showToast(newVal ? 'Đã cập nhật thiết bị' : 'Đã xóa thiết bị', 'success');
                 })
@@ -1714,6 +1740,7 @@
                     runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: deletedDevice, pass: sessionPass }).catch(() => {});
                     allData[rowIndex].thietBiIdol = finalString;
                     allData[rowIndex].thietBiTroLi = "";
+                    syncCurrentSheetToFirebase();
                     renderTable(allData);
                     showToast('Đã xóa thiết bị', 'success');
                 })
@@ -1918,6 +1945,7 @@
                     });
                     allData[currentEditIndex].thietBiIdol = finalString;
                     allData[currentEditIndex].thietBiTroLi = "";
+                    syncCurrentSheetToFirebase();
                     renderTable(allData);
                     closeDeviceEditor();
                     showToast('Đã lưu thiết bị thành công', 'success');
