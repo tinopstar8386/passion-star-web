@@ -10,18 +10,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
+    <script>tailwind.config = { darkMode: 'class' };</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .password-text { transition: opacity 0.12s ease-in-out; opacity: 1; }
         .password-text.fade-out { opacity: 0; }
-        
-        /* Cố định Sidebar trên PC */
         @media (min-width: 768px) {
             aside.collapsed { width: 76px !important; min-width: 76px !important; }
             aside.collapsed .collapse-text, aside.collapsed .section-title, aside.collapsed .user-info-text { display: none !important; }
@@ -30,79 +24,53 @@
             aside.collapsed nav { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
             aside.collapsed .logo-box { margin: 0 auto; }
         }
-
-        /* --- LOGIC HIỆU ỨNG BOTTOM SHEET (KHUNG RIÊNG MỜ NỀN) TRÊN MOBILE --- */
         @media (max-width: 767px) {
             .mobile-collapsible { display: none !important; }
-            
             tr.mobile-expanded {
                 position: fixed; inset: 0; z-index: 99999;
-                background: rgba(15, 23, 42, 0.6) !important; 
+                background: rgba(15, 23, 42, 0.6) !important;
                 backdrop-filter: blur(5px);
-                flex-direction: column; justify-content: flex-end;
+                flex-direction: column; justify-content: flex-start;
                 overflow-y: auto; padding: 0 !important; border: none !important;
                 animation: fadeInOverlay 0.25s ease-out forwards;
                 border-radius: 0 !important;
             }
-            
-            @keyframes fadeInOverlay {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            
+            @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
             tr.mobile-expanded .mobile-header-row { display: none !important; }
-            tr.mobile-expanded .mobile-close-area { display: block !important; flex: 1 1 auto; min-height: 40px; }
-            
-            tr.mobile-expanded .mobile-sheet-header { 
-                display: flex !important; 
+            tr.mobile-expanded .mobile-close-area { display: block !important; flex: 1 0 auto; margin-top: auto; min-height: 40px; }
+            tr.mobile-expanded .mobile-sheet-header {
+                display: flex !important; flex-shrink: 0 !important;
                 transform: translateY(100%); opacity: 0;
                 animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             }
-            
             tr.mobile-expanded .mobile-collapsible {
-                display: flex !important; flex-direction: column;
+                display: flex !important; flex-direction: column; flex-shrink: 0 !important;
                 background: white; padding: 1rem 1.25rem !important;
                 border-bottom: 1px solid #f1f5f9 !important; border-top: none !important;
                 transform: translateY(100%); opacity: 0;
                 animation: slideUpSheet 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             }
-            
-            html.dark tr.mobile-expanded .mobile-collapsible {
-                background: #1e293b; border-bottom: 1px solid #334155 !important;
-            }
-            
-            tr.mobile-expanded .mobile-collapsible:last-child {
-                padding-bottom: 2rem !important; border-bottom: none !important;
-            }
-
-            @keyframes slideUpSheet {
-                from { transform: translateY(100%); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-            }
+            html.dark tr.mobile-expanded .mobile-collapsible { background: #1e293b; border-bottom: 1px solid #334155 !important; }
+            tr.mobile-expanded .mobile-collapsible:last-child { padding-bottom: 2rem !important; border-bottom: none !important; }
+            @keyframes slideUpSheet { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         }
-        
         @keyframes custom-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-custom-spin { animation: custom-spin 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
-        
-        .floating-tooltip { position: fixed; background-color: #4f46e5; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; pointer-events: none; z-index: 9999; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); animation: floatUp 1s ease-out forwards; }
+        .floating-tooltip { position: fixed; background-color: #4f46e5; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; pointer-events: none; z-index: 100005; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); animation: floatUp 1s ease-out forwards; }
         @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(0.9); } 10% { opacity: 1; transform: translateY(-5px) scale(1); } 100% { opacity: 0; transform: translateY(-25px) scale(1); } }
-        
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         html.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
-        
         th { position: relative; }
         .resizer { position: absolute; top: 0; right: -3px; width: 8px; cursor: col-resize; user-select: none; height: 100%; z-index: 10; transition: background-color 0.2s; }
         .resizer:hover, .resizer.resizing { background-color: #6366f1; opacity: 0.5; }
-
         .peek-container { position: relative; display: inline-block; cursor: none; --x: -100px; --y: -100px; }
         .peek-obfuscated { color: #cbd5e1; font-family: monospace; font-weight: 600; letter-spacing: 0.1em; transition: opacity 0.15s ease; }
         .peek-container:hover .peek-obfuscated { -webkit-mask-image: radial-gradient(circle 22px at var(--x) var(--y), transparent 40%, black 100%); mask-image: radial-gradient(circle 22px at var(--x) var(--y), transparent 40%, black 100%); }
         .peek-real { position: absolute; top: 0; left: 0; color: #4f46e5; font-family: monospace; font-weight: 800; letter-spacing: 0.1em; white-space: nowrap; -webkit-mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); opacity: 0; transition: opacity 0.15s ease; pointer-events: none; text-shadow: 0 0 2px rgba(79, 70, 229, 0.4); }
         .peek-container:hover .peek-real { opacity: 1; }
-
         html.dark body, html.dark main, html.dark .bg-slate-100 { background-color: #0f172a !important; color: #f1f5f9 !important; }
         html.dark .bg-white { background-color: #1e293b !important; border-color: #334155 !important; }
         html.dark .border-slate-200, html.dark .border-slate-100, html.dark .border-slate-300 { border-color: #334155 !important; }
@@ -126,15 +94,9 @@
         html.dark .shadow-sm, html.dark .shadow-md, html.dark .shadow-xl, html.dark .shadow-2xl { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important; }
         html.dark .peek-obfuscated { color: #475569 !important; }
         html.dark .peek-real { color: #818cf8 !important; text-shadow: 0 0 4px rgba(129, 140, 248, 0.4); }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-6px); }
-            40%, 80% { transform: translateX(6px); }
-        }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
         .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
         .input-error { border-color: #f43f5e !important; color: #f43f5e !important; background-color: #fff1f2 !important; }
-
         .menu-item { transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1); will-change: transform, filter, opacity; position: relative; overflow: hidden; }
         @media (min-width: 768px) {
             #sidebar:not(.collapsed) nav:has(.menu-item:hover) .menu-item:not(:hover) { filter: blur(3px); opacity: 0.35; transform: scale(0.95); }
@@ -145,17 +107,13 @@
         html.dark .menu-item::before { background: radial-gradient(circle 55px at var(--mouse-x, 0) var(--mouse-y, 0), rgba(129, 140, 248, 0.25), transparent 100%); }
         .menu-item:hover::before { opacity: 1; }
         .menu-item > * { position: relative; z-index: 1; }
-
         @keyframes staggerFadeIn { 0% { opacity: 0; transform: translateY(15px); } 100% { opacity: 1; transform: translateY(0); } }
         .stagger-row { opacity: 0; animation: staggerFadeIn 0.35s ease-out forwards; }
-
         @keyframes vaultEnter { 0% { transform: scale(0.85) translateY(40px); opacity: 0; filter: blur(12px); } 100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); } }
         .animate-vault-enter { animation: vaultEnter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-
-        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; max-width: 90%; }
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 100005; display: flex; flex-direction: column; gap: 10px; pointer-events: none; max-width: 90%; }
         @media (max-width: 768px) { .toast-container { bottom: 16px; right: 16px; } }
-        
         .cyber-toast { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 12px 16px; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2); font-family: 'Inter', monospace; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 12px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; backdrop-filter: blur(8px); }
         .cyber-toast.show { transform: translateX(0) scale(1); opacity: 1; }
         .cyber-toast.success { border-color: rgba(16, 185, 129, 0.5); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(16, 185, 129, 0.2); }
@@ -164,29 +122,22 @@
         .cyber-toast.success .toast-progress { background: #10b981; }
         .cyber-toast.error .toast-progress { background: #f43f5e; }
         @keyframes toastProgress { 0% { width: 100%; } 100% { width: 0%; } }
-    
         .checkbox-cell { width: 40px; text-align: center; }
-        .cyber-checkbox { appearance: none; width: 18px; height: 18px; border: 2px solid rgba(99, 102, 241, 0.5); border-radius: 4px; background: rgba(0,0,0,0.2); cursor: pointer; position: relative; transition: all 0.2s; outline: none;}
-        .cyber-checkbox:checked { background: #6366f1; border-color: #6366f1; box-shadow: 0 0 10px rgba(99,102,241,0.5);}
+        .cyber-checkbox { appearance: none; width: 18px; height: 18px; border: 2px solid rgba(99, 102, 241, 0.5); border-radius: 4px; background: rgba(0,0,0,0.2); cursor: pointer; position: relative; transition: all 0.2s; outline: none; }
+        .cyber-checkbox:checked { background: #6366f1; border-color: #6366f1; box-shadow: 0 0 10px rgba(99,102,241,0.5); }
         .cyber-checkbox:checked::after { content: '✓'; position: absolute; color: white; font-size: 12px; font-weight: bold; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-
         #batchActionBar { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); z-index: 9000; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(99, 102, 241, 0.5); padding: 12px 24px; border-radius: 100px; box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 20px rgba(99,102,241,0.2); display: flex; align-items: center; gap: 16px; transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         #batchActionBar.visible { bottom: 30px; }
-
         .btn-ripple { position: relative; overflow: hidden; cursor: pointer; }
         .ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: ripple-animation 0.6s linear; background-color: rgba(255, 255, 255, 0.4); pointer-events: none; }
         html.dark .ripple { background-color: rgba(255, 255, 255, 0.2); }
         @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
-
         .dropdown-item-active { background-color: #e0e7ff !important; color: #4f46e5 !important; }
         html.dark .dropdown-item-active { background-color: #334155 !important; color: #818cf8 !important; }
-
     </style>
-    <!-- THÊM FIREBASE VÀO TRƯỚC THẺ </HEAD> -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        
         const firebaseConfig = {
             apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
             authDomain: "passionstar-2014d.firebaseapp.com",
@@ -199,17 +150,11 @@
         window.db = getFirestore(app);
         window.fs = { doc, setDoc, getDoc };
     </script>
-    
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex overflow-hidden">
-
-    <!-- TOAST NOTIFICATION -->
     <div class="toast-container" id="toastContainer"></div>
-    
-    <!-- LỚP PHỦ CHO MOBILE SIDEBAR -->
     <div id="mobileOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity" onclick="toggleSidebar()"></div>
-    
-    <!-- MULTI-SELECT BATCH ACTION BAR -->
+
     <div id="batchActionBar">
         <div class="text-white font-medium text-sm"><span id="batchCount" class="text-indigo-400 font-bold">0</span> Tài khoản đã chọn</div>
         <div class="h-6 w-px bg-white/20"></div>
@@ -221,13 +166,10 @@
         </button>
     </div>
 
-    <!-- MÀN HÌNH ĐĂNG NHẬP -->
     <div id="loginScreen" class="fixed inset-0 z-[100] bg-[#050505] flex items-center justify-center transition-all duration-500" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background-color: #050505;">
         <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#4f46e5 1px, transparent 1px); background-size: 30px 30px;"></div>
-        
         <div class="w-[400px] max-w-[90%] bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/10 p-6 md:p-10 rounded-3xl shadow-[0_0_50px_rgba(79,70,229,0.15)] relative overflow-hidden animate-vault-enter">
-           <div id="loginShimmer" class="absolute top-0 left-0 w-full h-[2px] bg-indigo-500/80 shadow-[0_0_15px_#6366f1] opacity-0 transition-opacity duration-300"></div>
-            
+            <div id="loginShimmer" class="absolute top-0 left-0 w-full h-[2px] bg-indigo-500/80 shadow-[0_0_15px_#6366f1] opacity-0 transition-opacity duration-300"></div>
             <div class="text-center mb-8">
                 <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 shadow-inner">
                     <i class="fa-solid fa-fingerprint text-indigo-400 text-3xl"></i>
@@ -235,16 +177,10 @@
                 <h2 class="text-white text-2xl font-bold tracking-tight">2FA Account System</h2>
                 <p class="text-slate-500 text-sm mt-1">Hệ thống bảo mật 2FA</p>
             </div>
-
             <div class="relative group">
-                <input type="password" id="passcodeInput" 
-                       autofocus
-                       placeholder="Nhập mã bảo mật..." 
-                       class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-5 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300 font-mono tracking-widest text-center shadow-inner relative z-10"
-                       onkeypress="if(event.key === 'Enter') checkLogin()">
+                <input type="password" id="passcodeInput" autofocus placeholder="Nhập mã bảo mật..." class="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-5 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300 font-mono tracking-widest text-center shadow-inner relative z-10" onkeypress="if(event.key === 'Enter') checkLogin()">
                 <div class="absolute -inset-[1px] bg-gradient-to-r from-indigo-500/0 via-indigo-500/30 to-indigo-500/0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none z-0"></div>
             </div>
-
             <button onclick="checkLogin()" class="btn-ripple w-full mt-6 py-4 bg-white/5 hover:bg-indigo-600/20 border border-white/10 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.1)] hover:shadow-[0_0_25px_rgba(79,70,229,0.4)] flex items-center justify-center gap-2" id="loginBtn">
                 <i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>
             </button>
@@ -252,7 +188,6 @@
         </div>
     </div>
 
-    <!-- MÀN HÌNH QUẢN LÝ THIẾT BỊ (DEVICE MODAL) -->
     <div id="deviceModal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-xl w-[500px] max-w-[95%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="deviceModalContent">
             <div class="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
@@ -264,19 +199,13 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            
-            <div id="deviceListContainer" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 mb-4 pr-1">
-                <!-- Javascript sẽ tự động thêm các input thiết bị vào đây -->
-            </div>
-            
+            <div id="deviceListContainer" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 mb-4 pr-1"></div>
             <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700 mt-auto">
                 <button onclick="addDeviceRow('', '', true, '')" class="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-medium rounded-xl text-sm transition-colors flex items-center gap-2">
                     <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Thêm máy</span><span class="sm:hidden">Thêm</span>
                 </button>
                 <div class="flex gap-2">
-                    <button onclick="closeDeviceEditor()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-medium rounded-xl text-sm transition-colors">
-                        Hủy
-                    </button>
+                    <button onclick="closeDeviceEditor()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-medium rounded-xl text-sm transition-colors">Hủy</button>
                     <button id="btnSaveDevice" onclick="saveDeviceData()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors shadow-md flex items-center gap-2">
                         <i class="fa-solid fa-floppy-disk"></i> Lưu
                     </button>
@@ -285,7 +214,6 @@
         </div>
     </div>
 
-    <!-- MÀN HÌNH QUÉT TRÙNG LẶP (SCAN MODAL) -->
     <div id="scanModal" class="fixed inset-0 z-[120] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl w-[600px] max-w-[95%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]" id="scanModalContent">
             <div class="flex items-center gap-4 mb-4 border-b border-slate-100 dark:border-slate-700 pb-4">
@@ -302,14 +230,11 @@
             </div>
             <div id="scanModalBody" class="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-[200px]"></div>
             <div class="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700 mt-4">
-                <button onclick="closeScanModal()" class="px-6 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-sm transition-colors">
-                    Đóng
-                </button>
+                <button onclick="closeScanModal()" class="px-6 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-sm transition-colors">Đóng</button>
             </div>
         </div>
     </div>
 
-    <!-- SIDEBAR TỐI ƯU CHO MOBILE VÀ PC -->
     <aside id="sidebar" class="fixed md:relative z-50 md:z-20 w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 min-h-screen sidebar-transition shadow-sm transform -translate-x-full md:translate-x-0 transition-transform duration-300">
         <div class="p-5 border-b border-slate-100 flex items-center justify-between">
             <div class="flex items-center gap-3 overflow-hidden">
@@ -385,15 +310,12 @@
                 <button onclick="toggleTheme()" id="themeToggleBtn" class="btn-ripple w-9 h-9 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition shadow-sm cursor-pointer" title="Đổi Giao Diện Sáng/Tối">
                     <i class="fa-solid fa-moon"></i>
                 </button>
-                
                 <button onclick="forceRefreshData()" class="btn-ripple px-3 py-2 md:px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer" title="Làm mới">
                     <i class="fa-solid fa-rotate"></i> <span class="hidden sm:inline">Làm mới</span>
                 </button>
-                
                 <button onclick="lockApp()" class="btn-ripple px-3 py-2 md:px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer" title="Khóa màn hình">
                     <i class="fa-solid fa-lock"></i> <span class="hidden sm:inline">Khóa</span>
                 </button>
-                
                 <button onclick="scanDuplicates()" class="btn-ripple px-3 py-2 md:px-4 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer" title="Quét Dữ Liệu">
                     <i class="fa-solid fa-clone"></i> <span class="hidden sm:inline">Quét</span>
                 </button>
@@ -411,7 +333,6 @@
                 </div>
             </div>
 
-            <!-- Tối ưu tỉ lệ độ rộng các cột trên Desktop -->
             <div id="tableContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 hidden flex-1 min-h-0 flex flex-col relative overflow-hidden w-full max-w-full">
                 <div class="overflow-x-auto overflow-y-auto custom-scrollbar h-full rounded-2xl relative w-full" style="padding-bottom: 200px;">
                     <table class="w-full text-left border-collapse relative" id="mainTable">
@@ -427,27 +348,23 @@
                                 <th class="py-4 px-4 bg-indigo-100/85 dark:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-center align-middle whitespace-nowrap min-w-[170px] max-w-[200px]">Mã 2FA (Live OTP)</th>
                             </tr>
                         </thead>
-                        <tbody id="dataTableBody" class="divide-y divide-slate-200 text-sm">
-                        </tbody>
+                        <tbody id="dataTableBody" class="divide-y divide-slate-200 text-sm"></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- KỊCH BẢN JAVASCRIPT -->
     <script>
-        // --- THAY LINK API CỦA BẠN VÀO ĐÂY ---
         const API_URL = "https://script.google.com/macros/s/AKfycbyTs0IMHFSOi9NH-UPPCq85oieHpM7w_dKE1WdJxj01vDB4ycdwPvo9udh8Df-Ashg_Fg/exec";
 
         function runScript(action, payload = {}) {
             return fetch(API_URL, {
                 method: 'POST',
-                redirect: 'follow', 
+                redirect: 'follow',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: action, payload: payload })
-            })
-            .then(async res => {
+            }).then(async res => {
                 const text = await res.text();
                 try {
                     const jsonRes = JSON.parse(text);
@@ -455,7 +372,7 @@
                     return jsonRes.data;
                 } catch (e) {
                     if (e.name === 'SyntaxError') throw new Error("Lỗi phản hồi máy chủ.");
-                    throw e; 
+                    throw e;
                 }
             });
         }
@@ -465,8 +382,9 @@
         let sessionPass = "";
         let inactivityTimer;
         let configDevices = [];
-        let originalDevicesForLog = []; 
-        let currentlyExpandedRowIndex = -1; // Theo dõi dòng đang mở trên mobile
+        let originalDevicesForLog = [];
+        let currentlyExpandedRowIndex = -1;
+        let emailCodeState = {};
 
         function fetchConfigDevices() {
             if (!sessionPass) return;
@@ -479,9 +397,8 @@
             if (e.key === 'Escape') {
                 if (!document.getElementById('deviceModal').classList.contains('hidden')) closeDeviceEditor();
                 if (!document.getElementById('scanModal').classList.contains('hidden')) closeScanModal();
-                
                 const activeInlineInputs = document.querySelectorAll('input[id^="inline-edit-"]');
-                if(activeInlineInputs.length > 0) renderTable(allData); 
+                if (activeInlineInputs.length > 0) renderTable(allData);
                 document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.add('hidden'));
             }
         });
@@ -493,7 +410,7 @@
                     delete d.dataset.activeIndex;
                 });
                 const globalDrop = document.getElementById('globalDeviceDropdown');
-                if(globalDrop) {
+                if (globalDrop) {
                     globalDrop.classList.add('hidden');
                     delete globalDrop.dataset.activeIndex;
                 }
@@ -526,22 +443,17 @@
             setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, duration);
         }
 
-        
-
         function resetTimer() {
             clearTimeout(inactivityTimer);
-            if (sessionPass !== "") inactivityTimer = setTimeout(lockApp, 300000); 
+            if (sessionPass !== "") inactivityTimer = setTimeout(lockApp, 300000);
         }
 
-        ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(evt => 
+        ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(evt =>
             document.addEventListener(evt, resetTimer, true)
         );
 
-
-        // ================= LOGIC BÁO ĐỘNG PRIME RADIANT =================
         function triggerPrimeRadiantAlarm(accountIdentifier, deviceName) {
             if (currentSheetName !== 'Prime Radiant') return;
-            
             let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
             if (!alarms.find(a => a.account === accountIdentifier && a.device === deviceName)) {
                 let today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Ho_Chi_Minh'});
@@ -552,29 +464,21 @@
 
         function checkPrimeRadiantAlarms() {
             document.querySelectorAll('.alarm-toast').forEach(el => el.remove());
-            
             if (currentSheetName !== 'Prime Radiant') return;
-            
             let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
             if (alarms.length === 0) return;
-
             let remainingAlarms = [];
             let today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Ho_Chi_Minh'});
-            
             alarms.forEach(alarm => {
                 let accountData = allData.find(item => (item.tenIdol || item.email) === alarm.account);
                 if (accountData) {
                     let mangThietBi = [accountData.thietBiIdol, accountData.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim());
-                    
                     if (mangThietBi.includes(alarm.device)) {
                         remainingAlarms.push(alarm);
-                        if (alarm.dateAdded !== today) {
-                            showPersistentAlarmToast(alarm);
-                        }
+                        if (alarm.dateAdded !== today) showPersistentAlarmToast(alarm);
                     }
                 }
             });
-            
             localStorage.setItem('prime_radiant_alarms', JSON.stringify(remainingAlarms));
         }
 
@@ -582,7 +486,6 @@
             const container = document.getElementById('toastContainer');
             const toastId = 'alarm_' + Date.now() + Math.floor(Math.random() * 1000);
             const toast = document.createElement('div');
-            
             toast.className = `cyber-toast error alarm-toast !border-rose-500 !shadow-[0_0_15px_rgba(244,63,94,0.3)] pointer-events-auto`;
             toast.id = toastId;
             toast.innerHTML = `
@@ -594,15 +497,14 @@
                         <span class="text-xs text-white">Thiết bị mới: <b class="text-rose-300">${escapeHtml(alarm.device)}</b></span>
                         <span class="text-[10px] text-rose-400 italic mt-0.5">⚠️ Yêu cầu logout thiết bị trong vòng 1 ngày!</span>
                         <div class="flex items-center gap-2 mt-2 pt-2 border-t border-rose-500/30">
-                            <input type="checkbox" id="chk_${toastId}" class="cyber-checkbox shrink-0" onchange="acknowledgeAlarm('${escapeHtml(alarm.account).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}','${escapeHtml(alarm.device).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}', '${toastId}')">
+                            <input type="checkbox" id="chk_${toastId}" class="cyber-checkbox shrink-0" onchange="acknowledgeAlarm('${escapeHtml(alarm.account).replace(/'/g, "\\'").replace(/"/g, '\\"')}','${escapeHtml(alarm.device).replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${toastId}')">
                             <label for="chk_${toastId}" class="text-[11px] text-slate-300 cursor-pointer select-none hover:text-white transition-colors">Đã xử lý / Tắt</label>
                         </div>
                     </div>
-                    <button onclick="acknowledgeAlarm('${escapeHtml(alarm.account).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}','${escapeHtml(alarm.device).replace(/'/g, "\\\\'").replace(/"/g, '\\\\"')}', '${toastId}')" class="absolute -right-1 -top-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 border border-slate-600 shadow-md">
+                    <button onclick="acknowledgeAlarm('${escapeHtml(alarm.account).replace(/'/g, "\\'").replace(/"/g, '\\"')}','${escapeHtml(alarm.device).replace(/'/g, "\\'").replace(/"/g, '\\"')}', '${toastId}')" class="absolute -right-1 -top-1 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 border border-slate-600 shadow-md">
                         <i class="fa-solid fa-xmark text-sm"></i>
                     </button>
-                </div>
-            `;
+                </div>`;
             container.appendChild(toast);
             setTimeout(() => toast.classList.add('show'), 10);
         }
@@ -611,34 +513,24 @@
             let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
             alarms = alarms.filter(a => !(a.account === account && a.device === device));
             localStorage.setItem('prime_radiant_alarms', JSON.stringify(alarms));
-
             const toast = document.getElementById(toastId);
-            if(toast) {
+            if (toast) {
                 toast.classList.remove('show');
                 toast.classList.add('opacity-0', 'scale-90');
                 setTimeout(() => toast.remove(), 400);
                 showToast('Đã ghi nhận tắt cảnh báo thiết bị', 'success');
             }
         }
-        // ================= KẾT THÚC LOGIC BÁO ĐỘNG =================
 
         window.onload = function() {
-            // Tự động focus vào ô password khi tải trang
             setTimeout(() => {
                 const passInput = document.getElementById('passcodeInput');
-                if (passInput && !document.getElementById('loginScreen').classList.contains('hidden')) {
-                    passInput.focus();
-                }
+                if (passInput && !document.getElementById('loginScreen').classList.contains('hidden')) passInput.focus();
             }, 100);
-
             setInterval(updateTOTPs, 1000);
-            initResizableColumns(); 
-            runScript('getColumnWidths')
-                .then(applySavedWidths)
-                .catch(e => console.log('Không lấy được saved widths'));
-            
-            const menuItems = document.querySelectorAll('.menu-item');
-            menuItems.forEach(item => {
+            initResizableColumns();
+            runScript('getColumnWidths').then(applySavedWidths).catch(() => {});
+            document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('mousemove', (e) => {
                     const rect = item.getBoundingClientRect();
                     item.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
@@ -646,137 +538,116 @@
                 });
             });
         };
-        
+
         function generateSkeletonHTML() {
             let html = '';
-            for(let i=0; i<6; i++) {
+            for (let i = 0; i < 6; i++) {
                 html += `<tr class="animate-pulse">
-                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16"></div></td>
-                            <td class="py-4 px-4"><div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-[240px] mb-2"></div><div class="h-7 bg-slate-200 dark:bg-slate-700 rounded-lg w-[240px]"></div></td>
-                            <td class="py-4 px-4"><div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-[230px]"></div></td>
-                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24 mb-2"></div><div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20"></div></td>
-                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20 mb-2"></div><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div></td>
-                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-12"></div></td>
-                            <td class="py-4 px-4"><div class="h-6 bg-slate-200 dark:bg-slate-700 rounded w-20"></div></td>
-                        </tr>`;
+                    <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16"></div></td>
+                    <td class="py-4 px-4"><div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-[240px] mb-2"></div><div class="h-7 bg-slate-200 dark:bg-slate-700 rounded-lg w-[240px]"></div></td>
+                    <td class="py-4 px-4"><div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-[230px]"></div></td>
+                    <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24 mb-2"></div><div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20"></div></td>
+                    <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20 mb-2"></div><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24"></div></td>
+                    <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-12"></div></td>
+                    <td class="py-4 px-4"><div class="h-6 bg-slate-200 dark:bg-slate-700 rounded w-20"></div></td>
+                </tr>`;
             }
             return html;
         }
 
-       async function sha256(message) {
-    // Sử dụng CryptoJS để băm chuỗi, tương thích mọi môi trường kể cả mở file local trên Mobile
-    return CryptoJS.SHA256(message).toString(CryptoJS.enc.Hex);
-}
+        async function sha256(message) {
+            return CryptoJS.SHA256(message).toString(CryptoJS.enc.Hex);
+        }
 
-       // ================= CƠ CHẾ LAI: SHEET LÀ GỐC, FIREBASE LÀ BỘ NHỚ ĐỆM =================
-        
-  // HÀM PHỤ: Xử lý hiệu ứng tắt màn hình đăng nhập
         function proceedToMainScreen(shimmer, btn, passInput) {
             shimmer.classList.add('opacity-0');
             shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
             passInput.value = '';
-            passInput.disabled = false; // Mở lại phòng hờ dù màn hình đã ẩn
+            passInput.disabled = false;
             document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => document.getElementById('loginScreen').classList.add('hidden'), 500);
             btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
             btn.disabled = false;
         }
 
-        // HÀM CHÍNH: KIỂM TRA ĐĂNG NHẬP SIÊU TỐC
         async function checkLogin() {
             const passInput = document.getElementById('passcodeInput');
             const rawInput = passInput.value;
-            if(!rawInput) return;
-            
+            if (!rawInput) return;
             const btn = document.getElementById('loginBtn');
             const err = document.getElementById('loginError');
-            const shimmer = document.getElementById('loginShimmer'); 
-            
-            // 🔒 BẮT ĐẦU XỬ LÝ: KHOÁ NÚT VÀ KHOÁ CỨNG Ô NHẬP
+            const shimmer = document.getElementById('loginShimmer');
+
             btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang đăng nhập...</span>';
-            btn.disabled = true; 
-            passInput.disabled = true; // Không cho nhập thêm
-            passInput.classList.add('opacity-50', 'cursor-not-allowed'); // Làm mờ ô nhập
+            btn.disabled = true;
+            passInput.disabled = true;
+            passInput.classList.add('opacity-50', 'cursor-not-allowed');
             err.classList.add('hidden');
-            
             shimmer.classList.remove('opacity-0');
-            shimmer.classList.add('animate-[shimmer_1.5s_infinite]'); 
-            
+            shimmer.classList.add('animate-[shimmer_1.5s_infinite]');
+
             const input = await sha256(rawInput);
             let isAuthSuccess = false;
 
-            // BƯỚC 1: KIỂM TRA MẬT KHẨU QUA FIREBASE (0.1 giây)
             try {
                 if (window.db && window.fs) {
                     const authSnap = await window.fs.getDoc(window.fs.doc(window.db, "2fa_cache", "auth_config"));
-                    if (authSnap.exists() && authSnap.data().validHash === input) {
-                        isAuthSuccess = true;
-                    }
+                    if (authSnap.exists() && authSnap.data().validHash === input) isAuthSuccess = true;
                 }
             } catch (e) { console.log("Lỗi check Firebase auth", e); }
 
             if (isAuthSuccess) {
-                // ĐÚNG PASS TỪ FIREBASE -> MỞ CỬA NGAY
                 sessionPass = input;
                 proceedToMainScreen(shimmer, btn, passInput);
-
-                loadData(); 
+                loadData();
                 fetchConfigDevices();
                 showToast('Đăng nhập thành công', 'success');
                 return;
             }
 
-            // BƯỚC 2: NẾU FIREBASE KHÔNG KHỚP -> ĐI HỎI GOOGLE SHEETS (Đề phòng vừa đổi Pass gốc)
             runScript('getSheetData', { sheetName: currentSheetName, pass: input })
                 .then(async (data) => {
                     sessionPass = input;
                     proceedToMainScreen(shimmer, btn, passInput);
-                    
-                    // Cập nhật lại mật khẩu mới cho Firebase học
                     if (window.db && window.fs) {
                         await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", "auth_config"), { validHash: input });
                         const safeID = currentSheetName.replace(/\s+/g, '_');
                         await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
                     }
-
                     allData = data;
                     document.getElementById('tableContainer').classList.remove('hidden');
-                    renderTable(allData); 
+                    renderTable(allData);
                     resetTimer(); fetchConfigDevices(); checkPrimeRadiantAlarms();
-                    showToast('Đăng nhập thành công', 'success'); 
+                    showToast('Đăng nhập thành công', 'success');
                 })
                 .catch(error => {
-                    // 🔴 SAI MẬT KHẨU TỪ GỐC
                     shimmer.classList.add('opacity-0');
                     shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
-                    
-                    btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>'; 
-                    btn.disabled = false; 
-                    
-                    // 🔓 MỞ KHOÁ LẠI Ô NHẬP CHO NGƯỜI DÙNG NHẬP LẠI
+                    btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
+                    btn.disabled = false;
                     passInput.disabled = false;
                     passInput.classList.remove('opacity-50', 'cursor-not-allowed');
                     err.classList.remove('hidden');
-                    
                     passInput.classList.add('animate-shake');
-                    
-                    setTimeout(() => { 
-                        passInput.classList.remove('animate-shake'); 
-                        passInput.focus(); 
-                        passInput.select(); // Tự động bôi đen pass cũ sai để gõ pass mới đè lên ngay
+                    setTimeout(() => {
+                        passInput.classList.remove('animate-shake');
+                        passInput.focus();
+                        passInput.select();
                     }, 400);
-                    
-                    if (error.message.includes("AUTH_FAILED")) { 
-                        err.innerText = "Từ chối truy cập: Sai mật khẩu"; 
-                        showToast('Từ chối: Sai mật khẩu', 'error'); 
-                    } else { 
-                        err.innerText = "Lỗi kết nối máy chủ"; 
+                    if (error.message.includes("AUTH_FAILED")) {
+                        err.innerText = "Từ chối truy cập: Sai mật khẩu";
+                        showToast('Từ chối: Sai mật khẩu', 'error');
+                    } else {
+                        err.innerText = "Lỗi kết nối máy chủ";
                     }
                 });
         }
 
         function lockApp() {
-            sessionPass = ""; 
+            sessionPass = "";
+            currentlyExpandedRowIndex = -1;
+            emailCodeState = {};
+            document.body.style.overflow = '';
             document.getElementById('loginScreen').classList.remove('hidden');
             setTimeout(() => {
                 document.getElementById('loginScreen').classList.remove('opacity-0', 'pointer-events-none');
@@ -784,72 +655,62 @@
             }, 10);
             document.getElementById('tableContainer').classList.add('hidden');
             document.getElementById('dataTableBody').innerHTML = '';
-            allData = []; 
+            allData = [];
             clearTimeout(inactivityTimer);
         }
 
-   async function loadData() {
+        async function loadData() {
             if (!sessionPass) return;
             document.getElementById('tableContainer').classList.remove('hidden');
-            
             let hasLoadedFromCache = false;
-            
-            // BƯỚC 1: LẤY DỮ LIỆU SIÊU TỐC TỪ FIREBASE HIỂN THỊ TẠM TRƯỚC (0.1s)
             try {
                 if (window.db && window.fs) {
                     const safeID = currentSheetName.replace(/\s+/g, '_');
                     const docSnap = await window.fs.getDoc(window.fs.doc(window.db, "2fa_cache", safeID));
                     if (docSnap.exists()) {
                         allData = docSnap.data().dataArray;
-                        renderTable(allData); 
+                        renderTable(allData);
                         resetTimer(); checkPrimeRadiantAlarms();
                         hasLoadedFromCache = true;
                     }
                 }
             } catch (e) { console.log("Không đọc được Firebase cache", e); }
-            
+
             if (!hasLoadedFromCache) {
                 document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
             }
 
-            // BƯỚC 2: TỰ ĐỘNG GỌI GOOGLE SHEETS Ở CHẾ ĐỘ NỀN (SYNC CHUẨN)
             runScript('getSheetData', { sheetName: currentSheetName, pass: sessionPass })
                 .then(async (data) => {
-                    allData = data; 
-                    renderTable(allData); // Cập nhật lại UI nếu có dòng mới
-                    
-                    // Chép đè bản mới nhất lên Firebase
+                    allData = data;
+                    renderTable(allData);
                     if (window.db && window.fs) {
                         const safeID = currentSheetName.replace(/\s+/g, '_');
                         await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
                     }
                 })
-                .catch(error => { if(error.message && error.message.includes("AUTH_FAILED")) lockApp(); });
+                .catch(error => { if (error.message && error.message.includes("AUTH_FAILED")) lockApp(); });
         }
-        
-    function forceRefreshData() {
+
+        function forceRefreshData() {
             if (!sessionPass) return;
+            emailCodeState = {};
             showToast('Đang tải dữ liệu mới từ máy chủ...', 'success');
             document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
-            
-            // ÉP GỌI VÀO GOOGLE SHEETS ĐỂ LẤY DATA MỚI NHẤT
             runScript('getSheetData', { sheetName: currentSheetName, pass: sessionPass })
                 .then(async (data) => {
-                    allData = data; 
+                    allData = data;
                     renderTable(allData); resetTimer(); checkPrimeRadiantAlarms();
-                    
-                    // Chép đè bản mới nhất này lên Firebase
                     if (window.db && window.fs) {
                         const safeID = currentSheetName.replace(/\s+/g, '_');
                         await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
                     }
                     showToast('Đã đồng bộ với Google Sheets!', 'success');
                 })
-                .catch(error => { if(error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); });
-                
+                .catch(error => { if (error.message === "AUTH_FAILED") lockApp(); else showToast('Lỗi tải dữ liệu', 'error'); });
             fetchConfigDevices();
         }
-        
+
         function applySavedWidths(savedWidths) {
             if (!savedWidths || savedWidths.length === 0) return;
             const headers = document.querySelectorAll('#mainTable th');
@@ -862,61 +723,61 @@
             const headers = document.querySelectorAll('#mainTable th');
             headers.forEach(th => {
                 const resizer = document.createElement('div'); resizer.classList.add('resizer'); th.appendChild(resizer);
-                let x = 0; let w = 0;
+                let x = 0, w = 0;
                 const mouseDownHandler = function(e) {
-                    x = e.clientX; 
-                    const styles = window.getComputedStyle(th); 
-                    w = parseInt(styles.width, 10);
-                    document.addEventListener('mousemove', mouseMoveHandler); 
-                    document.addEventListener('mouseup', mouseUpHandler); 
+                    x = e.clientX;
+                    w = parseInt(window.getComputedStyle(th).width, 10);
+                    document.addEventListener('mousemove', mouseMoveHandler);
+                    document.addEventListener('mouseup', mouseUpHandler);
                     resizer.classList.add('resizing');
                 };
-                const mouseMoveHandler = function(e) { 
-                    th.style.width = `${w + (e.clientX - x)}px`; 
-                    th.style.minWidth = `${w + (e.clientX - x)}px`; 
+                const mouseMoveHandler = function(e) {
+                    th.style.width = `${w + (e.clientX - x)}px`;
+                    th.style.minWidth = `${w + (e.clientX - x)}px`;
                 };
                 const mouseUpHandler = function() {
-                    resizer.classList.remove('resizing'); 
-                    document.removeEventListener('mousemove', mouseMoveHandler); 
+                    resizer.classList.remove('resizing');
+                    document.removeEventListener('mousemove', mouseMoveHandler);
                     document.removeEventListener('mouseup', mouseUpHandler);
-                    const widthsArray = []; 
+                    const widthsArray = [];
                     document.querySelectorAll('#mainTable th').forEach(h => widthsArray.push(parseInt(window.getComputedStyle(h).width, 10)));
-                    runScript('saveColumnWidths', { widths: widthsArray }).catch(e=>console.log(e));
+                    runScript('saveColumnWidths', { widths: widthsArray }).catch(() => {});
                 };
                 resizer.addEventListener('mousedown', mouseDownHandler);
             });
         }
 
         function switchTab(sheetName, element) {
-            currentSheetName = sheetName; 
+            currentSheetName = sheetName;
+            currentlyExpandedRowIndex = -1;
+            emailCodeState = {};
+            document.body.style.overflow = '';
             document.getElementById('currentTabTitle').innerText = sheetName;
             document.querySelectorAll('.menu-item').forEach(btn => {
                 btn.className = "btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600 hover:shadow-sm";
-                const icon = btn.querySelector('i'); 
-                if(icon) icon.className = icon.className.replace('text-indigo-600', 'text-slate-400');
+                const icon = btn.querySelector('i');
+                if (icon) icon.className = icon.className.replace('text-indigo-600', 'text-slate-400');
             });
             element.className = "btn-ripple menu-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-100/60 shadow-sm";
-            const activeIcon = element.querySelector('i'); 
-            if(activeIcon) activeIcon.className = activeIcon.className.replace('text-slate-400', 'text-indigo-600');
+            const activeIcon = element.querySelector('i');
+            if (activeIcon) activeIcon.className = activeIcon.className.replace('text-slate-400', 'text-indigo-600');
             loadData();
         }
 
-        function toggleSidebar() { 
+        function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobileOverlay');
             if (window.innerWidth <= 768) {
                 sidebar.classList.toggle('-translate-x-full');
                 overlay.classList.toggle('hidden');
             } else {
-                sidebar.classList.toggle('collapsed'); 
+                sidebar.classList.toggle('collapsed');
             }
         }
-        
-        // CẬP NHẬT: Trình diễn Khung Modal Bottom Sheet
+
         function toggleMobileRow(index) {
             const allRows = document.querySelectorAll('tr[data-index]');
             let hasExpanded = false;
-            
             allRows.forEach(row => {
                 const rIndex = row.getAttribute('data-index');
                 if (rIndex == index) {
@@ -924,31 +785,27 @@
                     if (row.classList.contains('mobile-expanded')) {
                         hasExpanded = true;
                         currentlyExpandedRowIndex = index;
-                    } else {
-                        if (currentlyExpandedRowIndex == index) currentlyExpandedRowIndex = -1;
+                    } else if (currentlyExpandedRowIndex == index) {
+                        currentlyExpandedRowIndex = -1;
                     }
                 } else {
                     row.classList.remove('mobile-expanded');
                 }
             });
-            
-            // Tắt cuộn thân trang web khi bật Bottom Sheet
             document.body.style.overflow = hasExpanded ? 'hidden' : '';
         }
 
         function renderTable(data) {
             const tbody = document.getElementById('dataTableBody');
             document.getElementById('recordCount').innerText = data.length;
-            
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400">Không có dữ liệu trong trang tính <b>${currentSheetName}</b>.</td></tr>`; 
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400">Không có dữ liệu trong trang tính <b>${currentSheetName}</b>.</td></tr>`;
                 return;
             }
 
             let html = '';
             data.forEach((item, loopIndex) => {
                 const index = allData.indexOf(item);
-                
                 let otpHtml = '';
                 if (item.key2fa && String(item.key2fa).trim() !== '') {
                     otpHtml = `
@@ -970,35 +827,32 @@
                                 </div>
                             </div>
                         </div>`;
-                } else { 
-                    otpHtml = `<span class="text-slate-400 italic text-xs whitespace-nowrap">Không có Key</span>`; 
+                } else {
+                    otpHtml = `<span class="text-slate-400 italic text-xs whitespace-nowrap">Không có Key</span>`;
                 }
 
                 let tiktokIdHtml = item.tiktokId && item.tiktokId.trim() !== '' ? `<div onclick="copyTiktokId(event, '${escapeHtml(item.tiktokId).replace(/'/g, "\\'")}')" title="Click để sao chép" class="text-[13px] text-indigo-600 font-bold cursor-pointer hover:underline inline-block mt-1 break-words sensitive-data">@${escapeHtml(item.tiktokId)}</div>` : '';
-                
-                let thietBiHtml = '';
-                let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim()).filter(Boolean);
 
-                thietBiHtml = `<div class="flex items-start justify-between gap-2 w-full"><div class="flex flex-wrap items-center gap-2">`;
-                
+                let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim()).filter(Boolean);
+                let thietBiHtml = `<div class="flex items-start justify-between gap-2 w-full"><div class="flex flex-wrap items-center gap-2">`;
+
                 if (mangThietBi.length > 0) {
-                    let displayLimit = 2; 
+                    let displayLimit = 2;
                     let visibleDevices = mangThietBi.slice(0, displayLimit);
                     let hiddenCount = mangThietBi.length - displayLimit;
 
                     visibleDevices.forEach((text, tbIndex) => {
                         let formattedText = escapeHtml(text);
                         let roleHtml = '';
-                        if (text.includes(':')) { 
-                            let parts = text.split(':'); 
-                            roleHtml = `<span class="font-bold text-slate-800 dark:text-slate-100 mr-1">${escapeHtml(parts[0])}:</span>`; 
-                            formattedText = escapeHtml(parts.slice(1).join(':')).trim(); 
-                        } else if (text.includes('-')) { 
-                            let parts = text.split('-'); 
-                            roleHtml = `<span class="font-bold text-slate-800 dark:text-slate-100 mr-1">${escapeHtml(parts[0])} -</span>`; 
-                            formattedText = escapeHtml(parts.slice(1).join('-')).trim(); 
+                        if (text.includes(':')) {
+                            let parts = text.split(':');
+                            roleHtml = `<span class="font-bold text-slate-800 dark:text-slate-100 mr-1">${escapeHtml(parts[0])}:</span>`;
+                            formattedText = escapeHtml(parts.slice(1).join(':')).trim();
+                        } else if (text.includes('-')) {
+                            let parts = text.split('-');
+                            roleHtml = `<span class="font-bold text-slate-800 dark:text-slate-100 mr-1">${escapeHtml(parts[0])} -</span>`;
+                            formattedText = escapeHtml(parts.slice(1).join('-')).trim();
                         }
-
                         thietBiHtml += `
                         <div class="device-tag-item group inline-flex items-center pl-3 pr-3 py-1.5 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-full shadow-sm relative overflow-hidden transition-all duration-300 ease-out hover:shadow-md hover:border-indigo-400 dark:hover:border-indigo-500 cursor-default min-h-[32px]">
                             <div class="flex items-center gap-1.5 whitespace-nowrap">
@@ -1007,45 +861,55 @@
                                 </div>
                                 <span class="text-[12px] text-slate-600 dark:text-slate-300 leading-none mt-px">${roleHtml}${formattedText}</span>
                             </div>
-                            
                             <div class="absolute right-0 top-0 bottom-0 pr-1 pl-5 flex items-center gap-0.5 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 bg-gradient-to-r from-transparent via-white to-white dark:via-[#1e293b] dark:to-[#1e293b] rounded-r-full">
-                                <button onclick="let btn = this; editDeviceInline(${index}, ${tbIndex}, btn)" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-slate-500 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors shadow-sm" title="Sửa nhanh">
-                                    <i class="fa-solid fa-pen text-[10px]"></i>
-                                </button>
-                                <button onclick="let btn = this; deleteDeviceInline(${index}, ${tbIndex}, btn)" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-slate-500 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 rounded-full transition-colors shadow-sm" title="Xóa">
-                                    <i class="fa-solid fa-xmark text-[11px]"></i>
-                                </button>
+                                <button onclick="let btn = this; editDeviceInline(${index}, ${tbIndex}, btn)" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-slate-500 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors shadow-sm" title="Sửa nhanh"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                                <button onclick="let btn = this; deleteDeviceInline(${index}, ${tbIndex}, btn)" class="w-6 h-6 flex items-center justify-center bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-slate-500 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 rounded-full transition-colors shadow-sm" title="Xóa"><i class="fa-solid fa-xmark text-[11px]"></i></button>
                             </div>
                         </div>`;
                     });
-                    
+
                     if (hiddenCount > 0) {
-                        thietBiHtml += `
-                        <div onclick="openDeviceEditor(${index})" class="inline-flex items-center justify-center px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full text-[11px] font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 cursor-pointer transition-colors min-h-[32px] shrink-0 shadow-sm" title="Nhấn để xem toàn bộ ${mangThietBi.length} thiết bị">
-                            +${hiddenCount}
-                        </div>`;
+                        thietBiHtml += `<div onclick="openDeviceEditor(${index})" class="inline-flex items-center justify-center px-2.5 py-1.5 bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-full text-[11px] font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 cursor-pointer transition-colors min-h-[32px] shrink-0 shadow-sm" title="Nhấn để xem toàn bộ ${mangThietBi.length} thiết bị">+${hiddenCount}</div>`;
                     }
                 } else {
-                    thietBiHtml += `
-                        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-slate-700 rounded-full cursor-default">
-                            <div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></div>
-                            <span class="text-[12px] text-slate-400 dark:text-slate-500 italic whitespace-nowrap leading-none mt-px">Chưa gắn thiết bị</span>
-                        </div>`;
+                    thietBiHtml += `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-300 dark:border-slate-700 rounded-full cursor-default"><div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0"></div><span class="text-[12px] text-slate-400 dark:text-slate-500 italic whitespace-nowrap leading-none mt-px">Chưa gắn thiết bị</span></div>`;
                 }
 
                 thietBiHtml += `</div>
-                    <button onclick="openDeviceEditor(${index})" 
-                            class="w-8 h-8 flex items-center justify-center shrink-0 rounded-full text-slate-400 hover:text-indigo-600 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 transition-all shadow-sm focus:outline-none" 
-                            title="Mở bảng Quản lý chi tiết">
-                        <i class="fa-solid fa-plus text-xs"></i>
-                    </button>
+                    <button onclick="openDeviceEditor(${index})" class="w-8 h-8 flex items-center justify-center shrink-0 rounded-full text-slate-400 hover:text-indigo-600 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 transition-all shadow-sm focus:outline-none" title="Mở bảng Quản lý chi tiết"><i class="fa-solid fa-plus text-xs"></i></button>
                 </div>`;
 
-                // CẤU TRÚC MOBILE & DESKTOP CHUẨN
+                const savedMailState = emailCodeState[index];
+                const isBoxVisible = savedMailState && savedMailState.status;
+                const boxClasses = isBoxVisible
+                    ? "shrink-0 w-full md:w-[240px] mt-2 overflow-hidden transition-all duration-300"
+                    : "hidden shrink-0 w-full md:w-[240px] mt-2 overflow-hidden transition-all duration-300 opacity-0 transform -translate-y-2";
+                let codeDisplayHtml = "------";
+                let codeColorClass = "";
+                let badgeClass = "hidden";
+                let btnPollingAttr = "";
+                let btnInnerHtml = `<i class="fa-solid fa-envelope-open-text text-xs"></i><span id="mail-badge-${index}" class="hidden absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce">1</span>`;
+
+                if (savedMailState) {
+                    if (savedMailState.status === 'polling') {
+                        codeDisplayHtml = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i><span class="text-[11px] ml-1.5 text-indigo-300 font-medium">Đang đợi mã...</span>`;
+                        btnPollingAttr = `data-polling="true"`;
+                        btnInnerHtml = `<i class="fa-solid fa-spinner fa-spin text-xs"></i>`;
+                    } else if (savedMailState.status === 'done') {
+                        codeDisplayHtml = escapeHtml(savedMailState.code);
+                        badgeClass = "";
+                        btnInnerHtml = `<i class="fa-solid fa-envelope-open-text text-xs"></i><span id="mail-badge-${index}" class="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce">1</span>`;
+                    } else if (savedMailState.status === 'empty') {
+                        codeDisplayHtml = "KHÔNG CÓ MÃ";
+                        codeColorClass = "text-rose-500";
+                    } else if (savedMailState.status === 'error') {
+                        codeDisplayHtml = "LỖI QUÉT";
+                        codeColorClass = "text-rose-500";
+                    }
+                }
+
                 html += `
                     <tr class="hover:bg-indigo-50/40 transition stagger-row flex flex-col md:table-row bg-white dark:bg-slate-800 md:bg-transparent border border-slate-200 dark:border-slate-700 md:border-none md:border-b rounded-xl md:rounded-none shadow-sm md:shadow-none mb-4 md:mb-0 relative" data-index="${index}" style="animation-delay: ${loopIndex * 0.04}s">
-                        
-                        <!-- 1. MOBILE HEADER (Sẽ ẨN khi ấn bung Modal) -->
                         <td class="mobile-header-row md:hidden p-3.5 flex items-center justify-between cursor-pointer rounded-t-xl" onclick="toggleMobileRow(${index})">
                             <div class="flex items-center gap-3">
                                 <input type="checkbox" class="cyber-checkbox row-checkbox shrink-0" value="${index}" onclick="event.stopPropagation(); updateBatchSelection()">
@@ -1063,10 +927,8 @@
                             </div>
                         </td>
 
-                        <!-- 1.5. MOBILE BACKDROP (Lớp mờ click tắt, CHỈ HIỆN KHI BUNG MODAL) -->
                         <td class="mobile-close-area hidden md:hidden flex-1 w-full cursor-pointer bg-transparent" onclick="event.stopPropagation(); toggleMobileRow(${index})"></td>
 
-                        <!-- 1.6. MOBILE SHEET HEADER (Thanh tiêu đề Modal nằm trên cùng) -->
                         <td class="mobile-sheet-header hidden md:hidden w-full bg-white dark:bg-slate-800 rounded-t-[1.5rem] p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between shrink-0 relative">
                             <div class="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
                             <div class="mt-2">
@@ -1078,86 +940,69 @@
                             </button>
                         </td>
 
-                        <!-- 2. CHECKBOX (Chỉ hiện trên PC) -->
                         <td class="hidden md:table-cell py-4 px-2 border border-slate-300 dark:border-slate-700 checkbox-cell align-middle bg-slate-50/30 dark:bg-slate-800/30">
                             <input type="checkbox" class="cyber-checkbox row-checkbox" value="${index}" onclick="updateBatchSelection()">
                         </td>
 
-                        <!-- 3. TEAM (Chỉ hiện trên PC) -->
                         <td class="hidden md:table-cell py-4 px-4 font-bold text-indigo-700 bg-slate-50/30 whitespace-nowrap">${escapeHtml(item.team)}</td>
 
-            <!-- 4. EMAIL & CODE (Nằm trong Modal trên Mobile) -->
-<td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
-    <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-envelope"></i> Email & Lấy Code</div>
-    
-    <!-- KHUNG EMAIL -->
-    <div class="font-medium text-slate-900 flex items-center justify-between gap-2 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 shadow-sm w-full md:w-max md:min-w-[240px] md:max-w-[240px] transition-[max-width] duration-300 ease-in-out overflow-hidden mb-2">
-        <span class="select-all font-mono font-medium whitespace-nowrap flex items-center flex-1 relative"><span id="email-text-${index}" class="password-text inline-block text-slate-500 dark:text-slate-400 sensitive-data">******</span></span>
-        <div class="flex items-center gap-1.5 shrink-0 border-l border-slate-200 dark:border-slate-700 pl-1.5">
-            <button onclick="let btn = this; copySecureText('${escapeHtml(item.email).replace(/'/g, "\\'")}', 'Email')" title="Sao chép email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
-            <button onclick="let btn = this; togglePlainText('email-text-${index}', '${escapeHtml(item.email).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
-            <button onclick="let btn = this; fetchEmailCodeUI('${escapeHtml(item.email)}', ${index}, btn)" title="Quét hộp thư lấy mã" class="relative text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 transition cursor-pointer px-1.5 py-0.5 rounded shadow-sm">
-                <i class="fa-solid fa-envelope-open-text text-xs"></i>
-                <span id="mail-badge-${index}" class="hidden absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce">1</span>
-            </button>
-        </div>
-    </div>
-    
-    <!-- KHUNG PASS EMAIL -->
-    <div class="text-[13px] text-slate-500 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 w-full md:w-max md:min-w-[240px] md:max-w-[240px] transition-[max-width] duration-300 ease-in-out overflow-hidden">
-        <span class="font-mono text-slate-700 dark:text-slate-300 select-all font-medium whitespace-nowrap flex items-center gap-1 flex-1 relative">Pass: <span id="pass-email-${index}" class="password-text inline-block sensitive-data">******</span></span>
-        <div class="flex items-center gap-1 shrink-0 border-l border-slate-200 dark:border-slate-700 pl-1.5">
-            <button onclick="let btn = this; copySecureText('${escapeHtml(item.passEmail).replace(/'/g, "\\'")}', 'Password')" title="Sao chép mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
-            <button onclick="let btn = this; togglePassword('pass-email-${index}', '${escapeHtml(item.passEmail).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
-        </div>
-    </div>
-    
-    <!-- KHUNG OTP MÃ CODE -->
-    <div id="code-box-${index}" class="hidden w-full md:w-[240px] mt-2 overflow-hidden transition-all duration-300 opacity-0 transform -translate-y-2">
-        <div class="bg-slate-900 border border-indigo-500/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between shadow-[0_0_12px_rgba(99,102,241,0.4)] relative overflow-hidden group">
-            <div class="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-indigo-400/10 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]"></div>
-            <div class="flex items-center gap-1.5 relative z-10"><div class="w-5 h-5 rounded bg-indigo-900/50 flex items-center justify-center"><i class="fa-solid fa-shield-halved text-indigo-400 text-[9px]"></i></div><span class="text-[9px] font-bold text-indigo-300 uppercase tracking-widest">OTP</span></div>
-            <div class="flex items-center gap-2 relative z-10"><span id="code-val-${index}" class="font-mono text-[14px] font-bold text-white tracking-[0.1em] drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]">------</span><button onclick="copyRawText(document.getElementById('code-val-${index}').innerText, 'OTP Mail')" class="text-slate-400 hover:text-white transition cursor-pointer p-0.5 rounded" title="Sao chép mã"><i class="fa-regular fa-copy text-[11px]"></i></button></div>
-        </div>
-    </div>
-</td>
+                        <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
+                            <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5 shrink-0"><i class="fa-solid fa-envelope"></i> Email & Lấy Code</div>
+                            <div class="shrink-0 font-medium text-slate-900 flex items-center justify-between gap-2 bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 shadow-sm w-full md:w-max md:min-w-[240px] md:max-w-[240px] transition-[max-width] duration-300 ease-in-out overflow-hidden mb-2">
+                                <span class="select-all font-mono font-medium whitespace-nowrap flex items-center flex-1 min-w-0 overflow-x-auto custom-scrollbar relative"><span id="email-text-${index}" class="password-text inline-block text-slate-500 dark:text-slate-400 sensitive-data">******</span></span>
+                                <div class="flex items-center gap-1.5 shrink-0 border-l border-slate-200 dark:border-slate-700 pl-1.5">
+                                    <button onclick="let btn = this; copySecureText('${escapeHtml(item.email).replace(/'/g, "\\'")}', 'Email')" title="Sao chép email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
+                                    <button onclick="let btn = this; togglePlainText('email-text-${index}', '${escapeHtml(item.email).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn email" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
+                                    <button id="mail-btn-${index}" ${btnPollingAttr} onclick="let btn = this; fetchEmailCodeUI('${escapeHtml(item.email).replace(/'/g, "\\'")}', ${index}, btn)" title="Quét hộp thư lấy mã" class="relative text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 transition cursor-pointer px-1.5 py-0.5 rounded shadow-sm">
+                                        ${btnInnerHtml}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="shrink-0 text-[13px] text-slate-500 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 w-full md:w-max md:min-w-[240px] md:max-w-[240px] transition-[max-width] duration-300 ease-in-out overflow-hidden">
+                                <span class="font-mono text-slate-700 dark:text-slate-300 select-all font-medium whitespace-nowrap flex items-center gap-1 flex-1 min-w-0 overflow-x-auto custom-scrollbar relative">Pass: <span id="pass-email-${index}" class="password-text inline-block sensitive-data">******</span></span>
+                                <div class="flex items-center gap-1 shrink-0 border-l border-slate-200 dark:border-slate-700 pl-1.5">
+                                    <button onclick="let btn = this; copySecureText('${escapeHtml(item.passEmail).replace(/'/g, "\\'")}', 'Password')" title="Sao chép mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
+                                    <button onclick="let btn = this; togglePassword('pass-email-${index}', '${escapeHtml(item.passEmail).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
+                                </div>
+                            </div>
+                            <div id="code-box-${index}" class="${boxClasses}">
+                                <div class="bg-slate-900 border border-indigo-500/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between shadow-[0_0_12px_rgba(99,102,241,0.4)] relative overflow-hidden group">
+                                    <div class="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-indigo-400/10 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]"></div>
+                                    <div class="flex items-center gap-1.5 relative z-10"><div class="w-5 h-5 rounded bg-indigo-900/50 flex items-center justify-center"><i class="fa-solid fa-shield-halved text-indigo-400 text-[9px]"></i></div><span class="text-[9px] font-bold text-indigo-300 uppercase tracking-widest">OTP</span></div>
+                                    <div class="flex items-center gap-2 relative z-10"><span id="code-val-${index}" class="font-mono text-[14px] font-bold text-white tracking-[0.1em] drop-shadow-[0_0_6px_rgba(255,255,255,0.4)] ${codeColorClass}">${codeDisplayHtml}</span><button onclick="copyRawText(document.getElementById('code-val-${index}').innerText, 'OTP Mail')" class="text-slate-400 hover:text-white transition cursor-pointer p-0.5 rounded" title="Sao chép mã"><i class="fa-regular fa-copy text-[11px]"></i></button></div>
+                                </div>
+                            </div>
+                        </td>
 
-<!-- 5. PASS TIKTOK -->
-<td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
-    <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-brands fa-tiktok"></i> Pass Tiktok</div>
-    
-    <!-- KHUNG PASS TIKTOK -->
-    <div class="text-[13px] text-slate-700 dark:text-slate-300 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 w-full md:w-max md:min-w-[200px] md:max-w-[200px] transition-[max-width] duration-300 ease-in-out overflow-hidden">
-        <span class="font-mono select-all font-medium whitespace-nowrap flex items-center flex-1 relative">
-            <span id="pass-tiktok-${index}" class="password-text inline-block sensitive-data">******</span>
-        </span>
-        <div class="flex items-center gap-1 shrink-0 border-l border-slate-200 dark:border-slate-700 pl-1.5">
-            <button onclick="let btn = this; copySecureText('${escapeHtml(item.passTiktok).replace(/'/g, "\\'")}', 'Pass Tiktok')" title="Sao chép mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
-            <button onclick="let btn = this; togglePassword('pass-tiktok-${index}', '${escapeHtml(item.passTiktok).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
-        </div>
-    </div>
-</td>
+                        <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
+                            <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5 shrink-0"><i class="fa-brands fa-tiktok"></i> Pass Tiktok</div>
+                            <div class="shrink-0 text-[13px] text-slate-700 dark:text-slate-300 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 w-full md:w-max md:min-w-[200px] md:max-w-[200px] transition-[max-width] duration-300 ease-in-out overflow-hidden">
+                                <span class="font-mono select-all font-medium whitespace-nowrap flex items-center flex-1 min-w-0 overflow-x-auto custom-scrollbar relative">
+                                    <span id="pass-tiktok-${index}" class="password-text inline-block sensitive-data">******</span>
+                                </span>
+                                <div class="flex items-center gap-1 shrink-0 border-l border-slate-200 dark:border-slate-700 pl-1.5">
+                                    <button onclick="let btn = this; copySecureText('${escapeHtml(item.passTiktok).replace(/'/g, "\\'")}', 'Pass Tiktok')" title="Sao chép mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-regular fa-copy text-xs"></i></button>
+                                    <button onclick="let btn = this; togglePassword('pass-tiktok-${index}', '${escapeHtml(item.passTiktok).replace(/'/g, "\\'")}', btn)" title="Hiện/Ẩn mật khẩu" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition cursor-pointer px-1"><i class="fa-solid fa-eye-slash text-xs"></i></button>
+                                </div>
+                            </div>
+                        </td>
 
-                        <!-- 6. IDOL / TIKTOK ID -->
                         <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
                             <div class="hidden md:block font-medium text-slate-900 break-words">${escapeHtml(item.tenIdol)}</div>
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1.5"><i class="fa-solid fa-at"></i> TikTok ID</div>
                             ${tiktokIdHtml || '<span class="text-[12px] text-slate-400 italic">Trống</span>'}
                         </td>
 
-                        <!-- 7. THIẾT BỊ -->
                         <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top md:min-w-[250px]">
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-mobile-screen-button"></i> Thiết bị</div>
                             ${thietBiHtml}
                         </td>
 
-                        <!-- 8. ĐẠI LÍ -->
                         <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top rounded-b-xl md:rounded-none">
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-sitemap"></i> Đại lí</div>
                             <div class="text-[13px] font-medium text-slate-600 align-top break-words sensitive-data">${escapeHtml(item.daiLi)}</div>
                         </td>
 
-                        <!-- 9. OTP (Nằm dưới cùng trên Mobile) -->
                         <td class="mobile-collapsible flex flex-col md:table-cell p-3 md:py-4 md:px-4 md:bg-indigo-50/10 border-b md:border-b-0 border-slate-100 dark:border-slate-700 md:border-none align-top rounded-b-xl md:rounded-none" data-key="${escapeHtml(item.key2fa)}" data-index="${index}" data-otp-active="false">
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-shield-halved"></i> Mã 2FA (Live OTP)</div>
                             ${otpHtml}
@@ -1165,8 +1010,7 @@
                     </tr>`;
             });
             tbody.innerHTML = html;
-            
-            // Xử lý giữ lại Bottom Sheet đang mở sau khi thao tác Lưu / Sửa
+
             if (currentlyExpandedRowIndex !== -1 && window.innerWidth <= 767) {
                 const rowToExpand = document.querySelector(`tr[data-index="${currentlyExpandedRowIndex}"]`);
                 if (rowToExpand) {
@@ -1181,108 +1025,91 @@
             }
         }
 
-        function handlePeekMove(e, container) { 
-            container.style.setProperty('--x', (e.clientX - container.getBoundingClientRect().left) + 'px'); 
-            container.style.setProperty('--y', (e.clientY - container.getBoundingClientRect().top) + 'px'); 
+        function handlePeekMove(e, container) {
+            container.style.setProperty('--x', (e.clientX - container.getBoundingClientRect().left) + 'px');
+            container.style.setProperty('--y', (e.clientY - container.getBoundingClientRect().top) + 'px');
         }
-        
-        function generateRandomString(length) { 
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*'; 
-            let result = ''; 
-            for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length)); 
-            return result; 
+
+        function generateRandomString(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*';
+            let result = '';
+            for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+            return result;
         }
-        
-  function togglePlainText(elementId, realValue, btn) {
-            const el = document.getElementById(elementId); 
+
+        function togglePlainText(elementId, realValue, btn) {
+            const el = document.getElementById(elementId);
             if (!el) return;
             const isHidden = el.innerText === '******';
-            executeTogglePlainText(elementId, realValue, btn, isHidden); 
+            executeTogglePlainText(elementId, realValue, btn, isHidden);
         }
 
-function togglePassword(elementId, realValue, btn) {
-            const el = document.getElementById(elementId); 
+        function togglePassword(elementId, realValue, btn) {
+            const el = document.getElementById(elementId);
             if (!el) return;
             const isPeekMode = el.querySelector('.peek-container') !== null;
-            executeTogglePassword(elementId, realValue, btn, isPeekMode); 
+            executeTogglePassword(elementId, realValue, btn, isPeekMode);
         }
-        
-        function executeTogglePlainText(elementId, realValue, btn, isHidden) {
-            const el = document.getElementById(elementId); 
-            const icon = btn.querySelector('i');
-            const wrapper = el.closest('.rounded-lg'); 
 
-            if (isHidden) { 
-                // TRẠNG THÁI MỞ BUNG RA
-                el.innerText = realValue; 
-                el.classList.remove('text-slate-500', 'dark:text-slate-400'); 
-                el.classList.add('text-indigo-700', 'dark:text-indigo-400'); 
-                icon.className = 'fa-solid fa-eye text-xs'; 
-                btn.classList.add('text-indigo-600', 'dark:text-indigo-400'); 
-                
-                // Tháo giới hạn cũ, đẩy max-width lên 500px để nó giãn như dây chun vừa khít chữ
+        function executeTogglePlainText(elementId, realValue, btn, isHidden) {
+            const el = document.getElementById(elementId);
+            const icon = btn.querySelector('i');
+            const wrapper = el.closest('.rounded-lg');
+
+            if (isHidden) {
+                el.innerText = realValue;
+                el.classList.remove('text-slate-500', 'dark:text-slate-400');
+                el.classList.add('text-indigo-700', 'dark:text-indigo-400');
+                icon.className = 'fa-solid fa-eye text-xs';
+                btn.classList.add('text-indigo-600', 'dark:text-indigo-400');
                 if (wrapper) {
                     wrapper.classList.remove('md:max-w-[240px]');
                     wrapper.classList.add('md:max-w-[500px]');
                 }
-            } else { 
-                // TRẠNG THÁI THU LẠI
-                el.classList.add('fade-out'); 
-                
-                // Đưa giới hạn khung về lại mặc định
+            } else {
+                el.classList.add('fade-out');
                 if (wrapper) {
                     wrapper.classList.remove('md:max-w-[500px]');
                     wrapper.classList.add('md:max-w-[240px]');
                 }
-
                 setTimeout(() => {
-                    el.innerText = '******'; 
-                    el.classList.add('text-slate-500', 'dark:text-slate-400'); 
-                    el.classList.remove('text-indigo-700', 'dark:text-indigo-400'); 
-                    icon.className = 'fa-solid fa-eye-slash text-xs'; 
-                    btn.classList.remove('text-indigo-600', 'dark:text-indigo-400'); 
-                    el.classList.remove('fade-out'); 
+                    el.innerText = '******';
+                    el.classList.add('text-slate-500', 'dark:text-slate-400');
+                    el.classList.remove('text-indigo-700', 'dark:text-indigo-400');
+                    icon.className = 'fa-solid fa-eye-slash text-xs';
+                    btn.classList.remove('text-indigo-600', 'dark:text-indigo-400');
+                    el.classList.remove('fade-out');
                 }, 300);
             }
         }
 
         function executeTogglePassword(elementId, realValue, btn, isPeekMode) {
-            const el = document.getElementById(elementId); 
+            const el = document.getElementById(elementId);
             const icon = btn.querySelector('i');
             const wrapper = el.closest('.rounded-lg');
-            
+
             if (!isPeekMode && el.innerText === '******') {
-                // TRẠNG THÁI MỞ BUNG RA (SOI PASS)
-                icon.className = 'fa-solid fa-eye text-xs'; 
+                icon.className = 'fa-solid fa-eye text-xs';
                 btn.classList.add('text-indigo-600', 'dark:text-indigo-400');
                 el.innerHTML = `<div class="peek-container" onmousemove="handlePeekMove(event, this)"><div class="peek-obfuscated">${generateRandomString(realValue.length)}</div><div class="peek-real">${escapeHtml(realValue)}</div></div>`;
-                
-                // Tháo giới hạn, bung rộng khung
                 if (wrapper) {
                     wrapper.classList.remove('md:max-w-[240px]', 'md:max-w-[200px]');
                     wrapper.classList.add('md:max-w-[500px]');
                 }
             } else {
-                // TRẠNG THÁI THU LẠI
-                el.classList.add('fade-out'); 
-
-                // Kéo giới hạn khung về chuẩn tùy theo loại Pass
+                el.classList.add('fade-out');
                 if (wrapper) {
                     wrapper.classList.remove('md:max-w-[500px]');
-                    if (elementId.includes('email')) {
-                        wrapper.classList.add('md:max-w-[240px]');
-                    } else {
-                        wrapper.classList.add('md:max-w-[200px]');
-                    }
+                    if (elementId.includes('email')) wrapper.classList.add('md:max-w-[240px]');
+                    else wrapper.classList.add('md:max-w-[200px]');
                 }
-
-                setTimeout(() => { 
-                    el.innerText = '******'; 
-                    el.classList.add('text-slate-500', 'dark:text-slate-400'); 
-                    el.classList.remove('text-indigo-700', 'dark:text-indigo-400'); 
-                    icon.className = 'fa-solid fa-eye-slash text-xs'; 
-                    btn.classList.remove('text-indigo-600', 'dark:text-indigo-400'); 
-                    el.classList.remove('fade-out'); 
+                setTimeout(() => {
+                    el.innerText = '******';
+                    el.classList.add('text-slate-500', 'dark:text-slate-400');
+                    el.classList.remove('text-indigo-700', 'dark:text-indigo-400');
+                    icon.className = 'fa-solid fa-eye-slash text-xs';
+                    btn.classList.remove('text-indigo-600', 'dark:text-indigo-400');
+                    el.classList.remove('fade-out');
                 }, 300);
             }
         }
@@ -1290,337 +1117,347 @@ function togglePassword(elementId, realValue, btn) {
         function updateTimerUI(index, remaining) {
             const timerBadge = document.getElementById(`timer-badge-${index}`);
             const timerRing = document.getElementById(`timer-ring-${index}`);
-            if (!timerBadge) return; 
+            if (!timerBadge) return;
             timerBadge.innerText = remaining;
-            
             if (timerRing) timerRing.style.strokeDashoffset = 94.24 - (remaining / 30) * 94.24;
-            
-            if (remaining <= 5) { 
-                timerBadge.className = "absolute text-[9px] font-bold text-rose-600 dark:text-rose-500 animate-pulse"; 
-                if (timerRing) timerRing.className = "stroke-rose-500 transition-all duration-1000 ease-linear animate-pulse"; 
-            } else { 
-                timerBadge.className = "absolute text-[9px] font-bold text-indigo-600 dark:text-indigo-400"; 
-                if (timerRing) timerRing.className = "stroke-indigo-500 transition-all duration-1000 ease-linear"; 
+            if (remaining <= 5) {
+                timerBadge.className = "absolute text-[9px] font-bold text-rose-600 dark:text-rose-500 animate-pulse";
+                if (timerRing) timerRing.className = "stroke-rose-500 transition-all duration-1000 ease-linear animate-pulse";
+            } else {
+                timerBadge.className = "absolute text-[9px] font-bold text-indigo-600 dark:text-indigo-400";
+                if (timerRing) timerRing.className = "stroke-indigo-500 transition-all duration-1000 ease-linear";
             }
         }
 
         async function toggleOTP(index, btn) {
-            const cell = document.querySelector(`td[data-index="${index}"]`); 
+            const cell = document.querySelector(`td[data-index="${index}"]`);
             if (!cell) return;
             const isActive = cell.getAttribute('data-otp-active') === 'true';
-            executeToggleOTP(index, btn, cell, isActive); 
+            executeToggleOTP(index, btn, cell, isActive);
         }
-        
+
         async function executeToggleOTP(index, btn, cell, isActive) {
             const icon = btn.querySelector('i');
             const otpSpan = document.getElementById(`otp-${index}`);
             const timerContainer = document.getElementById(`timer-container-${index}`);
-            
+
             if (isActive) {
-                cell.setAttribute('data-otp-active', 'false'); 
-                icon.className = 'fa-solid fa-eye-slash'; 
-                btn.classList.remove('text-indigo-600'); 
-                otpSpan.innerText = '******'; 
-                otpSpan.classList.remove('text-indigo-600'); 
-                otpSpan.classList.add('text-slate-400'); 
-                timerContainer.classList.add('hidden'); 
+                cell.setAttribute('data-otp-active', 'false');
+                icon.className = 'fa-solid fa-eye-slash';
+                btn.classList.remove('text-indigo-600');
+                otpSpan.innerText = '******';
+                otpSpan.classList.remove('text-indigo-600');
+                otpSpan.classList.add('text-slate-400');
+                timerContainer.classList.add('hidden');
             } else {
-                cell.setAttribute('data-otp-active', 'true'); 
-                icon.className = 'fa-solid fa-eye'; 
-                btn.classList.add('text-indigo-600'); 
-                otpSpan.classList.remove('text-slate-400'); 
-                otpSpan.classList.add('text-indigo-600'); 
-                timerContainer.classList.remove('hidden'); 
-                
+                cell.setAttribute('data-otp-active', 'true');
+                icon.className = 'fa-solid fa-eye';
+                btn.classList.add('text-indigo-600');
+                otpSpan.classList.remove('text-slate-400');
+                otpSpan.classList.add('text-indigo-600');
+                timerContainer.classList.remove('hidden');
+
                 const epoch = Math.floor(Date.now() / 1000);
                 const remaining = 30 - (epoch % 30);
                 const code = await generateTOTP(cell.getAttribute('data-key'));
-                
-                if (code) { 
-                    otpSpan.innerText = code.slice(0, 3) + ' ' + code.slice(3); 
-                    updateTimerUI(index, remaining); 
+                if (code) {
+                    otpSpan.innerText = code.slice(0, 3) + ' ' + code.slice(3);
+                    updateTimerUI(index, remaining);
                 } else {
                     otpSpan.innerText = 'Key lỗi';
                 }
             }
         }
-        
+
         async function updateTOTPs() {
-            const activeCells = document.querySelectorAll('#dataTableBody td[data-key][data-otp-active="true"]'); 
+            const activeCells = document.querySelectorAll('#dataTableBody td[data-key][data-otp-active="true"]');
             if (activeCells.length === 0) return;
-            
             const remaining = 30 - (Math.floor(Date.now() / 1000) % 30);
             for (const cell of activeCells) {
                 let code = await generateTOTP(cell.getAttribute('data-key'));
                 let index = cell.getAttribute('data-index');
-                if (code) { 
-                    document.getElementById(`otp-${index}`).innerText = code.slice(0, 3) + ' ' + code.slice(3); 
-                    updateTimerUI(index, remaining); 
+                if (code) {
+                    document.getElementById(`otp-${index}`).innerText = code.slice(0, 3) + ' ' + code.slice(3);
+                    updateTimerUI(index, remaining);
                 }
             }
         }
 
-        async function copyOTP(key, btn) { 
-            if(!key) return; 
-            const code = await generateTOTP(key); 
-            if(code) { 
-                navigator.clipboard.writeText(code).then(()=>showToast('Đã copy mã Live OTP','success')); 
-            } else {
-                showToast('Key 2FA Lỗi','error'); 
-            }
+        async function copyOTP(key, btn) {
+            if (!key) return;
+            const code = await generateTOTP(key);
+            if (code) navigator.clipboard.writeText(code).then(() => showToast('Đã copy mã Live OTP', 'success'));
+            else showToast('Key 2FA Lỗi', 'error');
         }
-        
-        function copySecureText(text, label="Dữ liệu") { 
-            if(!text) return; 
-            navigator.clipboard.writeText(text).then(()=>showToast(`Đã copy ${label}`,'success')); 
+
+        function copySecureText(text, label = "Dữ liệu") {
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => showToast(`Đã copy ${label}`, 'success'));
         }
-        
-        // CẬP NHẬT: Quét tự động Code (Polling)
+
         function fetchEmailCodeUI(email, index, btn) {
-            const box = document.getElementById(`code-box-${index}`);
-            const valSpan = document.getElementById(`code-val-${index}`);
-            const badge = document.getElementById(`mail-badge-${index}`);
-            
-            if (!email || email === "") { showToast('Không có Email', 'error'); return; }
-            if (btn.getAttribute('data-polling') === 'true') return; 
-            
-            btn.setAttribute('data-polling', 'true');
-            const originalHTML = btn.innerHTML; 
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>'; 
-            
-            box.classList.remove('hidden'); 
-            setTimeout(()=>box.classList.remove('opacity-0', '-translate-y-2'), 10);
-            
-            if (badge) badge.classList.add('hidden'); 
-            
+            if (!email || email.trim() === "") { showToast('Không có Email', 'error'); return; }
+            if (btn && btn.getAttribute('data-polling') === 'true') return;
+
+            const defaultBtnHTML = `<i class="fa-solid fa-envelope-open-text text-xs"></i><span id="mail-badge-${index}" class="hidden absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce">1</span>`;
+
+            function getElements() {
+                return {
+                    box: document.getElementById(`code-box-${index}`),
+                    valSpan: document.getElementById(`code-val-${index}`),
+                    currentBtn: document.getElementById(`mail-btn-${index}`) || btn
+                };
+            }
+
+            emailCodeState[index] = { status: 'polling', code: '' };
+            const initEls = getElements();
+            if (initEls.currentBtn) {
+                initEls.currentBtn.setAttribute('data-polling', 'true');
+                initEls.currentBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>';
+            }
+            if (initEls.box) {
+                initEls.box.classList.remove('hidden');
+                setTimeout(() => initEls.box.classList.remove('opacity-0', '-translate-y-2'), 10);
+            }
+
             let attempts = 0;
-            const maxAttempts = 6; // Đợi tối đa 30s (6 lần quét mỗi 5s)
-            const intervalTime = 5000; 
+            const maxAttempts = 6;
+            const intervalTime = 5000;
 
             function pollCode() {
                 attempts++;
-                
-                // CẬP NHẬT: Chữ ngắn gọn, không đếm giây làm dài khung
-                valSpan.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i><span class="text-[11px] ml-1.5 text-indigo-300 font-medium">Đang đợi mã...</span>`; 
-                valSpan.classList.remove('text-rose-500'); 
-                
-                runScript('getEmailVerificationCode', { targetEmail: email, pass: sessionPass })
-                    .then(code => {
-                        if(!code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && !code.includes("nha")) { 
-                            btn.removeAttribute('data-polling');
-                            btn.innerHTML = originalHTML; 
-                            valSpan.innerText = code; 
-                            
-                            if (badge) {
-                                badge.classList.remove('hidden');
-                                badge.innerText = "1";
-                            }
+                const els = getElements();
+                if (els.box) els.box.classList.remove('hidden', 'opacity-0', '-translate-y-2');
+                if (els.valSpan) {
+                    els.valSpan.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i><span class="text-[11px] ml-1.5 text-indigo-300 font-medium">Đang đợi mã...</span>`;
+                    els.valSpan.classList.remove('text-rose-500');
+                }
 
-                            if (window.innerWidth >= 768) {
-                                showToast(`Có mã mới từ Email: ${code}`, 'success', 5000); 
-                            } else {
-                                showToast('Đã lấy được mã!', 'success'); 
+                runScript('getEmailVerificationCode', { targetEmail: email, pass: sessionPass })
+                    .then(rawCode => {
+                        const code = String(rawCode || '').trim();
+                        const current = getElements();
+
+                        if (code && !code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && !code.includes("nha")) {
+                            emailCodeState[index] = { status: 'done', code: code };
+                            if (current.currentBtn) {
+                                current.currentBtn.removeAttribute('data-polling');
+                                current.currentBtn.innerHTML = defaultBtnHTML;
                             }
-                        } 
-                        else if (attempts < maxAttempts) {
+                            if (current.box) current.box.classList.remove('hidden', 'opacity-0', '-translate-y-2');
+                            if (current.valSpan) {
+                                current.valSpan.innerText = code;
+                                current.valSpan.classList.remove('text-rose-500');
+                            }
+                            const newBadge = document.getElementById(`mail-badge-${index}`);
+                            if (newBadge) {
+                                newBadge.classList.remove('hidden');
+                                newBadge.innerText = "1";
+                            }
+                            showToast(`Có mã mới từ Email: ${code}`, 'success', 5000);
+                        } else if (attempts < maxAttempts) {
                             setTimeout(pollCode, intervalTime);
-                        }
-                        else {
-                            btn.removeAttribute('data-polling');
-                            btn.innerHTML = originalHTML; 
-                            valSpan.innerText = "KHÔNG CÓ MÃ"; 
-                            valSpan.classList.add('text-rose-500'); 
-                            showToast('Hết thời gian chờ (30s). Vui lòng thử lại sau.', 'error'); 
+                        } else {
+                            emailCodeState[index] = { status: 'empty', code: '' };
+                            if (current.currentBtn) {
+                                current.currentBtn.removeAttribute('data-polling');
+                                current.currentBtn.innerHTML = defaultBtnHTML;
+                            }
+                            if (current.valSpan) {
+                                current.valSpan.innerText = "KHÔNG CÓ MÃ";
+                                current.valSpan.classList.add('text-rose-500');
+                            }
+                            showToast('Hết thời gian chờ (30s). Vui lòng thử lại sau.', 'error');
                         }
                     })
-                    .catch(err => {
-                        btn.removeAttribute('data-polling');
-                        btn.innerHTML = originalHTML; 
-                        valSpan.innerText = "LỖI QUÉT"; 
-                        valSpan.classList.add('text-rose-500'); 
-                        showToast('Lỗi kết nối hòm thư', 'error'); 
+                    .catch(() => {
+                        emailCodeState[index] = { status: 'error', code: '' };
+                        const current = getElements();
+                        if (current.currentBtn) {
+                            current.currentBtn.removeAttribute('data-polling');
+                            current.currentBtn.innerHTML = defaultBtnHTML;
+                        }
+                        if (current.valSpan) {
+                            current.valSpan.innerText = "LỖI QUÉT";
+                            current.valSpan.classList.add('text-rose-500');
+                        }
+                        showToast('Lỗi kết nối hòm thư', 'error');
                     });
             }
-            
-            pollCode(); 
+
+            pollCode();
         }
 
-        function copyRawText(text, label="Dữ liệu") { 
-            if (!text || text==="------" || text==="KHÔNG CÓ MÃ" || text==="LỖI QUÉT") return; 
-            navigator.clipboard.writeText(text).then(()=>showToast(`Đã copy ${label}`,'success')); 
+        function copyRawText(text, label = "Dữ liệu") {
+            if (!text || text === "------" || text === "KHÔNG CÓ MÃ" || text === "LỖI QUÉT") return;
+            navigator.clipboard.writeText(text).then(() => showToast(`Đã copy ${label}`, 'success'));
         }
-        
-        function copyTiktokId(e, text) { 
-            if(!text) return; 
-            navigator.clipboard.writeText(text).then(()=>showToast('Đã copy TikTok ID','success')); 
+
+        function copyTiktokId(e, text) {
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => showToast('Đã copy TikTok ID', 'success'));
         }
 
         let searchTimeout = null;
         function filterData() {
-            clearTimeout(searchTimeout); 
+            clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
                 if (!keyword) { renderTable(allData); return; }
-                const filtered = allData.filter(item => { 
-                    return (item.team && item.team.toLowerCase().includes(keyword)) || 
-                           (item.email && item.email.toLowerCase().includes(keyword)) || 
-                           (item.tenIdol && item.tenIdol.toLowerCase().includes(keyword)) || 
-                           (item.tiktokId && item.tiktokId.toLowerCase().includes(keyword)) || 
-                           (item.daiLi && String(item.daiLi).toLowerCase().includes(keyword)) || 
-                           (item.thietBiIdol && item.thietBiIdol.toLowerCase().includes(keyword)) || 
-                           (item.thietBiTroLi && item.thietBiTroLi.toLowerCase().includes(keyword)); 
+                const filtered = allData.filter(item => {
+                    return (item.team && item.team.toLowerCase().includes(keyword)) ||
+                           (item.email && item.email.toLowerCase().includes(keyword)) ||
+                           (item.tenIdol && item.tenIdol.toLowerCase().includes(keyword)) ||
+                           (item.tiktokId && item.tiktokId.toLowerCase().includes(keyword)) ||
+                           (item.daiLi && String(item.daiLi).toLowerCase().includes(keyword)) ||
+                           (item.thietBiIdol && item.thietBiIdol.toLowerCase().includes(keyword)) ||
+                           (item.thietBiTroLi && item.thietBiTroLi.toLowerCase().includes(keyword));
                 });
                 renderTable(filtered);
-            }, 300); 
+            }, 300);
         }
 
         function base32ToBytes(base32) {
-            let base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"; 
-            let cleaned = String(base32).replace(/=+$/, "").toUpperCase().replace(/[\s\-]+/g, ""); 
+            let base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+            let cleaned = String(base32).replace(/=+$/, "").toUpperCase().replace(/[\s\-]+/g, "");
             let bits = "";
-            for (let i=0; i<cleaned.length; i++) { 
-                let val = base32chars.indexOf(cleaned.charAt(i)); 
-                if (val === -1) throw new Error("Invalid base32"); 
-                bits += val.toString(2).padStart(5, '0'); 
+            for (let i = 0; i < cleaned.length; i++) {
+                let val = base32chars.indexOf(cleaned.charAt(i));
+                if (val === -1) throw new Error("Invalid base32");
+                bits += val.toString(2).padStart(5, '0');
             }
-            let bytes = new Uint8Array(Math.floor(bits.length / 8)); 
-            for (let i=0; i<bytes.length; i++) bytes[i] = parseInt(bits.substr(i*8, 8), 2);
+            let bytes = new Uint8Array(Math.floor(bits.length / 8));
+            for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(bits.substr(i * 8, 8), 2);
             return bytes;
         }
 
         async function generateTOTP(secret) {
             try {
-                let keyBytes = base32ToBytes(secret); 
-                let time = Math.floor(Math.floor(Date.now()/1000) / 30); 
+                let keyBytes = base32ToBytes(secret);
+                let time = Math.floor(Math.floor(Date.now() / 1000) / 30);
                 let timeBytes = new Uint8Array(8);
-                
-                for (let i=7; i>=0; i--) { 
-                    timeBytes[i] = time & 0xff; 
-                    time = Math.floor(time / 256); 
+                for (let i = 7; i >= 0; i--) {
+                    timeBytes[i] = time & 0xff;
+                    time = Math.floor(time / 256);
                 }
-                
                 const cryptoKey = await window.crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: { name: "SHA-1" } }, false, ["sign"]);
-                const signature = await window.crypto.subtle.sign("HMAC", cryptoKey, timeBytes); 
+                const signature = await window.crypto.subtle.sign("HMAC", cryptoKey, timeBytes);
                 let hmacResult = new Uint8Array(signature);
-                let offset = hmacResult[hmacResult.length-1] & 0x0f;
-                let binary = ((hmacResult[offset] & 0x7f) << 24) | ((hmacResult[offset+1] & 0xff) << 16) | ((hmacResult[offset+2] & 0xff) << 8) | (hmacResult[offset+3] & 0xff);
-                
+                let offset = hmacResult[hmacResult.length - 1] & 0x0f;
+                let binary = ((hmacResult[offset] & 0x7f) << 24) | ((hmacResult[offset + 1] & 0xff) << 16) | ((hmacResult[offset + 2] & 0xff) << 8) | (hmacResult[offset + 3] & 0xff);
                 return (binary % 1000000).toString().padStart(6, '0');
             } catch (e) { return null; }
         }
 
-        function escapeHtml(text) { 
-            return text ? String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : ''; 
+        function escapeHtml(text) {
+            return text ? String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '';
         }
 
         function initTheme() {
             if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark'); 
+                document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
             }
             updateThemeIcon(document.documentElement.classList.contains('dark'));
         }
-        
-        function toggleTheme() { 
-            const isDark = document.documentElement.classList.toggle('dark'); 
-            localStorage.setItem('theme', isDark ? 'dark' : 'light'); 
-            updateThemeIcon(isDark); 
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
         }
-        
+
         function updateThemeIcon(isDark) {
             const btn = document.getElementById('themeToggleBtn');
-            if (btn) { 
-                if (isDark) { 
-                    btn.innerHTML='<i class="fa-solid fa-sun text-amber-400"></i>'; 
-                    btn.classList.replace('bg-slate-100', 'bg-slate-800'); 
-                    btn.classList.replace('text-slate-700', 'text-slate-100'); 
-                    btn.classList.replace('border-slate-200', 'border-slate-700'); 
-                    btn.classList.replace('hover:bg-slate-200', 'hover:bg-slate-700'); 
-                } else { 
-                    btn.innerHTML='<i class="fa-solid fa-moon"></i>'; 
-                    btn.classList.replace('bg-slate-800', 'bg-slate-100'); 
-                    btn.classList.replace('text-slate-100', 'text-slate-700'); 
-                    btn.classList.replace('border-slate-700', 'border-slate-200'); 
-                    btn.classList.replace('hover:bg-slate-700', 'hover:bg-slate-200'); 
-                } 
+            if (btn) {
+                if (isDark) {
+                    btn.innerHTML = '<i class="fa-solid fa-sun text-amber-400"></i>';
+                    btn.classList.replace('bg-slate-100', 'bg-slate-800');
+                    btn.classList.replace('text-slate-700', 'text-slate-100');
+                    btn.classList.replace('border-slate-200', 'border-slate-700');
+                    btn.classList.replace('hover:bg-slate-200', 'hover:bg-slate-700');
+                } else {
+                    btn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+                    btn.classList.replace('bg-slate-800', 'bg-slate-100');
+                    btn.classList.replace('text-slate-100', 'text-slate-700');
+                    btn.classList.replace('border-slate-700', 'border-slate-200');
+                    btn.classList.replace('hover:bg-slate-700', 'hover:bg-slate-200');
+                }
             }
         }
-        
+
         initTheme();
 
         function toggleSelectAll() {
             const selectAllBox = document.getElementById('selectAllCheckbox');
-            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = selectAllBox.checked); 
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = selectAllBox.checked);
             updateBatchSelection();
         }
-        
+
         function updateBatchSelection() {
-            const checkedBoxes = document.querySelectorAll('.row-checkbox:checked'); 
+            const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
             const actionBar = document.getElementById('batchActionBar');
             document.getElementById('batchCount').innerText = checkedBoxes.length;
-            
-            if (checkedBoxes.length > 0) {
-                actionBar.classList.add('visible'); 
-            } else { 
-                actionBar.classList.remove('visible'); 
-                document.getElementById('selectAllCheckbox').checked = false; 
+            if (checkedBoxes.length > 0) actionBar.classList.add('visible');
+            else {
+                actionBar.classList.remove('visible');
+                document.getElementById('selectAllCheckbox').checked = false;
             }
         }
-        
-        function clearBatchSelection() { 
-            document.querySelectorAll('.cyber-checkbox').forEach(cb => cb.checked = false); 
-            updateBatchSelection(); 
+
+        function clearBatchSelection() {
+            document.querySelectorAll('.cyber-checkbox').forEach(cb => cb.checked = false);
+            updateBatchSelection();
         }
-        
+
         function batchExport() {
             let exportText = "";
-            document.querySelectorAll('.row-checkbox:checked').forEach(cb => { 
-                const item = allData[parseInt(cb.value)]; 
-                if(item) exportText += `[${item.team}] Idol: ${item.tenIdol} | Tiktok: ${item.tiktokId} | Email: ${item.email} | Pass Email: ${item.passEmail} | Pass Tiktok: ${item.passTiktok}\n`; 
+            document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
+                const item = allData[parseInt(cb.value)];
+                if (item) exportText += `[${item.team}] Idol: ${item.tenIdol} | Tiktok: ${item.tiktokId} | Email: ${item.email} | Pass Email: ${item.passEmail} | Pass Tiktok: ${item.passTiktok}\n`;
             });
-            navigator.clipboard.writeText(exportText).then(() => { 
-                showToast(`Đã Import Clipboard ${document.querySelectorAll('.row-checkbox:checked').length} Tài khoản`, 'success'); 
-                clearBatchSelection(); 
+            navigator.clipboard.writeText(exportText).then(() => {
+                showToast(`Đã Import Clipboard ${document.querySelectorAll('.row-checkbox:checked').length} Tài khoản`, 'success');
+                clearBatchSelection();
             });
         }
-        
+
         function scanDuplicates() {
             if (!allData || allData.length === 0) { showToast('Chưa có dữ liệu để quét. Vui lòng tải lại trang!', 'error'); return; }
             openScanModal('Quét Trùng Lặp Dữ Liệu', 'Đang phân tích các trường Email, TikTok ID và Key 2FA...', '<div class="text-center py-8"><i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-600"></i></div>', 'fa-clone text-amber-500');
             setTimeout(() => {
                 let emailMap = {}, tiktokMap = {}, duplicatesFound = [];
                 allData.forEach((item, index) => {
-                    if (item.email && item.email.trim() !== '') { 
-                        let em = item.email.toLowerCase().trim(); 
-                        if (!emailMap[em]) emailMap[em] = []; 
-                        emailMap[em].push({ index: index+1, team: item.team, name: item.tenIdol, type: 'Email' }); 
+                    if (item.email && item.email.trim() !== '') {
+                        let em = item.email.toLowerCase().trim();
+                        if (!emailMap[em]) emailMap[em] = [];
+                        emailMap[em].push({ index: index + 1, team: item.team, name: item.tenIdol, type: 'Email' });
                     }
-                    if (item.tiktokId && item.tiktokId.trim() !== '') { 
-                        let tk = item.tiktokId.toLowerCase().trim(); 
-                        if (!tiktokMap[tk]) tiktokMap[tk] = []; 
-                        tiktokMap[tk].push({ index: index+1, team: item.team, name: item.tenIdol, type: 'TikTok ID' }); 
+                    if (item.tiktokId && item.tiktokId.trim() !== '') {
+                        let tk = item.tiktokId.toLowerCase().trim();
+                        if (!tiktokMap[tk]) tiktokMap[tk] = [];
+                        tiktokMap[tk].push({ index: index + 1, team: item.team, name: item.tenIdol, type: 'TikTok ID' });
                     }
                 });
-                
                 for (let em in emailMap) { if (emailMap[em].length > 1) duplicatesFound.push({ value: em, category: 'Email', items: emailMap[em] }); }
-                for (let tk in tiktokMap) { if (tiktokMap[tk].length > 1) duplicatesFound.push({ value: '@'+tk, category: 'TikTok ID', items: tiktokMap[tk] }); }
-                
+                for (let tk in tiktokMap) { if (tiktokMap[tk].length > 1) duplicatesFound.push({ value: '@' + tk, category: 'TikTok ID', items: tiktokMap[tk] }); }
                 renderDuplicatesResult(duplicatesFound);
             }, 600);
         }
 
         function renderDuplicatesResult(duplicates) {
-            const body = document.getElementById('scanModalBody'); 
+            const body = document.getElementById('scanModalBody');
             document.getElementById('scanModalSubtitle').innerText = `Đã quét xong ${allData.length} bản ghi`;
             if (duplicates.length === 0) {
-                body.innerHTML = `<div class="text-center py-10"><div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl"><i class="fa-solid fa-check"></i></div><h4 class="font-bold text-slate-800 dark:text-white text-base">Không tìm thấy dữ liệu trùng lặp!</h4><p class="text-xs text-slate-500 mt-1">Tất cả Email và TikTok ID trong bảng đều là duy nhất.</p></div>`; return;
+                body.innerHTML = `<div class="text-center py-10"><div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl"><i class="fa-solid fa-check"></i></div><h4 class="font-bold text-slate-800 dark:text-white text-base">Không tìm thấy dữ liệu trùng lặp!</h4><p class="text-xs text-slate-500 mt-1">Tất cả Email và TikTok ID trong bảng đều là duy nhất.</p></div>`;
+                return;
             }
             let html = `<div class="mb-3 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 p-3 rounded-xl border border-amber-200 dark:border-amber-500/20 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-base"></i> Phát hiện ${duplicates.length} trường hợp bị trùng lặp trong hệ thống:</div>`;
             duplicates.forEach(dup => {
                 html += `<div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 mb-2.5"><div class="flex items-center justify-between mb-2"><span class="font-bold text-indigo-600 dark:text-indigo-400 text-sm">${escapeHtml(dup.value)}</span><span class="text-[10px] font-bold px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">${dup.category} trùng</span></div><div class="space-y-1">`;
-                dup.items.forEach(sub => { 
-                    html += `<div class="text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between bg-white dark:bg-slate-800 px-2.5 py-1 rounded border border-slate-100 dark:border-slate-700"><span><b>Team:</b> ${escapeHtml(sub.team)} | <b>Idol:</b> ${escapeHtml(sub.name || 'Chưa rõ')}</span><span class="font-mono text-slate-400">Dòng ${sub.index}</span></div>`; 
+                dup.items.forEach(sub => {
+                    html += `<div class="text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between bg-white dark:bg-slate-800 px-2.5 py-1 rounded border border-slate-100 dark:border-slate-700"><span><b>Team:</b> ${escapeHtml(sub.team)} | <b>Idol:</b> ${escapeHtml(sub.name || 'Chưa rõ')}</span><span class="font-mono text-slate-400">Dòng ${sub.index}</span></div>`;
                 });
                 html += `</div></div>`;
             });
@@ -1628,150 +1465,130 @@ function togglePassword(elementId, realValue, btn) {
         }
 
         function openScanModal(title, subtitle, htmlContent, iconClass) {
-            const modal = document.getElementById('scanModal'); 
+            const modal = document.getElementById('scanModal');
             const content = document.getElementById('scanModalContent');
-            document.getElementById('scanModalTitle').innerText = title; 
-            document.getElementById('scanModalSubtitle').innerText = subtitle; 
-            document.getElementById('scanModalBody').innerHTML = htmlContent; 
+            document.getElementById('scanModalTitle').innerText = title;
+            document.getElementById('scanModalSubtitle').innerText = subtitle;
+            document.getElementById('scanModalBody').innerHTML = htmlContent;
             document.getElementById('scanModalIcon').innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
-            
-            modal.classList.remove('hidden'); 
+            modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
         }
 
         function closeScanModal() {
-            const modal = document.getElementById('scanModal'); 
+            const modal = document.getElementById('scanModal');
             const content = document.getElementById('scanModalContent');
-            modal.classList.add('opacity-0'); 
-            content.classList.add('scale-95'); 
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
-        // ================= XỬ LÝ SỬA THIẾT BỊ TRỰC TIẾP INLINE =================
         function editDeviceInline(rowIndex, tbIndex, btnElem) {
             const item = allData[rowIndex];
-            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
+            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim()).filter(Boolean);
             let currentText = mangThietBi[tbIndex];
-            
             const tagElem = btnElem.closest('.device-tag-item');
-            
             tagElem.outerHTML = `
             <div class="inline-flex items-center gap-1.5 px-1 py-1 bg-white dark:bg-[#1e293b] border-2 border-indigo-400 dark:border-indigo-500 rounded-full shadow-md z-10 transition-all">
-                <input type="text" id="inline-edit-${rowIndex}-${tbIndex}" value="${escapeHtml(currentText)}" 
-                       class="w-40 px-2 text-[12px] bg-transparent outline-none text-slate-700 dark:text-slate-200 font-medium" 
-                       onkeypress="if(event.key==='Enter') saveInlineEdit(${rowIndex}, ${tbIndex})">
+                <input type="text" id="inline-edit-${rowIndex}-${tbIndex}" value="${escapeHtml(currentText)}" class="w-40 px-2 text-[12px] bg-transparent outline-none text-slate-700 dark:text-slate-200 font-medium" onkeypress="if(event.key==='Enter') saveInlineEdit(${rowIndex}, ${tbIndex})">
                 <div class="flex items-center gap-0.5 pr-1">
-                    <button onclick="saveInlineEdit(${rowIndex}, ${tbIndex})" class="w-6 h-6 flex items-center justify-center bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors" title="Lưu (Enter)">
-                        <i class="fa-solid fa-check text-[10px]"></i>
-                    </button>
-                    <button onclick="renderTable(allData)" class="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-full hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors" title="Hủy (Esc)">
-                        <i class="fa-solid fa-xmark text-[10px]"></i>
-                    </button>
+                    <button onclick="saveInlineEdit(${rowIndex}, ${tbIndex})" class="w-6 h-6 flex items-center justify-center bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition-colors" title="Lưu (Enter)"><i class="fa-solid fa-check text-[10px]"></i></button>
+                    <button onclick="renderTable(allData)" class="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 rounded-full hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors" title="Hủy (Esc)"><i class="fa-solid fa-xmark text-[10px]"></i></button>
                 </div>
             </div>`;
-            
             const input = document.getElementById(`inline-edit-${rowIndex}-${tbIndex}`);
-            input.focus(); 
-            input.setSelectionRange(input.value.length, input.value.length); 
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
         }
 
         function saveInlineEdit(rowIndex, tbIndex) {
             const input = document.getElementById(`inline-edit-${rowIndex}-${tbIndex}`);
-            const newVal = input.value.trim(); 
+            const newVal = input.value.trim();
             const item = allData[rowIndex];
-            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
-            
+            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim()).filter(Boolean);
             let oldDevice = mangThietBi[tbIndex];
 
             if (!newVal) {
-                mangThietBi.splice(tbIndex, 1); 
-                runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: oldDevice, pass: sessionPass }).catch(e=>console.log(e));
+                mangThietBi.splice(tbIndex, 1);
+                runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: oldDevice, pass: sessionPass }).catch(() => {});
             } else {
                 mangThietBi[tbIndex] = newVal;
             }
-            
+
             const finalString = mangThietBi.join(', ');
             input.parentElement.innerHTML = `<div class="px-3 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin text-indigo-500 text-[10px]"></i><span class="text-[11px] text-slate-500">Đang lưu...</span></div>`;
-            
             runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
-                .then(() => { 
-                    allData[rowIndex].thietBiIdol = finalString; 
-                    allData[rowIndex].thietBiTroLi = ""; 
-                    renderTable(allData); 
-                    showToast(newVal ? 'Đã cập nhật thiết bị' : 'Đã xóa thiết bị', 'success'); 
+                .then(() => {
+                    allData[rowIndex].thietBiIdol = finalString;
+                    allData[rowIndex].thietBiTroLi = "";
+                    renderTable(allData);
+                    showToast(newVal ? 'Đã cập nhật thiết bị' : 'Đã xóa thiết bị', 'success');
                 })
-                .catch(err => { 
-                    showToast('Lỗi: ' + err.message, 'error'); 
-                    renderTable(allData); 
+                .catch(err => {
+                    showToast('Lỗi: ' + err.message, 'error');
+                    renderTable(allData);
                 });
         }
 
         function deleteDeviceInline(rowIndex, tbIndex, btnElem) {
             const item = allData[rowIndex];
-            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t=>t.trim()).filter(Boolean);
-            
+            let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim()).filter(Boolean);
             let deletedDevice = mangThietBi[tbIndex];
             mangThietBi.splice(tbIndex, 1);
             const finalString = mangThietBi.join(', ');
-            
             const tagElem = btnElem.closest('.device-tag-item');
             tagElem.innerHTML = `<div class="px-3 flex items-center gap-2"><i class="fa-solid fa-spinner fa-spin text-rose-500 text-[10px]"></i><span class="text-[11px] text-rose-500 font-medium">Đang xóa...</span></div>`;
-            
             runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
-                .then(() => { 
-                    runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: deletedDevice, pass: sessionPass }).catch(e=>console.log(e));
-                    
-                    allData[rowIndex].thietBiIdol = finalString; 
-                    allData[rowIndex].thietBiTroLi = ""; 
-                    renderTable(allData); 
-                    showToast('Đã xóa thiết bị', 'success'); 
+                .then(() => {
+                    runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: deletedDevice, pass: sessionPass }).catch(() => {});
+                    allData[rowIndex].thietBiIdol = finalString;
+                    allData[rowIndex].thietBiTroLi = "";
+                    renderTable(allData);
+                    showToast('Đã xóa thiết bị', 'success');
                 })
-                .catch(err => { 
-                    showToast('Lỗi: ' + err.message, 'error'); 
-                    renderTable(allData); 
+                .catch(err => {
+                    showToast('Lỗi: ' + err.message, 'error');
+                    renderTable(allData);
                 });
         }
 
-        // ================= XỬ LÝ SỬA THIẾT BỊ BẰNG MODAL TỔNG =================
         let currentEditIndex = -1;
 
         function openDeviceEditor(index) {
-            currentEditIndex = index; 
+            currentEditIndex = index;
             const item = allData[index];
             document.getElementById('editDeviceTarget').innerText = `Tài khoản: ${item.tenIdol || item.email}`;
             document.getElementById('deviceListContainer').innerHTML = '';
-            
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').filter(tb => tb.trim() !== '');
-            
             originalDevicesForLog = mangThietBi.map(x => x.trim());
 
             if (mangThietBi.length === 0) {
-                addDeviceRow('', '', true, ''); 
+                addDeviceRow('', '', true, '');
             } else {
                 mangThietBi.forEach(tb => {
                     let text = tb.trim(), role = "", device = text;
-                    if (text.includes(':')) { 
-                        let parts = text.split(':'); 
-                        role = parts[0].trim(); 
-                        device = parts.slice(1).join(':').trim(); 
-                    } else if (text.includes('-')) { 
-                        let parts = text.split('-'); 
-                        role = parts[0].trim(); 
-                        device = parts.slice(1).join('-').trim(); 
+                    if (text.includes(':')) {
+                        let parts = text.split(':');
+                        role = parts[0].trim();
+                        device = parts.slice(1).join(':').trim();
+                    } else if (text.includes('-')) {
+                        let parts = text.split('-');
+                        role = parts[0].trim();
+                        device = parts.slice(1).join('-').trim();
                     }
                     addDeviceRow(role, device, false, text);
                 });
             }
-            
+
             const modal = document.getElementById('deviceModal');
-            modal.classList.remove('hidden', 'opacity-0'); 
+            modal.classList.remove('hidden', 'opacity-0');
             modal.classList.add('flex');
             document.getElementById('deviceModalContent').classList.remove('scale-95');
         }
 
         function closeDeviceEditor() {
             const modal = document.getElementById('deviceModal');
-            modal.classList.add('opacity-0'); 
+            modal.classList.add('opacity-0');
             document.getElementById('deviceModalContent').classList.add('scale-95');
             setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
         }
@@ -1785,7 +1602,6 @@ function togglePassword(elementId, realValue, btn) {
                 drop.id = 'globalDeviceDropdown';
                 drop.className = 'fixed bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg shadow-2xl z-[999999] max-h-[200px] overflow-y-auto hidden custom-scrollbar py-1';
                 document.body.appendChild(drop);
-                
                 window.addEventListener('scroll', (e) => {
                     if (e.target === drop) return;
                     drop.classList.add('hidden');
@@ -1797,20 +1613,17 @@ function togglePassword(elementId, realValue, btn) {
         function showCustomDropdown(inputElem) {
             activeDeviceInput = inputElem;
             const drop = initGlobalDropdown();
-            
             if (configDevices.length > 0) {
-                drop.innerHTML = configDevices.map(d => 
+                drop.innerHTML = configDevices.map(d =>
                     `<div class="dropdown-item px-3 py-2 text-[13px] hover:bg-indigo-50 dark:hover:bg-slate-700 cursor-pointer text-slate-700 dark:text-slate-300 transition-colors" onclick="selectDeviceOption('${escapeHtml(d).replace(/'/g, "\\'")}')">${escapeHtml(d)}</div>`
                 ).join('');
             } else {
                 drop.innerHTML = `<div class="px-3 py-2 text-[13px] text-slate-400 italic no-data-msg">Đang tải cấu hình...</div>`;
             }
-
             const rect = inputElem.getBoundingClientRect();
             drop.style.top = (rect.bottom + 4) + 'px';
             drop.style.left = rect.left + 'px';
             drop.style.width = rect.width + 'px';
-            
             drop.classList.remove('hidden');
             filterCustomDropdown(inputElem);
         }
@@ -1818,13 +1631,10 @@ function togglePassword(elementId, realValue, btn) {
         function filterCustomDropdown(inputElem) {
             const drop = document.getElementById('globalDeviceDropdown');
             if (!drop || drop.classList.contains('hidden')) return;
-
             const val = inputElem.value.toLowerCase().trim();
             const items = drop.querySelectorAll('.dropdown-item');
             let hasVisible = false;
-
-            delete drop.dataset.activeIndex; 
-            
+            delete drop.dataset.activeIndex;
             items.forEach(item => {
                 item.classList.remove('dropdown-item-active');
                 if (item.innerText.toLowerCase().includes(val)) {
@@ -1834,7 +1644,6 @@ function togglePassword(elementId, realValue, btn) {
                     item.style.display = 'none';
                 }
             });
-
             if (hasVisible) {
                 drop.classList.remove('hidden');
                 const rect = inputElem.getBoundingClientRect();
@@ -1848,12 +1657,9 @@ function togglePassword(elementId, realValue, btn) {
         function handleDropdownKey(e, inputElem) {
             const drop = document.getElementById('globalDeviceDropdown');
             if (!drop || drop.classList.contains('hidden')) return;
-
             const items = Array.from(drop.querySelectorAll('.dropdown-item')).filter(item => item.style.display !== 'none');
             if (items.length === 0) return;
-
             let currentIndex = drop.dataset.activeIndex ? parseInt(drop.dataset.activeIndex) : -1;
-
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 currentIndex = currentIndex + 1 >= items.length ? 0 : currentIndex + 1;
@@ -1883,27 +1689,22 @@ function togglePassword(elementId, realValue, btn) {
                 activeDeviceInput.focus();
             }
             const drop = document.getElementById('globalDeviceDropdown');
-            if(drop) drop.classList.add('hidden');
+            if (drop) drop.classList.add('hidden');
         }
 
         function addDeviceRow(role, device, isNew = true, originalFullText = "") {
             const container = document.getElementById('deviceListContainer');
-            const rowId = 'dev_row_' + Date.now() + Math.floor(Math.random()*1000);
-            
+            const rowId = 'dev_row_' + Date.now() + Math.floor(Math.random() * 1000);
             let html = `
             <div id="${rowId}" class="device-row flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-50 dark:bg-slate-900/50 p-3 sm:p-2 rounded-lg border border-slate-200 dark:border-slate-700" data-isnew="${isNew}" data-original="${escapeHtml(originalFullText)}">
                 <input type="text" class="role-input w-[calc(40%-0.25rem)] sm:w-28 px-3 py-2 text-[13px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md outline-none focus:border-indigo-500 transition-colors" value="${escapeHtml(role)}" placeholder="Vai trò (VD: MC)">
                 <span class="font-bold text-slate-400 hidden sm:block">:</span>
-                
                 <div class="relative w-[calc(60%-0.25rem)] sm:flex-1">
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
                     </div>
-                    <input type="text" class="device-input w-full pl-3 pr-8 py-2 text-[13px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md outline-none focus:border-indigo-500 transition-colors" 
-                           value="${escapeHtml(device)}" placeholder="Tên thiết bị..." 
-                           onfocus="showCustomDropdown(this)" oninput="filterCustomDropdown(this)" onkeydown="handleDropdownKey(event, this)">
+                    <input type="text" class="device-input w-full pl-3 pr-8 py-2 text-[13px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md outline-none focus:border-indigo-500 transition-colors" value="${escapeHtml(device)}" placeholder="Tên thiết bị..." onfocus="showCustomDropdown(this)" oninput="filterCustomDropdown(this)" onkeydown="handleDropdownKey(event, this)">
                 </div>
-                
                 <button onclick="document.getElementById('${rowId}').remove()" class="w-full mt-1 sm:mt-0 sm:w-9 sm:h-9 py-2 sm:py-0 flex items-center justify-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-rose-400 hover:text-white hover:bg-rose-500 hover:border-rose-500 rounded-md transition-colors shadow-sm"><i class="fa-solid fa-trash text-xs"></i><span class="sm:hidden text-xs font-semibold">Xoá thiết bị này</span></button>
             </div>`;
             container.insertAdjacentHTML('beforeend', html);
@@ -1911,61 +1712,54 @@ function togglePassword(elementId, realValue, btn) {
 
         function saveDeviceData() {
             const btn = document.getElementById('btnSaveDevice');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...'; 
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...';
             btn.disabled = true;
 
             let resultArr = [];
             let logsToPush = [];
-            let currentOriginals = []; 
+            let currentOriginals = [];
 
-            for(let row of document.getElementById('deviceListContainer').children) {
+            for (let row of document.getElementById('deviceListContainer').children) {
                 let role = row.querySelector('.role-input').value.trim();
                 let device = row.querySelector('.device-input').value.trim();
                 let fullText = role ? `${role}: ${device}` : device;
-                
                 let isNew = row.getAttribute('data-isnew') === "true";
                 let original = row.getAttribute('data-original');
-                
-                if(fullText) {
+
+                if (fullText) {
                     resultArr.push(fullText);
-                    
                     if (isNew) {
                         logsToPush.push({ action: 'Thêm thiết bị', dev: fullText });
                         triggerPrimeRadiantAlarm(allData[currentEditIndex].tenIdol || allData[currentEditIndex].email, fullText);
-                    } else if (original !== fullText) {
-                        currentOriginals.push(original); 
                     } else {
-                        currentOriginals.push(original); 
+                        currentOriginals.push(original);
                     }
                 }
             }
-            
+
             originalDevicesForLog.forEach(orig => {
-                if (!currentOriginals.includes(orig)) {
-                    logsToPush.push({ action: 'Xóa thiết bị', dev: orig });
-                }
+                if (!currentOriginals.includes(orig)) logsToPush.push({ action: 'Xóa thiết bị', dev: orig });
             });
 
             const finalString = resultArr.join(', ');
-            const item = allData[currentEditIndex]; 
+            const item = allData[currentEditIndex];
 
             runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
-                .then(res => {
+                .then(() => {
                     logsToPush.forEach(l => {
-                        runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: l.action, device: l.dev, pass: sessionPass }).catch(e=>console.log(e));
+                        runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: l.action, device: l.dev, pass: sessionPass }).catch(() => {});
                     });
-                    
-                    allData[currentEditIndex].thietBiIdol = finalString; 
-                    allData[currentEditIndex].thietBiTroLi = ""; 
-                    renderTable(allData); 
+                    allData[currentEditIndex].thietBiIdol = finalString;
+                    allData[currentEditIndex].thietBiTroLi = "";
+                    renderTable(allData);
                     closeDeviceEditor();
-                    showToast('Đã lưu thiết bị thành công', 'success'); 
-                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu'; 
+                    showToast('Đã lưu thiết bị thành công', 'success');
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu';
                     btn.disabled = false;
                 })
                 .catch(err => {
-                    showToast(err.message, 'error'); 
-                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu'; 
+                    showToast(err.message, 'error');
+                    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Lưu';
                     btn.disabled = false;
                 });
         }
