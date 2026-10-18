@@ -25,7 +25,9 @@
             overscroll-behavior: none;
             position: fixed;
             inset: 0;
+            background-color: #f1f5f9; /* Phủ màu nền sáng lấp đầy viền đáy iPhone */
         }
+        
         .password-text { transition: opacity 0.12s ease-in-out; opacity: 1; }
         .password-text.fade-out { opacity: 0; }
 
@@ -137,7 +139,7 @@
         .peek-real { position: absolute; top: 0; left: 0; color: #4f46e5; font-family: monospace; font-weight: 800; letter-spacing: 0.1em; white-space: nowrap; -webkit-mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); opacity: 0; transition: opacity 0.15s ease; pointer-events: none; text-shadow: 0 0 2px rgba(79, 70, 229, 0.4); }
         .peek-container:hover .peek-real { opacity: 1; }
 
-        html.dark body, html.dark main, html.dark .bg-slate-100 { background-color: #0f172a !important; color: #f1f5f9 !important; }
+        html.dark, html.dark body, html.dark main, html.dark .bg-slate-100 { background-color: #0f172a !important; color: #f1f5f9 !important; } /* Thêm html.dark để lấp đầy viền đáy chế độ tối */
         html.dark .bg-white { background-color: #1e293b !important; border-color: #334155 !important; }
         html.dark .border-slate-200, html.dark .border-slate-100, html.dark .border-slate-300 { border-color: #334155 !important; }
         html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: #334155 !important; }
@@ -1652,7 +1654,7 @@
             document.getElementById('scanModalSubtitle').innerText = `Đã quét xong ${allData.length} bản ghi`;
             if (duplicates.length === 0) {
                 body.innerHTML = `<div class="text-center py-10"><div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl"><i class="fa-solid fa-check"></i></div><h4 class="font-bold text-slate-800 dark:text-white text-base">Không có dữ liệu trùng lặp!</h4><p class="text-xs text-slate-500 mt-1">Tất cả Email và TikTok ID đều là duy nhất.</p></div>`;
-                return;
+                return
             }
             let html = `<div class="mb-3 text-xs font-bold text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-base"></i> Phát hiện ${duplicates.length} mục trùng lặp:</div>`;
             duplicates.forEach(dup => {
@@ -1971,23 +1973,25 @@
                 });
         }
 
-        // ================= CẢM ỨNG VUỐT ĐỂ ĐÓNG (SWIPE TO DISMISS) =================
+ //    ================= CẢM ỨNG VUỐT ĐỂ ĐÓNG (SWIPE TO DISMISS) TỐI ƯU =================
         let touchStartY = 0;
         let touchCurrentY = 0;
         let isSwipingSheet = false;
         let activeSheet = null;
+        let sheetPanels = []; // Chỉ nhắm mục tiêu vào các thẻ nội dung, bỏ qua nền mờ
 
         document.addEventListener('touchstart', function(e) {
             const sheet = e.target.closest('tr.mobile-expanded');
             if (!sheet) return;
             
-            // Lấy vị trí ngón tay chạm vào. Chỉ kích hoạt vuốt khi nội dung đang cuộn ở tít trên cùng
             if (sheet.scrollTop <= 0) {
                 activeSheet = sheet;
+                // Chỉ lấy phần Tiêu đề và Nội dung để kéo
+                sheetPanels = activeSheet.querySelectorAll('.mobile-sheet-header, .mobile-collapsible');
                 touchStartY = e.touches[0].clientY;
                 touchCurrentY = touchStartY;
                 isSwipingSheet = true;
-                activeSheet.style.transition = 'none'; // Tắt độ trễ để sheet bám sát ngón tay
+                sheetPanels.forEach(p => p.style.transition = 'none');
             }
         }, {passive: true});
 
@@ -1997,12 +2001,12 @@
             touchCurrentY = e.touches[0].clientY;
             let deltaY = touchCurrentY - touchStartY;
             
-            // Nếu phát hiện đang vuốt hướng xuống > 5px
+            // Kéo thẻ nội dung xuống, nền mờ đứng yên
             if (deltaY > 5) {
-                activeSheet.style.transform = `translateY(${deltaY}px)`;
-                if (e.cancelable) e.preventDefault(); // Khóa cuộn màn hình để kéo sheet
+                sheetPanels.forEach(p => p.style.transform = `translateY(${deltaY}px)`);
+                if (e.cancelable) e.preventDefault();
             } else {
-                activeSheet.style.transform = 'translateY(0)';
+                sheetPanels.forEach(p => p.style.transform = 'translateY(0)');
             }
         }, {passive: false});
 
@@ -2010,28 +2014,26 @@
             if (!activeSheet) return;
             
             let deltaY = touchCurrentY - touchStartY;
-            activeSheet.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+            sheetPanels.forEach(p => p.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)');
             
             if (isSwipingSheet && deltaY > 120) {
-                // Nếu vuốt xuống quá 120px -> Kéo tuột xuống và tự động đóng
-                activeSheet.style.transform = 'translateY(100%)';
+                // Đẩy thẻ tuột hẳn xuống dưới
+                sheetPanels.forEach(p => p.style.transform = 'translateY(100vh)');
                 const index = activeSheet.getAttribute('data-index');
                 setTimeout(() => {
-                    toggleMobileRow(index); // Kích hoạt hàm đóng có sẵn của anh
-                    if (activeSheet) {
-                        activeSheet.style.transform = '';
-                        activeSheet.style.transition = '';
-                        activeSheet = null;
-                    }
+                    toggleMobileRow(index); // Đóng thẻ
+                    sheetPanels.forEach(p => { p.style.transform = ''; p.style.transition = ''; });
+                    activeSheet = null;
+                    sheetPanels = [];
                 }, 250);
             } else {
-                // Nếu vuốt nhẹ chưa đủ lực -> Nhả tay ra sheet nảy ngược lại lên
-                activeSheet.style.transform = 'translateY(0)';
+                // Nhả tay ra thì nảy trở lại vị trí cũ
+                sheetPanels.forEach(p => p.style.transform = 'translateY(0)');
                 setTimeout(() => {
                     if (activeSheet) {
-                        activeSheet.style.transform = '';
-                        activeSheet.style.transition = '';
+                        sheetPanels.forEach(p => { p.style.transform = ''; p.style.transition = ''; });
                         activeSheet = null;
+                        sheetPanels = [];
                     }
                 }, 250);
             }
