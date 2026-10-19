@@ -118,57 +118,95 @@
     .vip-badge::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); animation: shine-badge 2s infinite; }
     @keyframes shine-badge { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
 
-    /* Các thành phần phụ trợ chỉ hiển thị trên Mobile */
-    .mobile-only-el { display: none; }
-    #mobileMoveBanner { display: none; }
+    /* ==========================================================================
+       CÁC PHẦN TỬ CHỈ HIỂN THỊ TRÊN MOBILE (ẨN HOÀN TOÀN TRÊN DESKTOP > 768PX)
+       ========================================================================== */
+    .mobile-only-el,
+    .mobile-group-microtag,
+    .mobile-spacer-row,
+    #mobileSubHeader,
+    #mobileSmartView,
+    #mobileEmpCalendarModal,
+    #mobileMoveBanner,
     #mobileBackdrop { display: none; }
 
     /* ==========================================================================
-       CSS TỐI ƯU HÓA ĐỘC QUYỀN CHO MOBILE & IPHONE (KHÔNG ẢNH HƯỞNG DESKTOP)
+       GIAO DIỆN TỐI ƯU ĐỘC QUYỀN CHO IPHONE / MOBILE (<= 768PX)
        ========================================================================== */
     @media (max-width: 768px) {
       .mobile-only-el { display: inline-flex !important; align-items: center; justify-content: center; }
+      .mobile-group-microtag { 
+        display: inline-block !important; 
+        font-size: 0.55rem; 
+        font-weight: 800; 
+        color: #64748b; 
+        text-transform: uppercase; 
+        letter-spacing: 0.3px;
+        line-height: 1;
+      }
+      .mobile-spacer-row { display: table-row !important; }
+      .mobile-spacer-row td { 
+        height: 150px !important; 
+        border: none !important; 
+        background: transparent !important; 
+        pointer-events: none;
+      }
 
-      /* 1. Tối ưu lại Thanh Công Cụ (Toolbar) gọn gàng, chuẩn iOS */
+      /* Chống Safari iOS Auto-Zoom khi chạm vào input/select */
+      input, select, textarea { font-size: 16px !important; }
+
+      /* 1. THU GỌN THANH TOOLBAR TRÊN ĐẦU ĐỂ NHƯỜNG 85% MÀN HÌNH CHO LỊCH */
       .toolbar { 
         flex-direction: column; 
-        gap: 10px; 
-        padding: 12px 12px; 
+        gap: 8px; 
+        padding: 10px 10px 8px 10px; 
         align-items: stretch; 
-        margin-bottom: 8px;
-        position: relative;
-        z-index: 50;
+        margin-bottom: 0;
+        position: sticky;
+        top: 0;
+        z-index: 60;
       }
-      .toolbar h2 { 
-        font-size: 1.05rem; 
-        text-align: center; 
+      .toolbar-top-row-mobile {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 8px;
+        justify-content: space-between;
+        width: 100%;
+      }
+      .toolbar h2 { 
+        font-size: 1rem; 
+        font-weight: 800;
+        text-align: left; 
       }
       
       .month-picker { 
-        justify-content: center; 
+        justify-content: space-between; 
         background: var(--table-header);
-        padding: 6px;
+        padding: 4px 6px;
         border-radius: 10px;
         border: 1px solid var(--border-color);
+        gap: 6px;
       }
-      .month-picker button { padding: 6px 14px; font-size: 0.95rem; border-radius: 8px; }
-      .custom-month-selector { min-width: 130px; font-size: 1rem; padding: 4px 10px; }
+      .month-picker button { padding: 6px 12px; font-size: 0.85rem; border-radius: 8px; }
+      .custom-month-selector { min-width: 115px; font-size: 0.95rem; padding: 4px 6px; }
 
-      /* Chống Safari iOS Auto-Zoom bằng cách ép font-size >= 16px cho input/select */
-      input, select, textarea { font-size: 16px !important; }
-
+      /* Ngăn kéo Công cụ (Mặc định ẩn gọn, bấm nút Công cụ mới xổ xuống) */
       .tool-btns { 
-        display: grid !important; 
+        display: none !important; 
         grid-template-columns: repeat(2, 1fr); 
         gap: 8px !important; 
         width: 100%;
+        padding-top: 8px;
+        border-top: 1px dashed var(--border-color);
+        animation: fadeInDrawer 0.2s ease;
       }
-      
-      /* Khung chỉnh Quota trên Mobile nằm gọn 1 hàng */
+      .tool-btns.mobile-drawer-open {
+        display: grid !important;
+      }
+      @keyframes fadeInDrawer {
+        from { opacity: 0; transform: translateY(-6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
       .tool-btns > div:first-child {
         grid-column: 1 / -1;
         justify-content: space-between;
@@ -177,22 +215,21 @@
         border-radius: 8px !important;
       }
       .tool-btns > div:first-child span { font-size: 0.85rem !important; }
-      .tool-btns > div:first-child input { width: 60px !important; height: 32px; box-sizing: border-box; }
+      .tool-btns > div:first-child input { width: 65px !important; height: 32px; box-sizing: border-box; }
       .tool-btns > div:first-child button { flex: 0 0 auto !important; padding: 6px 16px !important; font-size: 0.85rem !important; }
 
-      /* Ô chọn người chiếm trọn 1 hàng */
       #personSelect { 
         grid-column: 1 / -1;
         width: 100% !important; 
         margin-bottom: 0 !important; 
-        padding: 10px 12px !important;
+        padding: 9px 12px !important;
         border-radius: 8px !important;
         background-color: var(--card-bg);
       }
 
       .tool-btns button { 
-        padding: 10px 8px !important; 
-        font-size: 0.8rem !important; 
+        padding: 9px 8px !important; 
+        font-size: 0.78rem !important; 
         margin-left: 0 !important; 
         border-radius: 8px !important;
         text-align: center;
@@ -200,100 +237,358 @@
         align-items: center;
         justify-content: center;
         gap: 4px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
       }
 
-      /* Nút Lưu (btnSaveChanges) trên Mobile biến thành Floating Action Pill ở đáy màn hình iPhone */
+      /* Nút Lưu (btnSaveChanges) luôn nổi ở đáy màn hình iPhone (bất kể đóng hay mở ngăn công cụ) */
       #btnSaveChanges {
         position: fixed !important;
-        bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+        bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
-        z-index: 9990 !important;
+        z-index: 9995 !important;
         width: 88% !important;
-        max-width: 360px !important;
-        padding: 14px 20px !important;
+        max-width: 350px !important;
+        padding: 13px 20px !important;
         border-radius: 999px !important;
-        font-size: 1rem !important;
+        font-size: 0.98rem !important;
         font-weight: 800 !important;
         background: linear-gradient(135deg, #f59e0b, #ea580c) !important;
         color: white !important;
-        box-shadow: 0 10px 25px -5px rgba(234, 88, 12, 0.6), 0 0 0 3px rgba(255,255,255,0.8) !important;
+        box-shadow: 0 10px 25px -5px rgba(234, 88, 12, 0.65), 0 0 0 3px rgba(255,255,255,0.9) !important;
         text-align: center !important;
       }
-      #btnSaveChanges:active {
-        transform: translateX(-50%) scale(0.95) !important;
+      #btnSaveChanges:active { transform: translateX(-50%) scale(0.95) !important; }
+
+      /* 2. THANH ĐIỀU KHIỂN CHẾ ĐỘ XEM & LỌC NHANH NHÓM TRÊN IPHONE */
+      #mobileSubHeader {
+        display: flex !important;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 10px;
+        background: var(--bg-color);
+      }
+      .mobile-mode-bar {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .mobile-view-switch {
+        display: flex;
+        background: #e2e8f0;
+        padding: 3px;
+        border-radius: 9px;
+        flex: 1;
+      }
+      .mobile-view-switch button {
+        flex: 1;
+        border: none;
+        background: transparent;
+        padding: 7px 6px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #475569;
+        border-radius: 7px;
+        cursor: pointer;
+        font-family: 'Inter', sans-serif;
+      }
+      .mobile-view-switch button.active {
+        background: #ffffff;
+        color: #2563eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .mobile-search-input {
+        width: 115px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        font-family: 'Inter', sans-serif;
+        outline: none;
+      }
+      .mobile-filter-pills {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .mobile-filter-pills::-webkit-scrollbar { display: none; }
+      .m-pill {
+        flex: 0 0 auto;
+        padding: 5px 11px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        background: var(--card-bg);
+        color: #475569;
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .m-pill.active {
+        background: #2563eb;
+        color: #ffffff;
+        border-color: #2563eb;
       }
 
-      /* 2. Bảng Lịch (Schedule Table) tối ưu vuốt chạm mượt mà trên iPhone */
-      .main-content { padding: 0 6px; padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+      /* 3. CHẾ ĐỘ 1: XEM THẺ & LỊCH THÁNG TRỰC QUAN (KHÔNG CẦN KÉO NGANG!) */
+      #mobileSmartView.active {
+        display: block !important;
+        padding: 0 4px 160px 4px; /* Đệm đáy 160px chống thanh Safari che khuất nhân sự cuối */
+      }
+      .m-dept-header {
+        background: #1e293b;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 0.75rem;
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin: 10px 0 6px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        letter-spacing: 0.4px;
+      }
+      .m-group-header {
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #475569;
+        padding: 6px 6px 4px 6px;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .m-emp-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .m-emp-card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+      .m-emp-info {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        min-width: 0;
+      }
+      .m-emp-name {
+        font-weight: 800;
+        font-size: 0.9rem;
+        color: var(--text-main);
+      }
+      .m-emp-quota {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 6px;
+        background: #f1f5f9;
+        color: #475569;
+      }
+      .m-emp-quota.full { background: #fee2e2; color: #dc2626; }
+      .m-emp-actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      .m-btn-icon {
+        background: #f1f5f9;
+        border: 1px solid var(--border-color);
+        color: #334155;
+        padding: 6px 9px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .m-btn-cal {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #2563eb;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 800;
+      }
+      .m-emp-dates {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .m-date-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 9px;
+        border-radius: 7px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .m-date-chip.off { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+      .m-date-chip.pend { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; animation: flash 2s infinite; }
+      .m-date-chip.swap { background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; }
+      .m-date-chip.draft-add { background: #dbeafe; color: #2563eb; border: 1px dashed #3b82f6; }
+      .m-date-chip.draft-del { background: #fee2e2; color: #991b1b; text-decoration: line-through; opacity: 0.65; }
+
+      /* TỜ LỊCH THÁNG CÁ NHÂN TRỰC QUAN TRÊN IPHONE (7 CỘT VỪA KHÍT MÀN HÌNH DỌC) */
+      #mobileEmpCalendarModal.active {
+        display: flex !important;
+        opacity: 1;
+        visibility: visible;
+      }
+      .m-cal-sheet {
+        background: var(--card-bg);
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 22px 22px 0 0 !important;
+        padding: 16px 12px calc(24px + env(safe-area-inset-bottom, 0px)) 12px !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        box-sizing: border-box;
+        box-shadow: 0 -10px 30px rgba(0,0,0,0.25);
+        animation: slideUpSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+      .m-cal-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8fafc;
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 10px;
+      }
+      .m-cal-nav button {
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #334155;
+      }
+      .m-cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        text-align: center;
+      }
+      .m-cal-dow {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: #64748b;
+        padding: 4px 0;
+      }
+      .m-cal-day {
+        height: 48px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+      }
+      .m-cal-day.empty { background: transparent; border-color: transparent; pointer-events: none; }
+      .m-cal-day.today { border: 2px solid #3b82f6; }
+      .m-cal-day .d-num { font-size: 0.85rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
+      .m-cal-day .d-tag { font-size: 0.58rem; font-weight: 800; margin-top: 2px; padding: 1px 4px; border-radius: 4px; line-height: 1.1; }
+      .m-cal-day.is-off { background: #fef2f2; border-color: #fca5a5; }
+      .m-cal-day.is-off .d-tag { background: #ef4444; color: white; }
+      .m-cal-day.is-pend { background: #fffbeb; border-color: #fcd34d; }
+      .m-cal-day.is-pend .d-tag { background: #f59e0b; color: white; }
+      .m-cal-day.is-draft-add { background: #eff6ff; border: 2px dashed #3b82f6; }
+      .m-cal-day.is-draft-add .d-tag { background: #3b82f6; color: white; }
+      .m-cal-day.is-draft-del { background: #fef2f2; opacity: 0.6; }
+      .m-cal-day.is-draft-del .d-tag { background: #64748b; color: white; text-decoration: line-through; }
+      .m-cal-day.is-move-src { background: #fef08a !important; border: 2px dashed #ca8a04 !important; }
+
+      /* 4. CHẾ ĐỘ 2: XEM BẢNG NGANG ĐÃ TỐI ƯU GỌN GÀNG (FIX LỖI ẢNH CHỤP) */
+      .main-content { padding: 0 6px; }
       .table-container { 
-        max-height: 74vh; 
+        max-height: calc(100dvh - 145px); 
         border-width: 1px; 
         border-radius: 10px; 
         -webkit-overflow-scrolling: touch; 
         overscroll-behavior: contain;
         position: relative;
       }
-      
-      th, td { height: 48px; } /* Tăng nhẹ chiều cao để ngón tay dễ chạm trên iPhone */
+      .table-container.mobile-hidden { display: none !important; }
 
-      .group-cell { 
-        width: 52px !important; 
-        min-width: 52px !important; 
-        max-width: 52px !important; 
-        font-size: 0.6rem; 
-        padding: 0 2px; 
-      }
-      .name-cell { 
-        width: 112px !important; 
-        min-width: 112px !important; 
-        max-width: 112px !important; 
-        font-size: 0.72rem; 
-        padding-left: 5px;
-      }
-      th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { 
-        width: 42px !important; 
-        min-width: 42px !important; 
-        max-width: 42px !important; 
-      }
-
-      /* Ghim cố định cột Nhóm & Tên khi vuốt ngang, đồng thời giữ Header khi cuộn dọc */
-      thead th { position: sticky; top: 0; z-index: 15; }
+      /* Ẩn cột NHÓM/群组 bên trái trên Mobile để tránh lỗi rớt chữ "ROYEN:ON / E" và mở rộng diện tích cột Ngày */
       thead th.group-cell, tbody td.group-cell { 
-        position: sticky; 
-        left: 0; 
-        z-index: 11; 
-        background: var(--card-bg); 
-        border-right: 1px solid var(--border-color) !important; 
+        display: none !important; 
       }
+
+      th, td { height: 42px; }
+
+      /* Cột TÊN bám sát mép trái (left: 0), gọn gàng, hiển thị cả nhãn nhóm + badge + quota trên 1 dòng */
       thead th.name-cell, tbody td.name-cell { 
         position: sticky; 
-        left: 52px; 
-        z-index: 11; 
+        left: 0 !important; 
+        z-index: 12; 
+        width: 124px !important; 
+        min-width: 124px !important; 
+        max-width: 124px !important; 
+        font-size: 0.72rem; 
+        padding: 3px 6px !important;
         background: var(--card-bg); 
         border-right: 2px solid var(--border-color) !important; 
         box-shadow: 3px 0 6px -2px rgba(0,0,0,0.12); 
       }
-      thead th.group-cell, thead th.name-cell { 
-        background: var(--table-header); 
-        z-index: 20 !important; 
+      
+      /* Fix lỗi dòng đầu tiên bị lộ nửa chữ dưới thanh Header TÊN/姓名 */
+      thead th { 
+        position: sticky; 
+        top: 0; 
+        z-index: 18 !important; 
+        background-color: var(--table-header) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      }
+      thead th.name-cell { 
+        background-color: var(--table-header) !important; 
+        z-index: 25 !important; 
       }
 
-      /* Dòng phân cách Bộ Phận trên Mobile: Chữ bám trái khi cuộn ngang */
+      th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { 
+        width: 40px !important; 
+        min-width: 40px !important; 
+        max-width: 40px !important; 
+      }
+
       .dept-divider {
         text-align: left !important;
-        padding-left: 14px !important;
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
+        padding-left: 12px !important;
+        font-size: 0.74rem;
+        height: 32px !important;
       }
 
-      .badge { width: 36px; height: 26px; font-size: 0.65rem; border-radius: 6px; }
+      .vip-badge { padding: 2px 6px; font-size: 0.58rem; border-radius: 8px; }
+      .badge { width: 34px; height: 24px; font-size: 0.62rem; border-radius: 5px; }
 
       /* Hiệu ứng khi đang ở chế độ "Chọn ngày mới để dời lịch OFF" trên iPhone */
       body.mobile-moving-mode .day-cell:not(.cell-off):not(.cell-pending) {
         background-color: rgba(16, 185, 129, 0.08) !important;
-        position: relative;
       }
       body.mobile-moving-mode .day-cell.moving-source-cell {
         background-color: #fef08a !important;
@@ -301,45 +596,39 @@
         outline-offset: -2px;
       }
 
-      /* Thanh hướng dẫn nổi khi đang dời ngày trên iPhone */
       #mobileMoveBanner.active {
         display: flex !important;
         position: fixed;
-        top: 12px;
+        top: 10px;
         left: 50%;
         transform: translateX(-50%);
-        width: 92%;
+        width: 94%;
         max-width: 400px;
         background: #0f172a;
         color: #ffffff;
-        padding: 12px 14px;
+        padding: 10px 14px;
         border-radius: 12px;
-        z-index: 10001;
+        z-index: 10005;
         box-shadow: 0 15px 30px rgba(0,0,0,0.35), 0 0 0 2px #3b82f6;
         align-items: center;
         justify-content: space-between;
         gap: 10px;
         box-sizing: border-box;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         line-height: 1.35;
-        animation: slideDownBanner 0.25s ease-out;
-      }
-      @keyframes slideDownBanner {
-        from { transform: translate(-50%, -100%); opacity: 0; }
-        to { transform: translate(-50%, 0); opacity: 1; }
       }
       #mobileMoveBanner button {
         background: #ef4444;
         color: white;
         border: none;
-        padding: 8px 12px;
+        padding: 7px 12px;
         border-radius: 8px;
         font-weight: 700;
         font-size: 0.75rem;
         flex-shrink: 0;
       }
 
-      /* 3. Context Menu biến thành iOS Bottom Sheet trên iPhone */
+      /* Context Menu biến thành iOS Bottom Sheet trên iPhone */
       #mobileBackdrop.active {
         display: block !important;
         position: fixed;
@@ -371,15 +660,14 @@
         to { transform: translateY(0); }
       }
       .context-menu-item {
-        padding: 13px 16px !important;
-        font-size: 0.95rem !important;
+        padding: 12px 16px !important;
+        font-size: 0.92rem !important;
         border-radius: 10px;
         margin-bottom: 6px;
         background: var(--table-header);
         justify-content: center;
       }
 
-      /* 4. Tối ưu Modal & Toast trên iPhone */
       .modal-box { 
         width: 92% !important; 
         max-width: 400px !important;
@@ -396,15 +684,15 @@
         left: 50%; 
         transform: translateX(-50%) translateY(-20px); 
         right: auto; 
-        top: calc(14px + env(safe-area-inset-top, 0px));
+        top: calc(12px + env(safe-area-inset-top, 0px));
         bottom: auto; 
         width: 88%; 
         max-width: 360px;
         text-align: center; 
         border-radius: 999px;
         padding: 10px 16px;
-        font-size: 0.85rem;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        font-size: 0.82rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.25);
       }
       #toast.show { transform: translateX(-50%) translateY(0); }
       
@@ -432,7 +720,7 @@
       window.db = getFirestore(app);
       window.fs = { collection, getDocs, doc, setDoc, deleteDoc, writeBatch };
   </script>
-  <!-- Chỉ nạp thư viện drag-drop-touch khi ở màn hình lớn (PC/Tablet ngang) để tránh làm kẹt thao tác vuốt bảng trên iPhone -->
+  <!-- Chỉ nạp thư viện drag-drop-touch trên màn hình lớn (PC) để không làm kẹt thao tác vuốt trên iPhone -->
   <script>
     if (window.innerWidth > 768) {
       const ddtScript = document.createElement('script');
@@ -442,7 +730,6 @@
   </script>
 </head>
 <body>
-  <!-- Lớp nền mờ và Thanh điều hướng đổi ngày độc quyền cho Mobile -->
   <div id="mobileBackdrop" onclick="closeAllMobileSheets()"></div>
   <div id="mobileMoveBanner">
     <div id="mobileMoveBannerText">Đang chọn ngày mới...</div>
@@ -453,15 +740,22 @@
   <input type="hidden" id="contextMenuEmpName">
 
   <div class="toolbar">
-    <h2>Trang Quản Trị (Admin)</h2>
+    <div class="toolbar-top-row-mobile">
+      <h2>Trang Quản Trị (Admin)</h2>
+      <!-- Cụm nút thu gọn công cụ chỉ hiện trên iPhone -->
+      <div class="mobile-only-el" style="gap: 6px;">
+        <button type="button" onclick="refreshData()" style="background: var(--table-header); border: 1px solid var(--border-color); padding: 6px 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; color: var(--text-main);">🔄</button>
+        <button type="button" id="mobileDrawerToggleBtn" onclick="toggleMobileToolDrawer()" style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 6px 11px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; color: #2563eb;">🛠️ Công cụ ▾</button>
+      </div>
+    </div>
+
     <div class="month-picker" style="position: relative;">
       <button onclick="changeMonth(-1)">◀</button>
       <div class="custom-month-selector" onclick="toggleMonthPicker(event)">
         <span id="monthLabel">Tháng / Năm</span>
       </div>
       <button onclick="changeMonth(1)">▶</button>
-      <!-- Nút nhảy nhanh tới cột Hôm Nay trên iPhone -->
-      <button type="button" class="mobile-only-el" onclick="scrollToTodayCol(true)" style="font-size: 0.75rem; font-weight: 700; padding: 6px 10px; background: #eff6ff; color: #2563eb; border-color: #bfdbfe;">📍 Hôm nay</button>
+      <button type="button" class="mobile-only-el" id="mobileTodayJumpBtn" onclick="scrollToTodayCol(true)" style="font-size: 0.74rem; font-weight: 700; padding: 6px 10px; background: #eff6ff; color: #2563eb; border-color: #bfdbfe;">📍 Hôm nay</button>
 
       <div id="monthDropdown" class="month-dropdown">
         <div class="year-selector">
@@ -473,7 +767,7 @@
       </div>
     </div>
     
-    <div class="tool-btns" style="display: flex; gap: 8px; align-items: center;">
+    <div class="tool-btns" id="adminToolBtns" style="display: flex; gap: 8px; align-items: center;">
       <!-- THÊM GIAO DIỆN CHỈNH QUOTA -->
       <div style="display: flex; align-items: center; gap: 5px; background: var(--table-header); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); margin-right: 10px;">
         <span style="font-size: 0.75rem; font-weight: 600;">Quota (Ngày):</span>
@@ -489,12 +783,29 @@
       <button style="background: #2563eb !important; color: white !important;" onclick="openAddEmployeeModal()">➕ Thêm NS</button>
       <button style="background: #3b82f6 !important; color: white !important;" onclick="approveAll()">✅ Duyệt Tất Cả</button>
       <button style="background: #10b981 !important; color: white !important;" onclick="exportImage()">📸 Xuất Ảnh</button>
-      <button id="btnSaveChanges" style="background: #f59e0b !important; color: white !important; display: none; font-size: 1rem; font-weight: 800; padding: 8px 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" onclick="saveBulkChanges()">💾 Lưu (0)</button>
       <button onclick="refreshData()">🔄 Mới</button>
     </div>
+    <!-- Nút Lưu đặt độc lập để luôn nổi trên Mobile khi có thay đổi và vẫn nằm đúng chỗ trên PC -->
+    <button id="btnSaveChanges" style="background: #f59e0b !important; color: white !important; display: none; font-size: 1rem; font-weight: 800; padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);" onclick="saveBulkChanges()">💾 Lưu (0)</button>
+  </div>
+
+  <!-- THANH CHUYỂN CHẾ ĐỘ XEM & LỌC NHANH TRÊN IPHONE (ẨN HOÀN TOÀN TRÊN PC) -->
+  <div id="mobileSubHeader">
+    <div class="mobile-mode-bar">
+      <div class="mobile-view-switch">
+        <button type="button" id="btnModeSmart" class="active" onclick="setMobileViewMode('smart')">📅 Thẻ & Lịch (Không kéo ngang)</button>
+        <button type="button" id="btnModeTable" onclick="setMobileViewMode('table')">📊 Bảng Gọn</button>
+      </div>
+      <input type="text" id="mobileQuickSearch" class="mobile-search-input" placeholder="🔍 Tìm tên..." oninput="handleMobileSearch()">
+    </div>
+    <div class="mobile-filter-pills" id="mobileGroupPills"></div>
   </div>
 
   <div class="main-content">
+    <!-- CHẾ ĐỘ 1 TRÊN IPHONE: XEM THẺ & LỊCH TRỰC QUAN KHÔNG CẦN KÉO NGANG -->
+    <div id="mobileSmartView"></div>
+
+    <!-- CHẾ ĐỘ 2 (VÀ MẶC ĐỊNH TRÊN PC): BẢNG LƯỚI -->
     <div class="table-container" id="captureArea">
       <table id="scheduleTable">
         <thead id="tableHead"></thead>
@@ -504,6 +815,36 @@
   </div>
   
   <div id="toast">Đang đồng bộ...</div>
+
+  <!-- MODAL LỊCH THÁNG CÁ NHÂN TRỰC QUAN TRÊN IPHONE (CHẤM/ĐỔI LỊCH KHÔNG CẦN KÉO NGANG) -->
+  <div class="modal-overlay" id="mobileEmpCalendarModal" onclick="closeMobileEmpCalendar(event)">
+    <div class="m-cal-sheet" onclick="event.stopPropagation()">
+      <div class="m-cal-nav">
+        <button type="button" onclick="StepMobileCalendarEmp(-1)">◀ Trước</button>
+        <div style="text-align: center;">
+          <div id="mCalEmpName" style="font-weight: 800; font-size: 1rem; color: #0f172a;">Tên Nhân Sự</div>
+          <div id="mCalEmpSub" style="font-size: 0.72rem; color: #64748b; font-weight: 600;">Nhóm • Quota</div>
+        </div>
+        <button type="button" onclick="StepMobileCalendarEmp(1)">Tiếp ▶</button>
+      </div>
+
+      <div id="mCalMoveHint" style="display:none; background:#fef08a; color:#854d0e; padding:8px 10px; border-radius:8px; font-size:0.76rem; font-weight:700; margin-bottom:8px; justify-content:space-between; align-items:center;">
+        <span id="mCalMoveHintText">Chạm vào 1 ngày trống để chuyển lịch OFF tới</span>
+        <button type="button" onclick="cancelMobileCalMove()" style="background:#ca8a04; color:white; border:none; padding:4px 8px; border-radius:6px; font-size:0.7rem; font-weight:800;">Hủy dời</button>
+      </div>
+
+      <div class="m-cal-grid" id="mCalGrid"></div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:10px; border-top:1px solid var(--border-color); font-size:0.7rem; color:#64748b; font-weight:600;">
+        <span>💡 Chạm ô trống: <b>Thêm OFF</b> • Chạm ô đỏ: <b>Xóa / Dời ngày</b></span>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" style="flex:1; padding:11px; border-radius:10px; border:1px solid var(--border-color); background:#f1f5f9; color:#334155; font-weight:700; font-size:0.85rem;" onclick="openBadgeFromMobileCal()">🏷️ Badge / Xóa NS</button>
+        <button type="button" style="flex:1; padding:11px; border-radius:10px; border:none; background:#2563eb; color:white; font-weight:800; font-size:0.85rem;" onclick="closeMobileEmpCalendar()">✅ Xong</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="badgeLibraryModal">
     <div class="modal-box">
@@ -595,7 +936,6 @@
     </div>
   </div>
 
-  <!-- Modal hiển thị ảnh xuất trên iPhone để hỗ trợ Nhấn Giữ -> Lưu vào Ảnh (Fix lỗi Safari chặn auto-download base64) -->
   <div class="modal-overlay" id="iosImagePreviewModal">
     <div class="modal-box" style="text-align: center;">
       <h3 style="margin-top:0; color: #10b981;">📸 Ảnh Lịch Nghỉ Đã Sẵn Sàng</h3>
@@ -611,7 +951,6 @@
   </div>
 
   <script>
-    // BẮT BUỘC ĐIỀN LINK GOOGLE APPS SCRIPT WEB APP VÀO ĐÂY
     const API_URL = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec"; 
 
     let employeesData = [], leavesData = [], badgesData = {};
@@ -624,12 +963,71 @@
     let fpInstance = null; 
     let draftQueue = []; 
 
-    // BIẾN QUẢN LÝ TRẠNG THÁI DỜI NGÀY ĐỘC QUYỀN TRÊN MOBILE (KHÔNG ẢNH HƯỞNG PC)
-    let mobileMoveState = null; // { name, role, oldDate }
-    let hasInitialScrolledMobile = false;
+    // BIẾN QUẢN LÝ GIAO DIỆN MOBILE ĐỘC LẬP (KHÔNG ẢNH HƯỞNG PC)
+    let mobileMoveState = null; 
+    let mobileViewMode = 'smart'; // 'smart' (Thẻ & Lịch không kéo ngang) | 'table' (Bảng gọn)
+    let mobileGroupFilter = 'ALL';
+    let mobileSearchQuery = '';
+    let activeMobileCalEmpName = null;
+    let mobileCalMoveOldDate = null;
 
     function isMobileView() {
       return window.innerWidth <= 768;
+    }
+
+    function toggleMobileToolDrawer() {
+      const drawer = document.getElementById('adminToolBtns');
+      const btn = document.getElementById('mobileDrawerToggleBtn');
+      if (!drawer) return;
+      const isOpen = drawer.classList.toggle('mobile-drawer-open');
+      if (btn) {
+        btn.innerHTML = isOpen ? '🛠️ Đóng ▴' : '🛠️ Công cụ ▾';
+        btn.style.background = isOpen ? '#dbeafe' : '#eff6ff';
+      }
+    }
+
+    function setMobileViewMode(mode) {
+      mobileViewMode = mode;
+      document.getElementById('btnModeSmart').classList.toggle('active', mode === 'smart');
+      document.getElementById('btnModeTable').classList.toggle('active', mode === 'table');
+      const todayJumpBtn = document.getElementById('mobileTodayJumpBtn');
+      if (todayJumpBtn) todayJumpBtn.style.display = (mode === 'table') ? 'inline-flex' : 'none';
+      syncMobileDisplayContainers();
+      if (mode === 'table') {
+        setTimeout(() => scrollToTodayCol(false), 150);
+      }
+    }
+
+    function syncMobileDisplayContainers() {
+      const smartEl = document.getElementById('mobileSmartView');
+      const tableEl = document.getElementById('captureArea');
+      if (!isMobileView()) {
+        if (smartEl) smartEl.classList.remove('active');
+        if (tableEl) tableEl.classList.remove('mobile-hidden');
+        return;
+      }
+      if (mobileViewMode === 'smart') {
+        if (smartEl) smartEl.classList.add('active');
+        if (tableEl) tableEl.classList.add('mobile-hidden');
+      } else {
+        if (smartEl) smartEl.classList.remove('active');
+        if (tableEl) tableEl.classList.remove('mobile-hidden');
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      syncMobileDisplayContainers();
+    });
+
+    function handleMobileSearch() {
+      const input = document.getElementById('mobileQuickSearch');
+      mobileSearchQuery = input ? input.value.trim().toLowerCase() : '';
+      renderTable();
+    }
+
+    function setMobileGroupFilter(filterVal) {
+      mobileGroupFilter = filterVal;
+      renderTable();
     }
 
     // HÀM GỌI API BẰNG FIREBASE SIÊU TỐC
@@ -728,7 +1126,15 @@
         } catch (error) { console.error(error); throw error; }
     }
 
-    document.addEventListener("DOMContentLoaded", () => { updateMonthLabel(); refreshData(); });
+    document.addEventListener("DOMContentLoaded", () => { 
+      updateMonthLabel(); 
+      syncMobileDisplayContainers();
+      const todayJumpBtn = document.getElementById('mobileTodayJumpBtn');
+      if (isMobileView() && todayJumpBtn && mobileViewMode === 'smart') {
+        todayJumpBtn.style.display = 'none';
+      }
+      refreshData(); 
+    });
 
     function closeAllMobileSheets() {
       let menu = document.getElementById('badgeContextMenu');
@@ -738,7 +1144,7 @@
     }
 
     function openBadgeContextMenu(event, empName) {
-        event.preventDefault(); event.stopPropagation();
+        if (event) { event.preventDefault(); event.stopPropagation(); }
         let menu = document.getElementById('badgeContextMenu'); 
         document.getElementById('contextMenuEmpName').value = empName;
         
@@ -747,12 +1153,11 @@
           html += `<div style="text-align:center; font-weight:800; font-size:1rem; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border-color); color:var(--text-main);">👤 Tùy chọn: ${empName}</div>`;
         }
         
-        // Gắn danh sách Badge lên trước để dễ bấm trên điện thoại
         for (let key in badgesData) { 
           html += `<div class="context-menu-item" onclick="submitContextBadge('${key}')"><span class="vip-badge" style="background: ${badgesData[key]}; border:none; margin-left:0;">${key}</span></div>`; 
         }
         
-        html += `<div class="context-menu-item text-danger" onclick="submitContextBadge('')">🗑️ Gỡ bỏ Badge hiện tại</div>`;
+        html += `<div class="context-menu-item text-danger" onclick="submitContextBadge('')">🗑️ Hủy / Xóa Badge</div>`;
         html += `<div class="context-menu-divider"></div>`;
         html += `<div class="context-menu-item" style="color: #ef4444; font-weight: 800; background: #fee2e2; margin-top: 8px;" onclick="requestDeleteEmployee('${empName}')">❌ XÓA NHÂN SỰ NÀY</div>`;
         
@@ -765,7 +1170,7 @@
 
         if (isMobileView()) {
           document.getElementById('mobileBackdrop').classList.add('active');
-        } else {
+        } else if (event) {
           let x = event.pageX; let y = event.pageY;
           if (x + menu.offsetWidth > window.innerWidth) x = window.innerWidth - menu.offsetWidth - 10;
           if (y + menu.offsetHeight > window.innerHeight) y = window.innerHeight - menu.offsetHeight - 10;
@@ -773,9 +1178,9 @@
         }
     }
 
-    // HÀM HIỂN THỊ CẢNH BÁO XÓA
     window.requestDeleteEmployee = function(name) {
         closeAllMobileSheets();
+        closeMobileEmpCalendar();
         if(isSyncing) return showToast("Hệ thống đang bận...", false, true);
         
         document.getElementById('modalTitle').innerHTML = "❌ Xóa Nhân Sự";
@@ -792,9 +1197,12 @@
         document.getElementById('customModal').classList.add('active');
     };
 
-    // HÀM BẮN LỆNH XÓA LÊN FIREBASE
     window.executeDeleteEmployee = function(name) {
-        isSyncing = true; showToast(`⏳ Đang xóa ${name}...`, true); callAPI('deleteEmployee', { name: name }) .then(res => { isSyncing = false; if (res === "SUCCESS") { showToast(`✅ Đã xóa ${name} thành công!`); refreshData(); } 
+        isSyncing = true; showToast(`⏳ Đang xóa ${name}...`, true);
+        callAPI('deleteEmployee', { name: name })
+            .then(res => { 
+                isSyncing = false; 
+                if (res === "SUCCESS") { showToast(`✅ Đã xóa ${name} thành công!`); refreshData(); } 
                 else { showToast(res, false, true); refreshData(); } 
             })
             .catch(err => { isSyncing = false; showToast("Lỗi kết nối", false, true); refreshData(); });
@@ -811,13 +1219,25 @@
       }
     });
 
+    function updateSaveButtonUI() {
+      const btnSave = document.getElementById('btnSaveChanges');
+      if (!btnSave) return;
+      if (draftQueue.length > 0) {
+        btnSave.style.display = 'inline-block';
+        btnSave.innerText = `💾 Lưu (${draftQueue.length})`;
+      } else {
+        btnSave.style.display = 'none';
+      }
+    }
+
     function submitContextBadge(badgeName) {
       closeAllMobileSheets();
       let empName = document.getElementById('contextMenuEmpName').value; let emp = employeesData.find(e => e.name === empName);
       if(emp) emp.customBadge = badgeName; renderTable();
       let existingIdx = draftQueue.findIndex(d => d.type === 'BADGE' && d.name === empName);
       if (existingIdx > -1) draftQueue[existingIdx].badgeName = badgeName; else draftQueue.push({ type: 'BADGE', name: empName, badgeName: badgeName });
-      const btnSave = document.getElementById('btnSaveChanges'); btnSave.style.display = 'inline-block'; btnSave.innerText = `💾 Lưu (${draftQueue.length})`;
+      updateSaveButtonUI();
+      if (activeMobileCalEmpName) renderMobileEmpCalendar();
     }
 
     function generateBadgeHTML(emp) {
@@ -832,14 +1252,13 @@
     function renderPickerGrid() { document.getElementById('pickerYearLabel').innerText = tempPickerYear; const grid = document.getElementById('monthGrid'); grid.innerHTML = ''; const months = ["Thg 1", "Thg 2", "Thg 3", "Thg 4", "Thg 5", "Thg 6", "Thg 7", "Thg 8", "Thg 9", "Thg 10", "Thg 11", "Thg 12"]; months.forEach((m, idx) => { let isCurrent = (idx === displayMonth && tempPickerYear === displayYear); grid.innerHTML += `<button type="button" class="month-btn ${isCurrent ? 'active' : ''}" onclick="selectSpecificMonth(${idx}, event)">${m}</button>`; }); }
     function selectSpecificMonth(mIdx, event) { if(event) event.stopPropagation(); cancelMobileMoveMode(); displayMonth = mIdx; displayYear = tempPickerYear; updateMonthLabel(); renderTable(); document.getElementById('monthDropdown').classList.remove('active'); }
 
-    // Hàm cuộn nhanh tới cột Hôm Nay trên Mobile
     function scrollToTodayCol(forceToast = false) {
       if (!isMobileView()) return;
       const container = document.getElementById('captureArea');
       const todayHeader = container ? container.querySelector('thead th.today-col') : null;
       if (todayHeader && container) {
-        const stickyLeftWidth = 164; // 52px (group) + 112px (name)
-        const targetScroll = Math.max(0, todayHeader.offsetLeft - stickyLeftWidth - 12);
+        const stickyLeftWidth = 128; // Cột tên 124px + viền
+        const targetScroll = Math.max(0, todayHeader.offsetLeft - stickyLeftWidth - 10);
         container.scrollTo({ left: targetScroll, behavior: 'smooth' });
         if (forceToast) showToast("📍 Đã cuộn tới ngày hôm nay!");
       } else if (forceToast) {
@@ -851,7 +1270,7 @@
       if(isSyncing) return showToast("Hệ thống đang đồng bộ...", false, true);
       cancelMobileMoveMode();
       isSyncing = true; draftQueue = []; 
-      if(document.getElementById('btnSaveChanges')) document.getElementById('btnSaveChanges').style.display = 'none'; 
+      updateSaveButtonUI();
       showToast("⏳ Đang tải dữ liệu mới nhất...", true); 
       
       callAPI('getInitialData')
@@ -863,10 +1282,6 @@
              quotasData = data.quotas || {};
              renderTable(); 
              populatePersonSelect(); 
-             if (isMobileView() && !hasInitialScrolledMobile) {
-               hasInitialScrolledMobile = true;
-               setTimeout(() => scrollToTodayCol(false), 300);
-             }
           }
           isSyncing = false; showToast("✅ Đã cập nhật xong!"); 
         })
@@ -958,6 +1373,43 @@
     select.appendChild(optgroupDept);
   }
 
+    // Kiểm tra nhân sự có khớp với bộ lọc nhanh trên Mobile không (Trên PC luôn trả về true)
+    function matchesMobileFilter(emp, monthPrefix) {
+      if (!isMobileView()) return true;
+      if (mobileSearchQuery) {
+        const matchName = String(emp.name || '').toLowerCase().includes(mobileSearchQuery);
+        const matchGroup = String(emp.group || '').toLowerCase().includes(mobileSearchQuery);
+        const matchBadge = String(emp.customBadge || '').toLowerCase().includes(mobileSearchQuery);
+        if (!matchName && !matchGroup && !matchBadge) return false;
+      }
+      if (mobileGroupFilter === 'ALL') return true;
+      if (mobileGroupFilter === 'PENDING') {
+        return leavesData.some(l => String(l.name).trim() === String(emp.name).trim() && l.date.startsWith(monthPrefix) && l.status === 'Pending');
+      }
+      if (mobileGroupFilter.startsWith('GROUP:')) {
+        const targetG = mobileGroupFilter.replace('GROUP:', '');
+        return String(emp.group || '').trim() === targetG;
+      }
+      return true;
+    }
+
+    function renderMobileFilterPills(monthPrefix) {
+      const container = document.getElementById('mobileGroupPills');
+      if (!container) return;
+      const pendingCount = leavesData.filter(l => l.date && l.date.startsWith(monthPrefix) && l.status === 'Pending').length;
+      let groups = [...new Set(employeesData.map(e => (e.group ? String(e.group).trim() : 'KHÁC')))].filter(Boolean);
+
+      let html = `<button type="button" class="m-pill ${mobileGroupFilter === 'ALL' ? 'active' : ''}" onclick="setMobileGroupFilter('ALL')">🌟 Tất cả (${employeesData.length})</button>`;
+      if (pendingCount > 0 || mobileGroupFilter === 'PENDING') {
+        html += `<button type="button" class="m-pill ${mobileGroupFilter === 'PENDING' ? 'active' : ''}" style="${mobileGroupFilter !== 'PENDING' ? 'border-color:#f59e0b; color:#d97706; background:#fffbeb;' : ''}" onclick="setMobileGroupFilter('PENDING')">⏳ Chờ duyệt (${pendingCount})</button>`;
+      }
+      groups.forEach(g => {
+        const isAct = (mobileGroupFilter === 'GROUP:' + g);
+        html += `<button type="button" class="m-pill ${isAct ? 'active' : ''}" onclick="setMobileGroupFilter('GROUP:${g.replace(/'/g, "\\'")}')">${g}</button>`;
+      });
+      container.innerHTML = html;
+    }
+
     function renderTable() {
       const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
       const thead = document.getElementById("tableHead"), tbody = document.getElementById("tableBody"); 
@@ -972,6 +1424,8 @@
           document.getElementById('currentMonthQuota').value = currentQuotaGlobal;
       }
 
+      renderMobileFilterPills(monthPrefixGlobal);
+
       let headerRow = '<tr><th class="group-cell">NHÓM/群组</th><th class="name-cell" style="text-align: center;">TÊN/姓名</th>';
       for (let i = 1; i <= daysInMonth; i++) {
         let d = new Date(displayYear, displayMonth, i), dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; 
@@ -984,6 +1438,7 @@
       let depts = {};
       if(employeesData && employeesData.length > 0) {
          employeesData.forEach(emp => {
+             if (!matchesMobileFilter(emp, monthPrefixGlobal)) return;
              let roleStr = emp.role ? String(emp.role).trim() : "KHÁC"; let groupStr = emp.group ? String(emp.group).trim() : "KHÁC";
              if (!depts[roleStr]) depts[roleStr] = {}; if (!depts[roleStr][groupStr]) depts[roleStr][groupStr] = [];
              let nUp = emp.name ? String(emp.name).toUpperCase() : ""; let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
@@ -1007,9 +1462,10 @@
                 
                 let tr = `<tr>`; if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" class="group-cell">${group}</td>`;
                 tr += `<td class="name-cell ${isTeacher ? 'teacher-highlight' : ''}" onclick="openBadgeContextMenu(event, '${name}')" title="${name}">
-                         <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 100%; padding: 4px 0;">
+                         <div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 100%; padding: 2px 0;">
+                           <span class="mobile-group-microtag">${group}</span>
                            <span style="font-size: 0.75rem; line-height: 1.2;">${name}</span>
-                           <div style="display: flex; align-items: center; gap: 6px;">
+                           <div style="display: flex; align-items: center; gap: 5px; flex-wrap: nowrap;">
                              ${userBadge}
                              <span class="quota-text" style="font-size: 0.65rem; margin-left: 0;">(${userLeavesThisMonth}/${currentQuotaGlobal})</span>
                            </div>
@@ -1043,10 +1499,308 @@
              });
           }
       }
+
+      // Dòng đệm đáy bên trong bảng trên iPhone để thanh địa chỉ Safari không bao giờ che mất nhân sự cuối cùng
+      tbody.innerHTML += `<tr class="mobile-spacer-row"><td colspan="${daysInMonth + 2}"></td></tr>`;
+
+      // Render giao diện Thẻ & Lịch Trực Quan cho iPhone
+      renderMobileSmartView(depts, currentQuotaGlobal, swappingDates);
+      if (activeMobileCalEmpName) renderMobileEmpCalendar();
     }
 
     // =========================================================================
-    // CƠ CHẾ TƯƠNG TÁC Ô LỊCH: TÁCH BIỆT PC VÀ IPHONE ĐỂ TRÁNH KẸT KÉO THẢ
+    // CHẾ ĐỘ XEM THẺ & LỊCH THÁNG TRỰC QUAN TRÊN IPHONE (KHÔNG CẦN CUỘN NGANG)
+    // =========================================================================
+    function renderMobileSmartView(depts, currentQuotaGlobal, swappingDates) {
+      const container = document.getElementById('mobileSmartView');
+      if (!container) return;
+      const monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+      const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+      const dayNamesShort = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+
+      let html = '';
+      let totalMatched = 0;
+
+      for (let deptKey in depts) {
+        let displayRole = String(deptKey).toUpperCase();
+        if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+        else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; 
+        else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+        
+        html += `<div class="m-dept-header"><span>🏢 ${displayRole}</span></div>`;
+
+        for (let group in depts[deptKey]) {
+          html += `<div class="m-group-header"><span>📌 ${group} (${depts[deptKey][group].length})</span></div>`;
+
+          depts[deptKey][group].forEach(emp => {
+            totalMatched++;
+            let name = emp.name;
+            let role = emp.role;
+            let nUp = String(name).toUpperCase();
+            let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
+            let userBadge = generateBadgeHTML(emp);
+
+            let userLeavesCount = 0;
+            let chipsHtml = '';
+
+            for (let i = 1; i <= daysInMonth; i++) {
+              let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`;
+              let dObj = new Date(displayYear, displayMonth, i);
+              let dLabel = `${i < 10 ? '0'+i : i}/${displayMonth+1 < 10 ? '0'+(displayMonth+1) : displayMonth+1} (${dayNamesShort[dObj.getDay()]})`;
+
+              let isSwappingOut = swappingDates.includes(name + "_" + checkDate);
+              let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isSwappingOut);
+              let inDraft = draftQueue.find(d => d.type !== 'BADGE' && d.name === name && d.date === checkDate);
+
+              if (leave) userLeavesCount++;
+
+              if (isSwappingOut) {
+                chipsHtml += `<span class="m-date-chip swap" onclick="requestAction('${role}', '${name}', '${checkDate}', 'TỪ CHỐI ĐỔI')">🔄 ${dLabel} • ĐỔI</span>`;
+              } else if (leave) {
+                if (leave.status === "Pending") {
+                  chipsHtml += `<span class="m-date-chip pend" onclick="requestAction('${role}', '${name}', '${checkDate}', 'XỬ LÝ PENDING')">⏳ ${dLabel} • DUYỆT?</span>`;
+                } else {
+                  if (inDraft && inDraft.action === 'XÓA') {
+                    chipsHtml += `<span class="m-date-chip draft-del" onclick="openMobileEmpCalendar('${name}')">🗑️ ${dLabel} (Sẽ xóa)</span>`;
+                  } else {
+                    chipsHtml += `<span class="m-date-chip off" onclick="openMobileEmpCalendar('${name}')">🔴 ${dLabel}</span>`;
+                  }
+                }
+              } else if (inDraft && inDraft.action === 'THÊM') {
+                chipsHtml += `<span class="m-date-chip draft-add" onclick="openMobileEmpCalendar('${name}')">➕ ${dLabel} (Mới)</span>`;
+              }
+            }
+
+            if (!chipsHtml) {
+              chipsHtml = `<span style="font-size:0.74rem; color:#94a3b8; font-weight:500;">Chưa đăng ký ngày nghỉ nào trong tháng ${displayMonth + 1}</span>`;
+            }
+
+            let isQuotaFull = userLeavesCount >= currentQuotaGlobal;
+            html += `
+              <div class="m-emp-card">
+                <div class="m-emp-card-top">
+                  <div class="m-emp-info" onclick="openMobileEmpCalendar('${name}')">
+                    <span class="m-emp-name ${isTeacher ? 'teacher-highlight' : ''}">${name}</span>
+                    ${userBadge}
+                    <span class="m-emp-quota ${isQuotaFull ? 'full' : ''}">${userLeavesCount}/${currentQuotaGlobal} ngày</span>
+                  </div>
+                  <div class="m-emp-actions">
+                    <button type="button" class="m-btn-icon" onclick="openBadgeContextMenu(event, '${name}')" title="Badge / Xóa">🏷️</button>
+                    <button type="button" class="m-btn-cal" onclick="openMobileEmpCalendar('${name}')">📅 Chấm lịch</button>
+                  </div>
+                </div>
+                <div class="m-emp-dates">
+                  ${chipsHtml}
+                </div>
+              </div>
+            `;
+          });
+        }
+      }
+
+      if (totalMatched === 0) {
+        html = `<div style="text-align:center; padding:40px 20px; background:white; border-radius:12px; border:1px solid var(--border-color); color:#64748b; font-weight:600; margin-top:10px;">🔍 Không tìm thấy nhân sự nào khớp với bộ lọc hiện tại.</div>`;
+      }
+
+      container.innerHTML = html;
+    }
+
+    // MỞ LỊCH THÁNG CÁ NHÂN TRÊN IPHONE (7 CỘT VỪA KHÍT MÀN HÌNH DỌC)
+    function openMobileEmpCalendar(empName) {
+      activeMobileCalEmpName = empName;
+      mobileCalMoveOldDate = null;
+      renderMobileEmpCalendar();
+      document.getElementById('mobileEmpCalendarModal').classList.add('active');
+    }
+
+    function closeMobileEmpCalendar(ev) {
+      if (ev && ev.target && ev.target.id !== 'mobileEmpCalendarModal') return;
+      activeMobileCalEmpName = null;
+      mobileCalMoveOldDate = null;
+      document.getElementById('mobileEmpCalendarModal').classList.remove('active');
+    }
+
+    function StepMobileCalendarEmp(dir) {
+      if (!activeMobileCalEmpName || !employeesData.length) return;
+      const monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+      const visibleEmps = employeesData.filter(e => matchesMobileFilter(e, monthPrefix));
+      if (!visibleEmps.length) return;
+      let idx = visibleEmps.findIndex(e => e.name === activeMobileCalEmpName);
+      if (idx === -1) idx = 0;
+      else idx = (idx + dir + visibleEmps.length) % visibleEmps.length;
+      activeMobileCalEmpName = visibleEmps[idx].name;
+      mobileCalMoveOldDate = null;
+      renderMobileEmpCalendar();
+    }
+
+    function openBadgeFromMobileCal() {
+      const targetName = activeMobileCalEmpName;
+      closeMobileEmpCalendar();
+      if (targetName) openBadgeContextMenu(null, targetName);
+    }
+
+    function cancelMobileCalMove() {
+      mobileCalMoveOldDate = null;
+      renderMobileEmpCalendar();
+    }
+
+    function renderMobileEmpCalendar() {
+      if (!activeMobileCalEmpName) return;
+      const emp = employeesData.find(e => e.name === activeMobileCalEmpName);
+      if (!emp) return;
+
+      const monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+      let currentQuotaGlobal = quotasData[monthPrefix];
+      if (currentQuotaGlobal === undefined || currentQuotaGlobal === null) currentQuotaGlobal = 4;
+
+      let swappingDates = leavesData.filter(l => l.swapFrom).map(l => l.name + "_" + l.swapFrom);
+      let userLeavesCount = leavesData.filter(l => String(l.name).trim() === String(emp.name).trim() && l.date.startsWith(monthPrefix) && (l.status === "Approved" || l.status === "Pending") && !swappingDates.includes(emp.name + "_" + l.date)).length;
+
+      document.getElementById('mCalEmpName').innerHTML = `${emp.name}${generateBadgeHTML(emp)}`;
+      document.getElementById('mCalEmpSub').innerText = `${emp.group || 'Khác'} • Đã nghỉ: ${userLeavesCount}/${currentQuotaGlobal} ngày (Tháng ${displayMonth + 1}/${displayYear})`;
+
+      const moveHint = document.getElementById('mCalMoveHint');
+      if (mobileCalMoveOldDate) {
+        moveHint.style.display = 'flex';
+        document.getElementById('mCalMoveHintText').innerHTML = `🔄 Đang dời ngày <b>${mobileCalMoveOldDate.slice(8,10)}/${mobileCalMoveOldDate.slice(5,7)}</b> → Chạm vào 1 ngày trống!`;
+      } else {
+        moveHint.style.display = 'none';
+      }
+
+      const grid = document.getElementById('mCalGrid');
+      const dows = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+      let html = dows.map((d, idx) => `<div class="m-cal-dow" style="${idx===0?'color:#ef4444;':''}">${d}</div>`).join('');
+
+      const firstDayDow = new Date(displayYear, displayMonth, 1).getDay();
+      const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+
+      for (let e = 0; e < firstDayDow; e++) {
+        html += `<div class="m-cal-day empty"></div>`;
+      }
+
+      for (let i = 1; i <= daysInMonth; i++) {
+        let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`;
+        let isToday = (i === today.getDate() && displayMonth === today.getMonth() && displayYear === today.getFullYear());
+        let isSwappingOut = swappingDates.includes(emp.name + "_" + checkDate);
+        let leave = leavesData.find(l => String(l.name).trim() === String(emp.name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isSwappingOut);
+        let inDraft = draftQueue.find(d => d.type !== 'BADGE' && d.name === emp.name && d.date === checkDate);
+
+        let cls = `m-cal-day ${isToday ? 'today' : ''} ${mobileCalMoveOldDate === checkDate ? 'is-move-src' : ''}`;
+        let tagHtml = '';
+
+        if (isSwappingOut) {
+          cls += ' is-pend';
+          tagHtml = `<span class="d-tag" style="background:#475569;">ĐỔI</span>`;
+        } else if (leave) {
+          if (leave.status === 'Pending') {
+            cls += ' is-pend';
+            tagHtml = `<span class="d-tag">PEND</span>`;
+          } else {
+            if (inDraft && inDraft.action === 'XÓA') {
+              cls += ' is-draft-del';
+              tagHtml = `<span class="d-tag">XÓA</span>`;
+            } else {
+              cls += ' is-off';
+              tagHtml = `<span class="d-tag">OFF</span>`;
+            }
+          }
+        } else if (inDraft && inDraft.action === 'THÊM') {
+          cls += ' is-draft-add';
+          tagHtml = `<span class="d-tag">+THÊM</span>`;
+        }
+
+        html += `
+          <div class="${cls}" onclick="handleMobileCalDayTap('${emp.role}', '${emp.name}', '${checkDate}')">
+            <span class="d-num">${i}</span>${tagHtml}
+          </div>
+        `;
+      }
+
+      grid.innerHTML = html;
+    }
+
+    function handleMobileCalDayTap(role, name, checkDate) {
+      if (isSyncing) return showToast("Hệ thống đang lưu, vui lòng đợi...", false, true);
+
+      let swappingDates = leavesData.filter(l => l.swapFrom).map(l => l.name + "_" + l.swapFrom);
+      let isSwappingOut = swappingDates.includes(name + "_" + checkDate);
+      let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isSwappingOut);
+      let draftIdx = draftQueue.findIndex(d => d.type !== 'BADGE' && d.name === name && d.date === checkDate);
+
+      // 1. Nếu đang trong chế độ chọn ngày mới để Dời lịch OFF ngay trên tờ lịch
+      if (mobileCalMoveOldDate) {
+        if (mobileCalMoveOldDate === checkDate) {
+          mobileCalMoveOldDate = null;
+          renderMobileEmpCalendar();
+          return;
+        }
+        if (leave || isSwappingOut) {
+          return showToast("⚠️ Ngày này đã có lịch, hãy chọn 1 ngày trống!", false, true);
+        }
+        const oldD = mobileCalMoveOldDate;
+        mobileCalMoveOldDate = null;
+        renderMobileEmpCalendar();
+        executeConfirmedMove(name, oldD, checkDate);
+        return;
+      }
+
+      // 2. Nếu chạm vào ngày đang ĐỔI hoặc PENDING
+      if (isSwappingOut) {
+        requestAction(role, name, checkDate, 'TỪ CHỐI ĐỔI');
+        return;
+      }
+      if (leave && leave.status === 'Pending') {
+        requestAction(role, name, checkDate, 'XỬ LÝ PENDING');
+        return;
+      }
+
+      // 3. Nếu chạm vào ngày đã Approved OFF (chưa nằm trong nháp XÓA) -> Hỏi muốn Dời ngày hay Xóa
+      if (leave && draftIdx === -1) {
+        let menu = document.getElementById('badgeContextMenu');
+        let dShort = `${checkDate.slice(8,10)}/${checkDate.slice(5,7)}/${checkDate.slice(0,4)}`;
+        menu.innerHTML = `
+          <div style="text-align:center; font-weight:800; font-size:0.95rem; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border-color); color:var(--text-main);">
+            📅 Ngày OFF của <span style="color:#3b82f6;">${name}</span> (${dShort})
+          </div>
+          <div class="context-menu-item" style="background:#eff6ff; color:#2563eb; font-weight:700;" id="mCalStartMoveBtn">
+            🔄 Dời sang ngày khác trên lịch này
+          </div>
+          <div class="context-menu-item" style="background:#fef2f2; color:#ef4444; font-weight:700;" id="mCalMarkDeleteBtn">
+            🗑️ Đánh dấu XÓA ngày OFF này
+          </div>
+          <div class="context-menu-item" style="margin-top:8px; background:#e2e8f0; color:#475569; font-weight:700;" onclick="closeAllMobileSheets()">
+            Đóng
+          </div>
+        `;
+        menu.style.display = 'block';
+        document.getElementById('mobileBackdrop').classList.add('active');
+
+        document.getElementById('mCalStartMoveBtn').onclick = () => {
+          closeAllMobileSheets();
+          mobileCalMoveOldDate = checkDate;
+          renderMobileEmpCalendar();
+        };
+        document.getElementById('mCalMarkDeleteBtn').onclick = () => {
+          closeAllMobileSheets();
+          draftQueue.push({ role: role, name: name, date: checkDate, action: 'XÓA' });
+          updateSaveButtonUI();
+          renderTable();
+        };
+        return;
+      }
+
+      // 4. Chạm vào ô trống để THÊM hoặc chạm lại ô nháp để hoàn tác
+      if (draftIdx > -1) {
+        draftQueue.splice(draftIdx, 1);
+      } else {
+        draftQueue.push({ role: role, name: name, date: checkDate, action: leave ? 'XÓA' : 'THÊM' });
+      }
+      updateSaveButtonUI();
+      renderTable();
+    }
+
+    // =========================================================================
+    // CƠ CHẾ TƯƠNG TÁC Ô LỊCH TRONG BẢNG LƯỚI
     // =========================================================================
     function startMobileMoveMode(role, name, oldDate) {
       closeAllMobileSheets();
@@ -1054,7 +1808,7 @@
       document.body.classList.add('mobile-moving-mode');
       const banner = document.getElementById('mobileMoveBanner');
       const bannerText = document.getElementById('mobileMoveBannerText');
-      bannerText.innerHTML = `🔄 Đang dời ngày OFF (<b>${oldDate.slice(8,10)}/${oldDate.slice(5,7)}</b>) của <b>${name}</b>.<br>👉 Hãy chạm vào 1 ô ngày trống của <b>${name}</b> để chuyển tới!`;
+      bannerText.innerHTML = `🔄 Đang dời ngày OFF (<b>${oldDate.slice(8,10)}/${oldDate.slice(5,7)}</b>) của <b>${name}</b>.<br>👉 Hãy chạm vào 1 ô ngày trống của <b>${name}</b>!`;
       banner.classList.add('active');
       renderTable();
     }
@@ -1095,8 +1849,10 @@
         draftQueue.push({ role: role, name: name, date: checkDate, action: action }); element.classList.add('cell-draft');
         if (action === 'XÓA') element.innerHTML = `<div class="badge badge-draft-remove" title="Sẽ xóa lịch này">XÓA</div>`; else if (action === 'THÊM') element.innerHTML = `<div class="badge badge-draft-add" title="Sẽ thêm lịch này">THÊM</div>`;
       }
-      const btnSave = document.getElementById('btnSaveChanges');
-      if (draftQueue.length > 0) { btnSave.style.display = 'inline-block'; btnSave.innerText = `💾 Lưu (${draftQueue.length})`; } else { btnSave.style.display = 'none'; }
+      updateSaveButtonUI();
+      if (isMobileView()) {
+        renderTable();
+      }
     }
 
     function handleCellClick(element, role, name, checkDate, action) {
@@ -1109,7 +1865,6 @@
       }
 
       // TRÊN MOBILE (IPHONE):
-      // 1. Nếu đang trong chế độ chọn ngày mới để dời lịch OFF
       if (mobileMoveState) {
         if (mobileMoveState.name !== name) {
           return showToast(`⚠️ Vui lòng chọn ngày trên đúng hàng của ${mobileMoveState.name}!`, false, true);
@@ -1127,8 +1882,6 @@
         return;
       }
 
-      // 2. Nếu chạm vào ô đang có sẵn chữ OFF (và chưa nằm trong hàng đợi XÓA) trên iPhone:
-      // Hiển thị Bottom Sheet hỏi muốn "Dời sang ngày khác" hay "Xóa ngày OFF"
       let draftIdx = draftQueue.findIndex(d => d.type !== 'BADGE' && d.name === name && d.date === checkDate);
       if (action === 'XÓA' && draftIdx === -1) {
         let menu = document.getElementById('badgeContextMenu');
@@ -1156,7 +1909,6 @@
         return;
       }
 
-      // 3. Các trường hợp còn lại (chạm ô trống để THÊM, hoặc chạm lại ô nháp để hoàn tác):
       toggleCellDraftState(element, role, name, checkDate, action);
     }
 
@@ -1167,7 +1919,7 @@
       callAPI('processBatchChanges', { payloadStr: JSON.stringify(draftQueue) })
         .then(res => {
           isSyncing = false;
-          if (res === "SUCCESS") { showToast("✅ Đã lưu thành công!"); draftQueue = []; document.getElementById('btnSaveChanges').style.display = 'none'; refreshData(); } 
+          if (res === "SUCCESS") { showToast("✅ Đã lưu thành công!"); draftQueue = []; updateSaveButtonUI(); refreshData(); } 
           else { showToast("Lỗi Data: " + res, false, true); refreshData(); }
         })
         .catch(err => { isSyncing = false; showToast("LỖI KẾT NỐI", false, true); });
@@ -1189,7 +1941,11 @@
       if(isSyncing) return showToast("Hệ thống đang lưu, vui lòng đợi...", false, true);
       let btn = document.getElementById('modalOkBtn'), rejectBtn = document.getElementById('modalRejectBtn'); rejectBtn.style.display = 'none';
       if(action === "XỬ LÝ PENDING") { 
-          document.getElementById('modalTitle').innerHTML = "Duyệt Đơn Pending"; document.getElementById('modalMsg').innerHTML = `Bạn muốn <b>DUYỆT</b> hay <b>TỪ CHỐI</b> đơn xin nghỉ của <b>${name}</b> vào ngày ${checkDate}?`; 
+          let lv = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && l.status === "Pending");
+          let reasonHtml = (lv && lv.reason) ? `<br><span style="font-size:0.85rem; color:#64748b;">Lý do: ${lv.reason}</span>` : '';
+          let swapHtml = (lv && lv.swapFrom) ? `<br><span style="font-size:0.82rem; color:#9333ea;">(Đổi từ ngày ${lv.swapFrom})</span>` : '';
+          document.getElementById('modalTitle').innerHTML = "Duyệt Đơn Pending"; 
+          document.getElementById('modalMsg').innerHTML = `Bạn muốn <b>DUYỆT</b> hay <b>TỪ CHỐI</b> đơn xin nghỉ của <b>${name}</b> vào ngày ${checkDate}?${reasonHtml}${swapHtml}`; 
           rejectBtn.style.display = 'inline-block'; rejectBtn.onclick = () => { closeModal(); adminExecute(role, name, checkDate, "TỪ CHỐI"); };
           btn.className = "btn-ok"; btn.innerText = "Duyệt Ngay"; btn.onclick = () => { closeModal(); adminExecute(role, name, checkDate, "DUYỆT"); };
       } else if(action === "TỪ CHỐI ĐỔI") { 
@@ -1227,7 +1983,6 @@
     let toastTimer; function showToast(msg, keep = false, isError = false) { const toast = document.getElementById('toast'); toast.innerText = msg; toast.style.background = isError ? '#ef4444' : '#10b981'; toast.classList.add('show'); clearTimeout(toastTimer); if(!keep) toastTimer = setTimeout(() => toast.classList.remove('show'), 4000); }
     function hideToast() { document.getElementById('toast').classList.remove('show'); }
 
-    // Fix lỗi Copy Clipboard trên iOS Safari & WebView (Zalo/Telegram)
     function copyPersonLink() {
       const val = document.getElementById("personSelect").value;
       if (!val) return showToast("⚠️ Vui lòng chọn cá nhân/nhóm trước khi tạo link!", false, true);
@@ -1383,7 +2138,6 @@
           exportContainer.innerHTML = buildTableExportHTML(startDate, endDate, groupFilter, customNames);
       }
 
-      // Giới hạn scale = 2 trên iPhone để tránh tràn RAM Canvas của Safari iOS; trên PC giữ nguyên
       let renderScale = isMobileView() ? 2 : (window.devicePixelRatio > 1 ? window.devicePixelRatio * 2 : 3);
 
       setTimeout(() => {
@@ -1397,7 +2151,6 @@
           hideToast();
 
           if (isMobileView()) {
-            // Trên iPhone: Hiển thị hộp thoại xem trước ảnh để Nhấn Giữ -> Lưu vào Ảnh (hoặc bấm nút Tải)
             const previewImg = document.getElementById('iosExportedImg');
             const dlBtn = document.getElementById('iosDirectDownloadBtn');
             previewImg.src = dataUrl;
@@ -1410,7 +2163,6 @@
             document.getElementById('iosImagePreviewModal').classList.add('active');
             showToast("📸 Đã tạo ảnh! Hãy nhấn giữ ảnh để lưu.");
           } else {
-            // Trên PC: Tự động tải xuống như cũ
             let link = document.createElement('a'); 
             link.download = fileName; 
             link.href = dataUrl; 
