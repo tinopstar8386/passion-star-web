@@ -455,7 +455,7 @@
                 border-width: 2px !important;
             }
 
-            /* 7. BẢNG LỊCH THI ĐẤU VỪA KHÍT 100% MÀN HÌNH IPHONE */
+            /* 7. BẢNG LỊCH THI ĐẤU VỪA KHÍT 100% MÀN HÌNH IPHONE (XẾP DỌC ĐỀU ĐẸP CHO CẢ 1_SPLIT VÀ ĐA PHÒNG) */
             #capture-wrapper-event {
                 width: 100% !important;
                 min-width: 100% !important;
@@ -509,38 +509,6 @@
             #capture-wrapper-event .footer-note {
                 font-size: 12px !important;
                 padding: 10px !important;
-            }
-
-            /* CẤU TRÚC RIÊNG CHO CHẾ ĐỘ "1 PHÒNG THI (CHIA 2 CỘT NGANG)" TRÊN MOBILE */
-            .mobile-split-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                width: 100%;
-            }
-            .mobile-split-col:nth-child(2) {
-                border-left: 2px solid var(--text-main);
-            }
-            #capture-wrapper-event .mobile-split-grid th {
-                font-size: 9px !important;
-                padding: 4px 1px !important;
-            }
-            #capture-wrapper-event .mobile-split-grid td {
-                font-size: 10px !important;
-                padding: 5px 1px !important;
-            }
-            #capture-wrapper-event .mobile-split-grid td.team-name {
-                font-size: 10px !important;
-                padding-left: 3px !important;
-                word-break: break-word;
-            }
-            #capture-wrapper-event .mobile-split-grid .badge {
-                font-size: 9px !important;
-                padding: 3px 3px !important;
-                min-width: 30px !important;
-                border-radius: 4px !important;
-            }
-            #capture-wrapper-event .mobile-split-grid .badge-makeup {
-                min-width: 50px !important;
             }
         }
     </style>
@@ -792,7 +760,6 @@
             const container = document.getElementById('toast-container');
             if (!container) return;
             
-            // Xóa thông báo cũ ngay lập tức để không bao giờ bị chồng chất
             container.innerHTML = '';
             if (activeToastTimer) clearTimeout(activeToastTimer);
             
@@ -1307,7 +1274,7 @@
             return html;
         }
 
-        // Hàm dựng Bảng Thi Đấu trên màn hình iPhone (Hỗ trợ cả 1_split 2 cột ngang và Đa phòng xếp dọc)
+        // Hàm dựng Bảng Thi Đấu trên màn hình iPhone (Xếp dọc 100% khung hình cho cả 1_split và Đa phòng)
         function buildMobileStackedEventTableHTML() {
             const modeVal = document.getElementById('modeSelect').value;
             const isSplit = (modeVal === '1_split');
@@ -1317,20 +1284,23 @@
             const nLive = document.getElementById('hdLive').value;
             const draggableFlag = canDragNow() ? "true" : "false";
 
-            // XỬ LÝ RIÊNG CHẾ ĐỘ "1 PHÒNG THI (CHIA 2 CỘT NGANG)" TRÊN MOBILE
+            // CHẾ ĐỘ "1 PHÒNG THI (CHIA 2 CỘT NGANG)" -> XẾP DỌC CỘT 1 VÀ CỘT 2 GIỐNG HỆT 2 PHÒNG THI
             if (isSplit) {
                 let totalItems = roomsData[0].list.length;
                 let baseMaxRows = Math.ceil(totalItems / 2);
-                let html = `<div class="room-header" style="text-align:center;">Phòng: <span class="txt-blue">${roomsData[0].name}</span> &bull; ID: <span class="txt-cyan">${roomsData[0].acc}</span></div>`;
-                html += `<div class="mobile-split-grid">`;
+                let html = '';
 
                 for (let col = 0; col < 2; col++) {
-                    html += `<div class="mobile-split-col"><table><thead>
-                        <tr><th style="width:18px;">#</th><th style="text-align:left; padding-left:3px;">IDOL</th><th>${nVoca}</th><th>${nMkp}</th><th>${nLive}</th></tr>
+                    const topBorder = col > 0 ? 'border-top: 3px solid var(--text-main);' : '';
+                    const startIdx = (col === 0) ? 0 : baseMaxRows;
+                    const endIdx = (col === 0) ? baseMaxRows : totalItems;
+
+                    html += `<table><thead>
+                        <tr><th colspan="5" class="room-header" style="${topBorder}">Phòng: <span class="txt-blue">${roomsData[0].name}</span> &bull; ID: <span class="txt-cyan">${roomsData[0].acc}</span> (Cột ${col + 1})</th></tr>
+                        <tr><th style="width:28px;">#</th><th style="text-align:left; padding-left:6px;">TÊN NHÓM / IDOL</th><th>${nVoca}</th><th>${nMkp}</th><th>${nLive}</th></tr>
                     </thead><tbody>`;
 
-                    for (let i = 0; i < baseMaxRows; i++) {
-                        let idolIndex = (col === 0) ? i : (i + baseMaxRows);
+                    for (let idolIndex = startIdx; idolIndex < endIdx; idolIndex++) {
                         let idol = roomsData[0].list[idolIndex];
                         if (idol) {
                             const iName = typeof idol === 'object' ? idol.name : idol;
@@ -1347,9 +1317,8 @@
                             </tr>`;
                         }
                     }
-                    html += `</tbody></table></div>`;
+                    html += `</tbody></table>`;
                 }
-                html += `</div>`;
                 return html;
             }
 
@@ -1470,12 +1439,10 @@
 
             stage.appendChild(clone);
 
-            // Chờ 1 nhịp ngắn để trình duyệt tính toán kích thước chuẩn PC của bản clone
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
             const w = clone.offsetWidth;
             const h = clone.offsetHeight;
-            // Giới hạn scale an toàn để không bao giờ vượt ngưỡng 4096px của Safari iOS
             const safeScale = Math.min(3, Math.max(1.5, Math.floor((3800 / Math.max(w, h)) * 10) / 10));
 
             const canvas = await html2canvas(clone, {
@@ -1517,7 +1484,6 @@
                 return showToast("Trình duyệt không hỗ trợ Copy. Hãy bấm Ảnh HD.", "error", 3500);
             }
 
-            // GỌI ĐỒNG BỘ NGAY TRONG SỰ KIỆN CLICK ĐỂ SAFARI IPHONE CẤP QUYỀN CLIPBOARD 100%
             const blobPromise = renderPCQualityCanvas(id, false).then(canvas => {
                 return new Promise((resolve, reject) => {
                     canvas.toBlob(blob => {
