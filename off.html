@@ -154,6 +154,33 @@
         pointer-events: none;
       }
 
+      /* Tách biệt View Mobile: Biến Modal Thêm Nhân Sự thành Bottom Sheet */
+      #addEmployeeModal {
+        align-items: flex-end !important;
+      }
+      #addEmployeeModal .modal-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 24px 24px 0 0 !important;
+        padding: 20px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px !important;
+        margin: 0 !important;
+        transform: translateY(100%);
+        transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      #addEmployeeModal.active .modal-box {
+        transform: translateY(0) !important;
+      }
+      
+      /* Thanh gạt vuốt (Grabber) ở trên cùng của form Mobile */
+      #addEmployeeModal .modal-box::before {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 5px;
+        background: #cbd5e1;
+        border-radius: 99px;
+        margin: -5px auto 15px auto;
+      }
       /* Chống Safari iOS Auto-Zoom khi chạm vào input/select */
       input, select, textarea { font-size: 16px !important; }
 
@@ -2237,13 +2264,20 @@
     
     function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); document.getElementById('newEmpName').value = ''; document.getElementById('newEmpRole').value = 'LIVESTEAM'; updateGroupDropdown(); }
     function closeAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.remove('active'); }
-    function updateGroupDropdown() {
-      const role = document.getElementById('newEmpRole').value, groupSelect = document.getElementById('newEmpGroup'); let options = "";
-      if (role === "LIVESTEAM") options = '<option value="Team Dino">Team Dino</option><option value="Team Ken">Team Ken</option><option value="Team U">Team U</option>';
-      else if (role === "MANAGER") options = '<option value="Manager Team">Manager Team</option><option value="Operation">Operation</option><option value="Translation">Translation</option><option value="Tech">Tech</option><option value="HR">HR</option>';
-      else if (role === "ACCOUNTANT") options = '<option value="Accountant Team">Accountant Team</option>';
-      options += '<option value="CUSTOM">➕ Khác (Thêm nhóm mới)...</option>'; groupSelect.innerHTML = options; checkCustomGroup();
-    }
+   function updateGroupDropdown() {
+  const role = document.getElementById('newEmpRole').value, groupSelect = document.getElementById('newEmpGroup'); let options = "";
+  if (role === "LIVESTEAM") {
+    options = '<option value="Team Dino">Team Dino</option>' + 
+              '<option value="Team Ken">Team Ken</option>' + 
+              '<option value="Team U">Team U</option>' + 
+              '<option value="Team U Royen:One">Team U Royen:One</option>'; // Đã thêm Team U Royen:One
+  }
+  else if (role === "MANAGER") options = '<option value="Manager Team">Manager Team</option><option value="Operation">Operation</option><option value="Translation">Translation</option><option value="Tech">Tech</option><option value="HR">HR</option>';
+  else if (role === "ACCOUNTANT") options = '<option value="Accountant Team">Accountant Team</option>';
+  options += '<option value="CUSTOM">➕ Khác (Thêm nhóm mới)...</option>'; 
+  groupSelect.innerHTML = options; 
+  checkCustomGroup();
+}
     function checkCustomGroup() { let val = document.getElementById('newEmpGroup').value; document.getElementById('newEmpGroupCustom').style.display = (val === 'CUSTOM') ? 'block' : 'none'; }
     function submitNewEmployee() {
       let name = document.getElementById('newEmpName').value.trim(), role = document.getElementById('newEmpRole').value, group = document.getElementById('newEmpGroup').value;
