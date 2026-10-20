@@ -1007,6 +1007,7 @@
         <label style="font-weight: 600; font-size: 0.85rem;">Bộ phận (Department):</label>
         <select id="newEmpRole" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;" onchange="updateGroupDropdown()">
           <option value="LIVESTEAM">LIVESTREAM</option>
+          <option value="TEACHER DANCE">TEACHER DANCE</option>
           <option value="MANAGER">MANAGER</option>
           <option value="ACCOUNTANT">ACCOUNTANT</option>
         </select>
@@ -1440,9 +1441,21 @@
       
       callAPI('getInitialData')
         .then(data => { 
-        if(data && data.employees) { 
-                 // Tự động in hoa và xóa khoảng trắng thừa để gộp nhóm chính xác 100%
-                 employeesData = data.employees.map(e => ({ ...e, group: normalizeGroupName(e.group).toUpperCase() }));
+       if(data && data.employees) { 
+                 // Tự động in hoa, gộp nhóm và TÁCH RIÊNG các Teacher ra bộ phận TEACHER DANCE
+                 employeesData = data.employees.map(e => {
+                    let nUp = String(e.name).toUpperCase().trim();
+                    let finalRole = e.role;
+                    let finalGroup = normalizeGroupName(e.group).toUpperCase();
+                    
+                    // Nếu là Giáo Viên thì tự động bế ra khu vực riêng, không chung nhóm với ai nữa
+                    if (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER")) {
+                        finalRole = "TEACHER DANCE";
+                        finalGroup = "TEACHER";
+                    }
+                    
+                    return { ...e, role: finalRole, group: finalGroup };
+                 });
              leavesData = data.leaves || []; 
              badgesData = data.badges || {}; 
              quotasData = data.quotas || {};
@@ -2299,16 +2312,36 @@ function initMobileCalSwipeGesture() {
     
     function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); document.getElementById('newEmpName').value = ''; document.getElementById('newEmpRole').value = 'LIVESTEAM'; updateGroupDropdown(); }
     function closeAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.remove('active'); }
-   function updateGroupDropdown() {
-  const role = document.getElementById('newEmpRole').value, groupSelect = document.getElementById('newEmpGroup'); let options = "";
-  if (role === "LIVESTEAM") {
-    options = '<option value="Team Dino">Team Dino</option>' + 
-              '<option value="Team Ken">Team Ken</option>' + 
-              '<option value="Team U">Team U</option>' + 
-              '<option value="Team U Royen:One">Team U Royen:One</option>'; // Đã thêm Team U Royen:One
+  function updateGroupDropdown() {
+  const role = document.getElementById('newEmpRole').value;
+  const groupSelect = document.getElementById('newEmpGroup'); 
+  let options = "";
+  
+  if (role === "LIVESTEAM" || role === "LIVESTREAM") {
+    options = '<option value="Team Dino">Team Dino</option>' +
+              '<option value="Team Ken">Team Ken</option>' +
+              '<option value="Team U">Team U</option>' +
+              '<option value="Team U Royen:One">Team U Royen:One</option>' +
+              '<option value="Angelik">Angelik</option>' +
+              '<option value="Fashion">Fashion</option>' +
+              '<option value="Orion">Orion</option>' +
+              '<option value="Bnart">Bnart</option>' +
+              '<option value="Bee">Bee</option>';
   }
-  else if (role === "MANAGER") options = '<option value="Manager Team">Manager Team</option><option value="Operation">Operation</option><option value="Translation">Translation</option><option value="Tech">Tech</option><option value="HR">HR</option>';
-  else if (role === "ACCOUNTANT") options = '<option value="Accountant Team">Accountant Team</option>';
+  else if (role === "TEACHER DANCE") {
+    options = '<option value="Teacher">Teacher (Riêng biệt)</option>';
+  }
+  else if (role === "MANAGER") {
+    options = '<option value="Manager Team">Manager Team</option>' +
+              '<option value="Operation">Operation</option>' +
+              '<option value="Translation">Translation</option>' +
+              '<option value="Tech">Tech</option>' +
+              '<option value="HR">HR</option>';
+  }
+  else if (role === "ACCOUNTANT") {
+    options = '<option value="Accountant Team">Accountant Team</option>';
+  }
+  
   options += '<option value="CUSTOM">➕ Khác (Thêm nhóm mới)...</option>'; 
   groupSelect.innerHTML = options; 
   checkCustomGroup();
