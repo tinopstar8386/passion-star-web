@@ -1860,35 +1860,60 @@
       }, 130);
     }
 
-    function initMobileCalSwipeGesture() {
+function initMobileCalSwipeGesture() {
       const sheet = document.getElementById('mCalSheetBox');
       if (!sheet) return;
-      let touchStartX = 0;
-      let touchStartY = 0;
-      let startScrollY = 0; // Lưu vị trí cuộn để tránh xung đột thao tác
+      let startX = 0, startY = 0, startScrollY = 0;
+      let isDraggingDown = false;
 
       sheet.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-          startScrollY = sheet.scrollTop; // Ghi nhận xem nội dung có đang bị cuộn xuống không
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          startScrollY = sheet.scrollTop; // Lưu vị trí cuộn hiện tại của form
+          isDraggingDown = false;
+          // Tạm tắt hiệu ứng mượt của CSS để form dính sát theo ngón tay khi kéo
+          sheet.style.transition = 'none'; 
         }
       }, { passive: true });
 
+      sheet.addEventListener('touchmove', (e) => {
+        if (!activeMobileCalEmpName || e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+
+        // CHỈ KÍCH HOẠT khi đang ở tuốt trên cùng form VÀ ngón tay đang kéo hướng xuống
+        if (startScrollY <= 0 && dy > 0 && dy > Math.abs(dx)) {
+          isDraggingDown = true;
+          // CHẶN NGAY lập tức hành vi cuộn trang nền phía sau của iOS
+          if (e.cancelable) e.preventDefault(); 
+          // Cho cái bảng chạy xuống theo đúng số pixel ngón tay vuốt
+          sheet.style.transform = `translate3d(0, ${dy}px, 0)`; 
+        }
+      }, { passive: false }); // Bắt buộc false để có thể gọi preventDefault chặn cuộn nền
+
       sheet.addEventListener('touchend', (e) => {
         if (!activeMobileCalEmpName || e.changedTouches.length !== 1) return;
-        const dx = e.changedTouches[0].clientX - touchStartX;
-        const dy = e.changedTouches[0].clientY - touchStartY;
-        
-        // 1. Nhận diện vuốt ngang (chuyển đổi nhân sự)
+        const dx = e.changedTouches[0].clientX - startX;
+        const dy = e.changedTouches[0].clientY - startY;
+
+        // Trả lại quyền xử lý hiệu ứng cho CSS 
+        sheet.style.transition = '';
+        sheet.style.transform = '';
+
+        if (isDraggingDown) {
+          // Kéo xuống hơn 80px -> Đóng luôn form
+          if (dy > 80) {
+            closeMobileEmpCalendar();
+          }
+          isDraggingDown = false;
+          return; // Kết thúc thao tác kéo tắt
+        }
+
+        // Nhận diện vuốt ngang (Trái/Phải) để đổi nhân sự
         if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) {
           if (dx < 0) StepMobileCalendarEmp(1);
           else StepMobileCalendarEmp(-1);
-        }
-        // 2. THÊM MỚI: Nhận diện vuốt xuống (Swipe down) để đóng Form
-        // Chỉ đóng khi đang ở trên cùng bảng (startScrollY <= 0) để không bị nhầm với thao tác lướt đọc nội dung
-        else if (dy > 65 && Math.abs(dy) > Math.abs(dx) * 1.5 && startScrollY <= 0) {
-          closeMobileEmpCalendar();
         }
       }, { passive: true });
     }
