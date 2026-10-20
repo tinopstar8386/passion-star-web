@@ -1860,16 +1860,18 @@
       }, 130);
     }
 
-    // Hỗ trợ vuốt ngang (Swipe Left / Right) trên tờ lịch iPhone để chuyển nhân sự
     function initMobileCalSwipeGesture() {
       const sheet = document.getElementById('mCalSheetBox');
       if (!sheet) return;
       let touchStartX = 0;
       let touchStartY = 0;
+      let startScrollY = 0; // Lưu vị trí cuộn để tránh xung đột thao tác
+
       sheet.addEventListener('touchstart', (e) => {
         if (e.touches.length === 1) {
           touchStartX = e.touches[0].clientX;
           touchStartY = e.touches[0].clientY;
+          startScrollY = sheet.scrollTop; // Ghi nhận xem nội dung có đang bị cuộn xuống không
         }
       }, { passive: true });
 
@@ -1877,9 +1879,16 @@
         if (!activeMobileCalEmpName || e.changedTouches.length !== 1) return;
         const dx = e.changedTouches[0].clientX - touchStartX;
         const dy = e.changedTouches[0].clientY - touchStartY;
+        
+        // 1. Nhận diện vuốt ngang (chuyển đổi nhân sự)
         if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) {
           if (dx < 0) StepMobileCalendarEmp(1);
           else StepMobileCalendarEmp(-1);
+        }
+        // 2. THÊM MỚI: Nhận diện vuốt xuống (Swipe down) để đóng Form
+        // Chỉ đóng khi đang ở trên cùng bảng (startScrollY <= 0) để không bị nhầm với thao tác lướt đọc nội dung
+        else if (dy > 65 && Math.abs(dy) > Math.abs(dx) * 1.5 && startScrollY <= 0) {
+          closeMobileEmpCalendar();
         }
       }, { passive: true });
     }
