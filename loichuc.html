@@ -335,7 +335,6 @@
           opacity: 0.9;
         }
 
-        /* Toast gọn ở đáy màn hình, không đè lên các nút thao tác */
         #toast-container {
           bottom: calc(10px + env(safe-area-inset-bottom, 8px));
           left: 14px;
@@ -445,49 +444,46 @@
 
     <script>
       // =========================================================================
-      // HỆ THỐNG KẾT NỐI 3 TẦNG (TRIPLE-FALLBACK) ĐẶC TRỊ SAFARI IPHONE (WEBKIT)
-      // Tầng 1: POST Simple Request (Không custom header gây lỗi preflight/WebKit)
-      // Tầng 2: GET Query Request (Tránh lỗi Safari chặn 302 Redirect của POST)
-      // Tầng 3: JSONP Script Injection (Vượt qua 100% rào cản CORS trên Safari)
+      // HỆ THỐNG KẾT NỐI 3 TẦNG ĐẶC TRỊ SAFARI IPHONE (JSONP ➔ GET ➔ POST)
       // =========================================================================
       const API_URL = "https://script.google.com/macros/s/AKfycbyUnPauRyR_pxZqK4DKPlPc_LmM3uRzhA0W7S0KIgmj1je9hIl4ye5KKZ2_oQmCsgFY/exec";
 
-      // Tầng 3: JSONP Fallback (Miễn nhiễm hoàn toàn với CORS của Safari)
+      // Tầng 1: JSONP qua thẻ <script> (Miễn nhiễm 100% lỗi CORS & Load failed của Safari iPhone)
       function runScriptJSONP(action, payload = {}) {
         return new Promise((resolve, reject) => {
-          const cbName = "gas_cb_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
+          const cbName = "gas_cb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
           const script = document.createElement("script");
-          let isCompleted = false;
+          let isDone = false;
 
           const timer = setTimeout(() => {
-            if (isCompleted) return;
-            isCompleted = true;
+            if (isDone) return;
+            isDone = true;
             cleanup();
-            reject(new Error("Quá thời gian phản hồi từ Google Sheets (Hãy kiểm tra quyền 'Anyone / Bất kỳ ai' trên Apps Script)."));
-          }, 15000);
+            reject(new Error("Quá thời gian chờ phản hồi từ Google Sheets."));
+          }, 14000);
 
           function cleanup() {
             clearTimeout(timer);
-            delete window[cbName];
+            try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
             if (script.parentNode) script.parentNode.removeChild(script);
           }
 
           window[cbName] = function(res) {
-            if (isCompleted) return;
-            isCompleted = true;
+            if (isDone) return;
+            isDone = true;
             cleanup();
             if (!res || res.status === 'error') {
-              reject(new Error((res && res.message) ? res.message : "Lỗi xử lý từ Google Sheets."));
+              reject(new Error((res && res.message) ? res.message : "Lỗi trả về từ Google Sheets."));
             } else {
               resolve(res.data);
             }
           };
 
           script.onerror = function() {
-            if (isCompleted) return;
-            isCompleted = true;
+            if (isDone) return;
+            isDone = true;
             cleanup();
-            reject(new Error("Safari không thể nạp dữ liệu từ Apps Script (Kiểm tra Deploy 'Anyone' hoặc hàm doGet trong Code.gs)."));
+            reject(new Error("JSONP chưa kích hoạt (Hãy kiểm tra bạn đã chọn 'New version / Phiên bản mới' khi Deploy Code.gs chưa)."));
           };
 
           const params = new URLSearchParams({
@@ -501,24 +497,9 @@
         });
       }
 
-      // Hàm gọi API thông minh tự động thử POST -> GET -> JSONP
+      // Hàm gọi tổng hợp: Ưu tiên JSONP & GET cho Safari, tự động lùi về POST nếu cần
       async function runScript(action, payload = {}) {
-        // 1. Thử POST tối giản (tương thích doPost hiện tại của bạn)
-        try {
-          const resPost = await fetch(API_URL, {
-            method: 'POST',
-            redirect: 'follow',
-            body: JSON.stringify({ action: action, payload: payload })
-          });
-          const textPost = await resPost.text();
-          const jsonPost = JSON.parse(textPost);
-          if (jsonPost.status === 'error') throw new Error(jsonPost.message);
-          return jsonPost.data;
-        } catch (postErr) {
-          console.warn("Safari POST gặp trở ngại, chuyển sang GET/JSONP:", postErr.message);
-        }
-
-        // 2. Thử GET (Tránh lỗi Safari làm rớt kết nối khi 302 Redirect lệnh POST)
+        // 1. Ưu tiên thử GET (không body, omit cookie -> đi qua 302 Redirect của Google mượt mà)
         try {
           const params = new URLSearchParams({
             action: action,
@@ -527,18 +508,39 @@
           });
           const resGet = await fetch(`${API_URL}?${params.toString()}`, {
             method: 'GET',
+            mode: 'cors',
+            credentials: 'omit',
             redirect: 'follow'
           });
           const textGet = await resGet.text();
-          const jsonGet = JSON.parse(textGet);
-          if (jsonGet.status === 'error') throw new Error(jsonGet.message);
-          return jsonGet.data;
+          // Nếu Code.gs đã cập nhật, textGet sẽ là JSON hợp lệ
+          if (textGet && textGet.trim().startsWith("{")) {
+            const jsonGet = JSON.parse(textGet);
+            if (jsonGet.status === 'error') throw new Error(jsonGet.message);
+            return jsonGet.data;
+          }
         } catch (getErr) {
-          console.warn("Safari GET gặp trở ngại, kích hoạt JSONP:", getErr.message);
+          console.warn("GET chuyển tiếp sang JSONP:", getErr.message);
         }
 
-        // 3. Vũ khí cuối: JSONP qua thẻ <script> (Vượt mọi rào cản CORS trên Safari iPhone)
-        return await runScriptJSONP(action, payload);
+        // 2. Thử JSONP (Vượt tường lửa Safari ITP 100% khi fetch bị chặn)
+        try {
+          return await runScriptJSONP(action, payload);
+        } catch (jsonpErr) {
+          console.warn("JSONP chuyển tiếp sang POST:", jsonpErr.message);
+        }
+
+        // 3. Dự phòng POST (Nếu Code.gs chưa kịp Deploy bản mới)
+        const resPost = await fetch(API_URL, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: action, payload: payload })
+        });
+        const textPost = await resPost.text();
+        const jsonPost = JSON.parse(textPost);
+        if (jsonPost.status === 'error') throw new Error(jsonPost.message);
+        return jsonPost.data;
       }
 
       // ==========================================
@@ -1093,8 +1095,8 @@
           document.getElementById('count-pending').innerText = "0";
           document.getElementById('count-done').innerText = "0";
           renderErrorBox(
-            `Chưa có dữ liệu Sheet cho ngày ${lastRequestedDate || 'hôm nay'}`,
-            `Trang tính (Sheet) của ngày này có thể chưa được tạo trên Google Sheets. Bạn hãy bấm "Chọn ngày khác" để mở ngày đã có sẵn dữ liệu.`
+            `Không tìm thấy Sheet của tháng/ngày ${lastRequestedDate || 'hôm nay'}`,
+            `Hãy kiểm tra tên Sheet "Form chúc T..." trên Google Sheets hoặc bấm "Chọn ngày khác".`
           );
           return;
         }
@@ -1112,7 +1114,7 @@
         
         currentData = Array.isArray(response.messages) ? response.messages : [];
         currentData.forEach(item => {
-           if (item.status === 'pending') {
+           if (item.status === 'pending' || !item.message) {
                assignUniqueMessage(item);
            }
         });
@@ -1133,15 +1135,11 @@
         initDatePicker();
         runScript('getInitialData')
           .then(response => {
-            if (response) {
-              initApp(response);
-            } else {
-              return runScript('changeDateAndFetchData', { dateString: lastRequestedDate }).then(res2 => initApp(res2));
-            }
+            initApp(response);
           })
           .catch(err => {
             renderErrorBox(
-              "Lỗi kết nối hoặc chưa đúng tên Sheet",
+              "Lỗi kết nối tới Google Sheets",
               `${err.message}`
             );
           });
@@ -1164,7 +1162,7 @@
           })
           .catch(error => {
             renderErrorBox(
-              `Không tìm thấy dữ liệu ngày ${selectedDate}`,
+              `Không tải được dữ liệu ngày ${selectedDate}`,
               `${error.message}`
             );
           });
@@ -1241,7 +1239,7 @@
         displayData.sort((a,b) => sortMode === 'asc' ? a.coinRaw - b.coinRaw : b.coinRaw - a.coinRaw);
 
         if (displayData.length === 0) {
-          appDiv.innerHTML = '<div class="loader" style="grid-column: 1/-1; padding-top: 40px; text-align: center; color: var(--text-secondary);">Không có dữ liệu trong mục này.</div>';
+          appDiv.innerHTML = '<div class="loader" style="grid-column: 1/-1; padding-top: 40px; text-align: center; color: var(--text-secondary);">Không có Idol nào trong mục này vào ngày đã chọn.</div>';
           document.body.style.setProperty('--ambient-color', 'transparent');
           return;
         }
