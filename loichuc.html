@@ -443,7 +443,51 @@
     <div id="toast-container"></div>
 
     <script>
-   const API_URL =
+      // ==========================================
+      // KẾT NỐI QUA CẦU NỐI /api/proxy CỦA VERCEL (CHUẨN SAFARI IPHONE)
+      // ==========================================
+      const API_URL = "https://script.google.com/macros/s/AKfycbyUnPauRyR_pxZqK4DKPlPc_LmM3uRzhA0W7S0KIgmj1je9hIl4ye5KKZ2_oQmCsgFY/exec";
+      const PROXY_ENDPOINT = "/api/proxy";
+
+      async function runScript(action, payload = {}) {
+        const bodyData = JSON.stringify({
+          targetUrl: API_URL,
+          action: action,
+          payload: payload
+        });
+
+        // 1. Gọi qua /api/proxy trên cùng tên miền Vercel (Safari iPhone không bao giờ chặn)
+        try {
+          const res = await fetch(PROXY_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: bodyData
+          });
+
+          if (res.ok) {
+            const json = await res.json();
+            if (json.status === 'error') throw new Error(json.message);
+            return json.data;
+          }
+        } catch (proxyErr) {
+          // Nếu lỗi từ bên trong Google trả về qua proxy thì báo thẳng ra màn hình
+          if (proxyErr.message && !proxyErr.message.includes('Failed to fetch') && !proxyErr.message.includes('Load failed')) {
+            throw proxyErr;
+          }
+        }
+
+        // 2. Dự phòng khi mở file trực tiếp trên máy tính (ngoài Vercel)
+        const directRes = await fetch(API_URL, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: bodyData
+        });
+        const directJson = await directRes.json();
+        if (directJson.status === 'error') throw new Error(directJson.message);
+        return directJson.data;
+      }
+
       // ==========================================
       // HÀM COPY TƯƠNG THÍCH 100% SAFARI IPHONE (iOS WEBKIT)
       // ==========================================
@@ -975,7 +1019,7 @@
         setTimeout(() => { toast.classList.add('fade-out'); setTimeout(()=> toast.remove(), 350); }, 2400);
       }
 
-   function renderErrorBox(titleText, subText) {
+      function renderErrorBox(titleText, subText) {
         clearAllToasts();
         document.getElementById('app').innerHTML = `
           <div class="status-box">
@@ -984,7 +1028,6 @@
             <div class="status-box-actions">
               <button class="btn btn-sec" style="padding: 10px 14px; flex: unset;" onclick="openDatePicker()">📅 Chọn ngày khác</button>
               <button class="btn btn-main" style="padding: 10px 14px; flex: unset; --accent: #3b82f6; --accent-bg: rgba(59,130,246,0.25);" onclick="forceRefreshData()">🔄 Thử tải lại</button>
-              <a href="${API_URL}?action=getInitialData" target="_blank" class="btn btn-sec" style="padding: 10px 14px; flex: unset; text-decoration: none; color: #64d2b1; border-color: #64d2b1;">🔍 Kiểm tra Link Sheet</a>
             </div>
           </div>`;
       }
@@ -1251,7 +1294,7 @@
         }
         renderCards(); 
         
-        runScript('markAsCopied', { row: sheetRow, col: sheetCol }).catch(e => console.log(e));
+        runScript('markAsCopied', { row: sheetRow, col: sheetCol, dateString: lastRequestedDate }).catch(e => console.log(e));
       }
 
       function copyOnly(id) {
@@ -1264,7 +1307,7 @@
         let idx = currentData.findIndex(i => i.id === id);
         if (idx > -1) currentData[idx].status = 'pending'; 
         renderCards(); 
-        runScript('unmarkAsCopied', { row: sheetRow, col: sheetCol }).catch(e => console.log(e)); 
+        runScript('unmarkAsCopied', { row: sheetRow, col: sheetCol, dateString: lastRequestedDate }).catch(e => console.log(e)); 
       }
 
       function forceRefreshData() {
