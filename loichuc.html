@@ -443,106 +443,7 @@
     <div id="toast-container"></div>
 
     <script>
-      // =========================================================================
-      // HỆ THỐNG KẾT NỐI 3 TẦNG ĐẶC TRỊ SAFARI IPHONE (JSONP ➔ GET ➔ POST)
-      // =========================================================================
-      const API_URL = "https://script.google.com/macros/s/AKfycbyUnPauRyR_pxZqK4DKPlPc_LmM3uRzhA0W7S0KIgmj1je9hIl4ye5KKZ2_oQmCsgFY/exec";
-
-      // Tầng 1: JSONP qua thẻ <script> (Miễn nhiễm 100% lỗi CORS & Load failed của Safari iPhone)
-      function runScriptJSONP(action, payload = {}) {
-        return new Promise((resolve, reject) => {
-          const cbName = "gas_cb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
-          const script = document.createElement("script");
-          let isDone = false;
-
-          const timer = setTimeout(() => {
-            if (isDone) return;
-            isDone = true;
-            cleanup();
-            reject(new Error("Quá thời gian chờ phản hồi từ Google Sheets."));
-          }, 14000);
-
-          function cleanup() {
-            clearTimeout(timer);
-            try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
-            if (script.parentNode) script.parentNode.removeChild(script);
-          }
-
-          window[cbName] = function(res) {
-            if (isDone) return;
-            isDone = true;
-            cleanup();
-            if (!res || res.status === 'error') {
-              reject(new Error((res && res.message) ? res.message : "Lỗi trả về từ Google Sheets."));
-            } else {
-              resolve(res.data);
-            }
-          };
-
-          script.onerror = function() {
-            if (isDone) return;
-            isDone = true;
-            cleanup();
-            reject(new Error("JSONP chưa kích hoạt (Hãy kiểm tra bạn đã chọn 'New version / Phiên bản mới' khi Deploy Code.gs chưa)."));
-          };
-
-          const params = new URLSearchParams({
-            action: action,
-            payload: JSON.stringify(payload),
-            callback: cbName,
-            _t: Date.now()
-          });
-          script.src = `${API_URL}?${params.toString()}`;
-          document.body.appendChild(script);
-        });
-      }
-
-      // Hàm gọi tổng hợp: Ưu tiên JSONP & GET cho Safari, tự động lùi về POST nếu cần
-      async function runScript(action, payload = {}) {
-        // 1. Ưu tiên thử GET (không body, omit cookie -> đi qua 302 Redirect của Google mượt mà)
-        try {
-          const params = new URLSearchParams({
-            action: action,
-            payload: JSON.stringify(payload),
-            _t: Date.now()
-          });
-          const resGet = await fetch(`${API_URL}?${params.toString()}`, {
-            method: 'GET',
-            mode: 'cors',
-            credentials: 'omit',
-            redirect: 'follow'
-          });
-          const textGet = await resGet.text();
-          // Nếu Code.gs đã cập nhật, textGet sẽ là JSON hợp lệ
-          if (textGet && textGet.trim().startsWith("{")) {
-            const jsonGet = JSON.parse(textGet);
-            if (jsonGet.status === 'error') throw new Error(jsonGet.message);
-            return jsonGet.data;
-          }
-        } catch (getErr) {
-          console.warn("GET chuyển tiếp sang JSONP:", getErr.message);
-        }
-
-        // 2. Thử JSONP (Vượt tường lửa Safari ITP 100% khi fetch bị chặn)
-        try {
-          return await runScriptJSONP(action, payload);
-        } catch (jsonpErr) {
-          console.warn("JSONP chuyển tiếp sang POST:", jsonpErr.message);
-        }
-
-        // 3. Dự phòng POST (Nếu Code.gs chưa kịp Deploy bản mới)
-        const resPost = await fetch(API_URL, {
-          method: 'POST',
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: action, payload: payload })
-        });
-        const textPost = await resPost.text();
-        const jsonPost = JSON.parse(textPost);
-        if (jsonPost.status === 'error') throw new Error(jsonPost.message);
-        return jsonPost.data;
-      }
-
+   const API_URL =
       // ==========================================
       // HÀM COPY TƯƠNG THÍCH 100% SAFARI IPHONE (iOS WEBKIT)
       // ==========================================
@@ -1074,15 +975,16 @@
         setTimeout(() => { toast.classList.add('fade-out'); setTimeout(()=> toast.remove(), 350); }, 2400);
       }
 
-      function renderErrorBox(titleText, subText) {
+   function renderErrorBox(titleText, subText) {
         clearAllToasts();
         document.getElementById('app').innerHTML = `
           <div class="status-box">
             <p class="status-box-title">⚠️ ${titleText}</p>
-            <p class="status-box-sub">${subText}</p>
+            <p class="status-box-sub" style="text-align: left; background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: 10px; font-size: 12px; word-break: break-word;">${subText}</p>
             <div class="status-box-actions">
-              <button class="btn btn-sec" style="padding: 10px 16px; flex: unset;" onclick="openDatePicker()">📅 Chọn ngày khác</button>
-              <button class="btn btn-main" style="padding: 10px 16px; flex: unset; --accent: #3b82f6; --accent-bg: rgba(59,130,246,0.25);" onclick="forceRefreshData()">🔄 Thử tải lại</button>
+              <button class="btn btn-sec" style="padding: 10px 14px; flex: unset;" onclick="openDatePicker()">📅 Chọn ngày khác</button>
+              <button class="btn btn-main" style="padding: 10px 14px; flex: unset; --accent: #3b82f6; --accent-bg: rgba(59,130,246,0.25);" onclick="forceRefreshData()">🔄 Thử tải lại</button>
+              <a href="${API_URL}?action=getInitialData" target="_blank" class="btn btn-sec" style="padding: 10px 14px; flex: unset; text-decoration: none; color: #64d2b1; border-color: #64d2b1;">🔍 Kiểm tra Link Sheet</a>
             </div>
           </div>`;
       }
