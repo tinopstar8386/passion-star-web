@@ -444,48 +444,21 @@
 
     <script>
       // ==========================================
-      // KẾT NỐI QUA CẦU NỐI /api/proxy CỦA VERCEL (CHUẨN SAFARI IPHONE)
+      // KẾT NỐI API QUA FILE /api/proxy-loichuc.js
       // ==========================================
-      const API_URL = "https://script.google.com/macros/s/AKfycbyUnPauRyR_pxZqK4DKPlPc_LmM3uRzhA0W7S0KIgmj1je9hIl4ye5KKZ2_oQmCsgFY/exec";
-      const PROXY_ENDPOINT = "/api/proxy";
+      const API_URL = "/api/proxy-loichuc";
 
-      async function runScript(action, payload = {}) {
-        const bodyData = JSON.stringify({
-          targetUrl: API_URL,
-          action: action,
-          payload: payload
-        });
-
-        // 1. Gọi qua /api/proxy trên cùng tên miền Vercel (Safari iPhone không bao giờ chặn)
-        try {
-          const res = await fetch(PROXY_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: bodyData
-          });
-
-          if (res.ok) {
-            const json = await res.json();
-            if (json.status === 'error') throw new Error(json.message);
-            return json.data;
-          }
-        } catch (proxyErr) {
-          // Nếu lỗi từ bên trong Google trả về qua proxy thì báo thẳng ra màn hình
-          if (proxyErr.message && !proxyErr.message.includes('Failed to fetch') && !proxyErr.message.includes('Load failed')) {
-            throw proxyErr;
-          }
-        }
-
-        // 2. Dự phòng khi mở file trực tiếp trên máy tính (ngoài Vercel)
-        const directRes = await fetch(API_URL, {
+      function runScript(action, payload = {}) {
+        return fetch(API_URL, {
           method: 'POST',
-          redirect: 'follow',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: bodyData
+          body: JSON.stringify({ action: action, payload: payload })
+        })
+        .then(res => res.json())
+        .then(res => {
+          if (res.status === 'error') throw new Error(res.message);
+          return res.data;
         });
-        const directJson = await directRes.json();
-        if (directJson.status === 'error') throw new Error(directJson.message);
-        return directJson.data;
       }
 
       // ==========================================
