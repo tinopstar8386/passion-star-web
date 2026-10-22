@@ -123,6 +123,98 @@
             animation: toastSlideOut 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
         }
 
+        /* Smooth View & Tab Switching Animations */
+        @keyframes viewFadeSlideIn {
+            0% {
+                opacity: 0;
+                transform: translate3d(0, 14px, 0) scale(0.992);
+                filter: blur(4px);
+            }
+            100% {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
+                filter: blur(0px);
+            }
+        }
+        .view-Transition-enter {
+            animation: viewFadeSlideIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            will-change: opacity, transform, filter;
+        }
+
+        /* Smooth Accordion Expand/Collapse for Custom Category & Banners */
+        .smooth-collapse {
+            display: grid;
+            grid-template-rows: 0fr;
+            opacity: 0;
+            transform: translateY(-6px);
+            transition:
+                grid-template-rows 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                margin-top 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+            margin-top: 0px;
+            pointer-events: none;
+        }
+        .smooth-collapse.is-open {
+            grid-template-rows: 1fr;
+            opacity: 1;
+            transform: translateY(0);
+            margin-top: 8px;
+            pointer-events: auto;
+        }
+        .smooth-collapse-inner {
+            overflow: hidden;
+        }
+
+        /* Smooth Modal Backdrop & Dialog Spring Transitions */
+        .modal-backdrop-smooth {
+            opacity: 0;
+            transition: opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-backdrop-smooth.is-visible {
+            opacity: 1;
+        }
+        .modal-dialog-smooth {
+            opacity: 0;
+            transform: translate3d(0, 18px, 0) scale(0.95);
+            transition:
+                opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-backdrop-smooth.is-visible .modal-dialog-smooth {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+        }
+
+        /* Smooth Floating Calendar Popover */
+        .popover-smooth {
+            opacity: 0;
+            transform: translate3d(0, -8px, 0) scale(0.95);
+            transform-origin: top center;
+            transition:
+                opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .popover-smooth.is-visible {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+        }
+
+        /* Smooth Task Item Appearance */
+        @keyframes taskPopIn {
+            0% {
+                opacity: 0;
+                transform: translateY(6px) scale(0.97);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .task-appear {
+            animation: taskPopIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
         select option {
             background-color: #0f172a;
             color: #f8fafc;
@@ -343,15 +435,15 @@
 
                 <div class="flex flex-wrap items-center gap-2 justify-between xl:justify-end">
                     <div class="inline-flex p-1 rounded-xl bg-slate-900/90 border border-white/10">
-                        <button id="viewTimelineBtn" onclick="switchView('timeline')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition">
+                        <button id="viewTimelineBtn" onclick="switchView('timeline')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all duration-300">
                             <i data-lucide="clock" class="w-3.5 h-3.5"></i>
                             <span id="tabTimelineText">Timeline Từng Tiếng</span>
                         </button>
-                        <button id="viewShiftBtn" onclick="switchView('shift')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition">
+                        <button id="viewShiftBtn" onclick="switchView('shift')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all duration-300">
                             <i data-lucide="table-2" class="w-3.5 h-3.5"></i>
                             <span id="tabShiftText">Bảng Ca Sáng / Chiều (Mẫu Excel)</span>
                         </button>
-                        <button id="viewReportBtn" onclick="switchView('report')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition">
+                        <button id="viewReportBtn" onclick="switchView('report')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all duration-300">
                             <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i>
                             <span id="tabReportText">Thống Kê Giờ Làm</span>
                         </button>
@@ -475,7 +567,7 @@
     </main>
 
     <!-- FLOATING CALENDAR POPOVER -->
-    <div id="floatingCalendarPopover" class="hidden fixed z-[9999] w-80 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_24px_60px_rgba(0,0,0,0.85)] p-4 select-none">
+    <div id="floatingCalendarPopover" class="hidden popover-smooth fixed z-[9999] w-80 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_24px_60px_rgba(0,0,0,0.85)] p-4 select-none">
         <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10">
             <button type="button" onclick="shiftCalendarMonth(-1, event)" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
                 <i data-lucide="chevron-left" class="w-4 h-4"></i>
@@ -498,8 +590,8 @@
     </div>
 
     <!-- TASK MODAL -->
-    <div id="taskModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-        <div class="glass-panel rounded-2xl max-w-lg w-full p-6 border border-white/15 shadow-2xl my-8">
+    <div id="taskModal" class="fixed inset-0 z-50 hidden modal-backdrop-smooth bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-panel modal-dialog-smooth rounded-2xl max-w-lg w-full p-6 border border-white/15 shadow-2xl my-8">
             <div class="flex items-center justify-between pb-3 border-b border-white/10">
                 <div class="flex items-center gap-2.5">
                     <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300">
@@ -536,13 +628,15 @@
                     <div>
                         <div class="flex items-center justify-between mb-1.5">
                             <label id="lblTaskCategory" class="block text-xs font-semibold text-slate-300">Hạng mục công việc</label>
-                            <button type="button" onclick="toggleCustomCategoryField()" id="btnToggleCustomCat" class="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 transition flex items-center gap-1">
+                            <button type="button" onclick="toggleCustomCategoryField()" id="btnToggleCustomCat" class="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 transition-all duration-200 flex items-center gap-1 active:scale-95">
                                 <span>+ Tự nhập hạng mục</span>
                             </button>
                         </div>
-                        <select id="taskCategoryInput" onchange="handleCategorySelectChange(this.value)" class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400"></select>
-                        <div id="customCategoryBox" class="hidden mt-2">
-                            <input type="text" id="taskCustomCategoryInput" placeholder="Nhập tên hạng mục tuỳ chỉnh (VD: Chụp ngoại cảnh, Sự kiện...)" class="w-full bg-slate-950 border border-cyan-500/50 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400">
+                        <select id="taskCategoryInput" onchange="handleCategorySelectChange(this.value)" class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400 transition-colors duration-200"></select>
+                        <div id="customCategoryBox" class="smooth-collapse">
+                            <div class="smooth-collapse-inner">
+                                <input type="text" id="taskCustomCategoryInput" placeholder="Nhập tên hạng mục tuỳ chỉnh (VD: Chụp ngoại cảnh, Sự kiện...)" class="w-full bg-slate-950 border border-cyan-500/50 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 shadow-inner transition-all duration-200">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -628,8 +722,8 @@
     </div>
 
     <!-- STAFF MODAL -->
-    <div id="staffModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="glass-panel rounded-2xl max-w-md w-full p-6 border border-cyan-500/30 shadow-2xl">
+    <div id="staffModal" class="fixed inset-0 z-50 hidden modal-backdrop-smooth bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel modal-dialog-smooth rounded-2xl max-w-md w-full p-6 border border-cyan-500/30 shadow-2xl">
             <div class="flex items-center justify-between pb-3.5 border-b border-white/10">
                 <div class="flex items-center gap-2.5">
                     <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/25 to-blue-600/25 border border-cyan-400/40 flex items-center justify-center text-cyan-300">
@@ -665,8 +759,8 @@
     </div>
 
     <!-- LINKS MODAL (INDIVIDUAL STAFF LINKS + MANAGER LINK) -->
-    <div id="linksModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-        <div class="glass-panel rounded-2xl max-w-2xl w-full p-6 border border-violet-500/40 shadow-2xl space-y-4 my-8">
+    <div id="linksModal" class="fixed inset-0 z-50 hidden modal-backdrop-smooth bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-panel modal-dialog-smooth rounded-2xl max-w-2xl w-full p-6 border border-violet-500/40 shadow-2xl space-y-4 my-8">
             <div class="flex items-center justify-between pb-3 border-b border-white/10">
                 <div class="flex items-center gap-2.5">
                     <div class="w-9 h-9 rounded-xl bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-300">
@@ -1176,33 +1270,69 @@
             return dict.categories[task.category] || task.category || dict.categories.photo;
         }
 
-        window.toggleCustomCategoryField = function() {
+        function setCustomCategoryBoxOpen(isOpen, shouldFocus = false) {
             const box = document.getElementById('customCategoryBox');
             const inp = document.getElementById('taskCustomCategoryInput');
+            if (!box) return;
+            if (isOpen) {
+                box.classList.add('is-open');
+                if (shouldFocus && inp) {
+                    setTimeout(() => inp.focus(), 120);
+                }
+            } else {
+                box.classList.remove('is-open');
+                if (inp) inp.value = '';
+            }
+        }
+
+        function openModalSmooth(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    modal.classList.add('is-visible');
+                });
+            });
+        }
+
+        function closeModalSmooth(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            modal.classList.remove('is-visible');
+            setTimeout(() => {
+                if (!modal.classList.contains('is-visible')) {
+                    modal.classList.add('hidden');
+                }
+            }, 260);
+        }
+
+        function triggerViewSmoothAnimation(containerEl) {
+            if (!containerEl) return;
+            containerEl.classList.remove('view-Transition-enter');
+            void containerEl.offsetWidth;
+            containerEl.classList.add('view-Transition-enter');
+        }
+
+        window.toggleCustomCategoryField = function() {
+            const box = document.getElementById('customCategoryBox');
             const select = document.getElementById('taskCategoryInput');
             if (!box) return;
-            const isHidden = box.classList.contains('hidden');
-            if (isHidden) {
-                box.classList.remove('hidden');
+            const isCurrentlyOpen = box.classList.contains('is-open');
+            if (!isCurrentlyOpen) {
                 if (select) select.value = '__custom__';
-                if (inp) inp.focus();
+                setCustomCategoryBoxOpen(true, true);
             } else {
-                box.classList.add('hidden');
-                if (inp) inp.value = '';
+                setCustomCategoryBoxOpen(false, false);
                 if (select && select.value === '__custom__') select.value = 'photo';
             }
         };
 
         window.handleCategorySelectChange = function(val) {
-            const box = document.getElementById('customCategoryBox');
-            const inp = document.getElementById('taskCustomCategoryInput');
-            if (!box) return;
             if (val === '__custom__') {
-                box.classList.remove('hidden');
-                if (inp) inp.focus();
+                setCustomCategoryBoxOpen(true, true);
             } else {
-                box.classList.add('hidden');
-                if (inp) inp.value = '';
+                setCustomCategoryBoxOpen(false, false);
             }
         };
 
@@ -1609,13 +1739,29 @@
 
             popover.style.left = `${leftPx}px`;
             popover.style.top = `${topPx}px`;
+            requestAnimationFrame(() => {
+                popover.classList.add('is-visible');
+            });
             lucide.createIcons();
         };
+
+        function closeFloatingCalendarSmooth() {
+            const pop = document.getElementById('floatingCalendarPopover');
+            if (!pop || pop.classList.contains('hidden')) return;
+            pop.classList.remove('is-visible');
+            setTimeout(() => {
+                if (!pop.classList.contains('is-visible')) {
+                    pop.classList.add('hidden');
+                }
+            }, 220);
+        }
 
         window.shiftCalendarMonth = function(delta, event) {
             if (event) event.stopPropagation();
             calViewingMonth = new Date(calViewingMonth.getFullYear(), calViewingMonth.getMonth() + delta, 1);
             renderFloatingCalendarGrid();
+            const daysGrid = document.getElementById('calDaysGrid');
+            triggerViewSmoothAnimation(daysGrid);
             lucide.createIcons();
         };
 
@@ -1688,8 +1834,12 @@
                 selectedToolbarDateISO = isoDate;
                 currentWeekMonday = getMondayOfDate(parseISOToDate(isoDate));
                 renderAllViews();
+                const activeCont = document.getElementById(
+                    currentView === 'timeline' ? 'timelineViewContainer' : (currentView === 'shift' ? 'shiftViewContainer' : 'reportViewContainer')
+                );
+                triggerViewSmoothAnimation(activeCont);
             }
-            document.getElementById('floatingCalendarPopover')?.classList.add('hidden');
+            closeFloatingCalendarSmooth();
         };
 
         window.pickCalendarToday = function(event) {
@@ -1700,7 +1850,7 @@
         document.addEventListener('click', (e) => {
             const pop = document.getElementById('floatingCalendarPopover');
             if (pop && !pop.classList.contains('hidden') && !pop.contains(e.target)) {
-                pop.classList.add('hidden');
+                closeFloatingCalendarSmooth();
             }
         });
 
@@ -2010,7 +2160,7 @@
                     return `
                         <div onclick="event.stopPropagation(); openEditTaskModal('${task.id}')"
                              style="top: ${topPx}px; height: ${heightPx}px; left: calc(${leftPct}% + 3px); width: calc(${widthPct}% - 6px);"
-                             class="task-block group absolute z-10 rounded-xl p-2 ${isPendingDel ? 'bg-rose-950/80 border-rose-400/70' : `${style.bg} ${style.border}`} ${!isOwnTask && currentRole !== 'manager' ? 'opacity-75' : ''} border backdrop-blur-md cursor-pointer overflow-hidden flex flex-col justify-between shadow-md">
+                             class="task-block task-appear group absolute z-10 rounded-xl p-2 ${isPendingDel ? 'bg-rose-950/80 border-rose-400/70' : `${style.bg} ${style.border}`} ${!isOwnTask && currentRole !== 'manager' ? 'opacity-75' : ''} border backdrop-blur-md cursor-pointer overflow-hidden flex flex-col justify-between shadow-md">
                             <div>
                                 <div class="flex items-center justify-between gap-1">
                                     <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${isPendingDel ? 'bg-rose-500 text-white' : style.badge} truncate">
@@ -2134,7 +2284,7 @@
                             : '';
 
                         return `
-                            <div onclick="openEditTaskModal('${task.id}')" class="group p-2.5 rounded-xl ${isPendingDel ? 'bg-rose-950/75 border-rose-400/70' : `${style.bg} ${style.border}`} ${!isOwnTask && currentRole !== 'manager' ? 'opacity-75' : ''} border cursor-pointer hover:scale-[1.01] transition space-y-1">
+                            <div onclick="openEditTaskModal('${task.id}')" class="task-appear group p-2.5 rounded-xl ${isPendingDel ? 'bg-rose-950/75 border-rose-400/70' : `${style.bg} ${style.border}`} ${!isOwnTask && currentRole !== 'manager' ? 'opacity-75' : ''} border cursor-pointer hover:scale-[1.01] transition space-y-1">
                                 <div class="flex items-center justify-between gap-1">
                                     <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${isPendingDel ? 'bg-rose-500 text-white' : style.badge}">
                                         ${formatHourFloat(startH)} - ${formatHourFloat(startH + dur)} (${dur}h)
@@ -2303,16 +2453,26 @@
             }
             currentView = view;
             const tCont = document.getElementById('timelineViewContainer');
-            if (tCont) tCont.classList.toggle('hidden', view !== 'timeline');
+            if (tCont) {
+                tCont.classList.toggle('hidden', view !== 'timeline');
+                if (view === 'timeline') triggerViewSmoothAnimation(tCont);
+            }
             
             const sCont = document.getElementById('shiftViewContainer');
-            if (sCont) sCont.classList.toggle('hidden', view !== 'shift');
+            if (sCont) {
+                sCont.classList.toggle('hidden', view !== 'shift');
+                if (view === 'shift') triggerViewSmoothAnimation(sCont);
+            }
             
             const rCont = document.getElementById('reportViewContainer');
-            if (rCont) rCont.classList.toggle('hidden', view !== 'report' || !isManager);
+            if (rCont) {
+                const showReport = (view === 'report' && isManager);
+                rCont.classList.toggle('hidden', !showReport);
+                if (showReport) triggerViewSmoothAnimation(rCont);
+            }
 
-            const activeCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition';
-            const inactiveCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition';
+            const activeCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm scale-[1.02] transition-all duration-300';
+            const inactiveCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all duration-300';
 
             const vTBtn = document.getElementById('viewTimelineBtn');
             if (vTBtn) vTBtn.className = view === 'timeline' ? activeCls : inactiveCls;
@@ -2334,12 +2494,20 @@
             currentWeekMonday = addDays(currentWeekMonday, deltaWeeks * 7);
             selectedToolbarDateISO = formatDateISO(currentWeekMonday);
             renderAllViews();
+            const activeCont = document.getElementById(
+                currentView === 'timeline' ? 'timelineViewContainer' : (currentView === 'shift' ? 'shiftViewContainer' : 'reportViewContainer')
+            );
+            triggerViewSmoothAnimation(activeCont);
         };
 
         window.jumpToDefaultSampleWeek = function() {
             currentWeekMonday = new Date(2026, 9, 19);
             selectedToolbarDateISO = '2026-10-19';
             renderAllViews();
+            const activeCont = document.getElementById(
+                currentView === 'timeline' ? 'timelineViewContainer' : (currentView === 'shift' ? 'shiftViewContainer' : 'reportViewContainer')
+            );
+            triggerViewSmoothAnimation(activeCont);
         };
 
         window.jumpToCurrentWeek = function() {
@@ -2347,6 +2515,10 @@
             currentWeekMonday = getMondayOfDate(now);
             selectedToolbarDateISO = formatDateISO(now);
             renderAllViews();
+            const activeCont = document.getElementById(
+                currentView === 'timeline' ? 'timelineViewContainer' : (currentView === 'shift' ? 'shiftViewContainer' : 'reportViewContainer')
+            );
+            triggerViewSmoothAnimation(activeCont);
         };
 
         window.openTaskModal = function() {
@@ -2387,10 +2559,7 @@
             
             const catInp = document.getElementById('taskCategoryInput');
             if (catInp) catInp.value = 'photo';
-            const customCatBox = document.getElementById('customCategoryBox');
-            if (customCatBox) customCatBox.classList.add('hidden');
-            const customCatInp = document.getElementById('taskCustomCategoryInput');
-            if (customCatInp) customCatInp.value = '';
+            setCustomCategoryBoxOpen(false, false);
             
             const statInp = document.getElementById('taskStatusInput');
             if (statInp) statInp.value = 'todo';
@@ -2414,8 +2583,7 @@
             if (delTaskBtn) delTaskBtn.classList.add('hidden');
 
             updateCalculatedTimePreview();
-            const tModal = document.getElementById('taskModal');
-            if (tModal) tModal.classList.remove('hidden');
+            openModalSmooth('taskModal');
             lucide.createIcons();
         };
 
@@ -2450,23 +2618,20 @@
             if (assigneeInp) assigneeInp.value = (!isManager && lockedStaffName) ? lockedStaffName : (task.assignee || staffList[0]);
             
             const catInp = document.getElementById('taskCategoryInput');
-            const customCatBox = document.getElementById('customCategoryBox');
             const customCatInp = document.getElementById('taskCustomCategoryInput');
             if (task.customCategory && task.customCategory.trim()) {
                 const customVal = `custom:${task.customCategory.trim()}`;
                 if (catInp && Array.from(catInp.options).some(opt => opt.value === customVal)) {
                     catInp.value = customVal;
-                    if (customCatBox) customCatBox.classList.add('hidden');
-                    if (customCatInp) customCatInp.value = '';
+                    setCustomCategoryBoxOpen(false, false);
                 } else {
                     if (catInp) catInp.value = '__custom__';
-                    if (customCatBox) customCatBox.classList.remove('hidden');
+                    setCustomCategoryBoxOpen(true, false);
                     if (customCatInp) customCatInp.value = task.customCategory.trim();
                 }
             } else {
                 if (catInp) catInp.value = task.category || 'photo';
-                if (customCatBox) customCatBox.classList.add('hidden');
-                if (customCatInp) customCatInp.value = '';
+                setCustomCategoryBoxOpen(false, false);
             }
 
             const dateInp = document.getElementById('taskDateInput');
@@ -2503,13 +2668,12 @@
             }
 
             updateCalculatedTimePreview();
-            const tModal = document.getElementById('taskModal');
-            if (tModal) tModal.classList.remove('hidden');
+            openModalSmooth('taskModal');
             lucide.createIcons();
         };
 
         window.closeTaskModal = function() {
-            document.getElementById('taskModal')?.classList.add('hidden');
+            closeModalSmooth('taskModal');
         };
 
         window.selectDurationPill = function(hours) {
@@ -2766,11 +2930,11 @@
 
         window.openStaffModal = function() {
             populateStaffSelectors();
-            document.getElementById('staffModal')?.classList.remove('hidden');
+            openModalSmooth('staffModal');
             lucide.createIcons();
         };
         window.closeStaffModal = function() {
-            document.getElementById('staffModal')?.classList.add('hidden');
+            closeModalSmooth('staffModal');
         };
 
         window.handleAddStaff = async function(e) {
@@ -2796,11 +2960,11 @@
             const mgrInp = document.getElementById('shareManagerUrlInput');
             if (mgrInp) mgrInp.value = `${base}?role=manager`;
             renderIndividualStaffLinks();
-            document.getElementById('linksModal')?.classList.remove('hidden');
+            openModalSmooth('linksModal');
             lucide.createIcons();
         };
         window.closeLinksModal = function() {
-            document.getElementById('linksModal')?.classList.add('hidden');
+            closeModalSmooth('linksModal');
         };
 
         window.copyShareUrl = function(inputId) {
