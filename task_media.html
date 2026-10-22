@@ -179,7 +179,7 @@
                 </div>
 
                 <div class="flex items-center gap-2 flex-wrap">
-                    <button onclick="openTaskModal()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition-all active:scale-95">
+                    <button id="headerAddTaskBtn" onclick="openTaskModal()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition-all active:scale-95">
                         <i data-lucide="plus-circle" class="w-4 h-4 stroke-[2.5]"></i>
                         <span id="btnAddTaskText">+ Giao Task Cho Media</span>
                     </button>
@@ -529,14 +529,21 @@
                     <div>
                         <div class="flex items-center justify-between mb-1.5">
                             <label id="lblTaskAssignee" class="block text-xs font-semibold text-slate-300">Nhân sự Media phụ trách *</label>
-                            <span id="lockedAssigneeHint" class="hidden text-[10px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.2 rounded">🔒 Đã khoá theo link</span>
                         </div>
                         <select id="taskAssigneeInput" required class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400"></select>
                     </div>
 
                     <div>
-                        <label id="lblTaskCategory" class="block text-xs font-semibold text-slate-300 mb-1.5">Hạng mục công việc</label>
-                        <select id="taskCategoryInput" class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400"></select>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label id="lblTaskCategory" class="block text-xs font-semibold text-slate-300">Hạng mục công việc</label>
+                            <button type="button" onclick="toggleCustomCategoryField()" id="btnToggleCustomCat" class="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 transition flex items-center gap-1">
+                                <span>+ Tự nhập hạng mục</span>
+                            </button>
+                        </div>
+                        <select id="taskCategoryInput" onchange="handleCategorySelectChange(this.value)" class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400"></select>
+                        <div id="customCategoryBox" class="hidden mt-2">
+                            <input type="text" id="taskCustomCategoryInput" placeholder="Nhập tên hạng mục tuỳ chỉnh (VD: Chụp ngoại cảnh, Sự kiện...)" class="w-full bg-slate-950 border border-cyan-500/50 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400">
+                        </div>
                     </div>
                 </div>
 
@@ -750,10 +757,9 @@
                 mediaBannerTitle: "Chế độ dành cho Bộ phận Media điền Task",
                 mediaBannerTitlePersonal: (name) => `Không gian làm việc cá nhân của: ${name}`,
                 mediaBannerDesc: "Chọn thẻ tên của bạn bên phải, sau đó nhấp vào ô giờ trên lịch để đăng ký hoặc sửa công việc (Xoá task cần Quản lý Tino duyệt).",
-                mediaBannerDescPersonal: (name) => `Link này đã được khoá cố định cho riêng ${name}. Mọi task bạn tạo sẽ tự động gắn tên ${name} để không bao giờ bị chọn nhầm nhân sự khác!`,
+                mediaBannerDescPersonal: (name) => `Mọi công việc bạn đăng ký trên lịch này sẽ tự động gắn tên phụ trách là ${name}.`,
                 quickStaffLabel: "Nhân sự đang điền:",
-                quickStaffLockedLabel: "Nhân sự cố định:",
-                lockedPillBadge: "Đã khoá riêng biệt",
+                quickStaffLockedLabel: "Nhân sự:",
                 mediaBannerBtn: "+ Điền lịch ngay",
                 kpiTotalTasks: "Tổng Task Tuần Này",
                 kpiUnitTasks: "công việc",
@@ -834,8 +840,10 @@
                 lblTaskTitle: "Tên công việc / Lịch chụp *",
                 phTaskTitle: "VD: Chụp TTS (Mỹ phụ trách), Quay TikTok...",
                 lblTaskAssignee: "Nhân sự Media phụ trách *",
-                lockedAssigneeHint: "🔒 Đã khoá cố định theo link",
                 lblTaskCategory: "Hạng mục công việc",
+                btnToggleCustomCat: "+ Tự nhập hạng mục",
+                optCustomCategory: "✏️ Tự nhập hạng mục tuỳ chỉnh...",
+                phCustomCategory: "Nhập tên hạng mục (VD: Ngoại cảnh, Sự kiện, Reels...)",
                 lblTaskDate: "Ngày thực hiện *",
                 lblTaskStartHour: "Giờ bắt đầu *",
                 lblTaskDuration: "Task này tốn bao nhiêu tiếng? *",
@@ -907,10 +915,9 @@
                 mediaBannerTitle: "媒体部员工排班填报专用模式",
                 mediaBannerTitlePersonal: (name) => `${name} 的个人专属排班工作台`,
                 mediaBannerDesc: "请在右侧选择您的姓名卡片，点击日历登记或修改工作（删除任务需经主管 Tino 审批）。",
-                mediaBannerDescPersonal: (name) => `此链接已专属锁定为 ${name}。您登记的所有任务将自动绑定您的姓名，绝不会误选其他员工！`,
+                mediaBannerDescPersonal: (name) => `在此日程表登记的所有工作任务将自动绑定负责人为 ${name}。`,
                 quickStaffLabel: "当前填报人员:",
-                quickStaffLockedLabel: "已锁定员工:",
-                lockedPillBadge: "专属独立锁定",
+                quickStaffLockedLabel: "负责人员:",
                 mediaBannerBtn: "+ 立即登记排班",
                 kpiTotalTasks: "本周总任务数",
                 kpiUnitTasks: "项工作",
@@ -991,8 +998,10 @@
                 lblTaskTitle: "任务名称 / 拍摄与制作内容 *",
                 phTaskTitle: "例如：拍摄实习生 (Mỹ 负责)、拍摄抖音视频...",
                 lblTaskAssignee: "负责媒体人员 *",
-                lockedAssigneeHint: "🔒 已按个人链接锁定",
                 lblTaskCategory: "工作类别",
+                btnToggleCustomCat: "+ 自定义类别",
+                optCustomCategory: "✏️ 输入自定义工作类别...",
+                phCustomCategory: "输入自定义类别名称 (例如：外景拍摄、活动跟拍...)",
                 lblTaskDate: "执行日期 *",
                 lblTaskStartHour: "开始时间 *",
                 lblTaskDuration: "该项任务需要多少小时？ *",
@@ -1145,6 +1154,7 @@
         let db = null;
         let allTasks = [];
         let staffList = ['Mỹ', 'Anh Quý'];
+        let customCategoriesList = [];
         if (lockedStaffName && !staffList.includes(lockedStaffName)) {
             staffList.push(lockedStaffName);
         }
@@ -1156,6 +1166,45 @@
         function t() {
             return I18N[currentLang];
         }
+
+        function getTaskCategoryLabel(task) {
+            if (!task) return '';
+            if (task.customCategory && task.customCategory.trim()) {
+                return task.customCategory.trim();
+            }
+            const dict = t();
+            return dict.categories[task.category] || task.category || dict.categories.photo;
+        }
+
+        window.toggleCustomCategoryField = function() {
+            const box = document.getElementById('customCategoryBox');
+            const inp = document.getElementById('taskCustomCategoryInput');
+            const select = document.getElementById('taskCategoryInput');
+            if (!box) return;
+            const isHidden = box.classList.contains('hidden');
+            if (isHidden) {
+                box.classList.remove('hidden');
+                if (select) select.value = '__custom__';
+                if (inp) inp.focus();
+            } else {
+                box.classList.add('hidden');
+                if (inp) inp.value = '';
+                if (select && select.value === '__custom__') select.value = 'photo';
+            }
+        };
+
+        window.handleCategorySelectChange = function(val) {
+            const box = document.getElementById('customCategoryBox');
+            const inp = document.getElementById('taskCustomCategoryInput');
+            if (!box) return;
+            if (val === '__custom__') {
+                box.classList.remove('hidden');
+                if (inp) inp.focus();
+            } else {
+                box.classList.add('hidden');
+                if (inp) inp.value = '';
+            }
+        };
 
         window.setLanguage = function(lang, showNotification = true) {
             if (lang !== 'vi' && lang !== 'zh') return;
@@ -1272,8 +1321,10 @@
             const titleInp = document.getElementById('taskTitleInput');
             if (titleInp) titleInp.placeholder = dict.phTaskTitle;
             safeSetText('lblTaskAssignee', dict.lblTaskAssignee);
-            safeSetText('lockedAssigneeHint', dict.lockedAssigneeHint);
             safeSetText('lblTaskCategory', dict.lblTaskCategory);
+            safeSetText('btnToggleCustomCat', dict.btnToggleCustomCat);
+            const customCatInp = document.getElementById('taskCustomCategoryInput');
+            if (customCatInp) customCatInp.placeholder = dict.phCustomCategory;
             safeSetText('lblTaskDate', dict.lblTaskDate);
             safeSetText('lblTaskStartHour', dict.lblTaskStartHour);
             safeSetText('lblTaskDuration', dict.lblTaskDuration);
@@ -1321,13 +1372,17 @@
         function populateDynamicSelectOptions() {
             const dict = t();
 
+            const customCatOptionsHtml = customCategoriesList.map(cName =>
+                `<option value="custom:${escapeHtml(cName)}" class="bg-slate-900">✨ ${escapeHtml(cName)}</option>`
+            ).join('');
+
             const filterCat = document.getElementById('filterCategory');
             if (filterCat) {
                 const prevCat = filterCat.value || 'ALL';
                 filterCat.innerHTML = `<option value="ALL" class="bg-slate-900">${dict.filterAllCat}</option>` +
                     Object.entries(dict.categories).map(([key, label]) =>
                         `<option value="${key}" class="bg-slate-900">${CATEGORY_STYLE[key].icon} ${label}</option>`
-                    ).join('');
+                    ).join('') + customCatOptionsHtml;
                 filterCat.value = prevCat;
             }
 
@@ -1336,7 +1391,9 @@
                 const prevModalCat = modalCat.value || 'photo';
                 modalCat.innerHTML = Object.entries(dict.categories).map(([key, label]) =>
                     `<option value="${key}" class="bg-slate-900">${CATEGORY_STYLE[key].icon} ${label}</option>`
-                ).join('');
+                ).join('') +
+                customCatOptionsHtml +
+                `<option value="__custom__" class="bg-slate-900 text-amber-300 font-bold">${dict.optCustomCategory}</option>`;
                 modalCat.value = prevModalCat;
             }
 
@@ -1416,14 +1473,21 @@
                 });
 
                 onSnapshot(settingsDocRef, (docSnap) => {
-                    if (docSnap.exists() && Array.isArray(docSnap.data().staffList) && docSnap.data().staffList.length > 0) {
-                        staffList = docSnap.data().staffList;
-                        if (lockedStaffName && !staffList.includes(lockedStaffName)) {
-                            staffList.push(lockedStaffName);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        if (Array.isArray(data.staffList) && data.staffList.length > 0) {
+                            staffList = data.staffList;
+                            if (lockedStaffName && !staffList.includes(lockedStaffName)) {
+                                staffList.push(lockedStaffName);
+                            }
+                        }
+                        if (Array.isArray(data.customCategories)) {
+                            customCategoriesList = data.customCategories;
                         }
                     } else {
-                        setDoc(settingsDocRef, { staffList: ['Mỹ', 'Anh Quý'], updatedAt: Date.now() }, { merge: true });
+                        setDoc(settingsDocRef, { staffList: ['Mỹ', 'Anh Quý'], customCategories: [], updatedAt: Date.now() }, { merge: true });
                     }
+                    populateDynamicSelectOptions();
                     populateStaffSelectors();
                     renderAllViews();
                 });
@@ -1709,9 +1773,18 @@
             
             const mgrActBtns = document.getElementById('managerActionButtons');
             if (mgrActBtns) mgrActBtns.classList.toggle('hidden', !isManager);
+
+            const headerAddBtn = document.getElementById('headerAddTaskBtn');
+            if (headerAddBtn) {
+                headerAddBtn.classList.toggle('hidden', !isManager);
+                headerAddBtn.style.display = isManager ? '' : 'none';
+            }
             
             const repBtn = document.getElementById('viewReportBtn');
-            if (repBtn) repBtn.classList.toggle('hidden', !isManager);
+            if (repBtn) {
+                repBtn.classList.toggle('hidden', !isManager);
+                repBtn.style.display = isManager ? '' : 'none';
+            }
             
             const mediaBanner = document.getElementById('mediaModeBanner');
             if (mediaBanner) mediaBanner.classList.toggle('hidden', isManager);
@@ -1728,9 +1801,7 @@
             
             const btnAddTaskText = document.getElementById('btnAddTaskText');
             if (btnAddTaskText) {
-                btnAddTaskText.textContent = isManager
-                    ? dict.btnAssignTask
-                    : (lockedStaffName ? dict.btnPersonalAddTask(lockedStaffName) : dict.btnMediaAddTask);
+                btnAddTaskText.textContent = dict.btnAssignTask;
             }
 
             if (!isManager && currentView === 'report') {
@@ -1773,9 +1844,16 @@
             return allTasks.filter(task => {
                 if (!weekDates.has(task.date)) return false;
                 if (staffFilter !== 'ALL' && task.assignee !== staffFilter) return false;
-                if (catFilter !== 'ALL' && task.category !== catFilter) return false;
+                if (catFilter !== 'ALL') {
+                    if (catFilter.startsWith('custom:')) {
+                        const cName = catFilter.slice(7);
+                        if ((task.customCategory || '') !== cName) return false;
+                    } else if (task.category !== catFilter || task.customCategory) {
+                        return false;
+                    }
+                }
                 if (searchKeyword) {
-                    const hay = `${task.title || ''} ${task.assignee || ''} ${task.note || ''}`.toLowerCase();
+                    const hay = `${task.title || ''} ${task.assignee || ''} ${task.note || ''} ${task.customCategory || ''}`.toLowerCase();
                     if (!hay.includes(searchKeyword)) return false;
                 }
                 return true;
@@ -1919,6 +1997,7 @@
                     const leftPct = item.colIndex * widthPct;
 
                     const style = CATEGORY_STYLE[task.category] || CATEGORY_STYLE.photo;
+                    const catLabel = getTaskCategoryLabel(task);
                     const statusDot = STATUS_STYLE[task.status]?.dot || 'bg-slate-400';
                     const isAssigned = (task.createdBy === 'manager');
                     const isPendingDel = (task.deleteRequested === true);
@@ -1926,7 +2005,7 @@
 
                     const actionIconHtml = currentRole === 'manager'
                         ? `<button type="button" onclick="deleteTaskById('${task.id}', event)" title="Xoá task" class="opacity-0 group-hover:opacity-100 w-4 h-4 rounded bg-rose-500 text-white text-[10px] flex items-center justify-center">✕</button>`
-                        : (!isOwnTask ? `<span title="Task của ${escapeHtml(task.assignee)}" class="text-[10px] opacity-75">🔒</span>` : '');
+                        : '';
 
                     return `
                         <div onclick="event.stopPropagation(); openEditTaskModal('${task.id}')"
@@ -1945,6 +2024,7 @@
                                 <div class="font-bold text-xs text-white leading-snug mt-1 line-clamp-2">
                                     ${escapeHtml(task.title)}
                                 </div>
+                                ${task.customCategory ? `<div class="text-[10px] font-semibold text-cyan-200 truncate mt-0.5">🏷️ ${escapeHtml(catLabel)}</div>` : ''}
                                 ${task.note && dur >= 2 ? `<div class="text-[10px] text-slate-300/90 truncate mt-0.5">${escapeHtml(task.note)}</div>` : ''}
                             </div>
 
@@ -2044,13 +2124,14 @@
 
                     const tasksHTML = slotTasks.map(task => {
                         const style = CATEGORY_STYLE[task.category] || CATEGORY_STYLE.photo;
+                        const catLabel = getTaskCategoryLabel(task);
                         const startH = Number(task.startHour);
                         const dur = Number(task.duration);
                         const isPendingDel = (task.deleteRequested === true);
                         const isOwnTask = (!lockedStaffName || task.assignee === lockedStaffName);
                         const managerDelBtn = currentRole === 'manager'
                             ? `<button type="button" onclick="deleteTaskById('${task.id}', event)" class="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-200 text-xs font-bold">✕</button>`
-                            : (!isOwnTask ? `<span class="text-[10px] opacity-75">🔒</span>` : '');
+                            : '';
 
                         return `
                             <div onclick="openEditTaskModal('${task.id}')" class="group p-2.5 rounded-xl ${isPendingDel ? 'bg-rose-950/75 border-rose-400/70' : `${style.bg} ${style.border}`} ${!isOwnTask && currentRole !== 'manager' ? 'opacity-75' : ''} border cursor-pointer hover:scale-[1.01] transition space-y-1">
@@ -2061,6 +2142,7 @@
                                     ${managerDelBtn}
                                 </div>
                                 <div class="text-xs font-bold text-white leading-snug">${escapeHtml(task.title)}</div>
+                                <div class="text-[10px] text-cyan-300/90 font-medium">🏷️ ${escapeHtml(catLabel)}</div>
                                 ${task.note ? `<div class="text-[11px] text-amber-200/90">${escapeHtml(task.note)}</div>` : ''}
                                 <div class="text-[11px] text-slate-300 flex items-center justify-between pt-1 border-t border-white/10">
                                     <span>👤 ${escapeHtml(task.assignee)}</span>
@@ -2215,7 +2297,8 @@
         };
 
         window.switchView = function(view) {
-            if (currentRole !== 'manager' && view === 'report') {
+            const isManager = (currentRole === 'manager');
+            if (!isManager && view === 'report') {
                 view = 'timeline';
             }
             currentView = view;
@@ -2226,7 +2309,7 @@
             if (sCont) sCont.classList.toggle('hidden', view !== 'shift');
             
             const rCont = document.getElementById('reportViewContainer');
-            if (rCont) rCont.classList.toggle('hidden', view !== 'report' || currentRole !== 'manager');
+            if (rCont) rCont.classList.toggle('hidden', view !== 'report' || !isManager);
 
             const activeCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition';
             const inactiveCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition';
@@ -2236,7 +2319,15 @@
             const vSBtn = document.getElementById('viewShiftBtn');
             if (vSBtn) vSBtn.className = view === 'shift' ? activeCls : inactiveCls;
             const vRBtn = document.getElementById('viewReportBtn');
-            if (vRBtn) vRBtn.className = view === 'report' ? activeCls : inactiveCls;
+            if (vRBtn) {
+                if (!isManager) {
+                    vRBtn.className = 'hidden';
+                    vRBtn.style.display = 'none';
+                } else {
+                    vRBtn.style.display = '';
+                    vRBtn.className = view === 'report' ? activeCls : inactiveCls;
+                }
+            }
         };
 
         window.changeWeek = function(deltaWeeks) {
@@ -2296,6 +2387,10 @@
             
             const catInp = document.getElementById('taskCategoryInput');
             if (catInp) catInp.value = 'photo';
+            const customCatBox = document.getElementById('customCategoryBox');
+            if (customCatBox) customCatBox.classList.add('hidden');
+            const customCatInp = document.getElementById('taskCustomCategoryInput');
+            if (customCatInp) customCatInp.value = '';
             
             const statInp = document.getElementById('taskStatusInput');
             if (statInp) statInp.value = 'todo';
@@ -2353,8 +2448,27 @@
             if (titleInp) titleInp.value = task.title || '';
             const assigneeInp = document.getElementById('taskAssigneeInput');
             if (assigneeInp) assigneeInp.value = (!isManager && lockedStaffName) ? lockedStaffName : (task.assignee || staffList[0]);
+            
             const catInp = document.getElementById('taskCategoryInput');
-            if (catInp) catInp.value = task.category || 'photo';
+            const customCatBox = document.getElementById('customCategoryBox');
+            const customCatInp = document.getElementById('taskCustomCategoryInput');
+            if (task.customCategory && task.customCategory.trim()) {
+                const customVal = `custom:${task.customCategory.trim()}`;
+                if (catInp && Array.from(catInp.options).some(opt => opt.value === customVal)) {
+                    catInp.value = customVal;
+                    if (customCatBox) customCatBox.classList.add('hidden');
+                    if (customCatInp) customCatInp.value = '';
+                } else {
+                    if (catInp) catInp.value = '__custom__';
+                    if (customCatBox) customCatBox.classList.remove('hidden');
+                    if (customCatInp) customCatInp.value = task.customCategory.trim();
+                }
+            } else {
+                if (catInp) catInp.value = task.category || 'photo';
+                if (customCatBox) customCatBox.classList.add('hidden');
+                if (customCatInp) customCatInp.value = '';
+            }
+
             const dateInp = document.getElementById('taskDateInput');
             if (dateInp) dateInp.value = task.date;
             const dateDisp = document.getElementById('modalDateDisplay');
@@ -2435,11 +2549,35 @@
                 ? lockedStaffName
                 : (document.getElementById('taskAssigneeInput')?.value || staffList[0]);
 
+            const rawCatSelect = document.getElementById('taskCategoryInput')?.value || 'photo';
+            const typedCustomCat = (document.getElementById('taskCustomCategoryInput')?.value || '').trim();
+            let finalCategory = 'photo';
+            let finalCustomCategory = '';
+
+            if (rawCatSelect === '__custom__' || typedCustomCat) {
+                finalCategory = 'other';
+                finalCustomCategory = typedCustomCat || 'Khác';
+                if (finalCustomCategory && !customCategoriesList.includes(finalCustomCategory)) {
+                    customCategoriesList = [...customCategoriesList, finalCustomCategory];
+                    populateDynamicSelectOptions();
+                    if (db) {
+                        setDoc(doc(db, 'media_settings', 'config'), { customCategories: customCategoriesList, updatedAt: Date.now() }, { merge: true });
+                    }
+                }
+            } else if (rawCatSelect.startsWith('custom:')) {
+                finalCategory = 'other';
+                finalCustomCategory = rawCatSelect.slice(7);
+            } else {
+                finalCategory = rawCatSelect;
+                finalCustomCategory = '';
+            }
+
             const taskObj = {
                 id: existingId || ('task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
                 title: document.getElementById('taskTitleInput')?.value.trim() || '',
                 assignee: finalAssignee,
-                category: document.getElementById('taskCategoryInput')?.value || 'photo',
+                category: finalCategory,
+                customCategory: finalCustomCategory,
                 date: document.getElementById('taskDateInput')?.value || selectedToolbarDateISO,
                 startHour: Number(document.getElementById('taskStartHourInput')?.value) || 9,
                 duration: Math.max(0.5, Number(document.getElementById('taskDurationInput')?.value) || 1),
@@ -2489,14 +2627,12 @@
             }
 
             const modalSelect = document.getElementById('taskAssigneeInput');
-            const lockedHint = document.getElementById('lockedAssigneeHint');
             if (modalSelect) {
                 if (currentRole !== 'manager' && lockedStaffName) {
-                    // Khoá cứng ô chọn nhân sự khi dùng link cá nhân
-                    modalSelect.innerHTML = `<option value="${escapeHtml(lockedStaffName)}" class="bg-slate-900">🔒 ${escapeHtml(lockedStaffName)} (${dict.lockedAssigneeSuffix})</option>`;
+                    // Khoá cứng ô chọn nhân sự khi dùng link cá nhân nhưng hiển thị tên gọn gàng
+                    modalSelect.innerHTML = `<option value="${escapeHtml(lockedStaffName)}" class="bg-slate-900">${escapeHtml(lockedStaffName)}</option>`;
                     modalSelect.value = lockedStaffName;
-                    modalSelect.className = 'w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3.5 py-2.5 text-sm font-bold text-amber-300 pointer-events-none select-none focus:outline-none';
-                    if (lockedHint) lockedHint.classList.remove('hidden');
+                    modalSelect.className = 'w-full bg-slate-950 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm font-bold text-amber-300 pointer-events-none select-none focus:outline-none';
                 } else {
                     const prevAssignee = modalSelect.value || activeQuickStaff || staffList[0];
                     modalSelect.innerHTML = staffList.map(name =>
@@ -2504,7 +2640,6 @@
                     ).join('');
                     if (staffList.includes(prevAssignee)) modalSelect.value = prevAssignee;
                     modalSelect.className = 'w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400';
-                    if (lockedHint) lockedHint.classList.add('hidden');
                 }
             }
 
@@ -2515,8 +2650,7 @@
                     pillsContainer.innerHTML = `
                         <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/25">
                             <span class="w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-extrabold bg-slate-950/20 text-slate-950">${escapeHtml(initial)}</span>
-                            <span>🔒 ${escapeHtml(lockedStaffName)}</span>
-                            <span class="px-1.5 py-0.5 rounded bg-slate-950/20 text-[10px] font-bold">${dict.lockedPillBadge}</span>
+                            <span>${escapeHtml(lockedStaffName)}</span>
                         </div>
                     `;
                 } else {
@@ -2616,8 +2750,7 @@
                                 ${escapeHtml(initial)}
                             </div>
                             <div>
-                                <div class="text-xs font-extrabold text-white">🔒 ${escapeHtml(name)}</div>
-                                <div class="text-[10px] text-amber-300/80">${dict.lockedPillBadge}</div>
+                                <div class="text-xs font-extrabold text-white">${escapeHtml(name)}</div>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 flex-1">
@@ -2701,7 +2834,7 @@
                 const dur = Number(task.duration);
                 const shiftKey = getShiftKeyFromHour(startH);
                 const shiftName = dict.shifts[shiftKey].name;
-                const cat = dict.categories[task.category] || task.category;
+                const cat = getTaskCategoryLabel(task);
                 const st = dict.statuses[task.status] || task.status;
                 return [
                     `${task.date} (${shiftName})`,
