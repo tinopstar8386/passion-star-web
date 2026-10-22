@@ -94,6 +94,39 @@
             box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.65);
             z-index: 30 !important;
         }
+
+        /* Smooth Custom Toast Animations & Countdown Progress */
+        @keyframes toastSlideIn {
+            0% {
+                opacity: 0;
+                transform: translate3d(42px, 12px, 0) scale(0.94);
+            }
+            100% {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
+            }
+        }
+        @keyframes toastSlideOut {
+            0% {
+                opacity: 1;
+                transform: translate3d(0, 0, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate3d(48px, -6px, 0) scale(0.92);
+            }
+        }
+        .toast-enter {
+            animation: toastSlideIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .toast-exit {
+            animation: toastSlideOut 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+
+        select option {
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
@@ -101,7 +134,6 @@
     <header class="sticky top-0 z-40 glass-panel border-b border-white/10 px-4 lg:px-8 py-3.5">
         <div class="max-w-[1600px] mx-auto flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
             
-            <!-- Left: Brand & Greeting -->
             <div class="flex items-center gap-3.5">
                 <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500 via-blue-600 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 border border-white/20 shrink-0">
                     <i data-lucide="camera" class="w-6 h-6 text-white"></i>
@@ -122,10 +154,8 @@
                 </div>
             </div>
 
-            <!-- Right: Language Toggle, Role Switcher & Action Buttons -->
             <div class="flex flex-wrap items-center gap-2.5 w-full xl:w-auto justify-between xl:justify-end">
                 
-                <!-- LANGUAGE TOGGLE BUTTON (VIETNAMESE | CHINESE) -->
                 <div class="inline-flex p-1 rounded-xl bg-slate-900/95 border border-white/15 shadow-inner">
                     <button id="langViBtn" onclick="setLanguage('vi')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow">
                         <span>🇻🇳</span>
@@ -137,7 +167,6 @@
                     </button>
                 </div>
 
-                <!-- Role Mode Switcher (Hidden automatically when opened via ?role=media link) -->
                 <div id="roleSwitcherGroup" class="inline-flex p-1 rounded-xl bg-slate-900/90 border border-white/10">
                     <button id="roleManagerBtn" onclick="switchRole('manager')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md">
                         <i data-lucide="shield-check" class="w-4 h-4"></i>
@@ -150,13 +179,11 @@
                 </div>
 
                 <div class="flex items-center gap-2 flex-wrap">
-                    <!-- Quick Add / Assign Task Button -->
                     <button onclick="openTaskModal()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition-all active:scale-95">
                         <i data-lucide="plus-circle" class="w-4 h-4 stroke-[2.5]"></i>
                         <span id="btnAddTaskText">+ Giao Task Cho Media</span>
                     </button>
 
-                    <!-- Manager Tools Group -->
                     <div id="managerActionButtons" class="flex items-center gap-2">
                         <button id="btnStaffManage" onclick="openStaffModal()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-card text-xs font-semibold text-slate-200 hover:text-cyan-300">
                             <i data-lucide="users" class="w-4 h-4"></i>
@@ -180,29 +207,49 @@
 
     <main class="flex-1 max-w-[1600px] w-full mx-auto px-4 lg:px-8 py-5 space-y-5">
 
-        <!-- ROLE BANNER FOR MEDIA TEAM WHEN IN MEDIA MODE -->
-        <div id="mediaModeBanner" class="hidden glass-panel rounded-2xl p-4 border-l-4 border-l-amber-400 bg-gradient-to-r from-amber-500/15 via-slate-900/80 to-transparent flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shrink-0">
-                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+        <!-- MEDIA WORKSPACE BANNER WITH CUSTOM GLASS PILLS -->
+        <div id="mediaModeBanner" class="hidden glass-panel rounded-2xl p-4 sm:p-5 border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-slate-900/90 to-cyan-500/10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-xl">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/25 shrink-0">
+                    <i data-lucide="sparkles" class="w-5 h-5 stroke-[2.2]"></i>
                 </div>
                 <div>
-                    <h2 id="mediaBannerTitle" class="text-sm font-bold text-amber-200">Chế độ dành cho Bộ phận Media điền Task</h2>
-                    <p id="mediaBannerDesc" class="text-xs text-slate-300">Chọn tên của bạn bên phải, sau đó nhấp trực tiếp vào ô giờ bất kỳ trên lịch để điền công việc và số tiếng thực hiện.</p>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">MEDIA WORKSPACE</span>
+                        <h2 id="mediaBannerTitle" class="text-sm sm:text-base font-extrabold text-white">Chế độ dành cho Bộ phận Media điền Task</h2>
+                    </div>
+                    <p id="mediaBannerDesc" class="text-xs text-slate-300 mt-0.5">Chọn thẻ tên của bạn bên phải, sau đó nhấp vào ô giờ trên lịch để đăng ký hoặc sửa công việc (Xoá task cần Quản lý Tino duyệt).</p>
                 </div>
             </div>
-            <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-                <div class="flex items-center gap-2 bg-slate-900/90 border border-amber-500/40 rounded-xl px-3 py-1.5">
-                    <span id="quickStaffLabel" class="text-xs text-amber-200 font-medium">Nhân sự đang điền:</span>
-                    <select id="quickMediaStaffSelect" onchange="onQuickStaffChange(this.value)" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"></select>
+            <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
+                <div class="flex flex-wrap items-center gap-2 bg-slate-950/80 border border-white/10 rounded-2xl p-1.5">
+                    <span id="quickStaffLabel" class="text-[11px] text-slate-400 font-semibold px-2.5">Nhân sự đang điền:</span>
+                    <div id="quickMediaStaffPills" class="flex flex-wrap items-center gap-1.5"></div>
                 </div>
-                <button onclick="openTaskModal()" id="mediaBannerBtn" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shrink-0 transition">
+                <button onclick="openTaskModal()" id="mediaBannerBtn" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-amber-500/20 shrink-0 transition active:scale-95">
                     + Điền lịch ngay
                 </button>
             </div>
         </div>
 
-        <!-- KPI SUMMARY CARDS (MANAGER OVERVIEW ONLY) -->
+        <!-- MANAGER PENDING DELETE APPROVAL BANNER -->
+        <div id="managerDeleteApprovalBanner" class="hidden glass-panel rounded-2xl p-4 border border-rose-500/40 bg-gradient-to-r from-rose-950/60 via-slate-900/90 to-slate-900/90 space-y-3 shadow-xl">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-300 animate-pulse">
+                        <i data-lucide="bell-ring" class="w-4 h-4"></i>
+                    </span>
+                    <div>
+                        <h3 id="approvalBannerTitle" class="text-xs sm:text-sm font-extrabold text-rose-200 uppercase tracking-wide">Yêu Cầu Xoá Task Đang Chờ Anh Tino Duyệt</h3>
+                        <p id="approvalBannerSub" class="text-[11px] text-slate-300">Nhân sự Media đã gửi yêu cầu xin xoá các công việc dưới đây</p>
+                    </div>
+                </div>
+                <span id="approvalCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-rose-500 text-white">0</span>
+            </div>
+            <div id="approvalRequestsList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5"></div>
+        </div>
+
+        <!-- KPI SUMMARY CARDS (MANAGER ONLY) -->
         <section id="kpiSection" class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div class="glass-panel rounded-2xl p-4 flex items-center justify-between">
                 <div>
@@ -265,7 +312,6 @@
         <section class="glass-panel rounded-2xl p-4 space-y-3.5 relative z-30">
             <div class="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3.5">
                 
-                <!-- Left: Week Selector + Custom Floating Date Picker Button -->
                 <div class="flex flex-wrap items-center gap-2">
                     <div class="inline-flex items-center rounded-xl bg-slate-900/90 border border-white/10 p-1">
                         <button onclick="changeWeek(-1)" class="p-2 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white transition">
@@ -288,7 +334,6 @@
                         Tuần Hiện Tại
                     </button>
 
-                    <!-- Custom Dark Date Picker Trigger (Opens high z-index floating calendar) -->
                     <button id="toolbarCalendarTrigger" onclick="openFloatingCalendar('toolbar', this, event)" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/95 hover:bg-slate-800 border border-cyan-500/40 text-xs font-mono font-bold text-cyan-300 shadow transition">
                         <i data-lucide="calendar" class="w-4 h-4 text-cyan-400"></i>
                         <span id="toolbarDateLabel">19/10/2026</span>
@@ -296,7 +341,6 @@
                     </button>
                 </div>
 
-                <!-- Right: View Mode Tabs -->
                 <div class="flex flex-wrap items-center gap-2 justify-between xl:justify-end">
                     <div class="inline-flex p-1 rounded-xl bg-slate-900/90 border border-white/10">
                         <button id="viewTimelineBtn" onclick="switchView('timeline')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition">
@@ -315,7 +359,6 @@
                 </div>
             </div>
 
-            <!-- Second Row: Filters -->
             <div class="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2.5 flex-1">
                     <div class="flex items-center gap-1.5 bg-slate-900/80 border border-white/10 rounded-xl px-3 py-1.5">
@@ -342,7 +385,7 @@
             </div>
         </section>
 
-        <!-- VIEW 1: HOURLY TIMELINE VIEW (08:00 - 22:00) -->
+        <!-- TIMELINE VIEW -->
         <section id="timelineViewContainer" class="glass-panel rounded-2xl overflow-hidden border border-white/10 relative z-10">
             <div class="bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border-b border-amber-500/30 px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-2">
                 <div class="flex items-center gap-2.5">
@@ -375,7 +418,7 @@
             </div>
         </section>
 
-        <!-- VIEW 2: CLASSIC SHIFT VIEW (CA SÁNG / CA CHIỀU / CA TỐI) -->
+        <!-- SHIFT VIEW -->
         <section id="shiftViewContainer" class="hidden glass-panel rounded-2xl overflow-hidden border border-white/10">
             <div class="bg-[#f5d6b8]/15 border-b border-amber-500/30 py-3 px-5 text-center">
                 <h2 id="shiftViewMainTitle" class="text-lg sm:text-xl font-extrabold tracking-wider text-amber-200 uppercase">LỊCH CHỤP HÌNH</h2>
@@ -392,7 +435,7 @@
             </div>
         </section>
 
-        <!-- VIEW 3: ANALYTICS & WORKLOAD BREAKDOWN FOR ANH TINO -->
+        <!-- REPORT VIEW (MANAGER ONLY) -->
         <section id="reportViewContainer" class="hidden space-y-5">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 <div class="glass-panel rounded-2xl p-5 lg:col-span-1">
@@ -431,6 +474,7 @@
 
     </main>
 
+    <!-- FLOATING CALENDAR POPOVER -->
     <div id="floatingCalendarPopover" class="hidden fixed z-[9999] w-80 rounded-2xl bg-slate-900/95 backdrop-blur-2xl border border-cyan-500/40 shadow-[0_24px_60px_rgba(0,0,0,0.85)] p-4 select-none">
         <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10">
             <button type="button" onclick="shiftCalendarMonth(-1, event)" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
@@ -453,6 +497,7 @@
         </div>
     </div>
 
+    <!-- TASK MODAL -->
     <div id="taskModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
         <div class="glass-panel rounded-2xl max-w-lg w-full p-6 border border-white/15 shadow-2xl my-8">
             <div class="flex items-center justify-between pb-3 border-b border-white/10">
@@ -475,37 +520,26 @@
             <form id="taskForm" onsubmit="handleSaveTask(event)" class="space-y-4 mt-4">
                 <input type="hidden" id="taskIdInput">
 
-                <!-- Task Name -->
                 <div>
-                    <label id="lblTaskTitle" class="block text-xs font-semibold text-slate-300 mb-1.5">
-                        Tên công việc / Nội dung chụp & quay *
-                    </label>
+                    <label id="lblTaskTitle" class="block text-xs font-semibold text-slate-300 mb-1.5">Tên công việc / Nội dung chụp & quay *</label>
                     <input type="text" id="taskTitleInput" required placeholder="VD: Chụp TTS (Mỹ phụ trách), Quay TikTok..." class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
                 </div>
 
-                <!-- Assignee & Category -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                        <label id="lblTaskAssignee" class="block text-xs font-semibold text-slate-300 mb-1.5">
-                            Nhân sự Media phụ trách *
-                        </label>
+                        <label id="lblTaskAssignee" class="block text-xs font-semibold text-slate-300 mb-1.5">Nhân sự Media phụ trách *</label>
                         <select id="taskAssigneeInput" required class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400"></select>
                     </div>
 
                     <div>
-                        <label id="lblTaskCategory" class="block text-xs font-semibold text-slate-300 mb-1.5">
-                            Hạng mục công việc
-                        </label>
+                        <label id="lblTaskCategory" class="block text-xs font-semibold text-slate-300 mb-1.5">Hạng mục công việc</label>
                         <select id="taskCategoryInput" class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400"></select>
                     </div>
                 </div>
 
-                <!-- Custom Dark Date Trigger inside Modal & Start Hour -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                        <label id="lblTaskDate" class="block text-xs font-semibold text-slate-300 mb-1.5">
-                            Ngày thực hiện *
-                        </label>
+                        <label id="lblTaskDate" class="block text-xs font-semibold text-slate-300 mb-1.5">Ngày thực hiện *</label>
                         <input type="hidden" id="taskDateInput" value="2026-10-19">
                         <button type="button" id="modalDateTriggerBtn" onclick="openFloatingCalendar('modal', this, event)" class="w-full flex items-center justify-between bg-slate-900/90 hover:bg-slate-800 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold text-cyan-300 focus:outline-none focus:border-cyan-400 transition">
                             <span id="modalDateDisplay">19/10/2026</span>
@@ -514,14 +548,11 @@
                     </div>
 
                     <div>
-                        <label id="lblTaskStartHour" class="block text-xs font-semibold text-slate-300 mb-1.5">
-                            Giờ bắt đầu *
-                        </label>
+                        <label id="lblTaskStartHour" class="block text-xs font-semibold text-slate-300 mb-1.5">Giờ bắt đầu *</label>
                         <select id="taskStartHourInput" onchange="updateCalculatedTimePreview()" class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-400"></select>
                     </div>
                 </div>
 
-                <!-- Duration Selector -->
                 <div class="p-3.5 rounded-xl bg-slate-900/90 border border-cyan-500/30 space-y-2.5">
                     <div class="flex items-center justify-between flex-wrap gap-1">
                         <label class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
@@ -552,7 +583,6 @@
                     </div>
                 </div>
 
-                <!-- Status & CreatedBy -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                         <label id="lblTaskStatus" class="block text-xs font-semibold text-slate-300 mb-1.5">Trạng thái tiến độ</label>
@@ -564,13 +594,11 @@
                     </div>
                 </div>
 
-                <!-- Notes -->
                 <div>
                     <label id="lblTaskNote" class="block text-xs font-semibold text-slate-300 mb-1.5">Ghi chú chi tiết (Địa điểm, thiết bị, yêu cầu...)</label>
                     <input type="text" id="taskNoteInput" placeholder="VD: Chụp tại Studio A, chuẩn bị phông trắng..." class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
                 </div>
 
-                <!-- Footer Buttons -->
                 <div class="flex items-center justify-between pt-3 border-t border-white/10">
                     <button type="button" id="deleteTaskBtn" onclick="handleDeleteCurrentTask()" class="hidden px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -589,37 +617,40 @@
         </div>
     </div>
 
-    <!-- MODAL 2: STAFF TEAM MANAGEMENT -->
+    <!-- STAFF MODAL -->
     <div id="staffModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="glass-panel rounded-2xl max-w-md w-full p-6 border border-white/15 shadow-2xl">
-            <div class="flex items-center justify-between pb-3 border-b border-white/10">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="users" class="w-5 h-5 text-cyan-400"></i>
-                    <h3 id="staffModalTitle" class="text-base font-bold text-white">Danh Sách Nhân Sự Media</h3>
+        <div class="glass-panel rounded-2xl max-w-md w-full p-6 border border-cyan-500/30 shadow-2xl">
+            <div class="flex items-center justify-between pb-3.5 border-b border-white/10">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500/25 to-blue-600/25 border border-cyan-400/40 flex items-center justify-center text-cyan-300">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 id="staffModalTitle" class="text-base font-extrabold text-white">Danh Sách Nhân Sự Media</h3>
+                        <p id="staffModalDesc" class="text-[11px] text-slate-400">Đồng bộ trực tiếp trên Firebase passionstar-2014d</p>
+                    </div>
                 </div>
-                <button type="button" onclick="closeStaffModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white">
+                <button type="button" onclick="closeStaffModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
-            <p id="staffModalDesc" class="text-xs text-slate-400 mt-3">Thêm hoặc xoá tên thành viên trong bộ phận Media. Dữ liệu đồng bộ trực tiếp lên Firebase.</p>
-
-            <form onsubmit="handleAddStaff(event)" class="flex gap-2 mt-3">
-                <input type="text" id="newStaffNameInput" required placeholder="Nhập tên nhân sự (VD: Mỹ, Anh Quý...)" class="flex-1 bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-400">
-                <button type="submit" id="btnAddStaffSubmit" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shrink-0">
+            <form onsubmit="handleAddStaff(event)" class="flex gap-2 mt-4">
+                <input type="text" id="newStaffNameInput" required placeholder="Nhập tên nhân sự (VD: Mỹ, Anh Quý...)" class="flex-1 bg-slate-900/95 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                <button type="submit" id="btnAddStaffSubmit" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-extrabold text-xs shrink-0 shadow-lg shadow-cyan-500/20 transition">
                     + Thêm
                 </button>
             </form>
 
-            <div id="staffModalList" class="mt-4 space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+            <div id="staffModalList" class="mt-4 space-y-2.5 max-h-64 overflow-y-auto pr-1"></div>
 
             <div class="mt-5 pt-3 border-t border-white/10 flex justify-end">
-                <button type="button" onclick="closeStaffModal()" id="btnCloseStaffModal" class="px-4 py-2 rounded-xl glass-card text-xs font-semibold text-white">Đóng</button>
+                <button type="button" onclick="closeStaffModal()" id="btnCloseStaffModal" class="px-4 py-2 rounded-xl glass-card text-xs font-semibold text-white hover:border-cyan-400/40">Đóng</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL 3: 2 SEPARATE ROLE LINKS (?role=media & ?role=manager) -->
+    <!-- LINKS MODAL -->
     <div id="linksModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
         <div class="glass-panel rounded-2xl max-w-lg w-full p-6 border border-violet-500/40 shadow-2xl space-y-4">
             <div class="flex items-center justify-between pb-3 border-b border-white/10">
@@ -640,13 +671,13 @@
             <div class="space-y-3.5 text-xs">
                 <div class="p-4 rounded-xl bg-slate-900/90 border border-amber-500/30 space-y-2">
                     <div class="flex items-center justify-between">
-                        <span id="lblMediaLinkTitle" class="font-bold text-amber-300">1. Link dành riêng cho Bộ phận Media (Chỉ điền lịch)</span>
+                        <span id="lblMediaLinkTitle" class="font-bold text-amber-300">1. Link dành riêng cho Bộ phận Media (Chỉ điền & sửa lịch)</span>
                         <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-200 text-[10px] font-mono">?role=media</span>
                     </div>
-                    <p id="lblMediaLinkDesc" class="text-slate-400 text-[11px]">Khi mở link này, nhân sự Media chỉ thấy phần chọn tên mình và bảng lịch để điền công việc, ẩn toàn bộ công cụ quản lý.</p>
+                    <p id="lblMediaLinkDesc" class="text-slate-400 text-[11px]">Khi mở link này, nhân sự Media không thấy thống kê giờ làm và không được tự ý xoá task (muốn xoá phải gửi yêu cầu chờ anh Tino duyệt).</p>
                     <div class="flex gap-2">
-                        <input id="shareMediaUrlInput" readonly class="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3 py-2 font-mono text-amber-300 text-[11px]">
-                        <button type="button" onclick="copyShareUrl('shareMediaUrlInput')" class="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold">Copy</button>
+                        <input type="text" id="shareMediaUrlInput" readonly class="w-full bg-slate-950 border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyan-300">
+                        <button type="button" onclick="copyShareUrl('shareMediaUrlInput')" class="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shrink-0">Sao chép</button>
                     </div>
                 </div>
 
@@ -655,30 +686,27 @@
                         <span id="lblManagerLinkTitle" class="font-bold text-cyan-300">2. Link dành cho Quản lý (Anh Tino)</span>
                         <span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200 text-[10px] font-mono">?role=manager</span>
                     </div>
-                    <p id="lblManagerLinkDesc" class="text-slate-400 text-[11px]">Kiểm tra toàn bộ lịch Media điền, xem thống kê số tiếng, sửa/xoá trực tiếp và giao task cho Media.</p>
+                    <p id="lblManagerLinkDesc" class="text-slate-400 text-[11px]">Kiểm tra toàn bộ lịch Media điền, nhận thông báo duyệt xoá task, xem thống kê giờ làm và giao task cho Media.</p>
                     <div class="flex gap-2">
-                        <input id="shareManagerUrlInput" readonly class="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3 py-2 font-mono text-cyan-300 text-[11px]">
-                        <button type="button" onclick="copyShareUrl('shareManagerUrlInput')" class="px-3.5 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold">Copy</button>
+                        <input type="text" id="shareManagerUrlInput" readonly class="w-full bg-slate-950 border border-white/15 rounded-lg px-3 py-2 text-xs font-mono text-cyan-300">
+                        <button type="button" onclick="copyShareUrl('shareManagerUrlInput')" class="px-3.5 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold shrink-0">Sao chép</button>
                     </div>
                 </div>
             </div>
 
-            <div class="pt-3 border-t border-white/10 flex justify-end">
+            <div class="pt-2 border-t border-white/10 flex justify-end">
                 <button type="button" onclick="closeLinksModal()" id="btnCloseLinksModal" class="px-4 py-2 rounded-xl glass-card text-xs font-semibold text-white">Đóng</button>
             </div>
         </div>
     </div>
 
     <!-- TOAST CONTAINER -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-[10000] flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-[10000] flex flex-col gap-2.5 max-w-md w-full px-4 sm:px-0 pointer-events-none"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // =====================================================================
-        // 1. COMPLETE SINGLE-LANGUAGE DICTIONARY (VIETNAMESE ONLY OR CHINESE ONLY)
-        // =====================================================================
         const I18N = {
             vi: {
                 greetingManager: "Chào anh Tino • Quản lý Media",
@@ -695,7 +723,7 @@
                 btnLinks: "Lấy 2 Link Riêng",
                 btnDownloadHtml: "📥 Tải file index.html",
                 mediaBannerTitle: "Chế độ dành cho Bộ phận Media điền Task",
-                mediaBannerDesc: "Chọn tên của bạn bên phải, sau đó nhấp trực tiếp vào ô giờ bất kỳ trên lịch để điền công việc và số tiếng thực hiện.",
+                mediaBannerDesc: "Chọn thẻ tên của bạn bên phải, sau đó nhấp vào ô giờ trên lịch để đăng ký hoặc sửa công việc (Xoá task cần Quản lý Tino duyệt).",
                 quickStaffLabel: "Nhân sự đang điền:",
                 mediaBannerBtn: "+ Điền lịch ngay",
                 kpiTotalTasks: "Tổng Task Tuần Này",
@@ -724,7 +752,7 @@
                 filterAllCat: "Tất cả hạng mục",
                 searchPlaceholder: "Tìm tên task, nhân sự, ghi chú...",
                 timelineBannerTitle: "LỊCH CHỤP HÌNH & TIMELINE MEDIA THEO GIỜ",
-                timelineHint: "Nhấp vào ô giờ trống bất kỳ để điền task & chọn số tiếng",
+                timelineHint: "Nhấp vào ô giờ trống để điền task • Nhấp vào task đã tạo để chỉnh sửa",
                 colHourHeader: "KHUNG GIỜ",
                 colHourSub: "1 tiếng / ô",
                 addAtHour: (h) => `+ Điền ${h}:00`,
@@ -766,11 +794,12 @@
                 },
                 badgeAssigned: "👑 Quản lý giao",
                 badgeSelf: "✍️ Media điền",
+                badgePendingDelete: "⏳ Chờ Tino duyệt xoá",
                 modalBadgeManager: "👑 QUẢN LÝ GIAO TASK CHO MEDIA",
-                modalBadgeMedia: "✍️ BỘ PHẬN MEDIA ĐIỀN TASK",
+                modalBadgeMedia: "✍️ BỘ PHẬN MEDIA ĐIỀN & SỬA TASK",
                 modalAddTitleManager: "Thêm / Giao Task Cho Media",
                 modalAddTitleMedia: "Điền Task Media Mới",
-                modalEditTitle: "Cập Nhật / Kiểm Tra Task Media",
+                modalEditTitle: "Cập Nhật / Chỉnh Sửa Task Media",
                 lblTaskTitle: "Tên công việc / Lịch chụp *",
                 phTaskTitle: "VD: Chụp TTS (Mỹ phụ trách), Quay TikTok...",
                 lblTaskAssignee: "Nhân sự Media phụ trách *",
@@ -784,29 +813,40 @@
                 lblTaskCreator: "Phân loại nguồn task",
                 lblTaskNote: "Ghi chú chi tiết (Địa điểm, thiết bị, yêu cầu...)",
                 phTaskNote: "VD: Chụp tại Studio A, chuẩn bị phông trắng...",
-                btnDeleteTask: "Xoá Task Này",
+                btnDeleteTaskManager: "🗑️ Xoá Vĩnh Viễn Task Này",
+                btnRequestDeleteMedia: "⏳ Gửi Yêu Cầu Xoá (Chờ Anh Tino Duyệt)",
+                btnPendingDeleteMedia: "⏳ Đang Chờ Anh Tino Duyệt Xoá...",
                 btnCancel: "Huỷ",
                 btnSaveTask: "💾 Lưu Lịch Lên Firebase",
                 staffModalTitle: "Danh Sách Nhân Sự Media",
-                staffModalDesc: "Thêm hoặc xoá tên thành viên trong bộ phận Media. Dữ liệu đồng bộ trực tiếp lên Firebase.",
+                staffModalDesc: "Đồng bộ trực tiếp trên Firebase passionstar-2014d",
                 phNewStaff: "Nhập tên nhân sự (VD: Mỹ, Anh Quý...)",
                 btnAddStaff: "+ Thêm",
                 btnClose: "Đóng",
                 linksModalTitle: "Tách 2 Link Riêng: Quản Lý & Media",
                 linksModalSub: "Cùng kết nối chung bộ nhớ Firebase passionstar-2014d",
-                lblMediaLinkTitle: "1. Link dành riêng cho Bộ phận Media (Chỉ điền lịch)",
-                lblMediaLinkDesc: "Khi mở link này, nhân sự Media chỉ thấy phần chọn tên mình và bảng lịch để điền công việc, ẩn toàn bộ công cụ quản lý.",
+                lblMediaLinkTitle: "1. Link dành riêng cho Bộ phận Media (Chỉ điền & sửa lịch)",
+                lblMediaLinkDesc: "Khi mở link này, nhân sự Media không thấy thống kê giờ làm và không được tự ý xoá task (muốn xoá phải gửi yêu cầu chờ anh Tino duyệt).",
                 lblManagerLinkTitle: "2. Link dành cho Quản lý (Anh Tino)",
-                lblManagerLinkDesc: "Kiểm tra toàn bộ lịch Media điền, xem thống kê số tiếng, sửa/xoá trực tiếp và giao task cho Media.",
+                lblManagerLinkDesc: "Kiểm tra toàn bộ lịch Media điền, nhận thông báo duyệt xoá task, xem thống kê giờ làm và giao task cho Media.",
+                approvalBannerTitle: "Yêu Cầu Xoá Task Đang Chờ Anh Tino Duyệt",
+                approvalBannerSub: "Nhân sự Media đã gửi yêu cầu xin xoá các công việc dưới đây",
+                btnApproveDelete: "Duyệt xoá",
+                btnRejectDelete: "Giữ lại",
                 hourUnit: "tiếng",
                 taskCountUnit: "task",
                 completedUnit: "hoàn thành",
                 assigneeSuffix: "phụ trách",
+                staffActiveTag: "Đang chọn",
                 toastSaved: (title, dur) => `Đã lưu lên Firebase: "${title}" (${dur} tiếng)`,
                 toastDeleted: "Đã xoá vĩnh viễn task khỏi Firebase!",
+                toastDeleteRequestedMedia: (title) => `Đã gửi yêu cầu xoá "${title}". Đang chờ anh Tino duyệt!`,
+                toastManagerApprovalAlert: (staff, title) => `🔔 Nhân sự ${staff} vừa yêu cầu xoá task "${title}" — Cần anh Tino duyệt!`,
+                toastRejectDelete: (title) => `Đã từ chối yêu cầu xoá và giữ lại task "${title}"`,
                 toastLangChanged: "Đã đồng bộ 100% giao diện Tiếng Việt",
                 toastCopied: "Đã sao chép đường link!",
-                toastDownloadedHtml: "Đã tải file index.html hoàn chỉnh!"
+                toastDownloadedHtml: "Đã tải file index.html hoàn chỉnh!",
+                toastStaffSelected: (name) => `Đang điền lịch với tên: ${name}`
             },
             zh: {
                 greetingManager: "你好，Tino哥 • 媒体部主管",
@@ -823,7 +863,7 @@
                 btnLinks: "获取 2 个独立链接",
                 btnDownloadHtml: "📥 下载 index.html",
                 mediaBannerTitle: "媒体部员工排班填报专用模式",
-                mediaBannerDesc: "请在右侧选择您的姓名，然后点击日历上的任意时间格填写工作内容及所需小时数。",
+                mediaBannerDesc: "请在右侧选择您的姓名卡片，点击日历登记或修改工作（删除任务需经主管 Tino 审批）。",
                 quickStaffLabel: "当前填报人员:",
                 mediaBannerBtn: "+ 立即登记排班",
                 kpiTotalTasks: "本周总任务数",
@@ -852,7 +892,7 @@
                 filterAllCat: "全部任务类别",
                 searchPlaceholder: "搜索任务名称、人员、备注...",
                 timelineBannerTitle: "摄影排班与媒体部每小时时间轴",
-                timelineHint: "点击任意空白时间格即可登记任务并选择耗时（小时）",
+                timelineHint: "点击空白时间格登记任务 • 点击已有任务可修改内容",
                 colHourHeader: "时间段",
                 colHourSub: "每格 1 小时",
                 addAtHour: (h) => `+ 登记 ${h}:00`,
@@ -894,11 +934,12 @@
                 },
                 badgeAssigned: "👑 主管派发",
                 badgeSelf: "✍️ 媒体自填",
+                badgePendingDelete: "⏳ 待Tino审批删除",
                 modalBadgeManager: "👑 主管派发任务给媒体部",
-                modalBadgeMedia: "✍️ 媒体部员工填写排班",
+                modalBadgeMedia: "✍️ 媒体部员工填写与修改",
                 modalAddTitleManager: "添加 / 派发媒体任务",
                 modalAddTitleMedia: "填写媒体部新任务",
-                modalEditTitle: "更新 / 审核媒体任务",
+                modalEditTitle: "更新 / 修改媒体任务",
                 lblTaskTitle: "任务名称 / 拍摄与制作内容 *",
                 phTaskTitle: "例如：拍摄实习生 (Mỹ 负责)、拍摄抖音视频...",
                 lblTaskAssignee: "负责媒体人员 *",
@@ -912,35 +953,43 @@
                 lblTaskCreator: "任务来源类型",
                 lblTaskNote: "详细备注说明 (地点、器材、要求...)",
                 phTaskNote: "例如：A摄影棚拍摄，准备白色背景布...",
-                btnDeleteTask: "删除此任务",
+                btnDeleteTaskManager: "🗑️ 永久删除此任务",
+                btnRequestDeleteMedia: "⏳ 申请删除 (需主管 Tino 审批)",
+                btnPendingDeleteMedia: "⏳ 正在等待 Tino 审批删除...",
                 btnCancel: "取消",
                 btnSaveTask: "💾 保存排班至 Firebase",
                 staffModalTitle: "媒体部人员名单管理",
-                staffModalDesc: "添加或移除媒体部成员姓名，数据实时同步至 Firebase。",
+                staffModalDesc: "实时同步至 Firebase passionstar-2014d",
                 phNewStaff: "输入成员姓名 (例如: Mỹ, Anh Quý...)",
                 btnAddStaff: "+ 添加",
                 btnClose: "关闭",
                 linksModalTitle: "拆分 2 个独立链接：主管端 & 媒体端",
                 linksModalSub: "共用同一个 Firebase 数据库 passionstar-2014d",
-                lblMediaLinkTitle: "1. 媒体部专用填写链接 (仅填写排班)",
-                lblMediaLinkDesc: "打开此链接时，媒体人员只能选择自己的姓名并填写排班日历，自动隐藏所有管理端工具。",
+                lblMediaLinkTitle: "1. 媒体部专用填写链接 (仅填写与修改)",
+                lblMediaLinkDesc: "打开此链接时，不显示工时统计且不能擅自删除任务（删除需提交申请由 Tino 审批）。",
                 lblManagerLinkTitle: "2. 主管专用管理链接 (Tino哥)",
-                lblManagerLinkDesc: "查看所有媒体人员填报的工作、核对工时统计、直接修改/删除或派发新任务。",
+                lblManagerLinkDesc: "查看所有媒体排班、接收删除审批通知、核对工时统计或派发新任务。",
+                approvalBannerTitle: "待 Tino 哥审批的删除申请",
+                approvalBannerSub: "媒体部人员申请删除以下工作排班",
+                btnApproveDelete: "批准删除",
+                btnRejectDelete: "保留任务",
                 hourUnit: "小时",
                 taskCountUnit: "项",
                 completedUnit: "已完成",
                 assigneeSuffix: "负责",
+                staffActiveTag: "当前选择",
                 toastSaved: (title, dur) => `已同步至 Firebase: "${title}" (${dur} 小时)`,
                 toastDeleted: "已从 Firebase 永久删除该任务！",
+                toastDeleteRequestedMedia: (title) => `已提交删除申请 "${title}"，等待 Tino 哥审批！`,
+                toastManagerApprovalAlert: (staff, title) => `🔔 员工 ${staff} 申请删除任务 "${title}" — 请 Tino 哥审批！`,
+                toastRejectDelete: (title) => `已驳回删除申请并保留任务 "${title}"`,
                 toastLangChanged: "界面已 100% 同步为中文",
                 toastCopied: "已复制链接！",
-                toastDownloadedHtml: "已下载完整 index.html 文件！"
+                toastDownloadedHtml: "已下载完整 index.html 文件！",
+                toastStaffSelected: (name) => `当前填报人员已切换为: ${name}`
             }
         };
 
-        // =====================================================================
-        // 2. DATE, TIME & SHIFT HELPER FUNCTIONS (FIXING REFERENCE ERROR)
-        // =====================================================================
         const ROW_HEIGHT = 68;
         const START_HOUR = 8;
         const END_HOUR = 22;
@@ -997,9 +1046,6 @@
             return new Date(y, m - 1, d);
         }
 
-        // =====================================================================
-        // 3. CONSTANTS & FIREBASE "passionstar-2014d" CONFIG
-        // =====================================================================
         const FIREBASE_CONFIG = {
             apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
             authDomain: "passionstar-2014d.firebaseapp.com",
@@ -1024,7 +1070,6 @@
             done: { dot: 'bg-emerald-400' }
         };
 
-        // Check URL parameter ?role=media or ?role=manager
         const urlParams = new URLSearchParams(window.location.search);
         const roleParam = urlParams.get('role');
 
@@ -1032,25 +1077,24 @@
         let currentRole = roleParam === 'media' ? 'media' : 'manager';
         let isLockedMediaLink = (roleParam === 'media');
         let currentView = 'timeline';
-        let currentWeekMonday = new Date(2026, 9, 19); // 19/10/2026
+        let currentWeekMonday = new Date(2026, 9, 19);
         let selectedToolbarDateISO = '2026-10-19';
 
-        // Floating Calendar State
-        let calContext = 'toolbar'; // 'toolbar' | 'modal'
+        let calContext = 'toolbar';
         let calViewingMonth = new Date(2026, 9, 1);
 
         let db = null;
         let allTasks = [];
         let staffList = ['Mỹ', 'Anh Quý'];
+        let activeQuickStaff = localStorage.getItem('media_quick_staff') || 'Mỹ';
         let syncStateKey = 'syncConnecting';
+        let knownPendingDeleteIds = new Set();
+        let isInitialSnapshotLoaded = false;
 
         function t() {
             return I18N[currentLang];
         }
 
-        // =====================================================================
-        // 4. COMPLETE LANGUAGE & ROLE SYNCHRONIZATION
-        // =====================================================================
         window.setLanguage = function(lang, showNotification = true) {
             if (lang !== 'vi' && lang !== 'zh') return;
             currentLang = lang;
@@ -1060,8 +1104,10 @@
             const activeCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow';
             const inactiveCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-all';
 
-            document.getElementById('langViBtn').className = lang === 'vi' ? activeCls : inactiveCls;
-            document.getElementById('langZhBtn').className = lang === 'zh' ? activeCls : inactiveCls;
+            const langViBtn = document.getElementById('langViBtn');
+            const langZhBtn = document.getElementById('langZhBtn');
+            if (langViBtn) langViBtn.className = lang === 'vi' ? activeCls : inactiveCls;
+            if (langZhBtn) langZhBtn.className = lang === 'zh' ? activeCls : inactiveCls;
 
             applyStaticTranslations();
             populateDynamicSelectOptions();
@@ -1082,159 +1128,171 @@
             const dict = t();
             const isManager = (currentRole === 'manager');
 
-            document.getElementById('greetingBadge').textContent = isManager ? dict.greetingManager : dict.greetingMedia;
-            document.getElementById('appMainTitle').textContent = dict.appTitle;
-            document.getElementById('syncStatusText').textContent = dict[syncStateKey] || dict.syncOnline;
+            const safeSetText = (id, text) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = text;
+            };
 
-            document.getElementById('roleManagerText').textContent = dict.roleManager;
-            document.getElementById('roleMediaText').textContent = dict.roleMedia;
-            document.getElementById('btnAddTaskText').textContent = isManager ? dict.btnAssignTask : dict.btnMediaAddTask;
-            document.getElementById('btnStaffText').textContent = dict.btnStaff;
-            document.getElementById('btnLinksText').textContent = dict.btnLinks;
-            document.getElementById('btnDownloadHtmlText').textContent = dict.btnDownloadHtml;
+            safeSetText('greetingBadge', isManager ? dict.greetingManager : dict.greetingMedia);
+            safeSetText('appMainTitle', dict.appTitle);
+            safeSetText('syncStatusText', dict[syncStateKey] || dict.syncOnline);
 
-            document.getElementById('mediaBannerTitle').textContent = dict.mediaBannerTitle;
-            document.getElementById('mediaBannerDesc').textContent = dict.mediaBannerDesc;
-            document.getElementById('quickStaffLabel').textContent = dict.quickStaffLabel;
-            document.getElementById('mediaBannerBtn').textContent = dict.mediaBannerBtn;
+            safeSetText('roleManagerText', dict.roleManager);
+            safeSetText('roleMediaText', dict.roleMedia);
+            safeSetText('btnAddTaskText', isManager ? dict.btnAssignTask : dict.btnMediaAddTask);
+            safeSetText('btnStaffText', dict.btnStaff);
+            safeSetText('btnLinksText', dict.btnLinks);
+            safeSetText('btnDownloadHtmlText', dict.btnDownloadHtml);
 
-            document.getElementById('kpiLabelTotalTasks').textContent = dict.kpiTotalTasks;
-            document.getElementById('kpiUnitTasks').textContent = dict.kpiUnitTasks;
-            document.getElementById('kpiLabelTotalHours').textContent = dict.kpiTotalHours;
-            document.getElementById('kpiUnitHours').textContent = dict.kpiUnitHours;
-            document.getElementById('kpiLabelTopStaff').textContent = dict.kpiTopStaff;
-            document.getElementById('kpiLabelProgress').textContent = dict.kpiProgress;
+            safeSetText('mediaBannerTitle', dict.mediaBannerTitle);
+            safeSetText('mediaBannerDesc', dict.mediaBannerDesc);
+            safeSetText('quickStaffLabel', dict.quickStaffLabel);
+            safeSetText('mediaBannerBtn', dict.mediaBannerBtn);
 
-            document.getElementById('weekSelectorSub').textContent = dict.weekSelectorSub;
-            document.getElementById('btnSampleWeek').textContent = dict.btnSampleWeek;
-            document.getElementById('btnTodayWeek').textContent = dict.btnTodayWeek;
-            document.getElementById('calQuickTodayBtn').textContent = dict.calTodayBtn;
+            safeSetText('approvalBannerTitle', dict.approvalBannerTitle);
+            safeSetText('approvalBannerSub', dict.approvalBannerSub);
 
-            document.getElementById('tabTimelineText').textContent = dict.tabTimeline;
-            document.getElementById('tabShiftText').textContent = dict.tabShift;
-            document.getElementById('tabReportText').textContent = dict.tabReport;
+            safeSetText('kpiLabelTotalTasks', dict.kpiTotalTasks);
+            safeSetText('kpiUnitTasks', dict.kpiUnitTasks);
+            safeSetText('kpiLabelTotalHours', dict.kpiTotalHours);
+            safeSetText('kpiUnitHours', dict.kpiUnitHours);
+            safeSetText('kpiLabelTopStaff', dict.kpiTopStaff);
+            safeSetText('kpiLabelProgress', dict.kpiProgress);
 
-            document.getElementById('filterStaffLabel').textContent = dict.filterStaffLabel;
-            document.getElementById('filterCatLabel').textContent = dict.filterCatLabel;
-            document.getElementById('filterSearch').placeholder = dict.searchPlaceholder;
+            safeSetText('weekSelectorSub', dict.weekSelectorSub);
+            safeSetText('btnSampleWeek', dict.btnSampleWeek);
+            safeSetText('btnTodayWeek', dict.btnTodayWeek);
+            safeSetText('calQuickTodayBtn', dict.calTodayBtn);
 
-            document.getElementById('timelineBannerTitle').textContent = dict.timelineBannerTitle;
-            document.getElementById('timelineHintText').textContent = dict.timelineHint;
-            document.getElementById('colHourHeader').textContent = dict.colHourHeader;
-            document.getElementById('colHourSub').textContent = dict.colHourSub;
+            safeSetText('tabTimelineText', dict.tabTimeline);
+            safeSetText('tabShiftText', dict.tabShift);
+            safeSetText('tabReportText', dict.tabReport);
 
-            document.getElementById('shiftViewMainTitle').textContent = dict.shiftViewMainTitle;
+            safeSetText('filterStaffLabel', dict.filterStaffLabel);
+            safeSetText('filterCatLabel', dict.filterCatLabel);
+            const searchInput = document.getElementById('filterSearch');
+            if (searchInput) searchInput.placeholder = dict.searchPlaceholder;
 
-            document.getElementById('reportStaffTitle').textContent = dict.reportStaffTitle;
-            document.getElementById('reportStaffSub').textContent = dict.reportStaffSub;
-            document.getElementById('reportTableTitle').textContent = dict.reportTableTitle;
-            document.getElementById('reportTableSub').textContent = dict.reportTableSub;
-            document.getElementById('btnExportCsvReport').textContent = dict.btnExportCsvReport;
+            safeSetText('timelineBannerTitle', dict.timelineBannerTitle);
+            safeSetText('timelineHintText', dict.timelineHint);
+            safeSetText('colHourHeader', dict.colHourHeader);
+            safeSetText('colHourSub', dict.colHourSub);
 
-            // Modal Labels (100% single language)
-            document.getElementById('modalRoleBadge').textContent = isManager ? dict.modalBadgeManager : dict.modalBadgeMedia;
-            const editingId = document.getElementById('taskIdInput').value;
-            document.getElementById('taskModalTitle').textContent = editingId
+            safeSetText('shiftViewMainTitle', dict.shiftViewMainTitle);
+
+            safeSetText('reportStaffTitle', dict.reportStaffTitle);
+            safeSetText('reportStaffSub', dict.reportStaffSub);
+            safeSetText('reportTableTitle', dict.reportTableTitle);
+            safeSetText('reportTableSub', dict.reportTableSub);
+            safeSetText('btnExportCsvReport', dict.btnExportCsvReport);
+
+            safeSetText('modalRoleBadge', isManager ? dict.modalBadgeManager : dict.modalBadgeMedia);
+            const editingId = document.getElementById('taskIdInput')?.value;
+            safeSetText('taskModalTitle', editingId
                 ? dict.modalEditTitle
-                : (isManager ? dict.modalAddTitleManager : dict.modalAddTitleMedia);
+                : (isManager ? dict.modalAddTitleManager : dict.modalAddTitleMedia));
 
-            document.getElementById('lblTaskTitle').textContent = dict.lblTaskTitle;
-            document.getElementById('taskTitleInput').placeholder = dict.phTaskTitle;
-            document.getElementById('lblTaskAssignee').textContent = dict.lblTaskAssignee;
-            document.getElementById('lblTaskCategory').textContent = dict.lblTaskCategory;
-            document.getElementById('lblTaskDate').textContent = dict.lblTaskDate;
-            document.getElementById('lblTaskStartHour').textContent = dict.lblTaskStartHour;
-            document.getElementById('lblTaskDuration').textContent = dict.lblTaskDuration;
-            document.getElementById('lblCustomDur').textContent = dict.lblCustomDur;
-            document.getElementById('lblCustomDurUnit').textContent = dict.lblCustomDurUnit;
-            document.getElementById('lblTaskStatus').textContent = dict.lblTaskStatus;
-            document.getElementById('lblTaskCreator').textContent = dict.lblTaskCreator;
-            document.getElementById('lblTaskNote').textContent = dict.lblTaskNote;
-            document.getElementById('taskNoteInput').placeholder = dict.phTaskNote;
-            document.getElementById('btnDeleteTaskText').textContent = dict.btnDeleteTask;
-            document.getElementById('btnCancelTaskText').textContent = dict.btnCancel;
-            document.getElementById('btnSaveTaskText').textContent = dict.btnSaveTask;
+            safeSetText('lblTaskTitle', dict.lblTaskTitle);
+            const titleInp = document.getElementById('taskTitleInput');
+            if (titleInp) titleInp.placeholder = dict.phTaskTitle;
+            safeSetText('lblTaskAssignee', dict.lblTaskAssignee);
+            safeSetText('lblTaskCategory', dict.lblTaskCategory);
+            safeSetText('lblTaskDate', dict.lblTaskDate);
+            safeSetText('lblTaskStartHour', dict.lblTaskStartHour);
+            safeSetText('lblTaskDuration', dict.lblTaskDuration);
+            safeSetText('lblCustomDur', dict.lblCustomDur);
+            safeSetText('lblCustomDurUnit', dict.lblCustomDurUnit);
+            safeSetText('lblTaskStatus', dict.lblTaskStatus);
+            safeSetText('lblTaskCreator', dict.lblTaskCreator);
+            safeSetText('lblTaskNote', dict.lblTaskNote);
+            const noteInp = document.getElementById('taskNoteInput');
+            if (noteInp) noteInp.placeholder = dict.phTaskNote;
+            safeSetText('btnDeleteTaskText', isManager ? dict.btnDeleteTaskManager : dict.btnRequestDeleteMedia);
+            safeSetText('btnCancelTaskText', dict.btnCancel);
+            safeSetText('btnSaveTaskText', dict.btnSaveTask);
 
-            // Staff Modal
-            document.getElementById('staffModalTitle').textContent = dict.staffModalTitle;
-            document.getElementById('staffModalDesc').textContent = dict.staffModalDesc;
-            document.getElementById('newStaffNameInput').placeholder = dict.phNewStaff;
-            document.getElementById('btnAddStaffSubmit').textContent = dict.btnAddStaff;
-            document.getElementById('btnCloseStaffModal').textContent = dict.btnClose;
+            safeSetText('staffModalTitle', dict.staffModalTitle);
+            safeSetText('staffModalDesc', dict.staffModalDesc);
+            const newStaffInp = document.getElementById('newStaffNameInput');
+            if (newStaffInp) newStaffInp.placeholder = dict.phNewStaff;
+            safeSetText('btnAddStaffSubmit', dict.btnAddStaff);
+            safeSetText('btnCloseStaffModal', dict.btnClose);
 
-            // Links Modal
-            document.getElementById('linksModalTitle').textContent = dict.linksModalTitle;
-            document.getElementById('linksModalSub').textContent = dict.linksModalSub;
-            document.getElementById('lblMediaLinkTitle').textContent = dict.lblMediaLinkTitle;
-            document.getElementById('lblMediaLinkDesc').textContent = dict.lblMediaLinkDesc;
-            document.getElementById('lblManagerLinkTitle').textContent = dict.lblManagerLinkTitle;
-            document.getElementById('lblManagerLinkDesc').textContent = dict.lblManagerLinkDesc;
-            document.getElementById('btnCloseLinksModal').textContent = dict.btnClose;
+            safeSetText('linksModalTitle', dict.linksModalTitle);
+            safeSetText('linksModalSub', dict.linksModalSub);
+            safeSetText('lblMediaLinkTitle', dict.lblMediaLinkTitle);
+            safeSetText('lblMediaLinkDesc', dict.lblMediaLinkDesc);
+            safeSetText('lblManagerLinkTitle', dict.lblManagerLinkTitle);
+            safeSetText('lblManagerLinkDesc', dict.lblManagerLinkDesc);
+            safeSetText('btnCloseLinksModal', dict.btnClose);
 
-            // Category Legend
             const legendEl = document.getElementById('categoryLegend');
-            legendEl.innerHTML = ['photo', 'video', 'edit', 'design', 'livestream'].map(key => `
-                <span class="inline-flex items-center gap-1.5">
-                    <span class="w-2.5 h-2.5 rounded-sm ${CATEGORY_STYLE[key].dot}"></span>
-                    <span>${dict.categories[key]}</span>
-                </span>
-            `).join('');
+            if (legendEl) {
+                legendEl.innerHTML = ['photo', 'video', 'edit', 'design', 'livestream'].map(key => `
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-sm ${CATEGORY_STYLE[key].dot}"></span>
+                        <span>${dict.categories[key]}</span>
+                    </span>
+                `).join('');
+            }
         }
 
         function populateDynamicSelectOptions() {
             const dict = t();
 
-            // Filter Category
             const filterCat = document.getElementById('filterCategory');
-            const prevCat = filterCat.value || 'ALL';
-            filterCat.innerHTML = `<option value="ALL" class="bg-slate-900">${dict.filterAllCat}</option>` +
-                Object.entries(dict.categories).map(([key, label]) =>
+            if (filterCat) {
+                const prevCat = filterCat.value || 'ALL';
+                filterCat.innerHTML = `<option value="ALL" class="bg-slate-900">${dict.filterAllCat}</option>` +
+                    Object.entries(dict.categories).map(([key, label]) =>
+                        `<option value="${key}" class="bg-slate-900">${CATEGORY_STYLE[key].icon} ${label}</option>`
+                    ).join('');
+                filterCat.value = prevCat;
+            }
+
+            const modalCat = document.getElementById('taskCategoryInput');
+            if (modalCat) {
+                const prevModalCat = modalCat.value || 'photo';
+                modalCat.innerHTML = Object.entries(dict.categories).map(([key, label]) =>
                     `<option value="${key}" class="bg-slate-900">${CATEGORY_STYLE[key].icon} ${label}</option>`
                 ).join('');
-            filterCat.value = prevCat;
+                modalCat.value = prevModalCat;
+            }
 
-            // Modal Category (Strictly current language)
-            const modalCat = document.getElementById('taskCategoryInput');
-            const prevModalCat = modalCat.value || 'photo';
-            modalCat.innerHTML = Object.entries(dict.categories).map(([key, label]) =>
-                `<option value="${key}" class="bg-slate-900">${CATEGORY_STYLE[key].icon} ${label}</option>`
-            ).join('');
-            modalCat.value = prevModalCat;
-
-            // Modal Start Hour
             const hourSelect = document.getElementById('taskStartHourInput');
-            const prevHour = hourSelect.value || '9';
-            const hourOptions = [8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 13, 13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 19, 20, 21];
-            hourSelect.innerHTML = hourOptions.map(h => {
-                const shiftKey = getShiftKeyFromHour(h);
-                const shiftName = dict.shifts[shiftKey].name;
-                return `<option value="${h}" class="bg-slate-900">${formatHourFloat(h)} (${shiftName})</option>`;
-            }).join('');
-            hourSelect.value = prevHour;
+            if (hourSelect) {
+                const prevHour = hourSelect.value || '9';
+                const hourOptions = [8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 13, 13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 19, 20, 21];
+                hourSelect.innerHTML = hourOptions.map(h => {
+                    const shiftKey = getShiftKeyFromHour(h);
+                    const shiftName = dict.shifts[shiftKey].name;
+                    return `<option value="${h}" class="bg-slate-900">${formatHourFloat(h)} (${shiftName})</option>`;
+                }).join('');
+                hourSelect.value = prevHour;
+            }
 
-            // Modal Status
             const statusSelect = document.getElementById('taskStatusInput');
-            const prevStatus = statusSelect.value || 'todo';
-            statusSelect.innerHTML = `
-                <option value="todo" class="bg-slate-900">⏳ ${dict.statuses.todo}</option>
-                <option value="doing" class="bg-slate-900">⚡ ${dict.statuses.doing}</option>
-                <option value="done" class="bg-slate-900">✅ ${dict.statuses.done}</option>
-            `;
-            statusSelect.value = prevStatus;
+            if (statusSelect) {
+                const prevStatus = statusSelect.value || 'todo';
+                statusSelect.innerHTML = `
+                    <option value="todo" class="bg-slate-900">⏳ ${dict.statuses.todo}</option>
+                    <option value="doing" class="bg-slate-900">⚡ ${dict.statuses.doing}</option>
+                    <option value="done" class="bg-slate-900">✅ ${dict.statuses.done}</option>
+                `;
+                statusSelect.value = prevStatus;
+            }
 
-            // Modal Creator Type
             const creatorSelect = document.getElementById('taskCreatorInput');
-            const prevCreator = creatorSelect.value || (currentRole === 'manager' ? 'manager' : 'media');
-            creatorSelect.innerHTML = `
-                <option value="manager" class="bg-slate-900">${dict.creators.manager}</option>
-                <option value="media" class="bg-slate-900">${dict.creators.media}</option>
-            `;
-            creatorSelect.value = prevCreator;
+            if (creatorSelect) {
+                const prevCreator = creatorSelect.value || (currentRole === 'manager' ? 'manager' : 'media');
+                creatorSelect.innerHTML = `
+                    <option value="manager" class="bg-slate-900">${dict.creators.manager}</option>
+                    <option value="media" class="bg-slate-900">${dict.creators.media}</option>
+                `;
+                creatorSelect.value = prevCreator;
+            }
         }
 
-        // =====================================================================
-        // 5. FIREBASE INITIALIZATION & PERMANENT REALTIME SYNC (NO AUTO-RESEED)
-        // =====================================================================
         async function initFirebaseApp() {
             try {
                 const app = initializeApp(FIREBASE_CONFIG, 'passionstar_media_prod');
@@ -1251,7 +1309,23 @@
                     snapshot.forEach((docSnap) => {
                         loaded.push({ id: docSnap.id, ...docSnap.data() });
                     });
-                    // Directly reflect Firebase state without re-seeding deleted sample tasks
+
+                    loaded.forEach((task) => {
+                        if (task.deleteRequested) {
+                            if (isInitialSnapshotLoaded && !knownPendingDeleteIds.has(task.id) && currentRole === 'manager') {
+                                showToast(
+                                    t().toastManagerApprovalAlert(task.deleteRequestedBy || task.assignee || 'Media', task.title),
+                                    'warning',
+                                    7000
+                                );
+                            }
+                            knownPendingDeleteIds.add(task.id);
+                        } else {
+                            knownPendingDeleteIds.delete(task.id);
+                        }
+                    });
+
+                    isInitialSnapshotLoaded = true;
                     allTasks = loaded;
                     renderAllViews();
                 }, (error) => {
@@ -1299,13 +1373,48 @@
 
         window.deleteTaskById = async function(taskId, event) {
             if (event) event.stopPropagation();
+            const targetTask = allTasks.find(item => item.id === taskId);
+            if (!targetTask) return;
+
+            if (currentRole !== 'manager') {
+                targetTask.deleteRequested = true;
+                targetTask.deleteRequestedBy = activeQuickStaff || targetTask.assignee || 'Media';
+                targetTask.deleteRequestedAt = Date.now();
+                await saveTaskToStorage(targetTask);
+                showToast(t().toastDeleteRequestedMedia(targetTask.title), 'warning', 5000);
+                return;
+            }
+
             allTasks = allTasks.filter(item => item.id !== taskId);
             renderAllViews();
 
             if (db) {
                 await deleteDoc(doc(db, 'media_tasks', taskId));
             }
-            showToast(t().toastDeleted, 'info');
+            showToast(t().toastDeleted, 'info', 4000);
+        };
+
+        window.approveDeleteRequest = async function(taskId, event) {
+            if (event) event.stopPropagation();
+            allTasks = allTasks.filter(item => item.id !== taskId);
+            knownPendingDeleteIds.delete(taskId);
+            renderAllViews();
+
+            if (db) {
+                await deleteDoc(doc(db, 'media_tasks', taskId));
+            }
+            showToast(t().toastDeleted, 'success', 4000);
+        };
+
+        window.rejectDeleteRequest = async function(taskId, event) {
+            if (event) event.stopPropagation();
+            const task = allTasks.find(item => item.id === taskId);
+            if (!task) return;
+            task.deleteRequested = false;
+            task.deleteRequestedBy = null;
+            knownPendingDeleteIds.delete(taskId);
+            await saveTaskToStorage(task);
+            showToast(t().toastRejectDelete(task.title), 'info', 4000);
         };
 
         async function saveStaffListToStorage(newList) {
@@ -1317,9 +1426,6 @@
             }
         }
 
-        // =====================================================================
-        // 6. FLOATING DARK CALENDAR POPOVER (HIGH Z-INDEX 9999)
-        // =====================================================================
         window.openFloatingCalendar = function(context, triggerEl, event) {
             if (event) event.stopPropagation();
             calContext = context;
@@ -1335,7 +1441,6 @@
 
             popover.classList.remove('hidden');
 
-            // Position right below trigger button inside viewport
             const rect = triggerEl.getBoundingClientRect();
             const popWidth = 320;
             let leftPx = rect.left;
@@ -1366,15 +1471,18 @@
             const year = calViewingMonth.getFullYear();
             const month = calViewingMonth.getMonth();
 
-            document.getElementById('calMonthYearLabel').textContent = `${dict.months[month]} / ${year}`;
-            document.getElementById('calWeekdaysHeader').innerHTML = dict.calWeekdays.map(d => `<div>${d}</div>`).join('');
+            const monthLabel = document.getElementById('calMonthYearLabel');
+            if (monthLabel) monthLabel.textContent = `${dict.months[month]} / ${year}`;
+            
+            const weekdaysHeader = document.getElementById('calWeekdaysHeader');
+            if (weekdaysHeader) weekdaysHeader.innerHTML = dict.calWeekdays.map(d => `<div>${d}</div>`).join('');
 
             const firstDay = new Date(year, month, 1);
-            const startOffset = (firstDay.getDay() + 6) % 7; // Monday = 0
+            const startOffset = (firstDay.getDay() + 6) % 7;
             const daysInMonth = new Date(year, month + 1, 0).getDate();
 
             const activeISO = calContext === 'modal'
-                ? document.getElementById('taskDateInput').value
+                ? document.getElementById('taskDateInput')?.value
                 : selectedToolbarDateISO;
 
             const weekSet = new Set();
@@ -1412,20 +1520,23 @@
                 `;
             }
 
-            document.getElementById('calDaysGrid').innerHTML = cells;
+            const daysGrid = document.getElementById('calDaysGrid');
+            if (daysGrid) daysGrid.innerHTML = cells;
         }
 
         window.pickCalendarDate = function(isoDate, event) {
             if (event) event.stopPropagation();
             if (calContext === 'modal') {
-                document.getElementById('taskDateInput').value = isoDate;
-                document.getElementById('modalDateDisplay').textContent = formatDisplayDateFromISO(isoDate);
+                const dateInp = document.getElementById('taskDateInput');
+                if (dateInp) dateInp.value = isoDate;
+                const dateDisp = document.getElementById('modalDateDisplay');
+                if (dateDisp) dateDisp.textContent = formatDisplayDateFromISO(isoDate);
             } else {
                 selectedToolbarDateISO = isoDate;
                 currentWeekMonday = getMondayOfDate(parseISOToDate(isoDate));
                 renderAllViews();
             }
-            document.getElementById('floatingCalendarPopover').classList.add('hidden');
+            document.getElementById('floatingCalendarPopover')?.classList.add('hidden');
         };
 
         window.pickCalendarToday = function(event) {
@@ -1440,33 +1551,96 @@
             }
         });
 
-        // =====================================================================
-        // 7. RENDER ALL VIEWS (TIMELINE, SHIFT TABLE, REPORT)
-        // =====================================================================
         window.renderAllViews = function() {
             applyRoleVisibility();
             updateWeekHeaderLabels();
+            renderManagerApprovalBanner();
             const weekTasks = getFilteredTasksForCurrentWeek();
             renderKpiCards(weekTasks);
             renderHourlyTimelineView(weekTasks);
             renderClassicShiftView(weekTasks);
-            renderAnalyticsReportView(weekTasks);
+            if (currentRole === 'manager') {
+                renderAnalyticsReportView(weekTasks);
+            }
             lucide.createIcons();
         };
 
+        function renderManagerApprovalBanner() {
+            const banner = document.getElementById('managerDeleteApprovalBanner');
+            const listEl = document.getElementById('approvalRequestsList');
+            const countBadge = document.getElementById('approvalCountBadge');
+            if (!banner || !listEl || !countBadge) return;
+
+            if (currentRole !== 'manager') {
+                banner.classList.add('hidden');
+                return;
+            }
+
+            const pendingTasks = allTasks.filter(item => item.deleteRequested === true);
+            if (pendingTasks.length === 0) {
+                banner.classList.add('hidden');
+                return;
+            }
+
+            const dict = t();
+            banner.classList.remove('hidden');
+            countBadge.textContent = String(pendingTasks.length);
+
+            listEl.innerHTML = pendingTasks.map(task => {
+                const startH = Number(task.startHour);
+                const dur = Number(task.duration);
+                const requester = task.deleteRequestedBy || task.assignee || 'Media';
+                return `
+                    <div class="p-3 rounded-xl bg-slate-950/85 border border-rose-500/35 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300">${task.date} • ${formatHourFloat(startH)} (${dur}h)</span>
+                                <span class="text-[11px] font-bold text-amber-300 truncate">👤 ${escapeHtml(requester)}</span>
+                            </div>
+                            <div class="text-xs font-extrabold text-white truncate mt-1">${escapeHtml(task.title)}</div>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button type="button" onclick="approveDeleteRequest('${task.id}', event)" class="px-2.5 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-400 text-white text-[11px] font-extrabold shadow transition">
+                                ${dict.btnApproveDelete}
+                            </button>
+                            <button type="button" onclick="rejectDeleteRequest('${task.id}', event)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold transition">
+                                ${dict.btnRejectDelete}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         function applyRoleVisibility() {
             const isManager = (currentRole === 'manager');
-            document.getElementById('kpiSection').classList.toggle('hidden', !isManager);
-            document.getElementById('managerActionButtons').classList.toggle('hidden', !isManager);
-            document.getElementById('viewReportBtn').classList.toggle('hidden', !isManager);
-            document.getElementById('mediaModeBanner').classList.toggle('hidden', isManager);
-            document.getElementById('roleSwitcherGroup').classList.toggle('hidden', isLockedMediaLink);
+            const kpiSec = document.getElementById('kpiSection');
+            if (kpiSec) kpiSec.classList.toggle('hidden', !isManager);
+            
+            const mgrActBtns = document.getElementById('managerActionButtons');
+            if (mgrActBtns) mgrActBtns.classList.toggle('hidden', !isManager);
+            
+            const repBtn = document.getElementById('viewReportBtn');
+            if (repBtn) repBtn.classList.toggle('hidden', !isManager);
+            
+            const mediaBanner = document.getElementById('mediaModeBanner');
+            if (mediaBanner) mediaBanner.classList.toggle('hidden', isManager);
+            
+            const roleGroup = document.getElementById('roleSwitcherGroup');
+            if (roleGroup) roleGroup.classList.toggle('hidden', isLockedMediaLink);
 
-            document.getElementById('greetingBadge').textContent = isManager ? t().greetingManager : t().greetingMedia;
-            document.getElementById('btnAddTaskText').textContent = isManager ? t().btnAssignTask : t().btnMediaAddTask;
+            const greetingBadge = document.getElementById('greetingBadge');
+            if (greetingBadge) greetingBadge.textContent = isManager ? t().greetingManager : t().greetingMedia;
+            
+            const btnAddTaskText = document.getElementById('btnAddTaskText');
+            if (btnAddTaskText) btnAddTaskText.textContent = isManager ? t().btnAssignTask : t().btnMediaAddTask;
 
             if (!isManager && currentView === 'report') {
                 switchView('timeline');
+            }
+            if (!isManager) {
+                const repCont = document.getElementById('reportViewContainer');
+                if (repCont) repCont.classList.add('hidden');
             }
         }
 
@@ -1475,10 +1649,17 @@
             const rangeShort = `${formatDayMonth(currentWeekMonday)}-${formatDayMonth(sunday)}`;
             const rangeFull = `${formatDayMonth(currentWeekMonday)} - ${formatDayMonth(sunday)}/${sunday.getFullYear()}`;
 
-            document.getElementById('weekRangeLabel').textContent = rangeFull;
-            document.getElementById('excelBannerWeek').textContent = rangeShort;
-            document.getElementById('shiftViewWeekSubtitle').textContent = t().shiftViewSub(rangeFull);
-            document.getElementById('toolbarDateLabel').textContent = formatDisplayDateFromISO(selectedToolbarDateISO);
+            const weekRangeLabel = document.getElementById('weekRangeLabel');
+            if (weekRangeLabel) weekRangeLabel.textContent = rangeFull;
+            
+            const excelBannerWeek = document.getElementById('excelBannerWeek');
+            if (excelBannerWeek) excelBannerWeek.textContent = rangeShort;
+            
+            const shiftSub = document.getElementById('shiftViewWeekSubtitle');
+            if (shiftSub) shiftSub.textContent = t().shiftViewSub(rangeFull);
+            
+            const toolDateLabel = document.getElementById('toolbarDateLabel');
+            if (toolDateLabel) toolDateLabel.textContent = formatDisplayDateFromISO(selectedToolbarDateISO);
         }
 
         function getFilteredTasksForCurrentWeek() {
@@ -1504,6 +1685,7 @@
         }
 
         function renderKpiCards(weekTasks) {
+            if (currentRole !== 'manager') return;
             const dict = t();
             const totalTasks = weekTasks.length;
             let totalHours = 0, morningCount = 0, afternoonCount = 0, eveningCount = 0, doneCount = 0;
@@ -1522,10 +1704,14 @@
                 staffHoursMap[person] = (staffHoursMap[person] || 0) + dur;
             });
 
-            document.getElementById('kpiTotalTasks').textContent = totalTasks;
-            document.getElementById('kpiShiftSplit').textContent = dict.kpiShiftSplit(morningCount, afternoonCount, eveningCount);
-            document.getElementById('kpiTotalHours').textContent = `${Number(totalHours.toFixed(1))}h`;
-            document.getElementById('kpiAvgHours').textContent = dict.kpiAvgHours((totalHours / 7).toFixed(1));
+            const el1 = document.getElementById('kpiTotalTasks');
+            if (el1) el1.textContent = totalTasks;
+            const el2 = document.getElementById('kpiShiftSplit');
+            if (el2) el2.textContent = dict.kpiShiftSplit(morningCount, afternoonCount, eveningCount);
+            const el3 = document.getElementById('kpiTotalHours');
+            if (el3) el3.textContent = `${Number(totalHours.toFixed(1))}h`;
+            const el4 = document.getElementById('kpiAvgHours');
+            if (el4) el4.textContent = dict.kpiAvgHours((totalHours / 7).toFixed(1));
 
             let topStaff = '—', topHours = 0;
             Object.entries(staffHoursMap).forEach(([name, hrs]) => {
@@ -1534,13 +1720,18 @@
                     topStaff = name;
                 }
             });
-            document.getElementById('kpiTopStaff').textContent = topStaff;
-            document.getElementById('kpiTopStaffHours').textContent = topHours > 0 ? dict.kpiTopStaffHours(topHours) : dict.kpiNoData;
+            const el5 = document.getElementById('kpiTopStaff');
+            if (el5) el5.textContent = topStaff;
+            const el6 = document.getElementById('kpiTopStaffHours');
+            if (el6) el6.textContent = topHours > 0 ? dict.kpiTopStaffHours(topHours) : dict.kpiNoData;
 
             const pct = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0;
-            document.getElementById('kpiDonePercent').textContent = `${pct}%`;
-            document.getElementById('kpiDoneCount').textContent = dict.kpiDoneCount(doneCount, totalTasks);
-            document.getElementById('kpiProgressBar').style.width = `${pct}%`;
+            const el7 = document.getElementById('kpiDonePercent');
+            if (el7) el7.textContent = `${pct}%`;
+            const el8 = document.getElementById('kpiDoneCount');
+            if (el8) el8.textContent = dict.kpiDoneCount(doneCount, totalTasks);
+            const el9 = document.getElementById('kpiProgressBar');
+            if (el9) el9.style.width = `${pct}%`;
         }
 
         function renderHourlyTimelineView(weekTasks) {
@@ -1548,6 +1739,8 @@
             const headersContainer = document.getElementById('timelineDayHeaders');
             const hourLabelsContainer = document.getElementById('timelineHourLabels');
             const dayColumnsContainer = document.getElementById('timelineDayColumns');
+            if (!headersContainer || !hourLabelsContainer || !dayColumnsContainer) return;
+
             const todayISO = formatDateISO(new Date());
 
             headersContainer.innerHTML = dict.days.map((dayLabel, offset) => {
@@ -1557,15 +1750,21 @@
                 const dayTasks = weekTasks.filter(item => item.date === dateISO);
                 const dayHours = dayTasks.reduce((acc, item) => acc + (Number(item.duration) || 0), 0);
 
+                const statsBadgeHtml = currentRole === 'manager'
+                    ? `<div class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono ${dayHours > 0 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-white/5 text-slate-500'}">
+                            <span>${dayTasks.length} ${dict.taskCountUnit}</span>
+                            <span>•</span>
+                            <span>${dayHours}h</span>
+                       </div>`
+                    : `<div class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono ${dayTasks.length > 0 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-white/5 text-slate-500'}">
+                            <span>${dayTasks.length} ${dict.taskCountUnit}</span>
+                       </div>`;
+
                 return `
                     <div class="p-2.5 border-r border-white/10 text-center flex flex-col items-center justify-center relative ${isToday ? 'bg-cyan-500/10' : ''}">
                         <span class="text-xs sm:text-sm font-extrabold tracking-wide ${isToday ? 'text-cyan-300' : 'text-white'}">${dayLabel}</span>
                         <div class="text-xs font-mono text-slate-300 mt-0.5">${formatDayMonth(dateObj)}</div>
-                        <div class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono ${dayHours > 0 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-white/5 text-slate-500'}">
-                            <span>${dayTasks.length} ${dict.taskCountUnit}</span>
-                            <span>•</span>
-                            <span>${dayHours}h</span>
-                        </div>
+                        ${statsBadgeHtml}
                     </div>
                 `;
             }).join('');
@@ -1624,19 +1823,24 @@
                     const style = CATEGORY_STYLE[task.category] || CATEGORY_STYLE.photo;
                     const statusDot = STATUS_STYLE[task.status]?.dot || 'bg-slate-400';
                     const isAssigned = (task.createdBy === 'manager');
+                    const isPendingDel = (task.deleteRequested === true);
+
+                    const actionIconHtml = currentRole === 'manager'
+                        ? `<button type="button" onclick="deleteTaskById('${task.id}', event)" title="Xoá task" class="opacity-0 group-hover:opacity-100 w-4 h-4 rounded bg-rose-500 text-white text-[10px] flex items-center justify-center">✕</button>`
+                        : '';
 
                     return `
                         <div onclick="event.stopPropagation(); openEditTaskModal('${task.id}')"
                              style="top: ${topPx}px; height: ${heightPx}px; left: calc(${leftPct}% + 3px); width: calc(${widthPct}% - 6px);"
-                             class="task-block group absolute z-10 rounded-xl p-2 ${style.bg} ${style.border} border backdrop-blur-md cursor-pointer overflow-hidden flex flex-col justify-between shadow-md">
+                             class="task-block group absolute z-10 rounded-xl p-2 ${isPendingDel ? 'bg-rose-950/80 border-rose-400/70' : `${style.bg} ${style.border}`} border backdrop-blur-md cursor-pointer overflow-hidden flex flex-col justify-between shadow-md">
                             <div>
                                 <div class="flex items-center justify-between gap-1">
-                                    <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${style.badge} truncate">
+                                    <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${isPendingDel ? 'bg-rose-500 text-white' : style.badge} truncate">
                                         ${formatHourFloat(startH)} - ${formatHourFloat(endH)} (${dur}h)
                                     </span>
                                     <div class="flex items-center gap-1">
                                         <span class="w-2 h-2 rounded-full ${statusDot} shrink-0"></span>
-                                        <button type="button" onclick="deleteTaskById('${task.id}', event)" class="opacity-0 group-hover:opacity-100 w-4 h-4 rounded bg-rose-500 text-white text-[10px] flex items-center justify-center">✕</button>
+                                        ${actionIconHtml}
                                     </div>
                                 </div>
                                 <div class="font-bold text-xs text-white leading-snug mt-1 line-clamp-2">
@@ -1649,8 +1853,8 @@
                                 <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-white truncate">
                                     👤 ${escapeHtml(task.assignee)}
                                 </span>
-                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-950/60 text-slate-200 truncate">
-                                    ${isAssigned ? dict.badgeAssigned : dict.badgeSelf}
+                                <span class="text-[9px] px-1.5 py-0.2 rounded ${isPendingDel ? 'bg-rose-500/30 text-rose-200 font-bold' : 'bg-slate-950/60 text-slate-200'} truncate">
+                                    ${isPendingDel ? dict.badgePendingDelete : (isAssigned ? dict.badgeAssigned : dict.badgeSelf)}
                                 </span>
                             </div>
                         </div>
@@ -1707,6 +1911,7 @@
             const dict = t();
             const headerRow = document.getElementById('shiftTableHeaders');
             const tbody = document.getElementById('shiftTableBody');
+            if (!headerRow || !tbody) return;
 
             headerRow.innerHTML = `
                 <th class="p-3.5 border-r border-white/15 w-36 text-xs font-extrabold text-amber-300 uppercase">
@@ -1742,19 +1947,24 @@
                         const style = CATEGORY_STYLE[task.category] || CATEGORY_STYLE.photo;
                         const startH = Number(task.startHour);
                         const dur = Number(task.duration);
+                        const isPendingDel = (task.deleteRequested === true);
+                        const managerDelBtn = currentRole === 'manager'
+                            ? `<button type="button" onclick="deleteTaskById('${task.id}', event)" class="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-200 text-xs font-bold">✕</button>`
+                            : '';
+
                         return `
-                            <div onclick="openEditTaskModal('${task.id}')" class="group p-2.5 rounded-xl ${style.bg} border ${style.border} cursor-pointer hover:scale-[1.01] transition space-y-1">
+                            <div onclick="openEditTaskModal('${task.id}')" class="group p-2.5 rounded-xl ${isPendingDel ? 'bg-rose-950/75 border-rose-400/70' : `${style.bg} ${style.border}`} border cursor-pointer hover:scale-[1.01] transition space-y-1">
                                 <div class="flex items-center justify-between gap-1">
-                                    <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${style.badge}">
+                                    <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${isPendingDel ? 'bg-rose-500 text-white' : style.badge}">
                                         ${formatHourFloat(startH)} - ${formatHourFloat(startH + dur)} (${dur}h)
                                     </span>
-                                    <button type="button" onclick="deleteTaskById('${task.id}', event)" class="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-200 text-xs font-bold">✕</button>
+                                    ${managerDelBtn}
                                 </div>
                                 <div class="text-xs font-bold text-white leading-snug">${escapeHtml(task.title)}</div>
                                 ${task.note ? `<div class="text-[11px] text-amber-200/90">${escapeHtml(task.note)}</div>` : ''}
                                 <div class="text-[11px] text-slate-300 flex items-center justify-between pt-1 border-t border-white/10">
                                     <span>👤 ${escapeHtml(task.assignee)}</span>
-                                    <span class="text-[10px] opacity-80">${task.createdBy === 'manager' ? dict.badgeAssigned : dict.badgeSelf}</span>
+                                    <span class="text-[10px] opacity-90">${isPendingDel ? dict.badgePendingDelete : (task.createdBy === 'manager' ? dict.badgeAssigned : dict.badgeSelf)}</span>
                                 </div>
                             </div>
                         `;
@@ -1785,10 +1995,12 @@
         }
 
         function renderAnalyticsReportView(weekTasks) {
+            if (currentRole !== 'manager') return;
             const dict = t();
             const workloadContainer = document.getElementById('staffWorkloadList');
             const headRow = document.getElementById('reportTableHeadRow');
             const tableBody = document.getElementById('reportTaskTableBody');
+            if (!workloadContainer || !headRow || !tableBody) return;
 
             headRow.innerHTML = dict.reportCols.map((col, idx) =>
                 `<th class="py-2.5 px-3 ${idx === dict.reportCols.length - 1 ? 'text-right' : ''}">${col}</th>`
@@ -1877,9 +2089,6 @@
             }).join('');
         }
 
-        // =====================================================================
-        // 8. MODAL & UI HANDLERS
-        // =====================================================================
         window.switchRole = function(role) {
             if (isLockedMediaLink) return;
             currentRole = role;
@@ -1887,31 +2096,45 @@
             const mediaBtn = document.getElementById('roleMediaBtn');
 
             if (role === 'manager') {
-                managerBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md';
-                mediaBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white transition-all';
+                if (managerBtn) managerBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md';
+                if (mediaBtn) mediaBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white transition-all';
             } else {
-                mediaBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md';
-                managerBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white transition-all';
+                if (mediaBtn) mediaBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md';
+                if (managerBtn) managerBtn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white transition-all';
             }
             renderAllViews();
         };
 
         window.onQuickStaffChange = function(val) {
+            activeQuickStaff = val;
             localStorage.setItem('media_quick_staff', val);
+            populateStaffSelectors();
+            showToast(t().toastStaffSelected(val), 'info', 3000);
         };
 
         window.switchView = function(view) {
+            if (currentRole !== 'manager' && view === 'report') {
+                view = 'timeline';
+            }
             currentView = view;
-            document.getElementById('timelineViewContainer').classList.toggle('hidden', view !== 'timeline');
-            document.getElementById('shiftViewContainer').classList.toggle('hidden', view !== 'shift');
-            document.getElementById('reportViewContainer').classList.toggle('hidden', view !== 'report');
+            const tCont = document.getElementById('timelineViewContainer');
+            if (tCont) tCont.classList.toggle('hidden', view !== 'timeline');
+            
+            const sCont = document.getElementById('shiftViewContainer');
+            if (sCont) sCont.classList.toggle('hidden', view !== 'shift');
+            
+            const rCont = document.getElementById('reportViewContainer');
+            if (rCont) rCont.classList.toggle('hidden', view !== 'report' || currentRole !== 'manager');
 
             const activeCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition';
             const inactiveCls = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition';
 
-            document.getElementById('viewTimelineBtn').className = view === 'timeline' ? activeCls : inactiveCls;
-            document.getElementById('viewShiftBtn').className = view === 'shift' ? activeCls : inactiveCls;
-            document.getElementById('viewReportBtn').className = view === 'report' ? activeCls : inactiveCls;
+            const vTBtn = document.getElementById('viewTimelineBtn');
+            if (vTBtn) vTBtn.className = view === 'timeline' ? activeCls : inactiveCls;
+            const vSBtn = document.getElementById('viewShiftBtn');
+            if (vSBtn) vSBtn.className = view === 'shift' ? activeCls : inactiveCls;
+            const vRBtn = document.getElementById('viewReportBtn');
+            if (vRBtn) vRBtn.className = view === 'report' ? activeCls : inactiveCls;
         };
 
         window.changeWeek = function(deltaWeeks) {
@@ -1940,73 +2163,133 @@
         window.openTaskModalForSlot = function(dateISO, startHour) {
             const dict = t();
             const isManager = (currentRole === 'manager');
-            document.getElementById('modalRoleBadge').textContent = isManager ? dict.modalBadgeManager : dict.modalBadgeMedia;
-            document.getElementById('taskModalTitle').textContent = isManager ? dict.modalAddTitleManager : dict.modalAddTitleMedia;
+            const modBadge = document.getElementById('modalRoleBadge');
+            if (modBadge) modBadge.textContent = isManager ? dict.modalBadgeManager : dict.modalBadgeMedia;
+            
+            const modTitle = document.getElementById('taskModalTitle');
+            if (modTitle) modTitle.textContent = isManager ? dict.modalAddTitleManager : dict.modalAddTitleMedia;
 
-            document.getElementById('taskIdInput').value = '';
-            document.getElementById('taskTitleInput').value = '';
-            document.getElementById('taskDateInput').value = dateISO;
-            document.getElementById('modalDateDisplay').textContent = formatDisplayDateFromISO(dateISO);
-            document.getElementById('taskStartHourInput').value = String(startHour);
-            document.getElementById('taskDurationInput').value = '2';
-            document.getElementById('taskCategoryInput').value = 'photo';
-            document.getElementById('taskStatusInput').value = 'todo';
-            document.getElementById('taskCreatorInput').value = isManager ? 'manager' : 'media';
-            document.getElementById('taskNoteInput').value = '';
+            const taskIdInp = document.getElementById('taskIdInput');
+            if (taskIdInp) taskIdInp.value = '';
+            const taskTitleInp = document.getElementById('taskTitleInput');
+            if (taskTitleInp) taskTitleInp.value = '';
+            const taskDateInp = document.getElementById('taskDateInput');
+            if (taskDateInp) taskDateInp.value = dateISO;
+            const modDateDisp = document.getElementById('modalDateDisplay');
+            if (modDateDisp) modDateDisp.textContent = formatDisplayDateFromISO(dateISO);
+            
+            const startHourInp = document.getElementById('taskStartHourInput');
+            if (startHourInp) startHourInp.value = String(startHour);
+            
+            const durInp = document.getElementById('taskDurationInput');
+            if (durInp) durInp.value = '2';
+            
+            const catInp = document.getElementById('taskCategoryInput');
+            if (catInp) catInp.value = 'photo';
+            
+            const statInp = document.getElementById('taskStatusInput');
+            if (statInp) statInp.value = 'todo';
+            
+            const creatorInp = document.getElementById('taskCreatorInput');
+            if (creatorInp) creatorInp.value = isManager ? 'manager' : 'media';
+            
+            const noteInp = document.getElementById('taskNoteInput');
+            if (noteInp) noteInp.value = '';
 
-            const quickStaff = document.getElementById('quickMediaStaffSelect')?.value;
-            if (!isManager && quickStaff) {
-                document.getElementById('taskAssigneeInput').value = quickStaff;
+            if (!isManager && activeQuickStaff && staffList.includes(activeQuickStaff)) {
+                const assigneeInp = document.getElementById('taskAssigneeInput');
+                if (assigneeInp) assigneeInp.value = activeQuickStaff;
             }
 
-            document.getElementById('deleteTaskBtn').classList.add('hidden');
+            const delTaskBtn = document.getElementById('deleteTaskBtn');
+            if (delTaskBtn) delTaskBtn.classList.add('hidden');
+
             updateCalculatedTimePreview();
-            document.getElementById('taskModal').classList.remove('hidden');
+            const tModal = document.getElementById('taskModal');
+            if (tModal) tModal.classList.remove('hidden');
             lucide.createIcons();
         };
 
         window.openEditTaskModal = function(taskId) {
             const task = allTasks.find(item => item.id === taskId);
             if (!task) return;
+            const dict = t();
+            const isManager = (currentRole === 'manager');
 
-            document.getElementById('taskModalTitle').textContent = t().modalEditTitle;
-            document.getElementById('taskIdInput').value = task.id;
-            document.getElementById('taskTitleInput').value = task.title || '';
-            document.getElementById('taskAssigneeInput').value = task.assignee || staffList[0];
-            document.getElementById('taskCategoryInput').value = task.category || 'photo';
-            document.getElementById('taskDateInput').value = task.date;
-            document.getElementById('modalDateDisplay').textContent = formatDisplayDateFromISO(task.date);
-            document.getElementById('taskStartHourInput').value = String(task.startHour);
-            document.getElementById('taskDurationInput').value = String(task.duration);
-            document.getElementById('taskStatusInput').value = task.status || 'todo';
-            document.getElementById('taskCreatorInput').value = task.createdBy || 'media';
-            document.getElementById('taskNoteInput').value = task.note || '';
+            const modBadge = document.getElementById('modalRoleBadge');
+            if (modBadge) modBadge.textContent = isManager ? dict.modalBadgeManager : dict.modalBadgeMedia;
+            const modTitle = document.getElementById('taskModalTitle');
+            if (modTitle) modTitle.textContent = dict.modalEditTitle;
+            
+            const taskIdInp = document.getElementById('taskIdInput');
+            if (taskIdInp) taskIdInp.value = task.id;
+            const titleInp = document.getElementById('taskTitleInput');
+            if (titleInp) titleInp.value = task.title || '';
+            const assigneeInp = document.getElementById('taskAssigneeInput');
+            if (assigneeInp) assigneeInp.value = task.assignee || staffList[0];
+            const catInp = document.getElementById('taskCategoryInput');
+            if (catInp) catInp.value = task.category || 'photo';
+            const dateInp = document.getElementById('taskDateInput');
+            if (dateInp) dateInp.value = task.date;
+            const dateDisp = document.getElementById('modalDateDisplay');
+            if (dateDisp) dateDisp.textContent = formatDisplayDateFromISO(task.date);
+            const startHInp = document.getElementById('taskStartHourInput');
+            if (startHInp) startHInp.value = String(task.startHour);
+            const durInp = document.getElementById('taskDurationInput');
+            if (durInp) durInp.value = String(task.duration);
+            const statInp = document.getElementById('taskStatusInput');
+            if (statInp) statInp.value = task.status || 'todo';
+            const creatorInp = document.getElementById('taskCreatorInput');
+            if (creatorInp) creatorInp.value = task.createdBy || 'media';
+            const noteInp = document.getElementById('taskNoteInput');
+            if (noteInp) noteInp.value = task.note || '';
 
-            document.getElementById('deleteTaskBtn').classList.remove('hidden');
+            const delBtn = document.getElementById('deleteTaskBtn');
+            const delBtnText = document.getElementById('btnDeleteTaskText');
+            if (delBtn) delBtn.classList.remove('hidden');
+
+            if (isManager) {
+                if (delBtn) delBtn.disabled = false;
+                if (delBtn) delBtn.className = 'px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-xs font-bold flex items-center gap-1.5 transition';
+                if (delBtnText) delBtnText.textContent = dict.btnDeleteTaskManager;
+            } else if (task.deleteRequested) {
+                if (delBtn) delBtn.disabled = true;
+                if (delBtn) delBtn.className = 'px-3.5 py-2 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 opacity-80 cursor-not-allowed';
+                if (delBtnText) delBtnText.textContent = dict.btnPendingDeleteMedia;
+            } else {
+                if (delBtn) delBtn.disabled = false;
+                if (delBtn) delBtn.className = 'px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition';
+                if (delBtnText) delBtnText.textContent = dict.btnRequestDeleteMedia;
+            }
+
             updateCalculatedTimePreview();
-            document.getElementById('taskModal').classList.remove('hidden');
+            const tModal = document.getElementById('taskModal');
+            if (tModal) tModal.classList.remove('hidden');
             lucide.createIcons();
         };
 
         window.closeTaskModal = function() {
-            document.getElementById('taskModal').classList.add('hidden');
+            document.getElementById('taskModal')?.classList.add('hidden');
         };
 
         window.selectDurationPill = function(hours) {
-            document.getElementById('taskDurationInput').value = String(hours);
+            const durInp = document.getElementById('taskDurationInput');
+            if (durInp) durInp.value = String(hours);
             updateCalculatedTimePreview();
         };
 
         window.updateCalculatedTimePreview = function() {
             const dict = t();
-            const startH = Number(document.getElementById('taskStartHourInput').value) || 9;
-            const dur = Math.max(0.5, Number(document.getElementById('taskDurationInput').value) || 1);
+            const startH = Number(document.getElementById('taskStartHourInput')?.value) || 9;
+            const dur = Math.max(0.5, Number(document.getElementById('taskDurationInput')?.value) || 1);
             const endH = startH + dur;
             const shiftKey = getShiftKeyFromHour(startH);
             const shiftName = dict.shifts[shiftKey].name;
 
-            document.getElementById('timePreviewBadge').textContent =
-                `${formatHourFloat(startH)} - ${formatHourFloat(endH)} (${dur} ${dict.hourUnit} • ${shiftName})`;
+            const badge = document.getElementById('timePreviewBadge');
+            if (badge) {
+                badge.textContent = `${formatHourFloat(startH)} - ${formatHourFloat(endH)} (${dur} ${dict.hourUnit} • ${shiftName})`;
+            }
 
             document.querySelectorAll('.dur-pill').forEach(btn => {
                 const val = parseFloat(btn.textContent);
@@ -2018,28 +2301,31 @@
 
         window.handleSaveTask = async function(e) {
             e.preventDefault();
-            const existingId = document.getElementById('taskIdInput').value;
+            const existingId = document.getElementById('taskIdInput')?.value;
+            const prevTask = allTasks.find(item => item.id === existingId);
             const taskObj = {
                 id: existingId || ('task_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6)),
-                title: document.getElementById('taskTitleInput').value.trim(),
-                assignee: document.getElementById('taskAssigneeInput').value,
-                category: document.getElementById('taskCategoryInput').value,
-                date: document.getElementById('taskDateInput').value,
-                startHour: Number(document.getElementById('taskStartHourInput').value),
-                duration: Math.max(0.5, Number(document.getElementById('taskDurationInput').value) || 1),
-                status: document.getElementById('taskStatusInput').value,
-                createdBy: document.getElementById('taskCreatorInput').value,
-                note: document.getElementById('taskNoteInput').value.trim(),
+                title: document.getElementById('taskTitleInput')?.value.trim() || '',
+                assignee: document.getElementById('taskAssigneeInput')?.value || staffList[0],
+                category: document.getElementById('taskCategoryInput')?.value || 'photo',
+                date: document.getElementById('taskDateInput')?.value || selectedToolbarDateISO,
+                startHour: Number(document.getElementById('taskStartHourInput')?.value) || 9,
+                duration: Math.max(0.5, Number(document.getElementById('taskDurationInput')?.value) || 1),
+                status: document.getElementById('taskStatusInput')?.value || 'todo',
+                createdBy: document.getElementById('taskCreatorInput')?.value || 'media',
+                note: document.getElementById('taskNoteInput')?.value.trim() || '',
+                deleteRequested: prevTask?.deleteRequested || false,
+                deleteRequestedBy: prevTask?.deleteRequestedBy || null,
                 updatedAt: Date.now()
             };
 
             closeTaskModal();
             await saveTaskToStorage(taskObj);
-            showToast(t().toastSaved(taskObj.title, taskObj.duration), 'success');
+            showToast(t().toastSaved(taskObj.title, taskObj.duration), 'success', 4200);
         };
 
         window.handleDeleteCurrentTask = async function() {
-            const taskId = document.getElementById('taskIdInput').value;
+            const taskId = document.getElementById('taskIdInput')?.value;
             if (!taskId) return;
             closeTaskModal();
             await window.deleteTaskById(taskId);
@@ -2056,56 +2342,91 @@
 
         function populateStaffSelectors() {
             const dict = t();
+            if (!staffList.includes(activeQuickStaff)) {
+                activeQuickStaff = staffList[0] || 'Mỹ';
+            }
+
             const filterSelect = document.getElementById('filterStaff');
-            const currentFilter = filterSelect.value || 'ALL';
-            filterSelect.innerHTML = `<option value="ALL" class="bg-slate-900">${dict.filterAllStaff(staffList.length)}</option>` +
-                staffList.map(name => `<option value="${escapeHtml(name)}" class="bg-slate-900">${escapeHtml(name)}</option>`).join('');
-            filterSelect.value = staffList.includes(currentFilter) ? currentFilter : 'ALL';
+            if (filterSelect) {
+                const currentFilter = filterSelect.value || 'ALL';
+                filterSelect.innerHTML = `<option value="ALL" class="bg-slate-900">${dict.filterAllStaff(staffList.length)}</option>` +
+                    staffList.map(name => `<option value="${escapeHtml(name)}" class="bg-slate-900">${escapeHtml(name)}</option>`).join('');
+                filterSelect.value = staffList.includes(currentFilter) ? currentFilter : 'ALL';
+            }
 
             const modalSelect = document.getElementById('taskAssigneeInput');
-            const prevAssignee = modalSelect.value || staffList[0];
-            modalSelect.innerHTML = staffList.map(name =>
-                `<option value="${escapeHtml(name)}" class="bg-slate-900">${escapeHtml(name)} (${dict.assigneeSuffix})</option>`
-            ).join('');
-            if (staffList.includes(prevAssignee)) modalSelect.value = prevAssignee;
-
-            const quickSelect = document.getElementById('quickMediaStaffSelect');
-            if (quickSelect) {
-                const savedQuick = localStorage.getItem('media_quick_staff') || staffList[0];
-                quickSelect.innerHTML = staffList.map(name =>
-                    `<option value="${escapeHtml(name)}" class="bg-slate-900">${escapeHtml(name)}</option>`
+            if (modalSelect) {
+                const prevAssignee = modalSelect.value || activeQuickStaff || staffList[0];
+                modalSelect.innerHTML = staffList.map(name =>
+                    `<option value="${escapeHtml(name)}" class="bg-slate-900">${escapeHtml(name)} (${dict.assigneeSuffix})</option>`
                 ).join('');
-                if (staffList.includes(savedQuick)) quickSelect.value = savedQuick;
+                if (staffList.includes(prevAssignee)) modalSelect.value = prevAssignee;
+            }
+
+            const pillsContainer = document.getElementById('quickMediaStaffPills');
+            if (pillsContainer) {
+                pillsContainer.innerHTML = staffList.map(name => {
+                    const isSelected = (name === activeQuickStaff);
+                    const initial = name.trim().charAt(0).toUpperCase();
+                    return `
+                        <button type="button" onclick="onQuickStaffChange('${escapeHtml(name)}')"
+                            class="group flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                                isSelected
+                                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.02]'
+                                    : 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10'
+                            }">
+                            <span class="w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-extrabold ${
+                                isSelected ? 'bg-slate-950/20 text-slate-950' : 'bg-cyan-500/20 text-cyan-300'
+                            }">${escapeHtml(initial)}</span>
+                            <span>${escapeHtml(name)}</span>
+                            ${isSelected ? '<span class="w-1.5 h-1.5 rounded-full bg-slate-950"></span>' : ''}
+                        </button>
+                    `;
+                }).join('');
             }
 
             const listEl = document.getElementById('staffModalList');
             if (listEl) {
-                listEl.innerHTML = staffList.map(name => `
-                    <div class="flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-900/80 border border-white/10">
-                        <span class="text-xs font-semibold text-white">👤 ${escapeHtml(name)}</span>
-                        <button type="button" onclick="removeStaffMember('${escapeHtml(name)}')" class="text-xs text-rose-400 hover:text-rose-300 font-semibold">${dict.btnDelete}</button>
-                    </div>
-                `).join('');
+                listEl.innerHTML = staffList.map(name => {
+                    const initial = name.trim().charAt(0).toUpperCase();
+                    const count = allTasks.filter(item => item.assignee === name).length;
+                    return `
+                        <div class="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 hover:border-cyan-500/30 transition">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500/25 to-violet-500/25 border border-cyan-400/30 flex items-center justify-center text-xs font-extrabold text-cyan-300">
+                                    ${escapeHtml(initial)}
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-white">${escapeHtml(name)}</div>
+                                    <div class="text-[10px] text-slate-400">${count} ${dict.taskCountUnit}</div>
+                                </div>
+                            </div>
+                            <button type="button" onclick="removeStaffMember('${escapeHtml(name)}')" class="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-xs text-rose-300 border border-rose-500/30 font-semibold transition">
+                                ${dict.btnDelete}
+                            </button>
+                        </div>
+                    `;
+                }).join('');
             }
         }
 
         window.openStaffModal = function() {
             populateStaffSelectors();
-            document.getElementById('staffModal').classList.remove('hidden');
+            document.getElementById('staffModal')?.classList.remove('hidden');
         };
         window.closeStaffModal = function() {
-            document.getElementById('staffModal').classList.add('hidden');
+            document.getElementById('staffModal')?.classList.add('hidden');
         };
 
         window.handleAddStaff = async function(e) {
             e.preventDefault();
             const input = document.getElementById('newStaffNameInput');
-            const name = input.value.trim();
+            const name = input?.value.trim();
             if (!name) return;
             if (!staffList.includes(name)) {
                 await saveStaffListToStorage([...staffList, name]);
             }
-            input.value = '';
+            if (input) input.value = '';
         };
 
         window.removeStaffMember = async function(name) {
@@ -2115,16 +2436,19 @@
 
         window.openLinksModal = function() {
             const base = window.location.origin + window.location.pathname;
-            document.getElementById('shareMediaUrlInput').value = `${base}?role=media`;
-            document.getElementById('shareManagerUrlInput').value = `${base}?role=manager`;
-            document.getElementById('linksModal').classList.remove('hidden');
+            const mInp = document.getElementById('shareMediaUrlInput');
+            if (mInp) mInp.value = `${base}?role=media`;
+            const mgrInp = document.getElementById('shareManagerUrlInput');
+            if (mgrInp) mgrInp.value = `${base}?role=manager`;
+            document.getElementById('linksModal')?.classList.remove('hidden');
         };
         window.closeLinksModal = function() {
-            document.getElementById('linksModal').classList.add('hidden');
+            document.getElementById('linksModal')?.classList.add('hidden');
         };
 
         window.copyShareUrl = function(inputId) {
             const input = document.getElementById(inputId);
+            if (!input) return;
             input.select();
             document.execCommand('copy');
             showToast(t().toastCopied, 'success');
@@ -2183,21 +2507,86 @@
                 .replace(/"/g, '&quot;');
         }
 
-        function showToast(message, type = 'info') {
+        function showToast(message, type = 'info', durationMs = 4200) {
             const container = document.getElementById('toastContainer');
+            if (!container) return;
+
             const toast = document.createElement('div');
-            const colorMap = {
-                success: 'border-emerald-500/40 bg-emerald-950/90 text-emerald-200',
-                error: 'border-rose-500/40 bg-rose-950/90 text-rose-200',
-                info: 'border-cyan-500/40 bg-slate-900/95 text-cyan-200'
+            const themeMap = {
+                success: {
+                    wrap: 'border-emerald-500/45 bg-slate-900/95 text-emerald-100 shadow-emerald-950/50',
+                    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+                    bar: 'from-emerald-400 to-teal-400',
+                    icon: '✓'
+                },
+                warning: {
+                    wrap: 'border-amber-500/50 bg-slate-900/95 text-amber-100 shadow-amber-950/50',
+                    badge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+                    bar: 'from-amber-400 to-orange-500',
+                    icon: '🔔'
+                },
+                error: {
+                    wrap: 'border-rose-500/50 bg-slate-900/95 text-rose-100 shadow-rose-950/50',
+                    badge: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+                    bar: 'from-rose-500 to-pink-500',
+                    icon: '!'
+                },
+                info: {
+                    wrap: 'border-cyan-500/45 bg-slate-900/95 text-cyan-100 shadow-cyan-950/50',
+                    badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+                    bar: 'from-cyan-400 to-blue-500',
+                    icon: 'i'
+                }
             };
-            toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl border backdrop-blur-md shadow-xl text-xs font-semibold transition-all duration-300 ${colorMap[type] || colorMap.info}`;
-            toast.textContent = message;
+            const theme = themeMap[type] || themeMap.info;
+
+            toast.className = `pointer-events-auto toast-enter relative overflow-hidden rounded-2xl border backdrop-blur-xl shadow-2xl px-4 py-3 ${theme.wrap}`;
+            toast.innerHTML = `
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-6 h-6 rounded-lg border flex items-center justify-center text-xs font-extrabold shrink-0 ${theme.badge}">${theme.icon}</span>
+                        <p class="text-xs font-semibold leading-snug break-words">${escapeHtml(message)}</p>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <span class="toast-countdown text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/5 text-slate-300">${(durationMs / 1000).toFixed(1)}s</span>
+                        <button type="button" class="toast-close p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition text-xs">✕</button>
+                    </div>
+                </div>
+                <div class="w-full h-1 bg-slate-800/90 rounded-full overflow-hidden mt-2">
+                    <div class="toast-bar h-full bg-gradient-to-r ${theme.bar}" style="width: 100%; transition: width 100ms linear;"></div>
+                </div>
+            `;
+
             container.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 300);
-            }, 2800);
+
+            const countdownEl = toast.querySelector('.toast-countdown');
+            const barEl = toast.querySelector('.toast-bar');
+            const closeBtn = toast.querySelector('.toast-close');
+
+            const startTime = performance.now();
+            let closed = false;
+
+            const dismissToast = () => {
+                if (closed) return;
+                closed = true;
+                clearInterval(timerId);
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 280);
+            };
+
+            closeBtn.addEventListener('click', dismissToast);
+
+            const timerId = setInterval(() => {
+                const elapsed = performance.now() - startTime;
+                const remaining = Math.max(0, durationMs - elapsed);
+                const pct = (remaining / durationMs) * 100;
+                if (countdownEl) countdownEl.textContent = `${(remaining / 1000).toFixed(1)}s`;
+                if (barEl) barEl.style.width = `${pct}%`;
+                if (remaining <= 0) {
+                    dismissToast();
+                }
+            }, 100);
         }
 
         window.addEventListener('DOMContentLoaded', () => {
