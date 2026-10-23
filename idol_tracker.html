@@ -1727,7 +1727,7 @@
 
 
     <!-- MODAL XÁC NHẬN XÓA TÀI KHOẢN (CUSTOM UI ĐỒNG BỘ WEB - THỨ 1, HÌNH 1) -->
-    <div id="confirmDeleteAccountModal" onclick="if(event.target===this)closeConfirmDeleteAccountModal()" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+    <div id="confirmDeleteAccountModal" onclick="if(event.target===this)closeConfirmDeleteAccountModal()" class="fixed inset-0 z-[70] hidden bg-slate-900/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
         <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
             <div class="p-6 text-center space-y-3">
                 <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center text-2xl shadow-inner border border-rose-200 dark:border-rose-800/80">
@@ -2584,17 +2584,31 @@ service cloud.firestore {
 
         function handleGlobalKeydown(e) {
             if (e.key === 'Escape') {
+                // 1. Ưu tiên modal xác nhận xóa tài khoản (Esc hủy nhanh)
+                const confirmDelModal = document.getElementById('confirmDeleteAccountModal');
+                if (confirmDelModal && !confirmDelModal.classList.contains('hidden')) {
+                    e.preventDefault();
+                    closeConfirmDeleteAccountModal();
+                    return;
+                }
+
+                // 2. Dropdown đang mở
                 const openDropdown = document.querySelector('.modern-dropdown.open');
                 if (openDropdown) {
                     closeAllModernDropdowns();
                     return;
                 }
+
+                // 3. Huỷ xác nhận xóa bài đăng inline
                 if (pendingDeletePostId) {
                     cancelDeletePost(pendingDeletePostId);
                     return;
                 }
+
+                // 4. Đóng các modal hệ thống khác
                 closeIdolDetailModal();
                 closeGoogleSheetModal();
+                closeExportSheetModal();
                 closeKeyboardShortcutsModal();
                 closeAccountModal();
                 closeCloudHelpModal();
@@ -2606,6 +2620,15 @@ service cloud.firestore {
             }
 
             if (e.key === 'Enter') {
+                // 1. Ưu tiên Enter xác nhận xóa tài khoản khi modal xác nhận đang mở
+                const confirmDelModal = document.getElementById('confirmDeleteAccountModal');
+                if (confirmDelModal && !confirmDelModal.classList.contains('hidden')) {
+                    e.preventDefault();
+                    executeDeleteAccountConfirmed();
+                    return;
+                }
+
+                // 2. Xác nhận xóa bài đăng inline
                 if (pendingDeletePostId) {
                     e.preventDefault();
                     confirmDeletePost(pendingDeletePostId);
@@ -4831,41 +4854,59 @@ service cloud.firestore {
         }
 
         function updateDashboardStats() {
-            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
-            const totalAcc = accounts.length;
-            const missingPosted = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
-            const missingTotal = getMissingAccountsForWeek(activeWeek, 'ALL').length;
-            const donePosted = totalAcc - missingPosted;
-            const doneTotal = totalAcc - missingTotal;
+            try {
+                const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+                const totalAcc = accounts.length;
+                const missingPosted = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
+                const missingTotal = getMissingAccountsForWeek(activeWeek, 'ALL').length;
+                const donePosted = totalAcc - missingPosted;
+                const doneTotal = totalAcc - missingTotal;
 
-            document.getElementById('statWeeklyCompleted').textContent = `${donePosted}/${totalAcc}`;
-            document.getElementById('statWeeklyMissingBadge').textContent = `${missingPosted} kênh thiếu bài`;
-            document.getElementById('statWeeklyCompletedSub').textContent = `Gồm cả Lên lịch: ${doneTotal}/${totalAcc} kênh đủ`;
+                const elWeeklyCompleted = document.getElementById('statWeeklyCompleted');
+                if (elWeeklyCompleted) elWeeklyCompleted.textContent = `${donePosted}/${totalAcc}`;
 
-            const weekPosts = getPostsForWeek(selectedWeekMonday);
-            const groupPosts = weekPosts.filter(p => {
-                const a = getAccountById(p.accountId);
-                return a && a.role === 'GROUP';
-            }).length;
-            const idolPosts = weekPosts.length - groupPosts;
+                const elWeeklyMissingBadge = document.getElementById('statWeeklyMissingBadge');
+                if (elWeeklyMissingBadge) elWeeklyMissingBadge.textContent = `${missingPosted} kênh thiếu bài`;
 
-            document.getElementById('statTotalPosts').textContent = weekPosts.length;
-            document.getElementById('statGroupVsIdolPosts').textContent = `Nhóm: ${groupPosts} • Idol: ${idolPosts}`;
+                const elWeeklyCompletedSub = document.getElementById('statWeeklyCompletedSub');
+                if (elWeeklyCompletedSub) elWeeklyCompletedSub.textContent = `Gồm cả Lên lịch: ${doneTotal}/${totalAcc} kênh đủ`;
 
-            const postedCnt = weekPosts.filter(p => p.status === 'ĐÃ ĐĂNG').length;
-            const pendingCnt = weekPosts.length - postedCnt;
-            document.getElementById('statPostedVsPending').textContent = `${postedCnt} / ${pendingCnt}`;
+                const weekPosts = getPostsForWeek(selectedWeekMonday);
+                const groupPosts = weekPosts.filter(p => {
+                    const a = getAccountById(p.accountId);
+                    return a && a.role === 'GROUP';
+                }).length;
+                const idolPosts = weekPosts.length - groupPosts;
 
-            const checkedCount = accounts.filter(a => a.checkedToday).length;
-            document.getElementById('statCheckedToday').textContent = `${checkedCount}/${totalAcc}`;
-            const uncheckedAlert = document.getElementById('statUncheckedAlert');
-            const unchecked = totalAcc - checkedCount;
-            if (unchecked === 0 && totalAcc > 0) {
-                uncheckedAlert.textContent = 'Đã check 100%';
-                uncheckedAlert.className = 'text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full';
-            } else {
-                uncheckedAlert.textContent = `Còn ${unchecked} kênh`;
-                uncheckedAlert.className = 'text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full';
+                const elTotalPosts = document.getElementById('statTotalPosts');
+                if (elTotalPosts) elTotalPosts.textContent = weekPosts.length;
+
+                const elGroupVsIdol = document.getElementById('statGroupVsIdolPosts');
+                if (elGroupVsIdol) elGroupVsIdol.textContent = `Nhóm: ${groupPosts} • Idol: ${idolPosts}`;
+
+                const postedCnt = weekPosts.filter(p => p.status === 'ĐÃ ĐĂNG').length;
+                const pendingCnt = weekPosts.length - postedCnt;
+                const elPostedVsPending = document.getElementById('statPostedVsPending');
+                if (elPostedVsPending) elPostedVsPending.textContent = `${postedCnt} / ${pendingCnt}`;
+
+                const elCheckedToday = document.getElementById('statCheckedToday');
+                if (elCheckedToday) {
+                    const checkedCount = accounts.filter(a => a.checkedToday).length;
+                    elCheckedToday.textContent = `${checkedCount}/${totalAcc}`;
+                    const uncheckedAlert = document.getElementById('statUncheckedAlert');
+                    if (uncheckedAlert) {
+                        const unchecked = totalAcc - checkedCount;
+                        if (unchecked === 0 && totalAcc > 0) {
+                            uncheckedAlert.textContent = 'Đã check 100%';
+                            uncheckedAlert.className = 'text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full';
+                        } else {
+                            uncheckedAlert.textContent = `Còn ${unchecked} kênh`;
+                            uncheckedAlert.className = 'text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Cảnh báo khi cập nhật dashboard stats:', err);
             }
         }
 
@@ -6205,6 +6246,7 @@ service cloud.firestore {
         function closeAccountModal() {
             const modal = document.getElementById('accountModal');
             if (modal) modal.classList.add('hidden');
+            closeConfirmDeleteAccountModal();
             resetAccountForm();
         }
 
@@ -6370,6 +6412,65 @@ service cloud.firestore {
             document.getElementById('accountFormHeading').innerHTML = '<span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span><span>+ Thêm Hoặc Cập Nhật Tài Khoản</span>';
             document.getElementById('saveAccountBtn').innerHTML = `<i class="fa-solid fa-check"></i><span>Lưu Tài Khoản</span>`;
             document.getElementById('cancelAccountEditBtn').classList.add('hidden');
+        }
+
+        function renderModalAccountsList() {
+            const container = document.getElementById('modalAccountsList');
+            const totalBadge = document.getElementById('modalAccountsTotalBadge');
+            if (totalBadge) totalBadge.textContent = `${accounts.length} tài khoản`;
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (accounts.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-slate-400">
+                        <i class="fa-solid fa-users-slash text-3xl mb-2 opacity-50"></i>
+                        <p class="text-xs">Chưa có tài khoản nào trong hệ thống</p>
+                    </div>
+                `;
+                return;
+            }
+
+            accounts.forEach(acc => {
+                const isGroup = acc.role === 'GROUP';
+                const gName = extractCleanGroupName(acc);
+                const iName = extractCleanIdolName(acc);
+                const theme = getGroupTheme(gName);
+                const row = document.createElement('div');
+                row.className = 'p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition border-b border-slate-100 dark:border-slate-800/80 last:border-b-0';
+                
+                const subTag = acc.subHandle ? `
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800/60">
+                        Phụ: ${acc.subHandle}
+                    </span>
+                ` : '';
+
+                row.innerHTML = `
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${isGroup ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100' : theme.badgeBg}">
+                            ${isGroup ? ('👥 NHÓM ' + gName.toUpperCase()) : (theme.icon + ' ' + gName)}
+                        </span>
+                        <span class="font-black text-xs sm:text-sm text-slate-900 dark:text-white">${isGroup ? `${gName} (Kênh Nhóm)` : iName}</span>
+                        <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
+                            class="text-xs font-semibold text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1">
+                            <i class="fa-brands fa-tiktok"></i>
+                            <span>${acc.handle}</span>
+                        </a>
+                        ${subTag}
+                    </div>
+                    <div class="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                        <button type="button" onclick="editAccountInModal('${acc.id}')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/60 text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 text-xs font-bold transition cursor-pointer flex items-center gap-1">
+                            <i class="fa-solid fa-pen text-[10px]"></i>
+                            <span>Sửa</span>
+                        </button>
+                        <button type="button" onclick="deleteAccountWithConfirm('${acc.id}')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-600 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-400 text-xs font-bold transition cursor-pointer flex items-center gap-1">
+                            <i class="fa-solid fa-trash-can text-[10px]"></i>
+                            <span>Xóa</span>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
         }
         // ============================================================================
         // COPY BÁO CÁO TIẾN ĐỘ KPI GỬI VẬN HÀNH (THỨ 3)
@@ -7239,6 +7340,7 @@ service cloud.firestore {
             openExportSheetModal, closeExportSheetModal, downloadFullExcelFile, copyTableForGoogleSheets,
             generateGroupKpiReportText, copyGroupKpiReport, copyCurrentOperatorGroupReport, copyGroupShareLink, initGroupFromUrlQuery,
             deleteAccountWithConfirm, closeConfirmDeleteAccountModal, executeDeleteAccountConfirmed,
+            renderModalAccountsList,
             openKeyboardShortcutsModal, closeKeyboardShortcutsModal, handleGlobalKeydown,
             toggleGroupCardExpand, toggleAllGroupCards
         });
