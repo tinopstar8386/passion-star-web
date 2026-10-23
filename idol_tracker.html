@@ -4,9 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Passion Media Tracker - Quản Lý & Theo Dõi TikTok Theo Tuần</title>
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS with Dark Mode -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- SheetJS for direct Excel (.xlsx) import -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#090d16',
+                        darkcard: '#111827',
+                        darkborder: '#1f2937'
+                    }
+                }
+            }
+        };
+        // Apply theme immediately on head parse to prevent flash
+        if (localStorage.getItem('ps_theme') === 'light') {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <!-- SheetJS for direct Excel (.xlsx) import & CSV parsing -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -17,6 +37,11 @@
             font-family: 'Inter', sans-serif;
             background-color: #f4f6fb;
             overflow-x: hidden;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+        html.dark body {
+            background-color: #090d16;
+            color: #f1f5f9;
         }
         .tiktok-gradient {
             background: linear-gradient(135deg, #00f2fe 0%, #4facfe 45%, #ff0844 100%);
@@ -36,9 +61,15 @@
         ::-webkit-scrollbar-track {
             background: #f1f5f9;
         }
+        html.dark ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
         ::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 9999px;
+        }
+        html.dark ::-webkit-scrollbar-thumb {
+            background: #334155;
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
@@ -61,6 +92,11 @@
             transform: translateY(-6px) scale(0.98);
             transform-origin: top center;
             transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
+        }
+        html.dark .modern-dropdown-menu {
+            background: #111827;
+            border-color: #1f2937;
+            box-shadow: 0 20px 38px -10px rgba(0, 0, 0, 0.6);
         }
         .modern-dropdown.open .modern-dropdown-menu {
             opacity: 1;
@@ -160,25 +196,24 @@
                     <span id="headerMissingBadge" class="px-1.5 py-0.2 rounded-full bg-white text-rose-700 text-[11px] font-extrabold">0</span>
                 </button>
 
-                <!-- Auto Scan All 43 Channels Button -->
-                <button onclick="scanAllAccounts()" id="headerScanAllBtn" class="h-9 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold border border-cyan-300/40 transition flex items-center gap-1.5 shadow-sm" title="Tự động quét 43 kênh TikTok để lấy bài đăng mới nhất trong tuần">
-                    <i id="headerScanAllIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="headerScanAllText">Quét 43 Kênh</span>
+                <!-- Google Sheets Import Button -->
+                <button onclick="openGoogleSheetModal()" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer" title="Nhập dữ liệu từ Google Sheets (Phím tắt: G)">
+                    <i class="fa-solid fa-file-excel text-emerald-200"></i>
+                    <span>Nhập Google Sheet</span>
+                    <kbd class="hidden sm:inline-block text-[9px] font-mono bg-black/20 px-1 py-0.5 rounded text-emerald-100">G</kbd>
                 </button>
 
-                <!-- Open Scan Log Button -->
-                <button onclick="openScanLogModal()" class="h-9 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5" title="Xem nhật ký quét tự động & danh sách kênh riêng tư/lỗi">
-                    <i class="fa-solid fa-terminal"></i>
-                    <span>Log Quét</span>
-                    <span id="headerPrivateAlertBadge" class="hidden px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-extrabold">0</span>
+                <!-- Dark / Light Mode Toggle Button -->
+                <button onclick="toggleTheme()" id="themeToggleBtn" class="h-9 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 shadow-sm cursor-pointer" title="Chuyển đổi giao diện Sáng / Tối (Phím tắt: D)">
+                    <i id="themeToggleIcon" class="fa-solid fa-moon text-indigo-400"></i>
+                    <span id="themeToggleText">Tối</span>
+                    <kbd class="hidden sm:inline-block text-[9px] font-mono bg-white/10 px-1 py-0.5 rounded text-slate-300">D</kbd>
                 </button>
 
-                <!-- Upload New Excel File -->
-                <label class="cursor-pointer h-9 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition flex items-center gap-1.5" title="Nhập thêm file Excel (.xlsx) mới">
-                    <i class="fa-solid fa-file-import text-cyan-400"></i>
-                    <span>Nhập .xlsx</span>
-                    <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="hidden" onchange="handleExcelFileUpload(event)">
-                </label>
+                <!-- Keyboard Shortcuts Help -->
+                <button onclick="openKeyboardShortcutsModal()" class="h-9 w-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 transition flex items-center justify-center cursor-pointer" title="Danh sách phím tắt (Phím tắt: ?)">
+                    <i class="fa-solid fa-keyboard"></i>
+                </button>
 
                 <!-- Cloud Status Badge -->
                 <button onclick="openCloudHelpModal()" id="cloudStatusBadge" class="h-9 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-300 text-xs font-medium border border-slate-700 transition flex items-center gap-2" title="Trạng thái kết nối Firebase">
@@ -438,63 +473,56 @@
             </div>
         </section>
 
-        <!-- SECTION 1: DANH BẠ 43 KÊNH TIKTOK THEO NHÓM & TIẾN ĐỘ KPI TUẦN (SẮP XẾP NGĂN NẮP - HÌNH 1, 2, 3) -->
-        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
+        <!-- SECTION 1: 6 NHÓM & DANH BẠ IDOL TIKTOK (THỂ HIỆN 6 NHÓM, BẤM ĐỂ BUNG THÀNH VIÊN - HÌNH 3) -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 transition-colors duration-200">
             <!-- Header Row: Title on Left, Clean Organized Action Bar on Right -->
-            <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3.5 pb-4 border-b border-slate-100">
+            <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3.5 pb-4 border-b border-slate-100 dark:border-slate-800">
                 <div class="min-w-0">
                     <div class="flex items-center gap-2">
-                        <h2 class="text-base sm:text-lg font-extrabold text-slate-900">
-                            <i class="fa-brands fa-tiktok text-pink-600 mr-1.5"></i>
-                            Danh Bạ 43 Kênh TikTok & Tiến Độ KPI Tuần (2 Bài / Tuần)
+                        <h2 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-brands fa-tiktok text-pink-600 mr-1"></i>
+                            <span>6 Nhóm & Danh Bạ Idol TikTok (KPI: 2 Bài / Tuần)</span>
                         </h2>
                     </div>
-                    <p class="text-xs text-slate-500 mt-0.5">
-                        💡 <strong>Bấm trực tiếp vào thẻ Idol bất kỳ</strong> để xem chi tiết các bài đã đăng trong tuần hoặc thêm bài mới cho Idol đó.
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        💡 <strong>Bấm vào thẻ từng Nhóm</strong> để bung danh sách Idol trong nhóm, xem chi tiết bài đăng hoặc thêm bài mới nhanh gọn.
                     </p>
                 </div>
 
-                <!-- Clean 1-Row Action Toolbar (Thứ 2 - Hình 1: Ngăn nắp, đồng bộ chiều cao h-9) -->
+                <!-- Clean 1-Row Action Toolbar -->
                 <div class="flex flex-wrap items-center gap-2 shrink-0">
-                    <button onclick="scanAllAccounts()" id="dirScanAllBtn" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer">
-                        <i class="fa-solid fa-rotate"></i>
-                        <span>Quét Tất Cả 43 Kênh</span>
-                    </button>
-
-                    <button onclick="openIdolDetailModal(null, true)" class="h-9 px-3.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer">
+                    <button type="button" onclick="openIdolDetailModal(null, true)" class="h-9 px-3.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer">
                         <i class="fa-solid fa-plus"></i>
                         <span>Thêm Bài Mới</span>
                     </button>
 
-                    <button onclick="openScanLogModal()" class="h-9 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                        <i class="fa-solid fa-clipboard-list text-amber-600"></i>
-                        <span>Xem Log / Kênh Ẩn</span>
+                    <button type="button" onclick="openGoogleSheetModal()" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>Nhập Google Sheet</span>
                     </button>
 
-                    <button onclick="cleanupDuplicatePostsManual()" class="h-9 px-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer" title="Tự động kiểm tra, gộp và xóa bài đăng bị trùng">
+                    <button type="button" onclick="toggleAllGroupCards()" id="toggleAllGroupsBtn" class="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+                        <i class="fa-solid fa-layer-group text-indigo-500"></i>
+                        <span id="toggleAllGroupsText">Mở Tất Cả Nhóm</span>
+                    </button>
+
+                    <button type="button" onclick="cleanupDuplicatePostsManual()" class="h-9 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer" title="Tự động kiểm tra, gộp và xóa bài đăng bị trùng">
                         <i class="fa-solid fa-broom text-purple-600"></i>
                         <span>Dọn Bài Trùng</span>
                     </button>
 
-                    <!-- Modern Custom Dropdown for Secondary Management Tools (Giữ giao diện gọn gàng 1 hàng) -->
+                    <!-- Modern Custom Dropdown for Secondary Management Tools -->
                     <div class="modern-dropdown" id="dirToolsDropdown">
                         <button type="button" onclick="toggleModernDropdown('dirToolsDropdown', event)"
-                            class="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+                            class="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
                             <i class="fa-solid fa-sliders text-indigo-600"></i>
-                            <span>Công Cụ Quản Lý</span>
+                            <span>Công Cụ</span>
                             <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 dropdown-chevron"></i>
                         </button>
                         <div class="modern-dropdown-menu right-0 w-64 space-y-1">
                             <div class="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                                 Tiện ích & Quản trị kênh
                             </div>
-                            <button type="button" onclick="closeAllModernDropdowns(); clearAllScanAlerts();" class="w-full px-3 py-2 rounded-xl hover:bg-amber-50 text-left text-xs font-semibold text-slate-700 hover:text-amber-800 flex items-center gap-2.5 transition">
-                                <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-eraser"></i></span>
-                                <div>
-                                    <div class="font-bold">Xóa Báo Lỗi API</div>
-                                    <div class="text-[10px] text-slate-400">Gỡ cảnh báo cũ trên thẻ</div>
-                                </div>
-                            </button>
                             <button type="button" onclick="closeAllModernDropdowns(); toggleKpiSidebar();" class="w-full px-3 py-2 rounded-xl hover:bg-rose-50 text-left text-xs font-semibold text-slate-700 hover:text-rose-700 flex items-center gap-2.5 transition">
                                 <span class="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-table-columns"></i></span>
                                 <div>
@@ -536,58 +564,32 @@
                 </div>
             </div>
 
-            <!-- Thanh Trạng Thái Quét Tự Động Thời Gian Thực (Ẩn khi chưa quét) -->
-            <div id="liveScanProgressBarBox" class="hidden mt-4 p-3.5 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-md">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                    <div class="flex items-center gap-2 text-xs sm:text-sm font-bold">
-                        <i id="liveScanSpinner" class="fa-solid fa-circle-notch animate-spin text-cyan-400"></i>
-                        <span id="liveScanStatusTitle">Đang tự động quét kênh TikTok...</span>
-                    </div>
-                    <div class="flex items-center gap-3 text-xs">
-                        <span class="text-emerald-400 font-bold">Bài mới: <strong id="liveScanNewPostsCount">0</strong></span>
-                        <span class="text-amber-400 font-bold">Riêng tư / Lỗi: <strong id="liveScanPrivateCount">0</strong></span>
-                        <button onclick="openScanLogModal()" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold transition">
-                            Mở Chi Tiết Log
-                        </button>
-                        <button onclick="stopBulkScan()" id="stopScanBtn" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold transition">
-                            Dừng
-                        </button>
-                    </div>
-                </div>
-                <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                    <div id="liveScanProgressFill" class="h-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-pink-500 transition-all duration-300" style="width: 0%"></div>
-                </div>
-            </div>
-
             <!-- Bộ lọc & Tìm kiếm nhanh trong 43 Kênh TikTok -->
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-4 pt-1">
-                <div class="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200/60">
-                    <button onclick="setDirectoryFilter('ALL')" id="dirTabAll" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs transition cursor-pointer">
-                        Tất cả (43)
+                <div class="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
+                    <button onclick="setDirectoryFilter('ALL')" id="dirTabAll" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs transition cursor-pointer">
+                        Tất cả 6 Nhóm (43)
                     </button>
-                    <button onclick="setDirectoryFilter('MISSING_KPI')" id="dirTabMissingKpi" class="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 hover:bg-rose-50 transition cursor-pointer">
+                    <button onclick="setDirectoryFilter('MISSING_KPI')" id="dirTabMissingKpi" class="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer">
                         ⚠️ Chưa đủ 2 bài
                     </button>
-                    <button onclick="setDirectoryFilter('DONE_KPI')" id="dirTabDoneKpi" class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition cursor-pointer">
+                    <button onclick="setDirectoryFilter('DONE_KPI')" id="dirTabDoneKpi" class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer">
                         ✅ Đã đủ KPI (&ge;2 bài)
                     </button>
-                    <button onclick="setDirectoryFilter('PRIVATE_LOG')" id="dirTabPrivateLog" class="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-800 hover:bg-amber-50 transition cursor-pointer">
-                        🔒 Kênh Riêng Tư / Lỗi (0)
+                    <button onclick="setDirectoryFilter('GROUP')" id="dirTabGroup" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition cursor-pointer">
+                        👥 6 Kênh Nhóm
                     </button>
-                    <button onclick="setDirectoryFilter('GROUP')" id="dirTabGroup" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition cursor-pointer">
-                        👥 6 Nhóm
-                    </button>
-                    <button onclick="setDirectoryFilter('IDOL')" id="dirTabIdol" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition cursor-pointer">
+                    <button onclick="setDirectoryFilter('IDOL')" id="dirTabIdol" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition cursor-pointer">
                         🌟 37 Idol
                     </button>
                 </div>
 
-                <!-- Bộ lọc theo từng Nhóm (Custom Modern Dropdown) + Tìm kiếm -->
+                <!-- Bộ lọc theo từng Nhóm + Tìm kiếm -->
                 <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full lg:w-auto">
                     <!-- Custom Modern Group Dropdown -->
                     <div class="modern-dropdown w-full sm:w-56" id="dirGroupCustomDropdown">
                         <button type="button" onclick="toggleModernDropdown('dirGroupCustomDropdown', event)"
-                            class="w-full h-9 px-3.5 rounded-xl bg-slate-50 hover:bg-white border border-slate-200 text-xs font-bold text-slate-800 flex items-center justify-between gap-2 transition cursor-pointer">
+                            class="w-full h-9 px-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer">
                             <span id="dirGroupDropdownLabel" class="truncate">🏷️ Tất cả 6 Nhóm</span>
                             <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 dropdown-chevron shrink-0"></i>
                         </button>
@@ -602,11 +604,11 @@
                             </button>
                             <button type="button" onclick="selectDirectoryGroup('Fashion', '👑 Nhóm Fashion')" class="w-full px-3 py-2 rounded-xl hover:bg-purple-50 text-left text-xs font-bold text-purple-800 flex items-center justify-between">
                                 <span>👑 Nhóm Fashion</span>
-                                <span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-md">1 Nhóm + 5 Idol</span>
+                                <span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-md">1 Nhóm + 7 Idol</span>
                             </button>
                             <button type="button" onclick="selectDirectoryGroup('Royen:One', '💫 Nhóm Royen:One')" class="w-full px-3 py-2 rounded-xl hover:bg-indigo-50 text-left text-xs font-bold text-indigo-800 flex items-center justify-between">
                                 <span>💫 Nhóm Royen:One</span>
-                                <span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-md">1 Nhóm + 9 Idol</span>
+                                <span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-md">1 Nhóm + 6 Idol</span>
                             </button>
                             <button type="button" onclick="selectDirectoryGroup('Bnart', '🎨 Nhóm Bnart')" class="w-full px-3 py-2 rounded-xl hover:bg-cyan-50 text-left text-xs font-bold text-cyan-900 flex items-center justify-between">
                                 <span>🎨 Nhóm Bnart</span>
@@ -614,7 +616,7 @@
                             </button>
                             <button type="button" onclick="selectDirectoryGroup('BEE', '🐝 Nhóm BEE')" class="w-full px-3 py-2 rounded-xl hover:bg-amber-50 text-left text-xs font-bold text-amber-900 flex items-center justify-between">
                                 <span>🐝 Nhóm BEE</span>
-                                <span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md">1 Nhóm + 5 Idol</span>
+                                <span class="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-md">1 Nhóm + 6 Idol</span>
                             </button>
                             <button type="button" onclick="selectDirectoryGroup('Orion', '🌌 Nhóm Orion')" class="w-full px-3 py-2 rounded-xl hover:bg-emerald-50 text-left text-xs font-bold text-emerald-900 flex items-center justify-between">
                                 <span>🌌 Nhóm Orion</span>
@@ -634,16 +636,16 @@
 
                     <div class="relative flex-1 sm:w-64">
                         <input type="text" id="directorySearch" oninput="renderAccountsGrid()"
-                            placeholder="Tìm tên Nhóm, Idol hoặc @id..."
-                            class="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30">
+                            placeholder="Tìm tên Nhóm, Idol hoặc @id... (Phím: /)"
+                            class="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/30">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- Accounts Grid -->
-            <div id="accountsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-4 max-h-[620px] overflow-y-auto pr-1">
-                <!-- Populated dynamically via JS -->
+            <!-- Group Cards Hub & Collapsible Member Cards (Hình 3) -->
+            <div id="accountsGrid" class="space-y-4 mt-5">
+                <!-- Populated dynamically via JS: 6 Group Hubs with expansion -->
             </div>
         </section>
 
@@ -801,14 +803,12 @@
                 <div class="overflow-x-auto rounded-2xl border border-slate-200/80">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-slate-900 text-white text-[11px] uppercase tracking-wider">
-                                <th class="py-3 px-3.5 font-semibold whitespace-nowrap">Ngày / Tuần</th>
-                                <th class="py-3 px-3.5 font-semibold whitespace-nowrap">[Nhóm] &bull; Tên Idol & Kênh</th>
-                                <th class="py-3 px-3.5 font-semibold whitespace-nowrap">Hạng Mục</th>
-                                <th class="py-3 px-3.5 font-semibold whitespace-nowrap">Link TikTok</th>
-                                <th class="py-3 px-3.5 font-semibold whitespace-nowrap">Trạng Thái</th>
-                                <th class="py-3 px-3.5 font-semibold whitespace-nowrap">Ghi Chú</th>
-                                <th class="py-3 px-3.5 font-semibold text-right whitespace-nowrap">Thao Tác</th>
+                            <tr class="bg-slate-900 dark:bg-slate-950 text-white text-[11px] uppercase tracking-wider">
+                                <th class="py-3.5 px-4 font-bold whitespace-nowrap min-w-[210px]">Kênh / Idol (Kênh Nhóm Ở Đầu)</th>
+                                <th class="py-3.5 px-4 font-bold whitespace-nowrap min-w-[270px]">Bài Đăng #1 (KPI 1)</th>
+                                <th class="py-3.5 px-4 font-bold whitespace-nowrap min-w-[270px]">Bài Đăng #2 (KPI 2)</th>
+                                <th class="py-3.5 px-4 font-bold text-center whitespace-nowrap min-w-[150px]">Tiến Độ KPI</th>
+                                <th class="py-3.5 px-4 font-bold text-right whitespace-nowrap min-w-[140px]">Thao Tác</th>
                             </tr>
                         </thead>
                         <tbody id="postsTableBody" class="divide-y divide-slate-200/80 text-xs sm:text-sm">
@@ -876,12 +876,6 @@
                 </div>
 
                 <div class="flex items-center gap-2 shrink-0">
-                    <button type="button" id="idolModalScanBtn" onclick="scanCurrentModalAccount()"
-                        class="h-9 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                        title="Quét tự động bài mới của kênh này">
-                        <i class="fa-solid fa-rotate"></i>
-                        <span class="hidden sm:inline">Quét kênh</span>
-                    </button>
                     <button type="button" onclick="closeIdolDetailModal()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center transition cursor-pointer">
                         <i class="fa-solid fa-xmark text-base"></i>
                     </button>
@@ -1123,85 +1117,204 @@
         </div>
     </div>
 
-    <!-- MODAL 1: NHẬT KÝ QUÉT TỰ ĐỘNG (SCAN LOG) & PHÁT HIỆN KÊNH RIÊNG TƯ / LỖI -->
-    <div id="scanLogModal" onclick="if(event.target===this)closeScanLogModal()" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+    <!-- MODAL NHẬP DỮ LIỆU TỪ GOOGLE SHEETS -->
+    <div id="googleSheetModal" onclick="if(event.target===this)closeGoogleSheetModal()" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
             <!-- Header -->
-            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-                <div>
-                    <h3 class="text-base sm:text-lg font-extrabold flex items-center gap-2">
-                        <i class="fa-solid fa-terminal text-cyan-400"></i>
-                        <span>Nhật Ký Quét Tự Động TikTok & Kiểm Tra Kênh Riêng Tư</span>
-                    </h3>
-                    <p id="scanLogModalSubtitle" class="text-xs text-slate-400 mt-0.5">
-                        Tự động lấy bài đăng thuộc tuần đang chọn, giải mã thời gian thực & báo cáo các kênh để chế độ Riêng tư (Private).
-                    </p>
+            <div class="px-6 py-4 bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-file-excel"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-extrabold flex items-center gap-2">
+                            <span>Nhập Dữ Liệu Từ Google Sheets Trực Tiếp</span>
+                            <span class="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-bold">Tự Động 100%</span>
+                        </h3>
+                        <p class="text-xs text-emerald-100 mt-0.5">
+                            Chỉ cần dán đường link hoặc Sheet ID của bảng Google Sheets có cấu trúc chuẩn
+                        </p>
+                    </div>
                 </div>
-                <button onclick="closeScanLogModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                <button type="button" onclick="closeGoogleSheetModal()" class="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-slate-50/60 dark:bg-slate-950/50 text-xs sm:text-sm">
+                <!-- Instruction banner -->
+                <div class="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-200 space-y-1.5">
+                    <div class="font-bold flex items-center gap-2 text-xs uppercase tracking-wider">
+                        <i class="fa-solid fa-circle-info text-emerald-600"></i>
+                        <span>Hướng dẫn chuẩn bị Google Sheet</span>
+                    </div>
+                    <ol class="list-decimal list-inside space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                        <li>Mở bảng tính Google Sheets của bạn &rarr; Bấm <strong>Chia sẻ (Share)</strong> &rarr; Đổi quyền truy cập chung thành <strong>"Bất kỳ ai có đường liên kết đều có thể xem"</strong> (Viewer).</li>
+                        <li>Đảm bảo dòng 1 (Header) chứa đúng 9 cột chuẩn theo bảng mẫu dưới đây hoặc bấm nút sao chép nhanh tiêu đề.</li>
+                        <li>Dán link hoặc Sheet ID vào ô bên dưới rồi bấm <strong>"Nạp Dữ Liệu Ngay"</strong>.</li>
+                    </ol>
+                </div>
+
+                <!-- Form Inputs -->
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3.5 shadow-xs">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
+                            Link Google Sheets hoặc Sheet ID <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="googleSheetUrlInput"
+                                placeholder="VD: https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit hoặc dán trực tiếp ID"
+                                class="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <i class="fa-solid fa-link absolute left-3 top-3 text-slate-400 text-xs"></i>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Hệ thống sẽ tự nhận diện Sheet ID từ đường dẫn bạn dán vào.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
+                                Tên Sheet / Tab (Sheet Name)
+                            </label>
+                            <input type="text" id="googleSheetTabName" value="MEDIA" placeholder="Mặc định: MEDIA"
+                                class="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" onclick="copySheetTemplateHeader()"
+                                class="w-full h-10 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 transition flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-copy text-indigo-500"></i>
+                                <span>📋 Sao Chép Dòng Tiêu Đề Mẫu</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Table Preview -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Cấu trúc chuẩn Form Google Sheets (9 Cột A &rarr; I)
+                        </span>
+                        <span class="text-[11px] text-slate-400">Khớp chuẩn với file MEDIA.xlsx</span>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-[11px]">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold border-b border-slate-200 dark:border-slate-700">
+                                    <th class="p-2 border-r border-slate-200 dark:border-slate-700 text-center w-8">A</th>
+                                    <th class="p-2 border-r border-slate-200 dark:border-slate-700">B (TUẦN)</th>
+                                    <th class="p-2 border-r border-slate-200 dark:border-slate-700">C (TÊN IDOL)</th>
+                                    <th class="p-2 border-r border-slate-200 dark:border-slate-700">D (ID TIKTOK)</th>
+                                    <th class="p-2 border-r border-slate-200 dark:border-slate-700">E (NHÓM)</th>
+                                    <th class="p-2 border-r border-slate-200 dark:border-slate-700">F (NGÀY)</th>
+                                    <th class="p-2 border-r border-slate-200 dark:border-slate-700">G (HẠNG MỤC)</th>
+                                    <th class="p-2 border-r border-slate-200 dark:border-slate-700">H (LINK TIKTOK)</th>
+                                    <th class="p-2">I (TRẠNG THÁI)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-slate-600 dark:text-slate-300">
+                                <tr class="font-medium bg-emerald-50/40 dark:bg-emerald-950/20">
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 text-center text-slate-400 font-mono">1</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap">Tuần 19/10 - 25/10/2026</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap font-bold text-slate-900 dark:text-white">Dolia</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 text-pink-600 font-mono">@dolia1012</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700">Angelik</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap font-mono">19/10/2026</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap">Clip nhảy</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 truncate max-w-[130px] text-cyan-600 font-mono">https://www.tiktok.com/@dolia1012/video/...</td>
+                                    <td class="p-2 font-bold text-emerald-600">ĐÃ ĐĂNG</td>
+                                </tr>
+                                <tr class="font-medium">
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 text-center text-slate-400 font-mono">2</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap">Tuần 19/10 - 25/10/2026</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap font-bold text-slate-900 dark:text-white">Kênh Nhóm</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 text-pink-600 font-mono">@angelik_276</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700">Angelik</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap font-mono">20/10/2026</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-nowrap">Ảnh</td>
+                                    <td class="p-2 border-r border-slate-200 dark:border-slate-700 truncate max-w-[130px] text-cyan-600 font-mono">https://www.tiktok.com/@angelik_276/photo/...</td>
+                                    <td class="p-2 font-bold text-sky-600">LÊN LỊCH</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Status output -->
+                <div id="googleSheetStatusBox" class="hidden p-3 rounded-xl text-xs font-medium"></div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-3.5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <span class="text-xs text-slate-500 dark:text-slate-400">💡 Dữ liệu nạp sẽ tự động đồng bộ lên Firebase Database.</span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeGoogleSheetModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition cursor-pointer">
+                        Hủy
+                    </button>
+                    <button type="button" id="btnExecuteSheetImport" onclick="importGoogleSheetData()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-md transition flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                        <span>Nạp Dữ Liệu Ngay</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HƯỚNG DẪN PHÍM TẮT BÀN PHÍM -->
+    <div id="keyboardShortcutsModal" onclick="if(event.target===this)closeKeyboardShortcutsModal()" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
+            <div class="px-6 py-4 bg-slate-900 dark:bg-slate-950 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-keyboard text-indigo-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-extrabold">Phím Tắt Bàn Phím (Keyboard Shortcuts)</h3>
+                        <p class="text-xs text-slate-400">Thao tác siêu tốc chuyên nghiệp như trên các ứng dụng lớn</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeKeyboardShortcutsModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 flex items-center justify-center transition cursor-pointer">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <!-- Toolbar & Quick Smart Link Decoder -->
-            <div class="p-4 bg-slate-50 border-b border-slate-200 space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <div class="inline-flex flex-wrap gap-1.5 p-1 rounded-xl bg-slate-200/80 text-xs font-bold">
-                        <button onclick="setScanLogFilter('ALL')" id="logTabAll" class="px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-xs transition">
-                            Tất cả Log (0)
-                        </button>
-                        <button onclick="setScanLogFilter('PRIVATE')" id="logTabPrivate" class="px-3 py-1.5 rounded-lg text-amber-800 hover:bg-amber-100/60 transition">
-                            🔒 Kênh Riêng Tư / Lỗi (0)
-                        </button>
-                        <button onclick="setScanLogFilter('NEW_POSTS')" id="logTabNewPosts" class="px-3 py-1.5 rounded-lg text-emerald-800 hover:bg-emerald-100/60 transition">
-                            ✅ Có Bài Tuần Này (0)
-                        </button>
-                        <button onclick="setScanLogFilter('NO_POSTS')" id="logTabNoPosts" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">
-                            ⚪ 0 Bài Tuần Này (0)
-                        </button>
+            <div class="p-6 space-y-3 overflow-y-auto max-h-[70vh] text-xs sm:text-sm">
+                <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <div class="py-2.5 flex items-center justify-between">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Đóng bất kỳ hộp thoại hoặc menu mở</span>
+                        <kbd class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs shadow-2xs">Esc</kbd>
                     </div>
-
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button onclick="scanAllAccounts()" class="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
-                            <i class="fa-solid fa-rotate"></i>
-                            <span>Quét Lại Tất Cả 43 Kênh</span>
-                        </button>
-                        <button onclick="cleanupDuplicatePostsManual()" class="px-3 py-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs font-bold transition flex items-center gap-1">
-                            <i class="fa-solid fa-broom"></i>
-                            <span>Dọn Bài Trùng</span>
-                        </button>
-                        <button onclick="clearScanLogs()" class="px-3 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold transition flex items-center gap-1" title="Xóa toàn bộ nhật ký và gỡ mọi cảnh báo lỗi API trên các thẻ">
-                            <i class="fa-solid fa-trash-can"></i>
-                            <span>Xóa Log & Cảnh Báo Lỗi</span>
-                        </button>
+                    <div class="py-2.5 flex items-center justify-between">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Gửi biểu mẫu / Dán nhanh link</span>
+                        <kbd class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs shadow-2xs">Enter</kbd>
                     </div>
-                </div>
-
-                <!-- Bóc tách nhanh từ Link TikTok -->
-                <div class="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <div class="text-xs text-indigo-950 font-semibold shrink-0 flex items-center gap-1.5">
-                        <i class="fa-solid fa-bolt text-indigo-600"></i>
-                        <span>Dán nhanh link bài đăng TikTok (Đầy đủ hoặc vt.tiktok.com):</span>
+                    <div class="py-2.5 flex items-center justify-between">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Bật / Tắt giao diện Sáng - Tối (Dark Mode)</span>
+                        <kbd class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs shadow-2xs">D</kbd>
                     </div>
-                    <input type="text" id="smartPasteLinksInput"
-                        placeholder="Dán 1 hoặc nhiều link https://www.tiktok.com/@.../video/... hoặc vt.tiktok.com/... vào đây"
-                        onkeydown="if(event.key==='Enter'){event.preventDefault();handleSmartLinksExtract('smartPasteLinksInput');}"
-                        class="flex-1 px-3 py-1.5 rounded-lg border border-indigo-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
-                    <button onclick="handleSmartLinksExtract('smartPasteLinksInput')" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shrink-0 transition">
-                        Tự Bóc Tách & Lưu
-                    </button>
+                    <div class="py-2.5 flex items-center justify-between">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Mở hộp thoại Thêm Bài Đăng Mới</span>
+                        <kbd class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs shadow-2xs">N</kbd>
+                    </div>
+                    <div class="py-2.5 flex items-center justify-between">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Mở hộp thoại Nhập Google Sheets</span>
+                        <kbd class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs shadow-2xs">G</kbd>
+                    </div>
+                    <div class="py-2.5 flex items-center justify-between">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Focus nhanh vào ô tìm kiếm</span>
+                        <kbd class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs shadow-2xs">/</kbd>
+                    </div>
+                    <div class="py-2.5 flex items-center justify-between">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Mở bảng hướng dẫn phím tắt này</span>
+                        <kbd class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs shadow-2xs">?</kbd>
+                    </div>
                 </div>
             </div>
 
-            <!-- Log List Body -->
-            <div id="scanLogListContainer" class="p-4 overflow-y-auto space-y-2.5 flex-1 bg-slate-950 text-slate-100 font-mono text-xs">
-                <!-- Populated by JS -->
-            </div>
-
-            <!-- Footer -->
-            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
-                <span class="text-slate-500">Mẹo: Bạn có thể bấm nút <strong>"🔄 Quét"</strong> trên từng thẻ Idol để quét riêng từng người.</span>
-                <button onclick="closeScanLogModal()" class="px-4 py-2 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
-                    Đóng Nhật Ký
+            <div class="px-6 py-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                <button type="button" onclick="closeKeyboardShortcutsModal()" class="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold transition cursor-pointer">
+                    Đã Hiểu (Esc)
                 </button>
             </div>
         </div>
@@ -1811,6 +1924,291 @@ service cloud.firestore {
         let stopBulkScanRequested = false;
         let scanningAccountIds = new Set();
 
+        // ============================================================================
+        // THEME MANAGEMENT (DARK / LIGHT MODE)
+        // ============================================================================
+        function initTheme() {
+            const savedTheme = localStorage.getItem('ps_theme') || 'dark';
+            applyTheme(savedTheme);
+        }
+
+        function applyTheme(theme) {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeToggleIcon');
+            const text = document.getElementById('themeToggleText');
+            if (theme === 'dark') {
+                html.classList.add('dark');
+                if (icon) {
+                    icon.className = 'fa-solid fa-moon text-indigo-400';
+                }
+                if (text) text.textContent = 'Tối';
+            } else {
+                html.classList.remove('dark');
+                if (icon) {
+                    icon.className = 'fa-solid fa-sun text-amber-500';
+                }
+                if (text) text.textContent = 'Sáng';
+            }
+            localStorage.setItem('ps_theme', theme);
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+            applyTheme(newTheme);
+            showToast(`Đã chuyển sang giao diện ${newTheme === 'dark' ? 'Tối' : 'Sáng'}`);
+        }
+
+        // ============================================================================
+        // GOOGLE SHEETS IMPORT & CSV PARSING (THAY THẾ FILE .XLSX)
+        // ============================================================================
+        function openGoogleSheetModal() {
+            closeAllModernDropdowns();
+            const modal = document.getElementById('googleSheetModal');
+            if (modal) modal.classList.remove('hidden');
+            const box = document.getElementById('googleSheetStatusBox');
+            if (box) { box.className = 'hidden'; box.innerHTML = ''; }
+        }
+
+        function closeGoogleSheetModal() {
+            const modal = document.getElementById('googleSheetModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function copySheetTemplateHeader() {
+            const headerRow = "STT\tTUẦN\tTÊN IDOL\tID TIKTOK\tTHUỘC NHÓM\tNGÀY ĐĂNG\tHẠNG MỤC\tLINK TIKTOK\tTRẠNG THÁI";
+            navigator.clipboard.writeText(headerRow).then(() => {
+                showToast("Đã sao chép 9 tiêu đề cột mẫu! Hãy dán vào ô A1 trên Google Sheets.");
+            }).catch(() => {
+                showToast("Tiêu đề mẫu: STT, TUẦN, TÊN IDOL, ID TIKTOK, THUỘC NHÓM, NGÀY ĐĂNG, HẠNG MỤC, LINK TIKTOK, TRẠNG THÁI", "info");
+            });
+        }
+
+        async function importGoogleSheetData() {
+            const urlInput = document.getElementById('googleSheetUrlInput');
+            const tabInput = document.getElementById('googleSheetTabName');
+            const statusBox = document.getElementById('googleSheetStatusBox');
+            const btn = document.getElementById('btnExecuteSheetImport');
+
+            const rawVal = urlInput ? urlInput.value.trim() : '';
+            if (!rawVal) {
+                showToast('Vui lòng dán Link Google Sheets hoặc Sheet ID!', 'error');
+                if (urlInput) urlInput.focus();
+                return;
+            }
+
+            let sheetId = rawVal;
+            const match = rawVal.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+            if (match && match[1]) {
+                sheetId = match[1];
+            }
+
+            const tabName = tabInput ? (tabInput.value.trim() || 'MEDIA') : 'MEDIA';
+
+            if (statusBox) {
+                statusBox.className = 'p-3 rounded-xl text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 block';
+                statusBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang tải dữ liệu từ Google Sheets (tab: ' + tabName + ')...';
+            }
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-60');
+            }
+
+            try {
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
+                let csvText = '';
+                
+                try {
+                    const res = await fetch(csvUrl);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    csvText = await res.text();
+                } catch (fetchErr) {
+                    console.warn("Direct fetch Google Sheet failed, trying proxy...", fetchErr);
+                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`;
+                    const resProxy = await fetch(proxyUrl);
+                    if (!resProxy.ok) throw new Error('Không thể tải Google Sheet. Hãy kiểm tra bạn đã chia sẻ quyền "Bất kỳ ai có link đều xem được" chưa!');
+                    csvText = await resProxy.text();
+                }
+
+                if (!csvText || csvText.includes('<!DOCTYPE html>') || csvText.includes('accounts.google.com')) {
+                    throw new Error('Google Sheet chưa được bật quyền công khai hoặc ID/Tên Tab không đúng! Hãy bấm "Chia sẻ" -> Đổi quyền thành "Bất kỳ ai có đường liên kết".');
+                }
+
+                const workbook = XLSX.read(csvText, { type: 'string' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+                if (!rawRows || rawRows.length < 2) {
+                    throw new Error('Bảng Google Sheet không có dữ liệu hàng nào!');
+                }
+
+                const dataRows = rawRows.slice(1);
+                let importedCount = 0;
+
+                dataRows.forEach((row, rIdx) => {
+                    if (!row || row.length === 0) return;
+                    const weekVal = sanitizeVietnameseText(row[1] || '').trim();
+                    const idolNameVal = sanitizeVietnameseText(row[2] || '').trim();
+                    const handleVal = String(row[3] || '').trim();
+                    const groupVal = sanitizeVietnameseText(row[4] || '').trim();
+                    let dateVal = String(row[5] || '').trim();
+                    const categoryVal = sanitizeVietnameseText(row[6] || '').trim() || 'Bài đăng TikTok';
+                    const linkVal = String(row[7] || '').trim();
+                    let statusVal = sanitizeVietnameseText(row[8] || '').toUpperCase().trim();
+                    const noteVal = sanitizeVietnameseText(row[9] || '').trim();
+
+                    if (!idolNameVal && !handleVal && !linkVal) return;
+
+                    let standardizedDate = todayStr;
+                    if (dateVal) {
+                        dateVal = dateVal.replace(/\s+/g, '');
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+                            standardizedDate = dateVal;
+                        } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateVal)) {
+                            const [d, m, y] = dateVal.split('/');
+                            standardizedDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                        } else if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(dateVal)) {
+                            const [d, m, y] = dateVal.split('-');
+                            standardizedDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                        }
+                    }
+
+                    let matchedAccount = null;
+                    if (handleVal) {
+                        const cleanH = handleVal.replace(/^@/, '').toLowerCase();
+                        matchedAccount = accounts.find(a => a.handle.replace(/^@/, '').toLowerCase() === cleanH);
+                    }
+                    if (!matchedAccount && idolNameVal) {
+                        const cleanName = idolNameVal.toLowerCase();
+                        matchedAccount = accounts.find(a => {
+                            const idl = (a.idolName || '').toLowerCase();
+                            const full = (a.name || '').toLowerCase();
+                            return idl === cleanName || full === cleanName || full.includes(cleanName);
+                        });
+                    }
+
+                    const accId = matchedAccount ? matchedAccount.id : (DEFAULT_ACCOUNTS[0] ? DEFAULT_ACCOUNTS[0].id : 'idol_dolia');
+                    const postMonday = getMondayOfWeekStr(standardizedDate);
+
+                    if (!statusVal || (!statusVal.includes('ĐÃ ĐĂNG') && !statusVal.includes('LÊN LỊCH') && !statusVal.includes('CẦN KIỂM TRA'))) {
+                        statusVal = 'ĐÃ ĐĂNG';
+                    }
+
+                    const postId = `gs_${sheetId.slice(0, 6)}_${rIdx + 1}_${Date.now().toString(36)}`;
+                    const newPost = {
+                        id: postId,
+                        accountId: accId,
+                        date: standardizedDate,
+                        weekMonday: postMonday,
+                        sheet: weekVal || 'Google Sheets',
+                        category: categoryVal,
+                        link: linkVal,
+                        status: statusVal,
+                        note: noteVal,
+                        updatedAt: Date.now() + rIdx
+                    };
+
+                    const existingIdx = posts.findIndex(p => (p.link && p.link === linkVal) || p.id === postId);
+                    if (existingIdx >= 0) posts[existingIdx] = newPost;
+                    else posts.unshift(newPost);
+
+                    if (currentUser) {
+                        const postRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
+                        setDoc(postRef, newPost, { merge: true });
+                    }
+                    importedCount++;
+                });
+
+                const { uniquePosts } = deduplicatePostsArray(posts);
+                posts = uniquePosts;
+                renderAllUI();
+
+                if (statusBox) {
+                    statusBox.className = 'p-3 rounded-xl text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+                    statusBox.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 mr-1.5"></i> Đã nạp thành công <strong>${importedCount} bài đăng</strong> từ Google Sheet! Đã tự động đồng bộ lên Firebase.`;
+                }
+                showToast(`Nạp thành công ${importedCount} bài đăng từ Google Sheet!`);
+            } catch (err) {
+                console.error("Lỗi import Google Sheet:", err);
+                if (statusBox) {
+                    statusBox.className = 'p-3 rounded-xl text-xs bg-rose-50 text-rose-800 border border-rose-200 block';
+                    statusBox.innerHTML = `<i class="fa-solid fa-circle-exclamation text-rose-600 mr-1.5"></i> <strong>Lỗi:</strong> ${err.message || 'Không thể đọc dữ liệu'}`;
+                }
+                showToast('Lỗi nạp Google Sheet: ' + (err.message || 'Kiểm tra quyền truy cập'), 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-60');
+                }
+            }
+        }
+
+        // ============================================================================
+        // KEYBOARD SHORTCUTS (ESC, ENTER, D, N, G, /, ?)
+        // ============================================================================
+        function openKeyboardShortcutsModal() {
+            closeAllModernDropdowns();
+            const modal = document.getElementById('keyboardShortcutsModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeKeyboardShortcutsModal() {
+            const modal = document.getElementById('keyboardShortcutsModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function handleGlobalKeydown(e) {
+            if (e.key === 'Escape') {
+                closeAllModernDropdowns();
+                closeIdolDetailModal();
+                closeGoogleSheetModal();
+                closeKeyboardShortcutsModal();
+                closeAccountModal();
+                closeCloudHelpModal();
+                closeLastWeekReportModal();
+                return;
+            }
+
+            const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+            const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable);
+            if (isEditing) return;
+
+            if (e.key === 'd' || e.key === 'D') {
+                e.preventDefault();
+                toggleTheme();
+                return;
+            }
+
+            if (e.key === 'n' || e.key === 'N') {
+                e.preventDefault();
+                openIdolDetailModal(null, true);
+                return;
+            }
+
+            if (e.key === 'g' || e.key === 'G') {
+                e.preventDefault();
+                openGoogleSheetModal();
+                return;
+            }
+
+            if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+                e.preventDefault();
+                openKeyboardShortcutsModal();
+                return;
+            }
+
+            if (e.key === '/') {
+                e.preventDefault();
+                const searchInput = document.getElementById('directorySearch') || document.getElementById('filterSearch');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
+                return;
+            }
+        }
+
         // Làm sạch hoàn toàn tiếng Trung (nếu còn sót trên Firebase cũ hoặc từ file Excel tải lên) -> Chỉ giữ Tiếng Việt 100%
         function sanitizeVietnameseText(rawStr) {
             if (!rawStr) return '';
@@ -1911,13 +2309,9 @@ service cloud.firestore {
             return clean;
         }
 
-        // Kiểm tra xem tài khoản có cảnh báo lỗi/riêng tư thực sự đang nằm trong Log hay không
-        // (Giải quyết triệt để lỗi "Mất kết nối API hoặc bị giới hạn..." vẫn hiện dù trong Log không có gì)
+        // Đã gỡ bỏ toàn bộ cơ chế quét kênh tự động theo yêu cầu người dùng
         function hasActiveScanAlert(acc) {
-            if (!acc) return false;
-            if (!scanLogs || scanLogs.length === 0) return false;
-            if (acc.scanStatus !== 'PRIVATE' && acc.scanStatus !== 'ERROR') return false;
-            return scanLogs.some(l => l.accountId === acc.id && (l.statusType === 'PRIVATE' || l.statusType === 'ERROR'));
+            return false;
         }
 
         function getPostWeekMonday(post) {
@@ -2885,6 +3279,34 @@ service cloud.firestore {
             renderAccountsGrid();
         }
 
+        // ============================================================================
+        // 10. 6 NHÓM THẺ BUNG THÀNH VIÊN THEO ACCORDION (HÌNH 3 - GỌN GÀNG, TRỰC QUAN)
+        // ============================================================================
+        let expandedGroupCards = new Set(['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion']);
+
+        function toggleGroupCardExpand(grpName) {
+            if (expandedGroupCards.has(grpName)) {
+                expandedGroupCards.delete(grpName);
+            } else {
+                expandedGroupCards.add(grpName);
+            }
+            renderAccountsGrid();
+        }
+
+        function toggleAllGroupCards() {
+            const allGroups = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
+            if (expandedGroupCards.size === allGroups.length) {
+                expandedGroupCards.clear();
+            } else {
+                allGroups.forEach(g => expandedGroupCards.add(g));
+            }
+            const btnText = document.getElementById('toggleAllGroupsText');
+            if (btnText) {
+                btnText.textContent = expandedGroupCards.size === allGroups.length ? 'Thu Gọn Tất Cả' : 'Mở Tất Cả Nhóm';
+            }
+            renderAccountsGrid();
+        }
+
         function renderAccountsGrid() {
             const grid = document.getElementById('accountsGrid');
             if (!grid) return;
@@ -2898,189 +3320,206 @@ service cloud.firestore {
 
             const missingKpiCount = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
             const doneKpiCount = accounts.length - missingKpiCount;
-            const privateOrErrorCount = accounts.filter(a => hasActiveScanAlert(a)).length;
 
-            document.getElementById('dirTabAll').textContent = `Tất cả (${accounts.length})`;
-            document.getElementById('dirTabMissingKpi').textContent = `⚠️ Chưa đủ 2 bài (${missingKpiCount})`;
-            document.getElementById('dirTabDoneKpi').textContent = `✅ Đã đủ KPI (${doneKpiCount})`;
-            const privTab = document.getElementById('dirTabPrivateLog');
-            if (privTab) privTab.textContent = `🔒 Kênh Riêng Tư / Lỗi (${privateOrErrorCount})`;
+            const tabAll = document.getElementById('dirTabAll');
+            if (tabAll) tabAll.textContent = `Tất cả 6 Nhóm (${accounts.length})`;
+            const tabMissing = document.getElementById('dirTabMissingKpi');
+            if (tabMissing) tabMissing.textContent = `⚠️ Chưa đủ 2 bài (${missingKpiCount})`;
+            const tabDone = document.getElementById('dirTabDoneKpi');
+            if (tabDone) tabDone.textContent = `✅ Đã đủ KPI (${doneKpiCount})`;
 
-            const headerPrivBadge = document.getElementById('headerPrivateAlertBadge');
-            if (headerPrivBadge) {
-                if (privateOrErrorCount > 0) {
-                    headerPrivBadge.textContent = privateOrErrorCount;
-                    headerPrivBadge.classList.remove('hidden');
-                } else {
-                    headerPrivBadge.classList.add('hidden');
-                }
-            }
+            const GROUP_NAMES = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
+            const targetGroups = selectedGroupFilter === 'ALL'
+                ? GROUP_NAMES
+                : GROUP_NAMES.filter(g => g.toUpperCase() === selectedGroupFilter.toUpperCase());
 
-            const filteredAccounts = accounts.filter(acc => {
-                const prog = getAccountWeeklyProgress(acc.id, activeWeek);
-                const grpName = extractCleanGroupName(acc);
-                if (selectedGroupFilter !== 'ALL' && grpName.toUpperCase() !== selectedGroupFilter.toUpperCase()) return false;
-                if (currentDirectoryFilter === 'GROUP' && acc.role !== 'GROUP') return false;
-                if (currentDirectoryFilter === 'IDOL' && acc.role !== 'IDOL') return false;
-                if (currentDirectoryFilter === 'MISSING_KPI' && prog.isDonePosted) return false;
-                if (currentDirectoryFilter === 'DONE_KPI' && !prog.isDonePosted) return false;
-                if (currentDirectoryFilter === 'PRIVATE_LOG' && !hasActiveScanAlert(acc)) return false;
-                if (keyword) {
-                    const hay = `${acc.name} ${extractCleanIdolName(acc)} ${acc.handle} ${grpName}`.toLowerCase();
-                    if (!hay.includes(keyword)) return false;
-                }
-                return true;
-            });
+            let renderedGroupsCount = 0;
 
-            if (filteredAccounts.length === 0) {
-                grid.innerHTML = `
-                    <div class="col-span-full py-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                        <p class="text-sm font-medium text-slate-600">Không tìm thấy tài khoản nào phù hợp bộ lọc</p>
-                    </div>
-                `;
-                updateDashboardStats();
-                populateAccountSelects();
-                return;
-            }
-
-            filteredAccounts.forEach(acc => {
-                const prog = getAccountWeeklyProgress(acc.id, activeWeek);
-                const isGroup = acc.role === 'GROUP';
-                const grpName = extractCleanGroupName(acc);
-                const idolShort = extractCleanIdolName(acc);
+            const groupsHtml = targetGroups.map(grpName => {
                 const theme = getGroupTheme(grpName);
-                const isScanning = scanningAccountIds.has(acc.id);
+                
+                // Lọc danh sách account thuộc nhóm này
+                let grpAccounts = accounts.filter(acc => extractCleanGroupName(acc).toUpperCase() === grpName.toUpperCase());
 
-                // Thẻ nhóm chính thức: giao diện dark sang trọng. Thẻ Idol: nền trắng viền theme nhóm
-                const cardBaseClass = isGroup
-                    ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white border-2 border-indigo-400/50 shadow-md hover:border-pink-400 hover:shadow-xl'
-                    : `bg-white text-slate-800 border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-indigo-300 ${theme.cardAccent}`;
+                // SẮP XẾP: Kênh nhóm (Official Group) luôn đứng đầu tiên, sau đó đến các Idol
+                grpAccounts.sort((a, b) => {
+                    if (a.role === 'GROUP' && b.role !== 'GROUP') return -1;
+                    if (a.role !== 'GROUP' && b.role === 'GROUP') return 1;
+                    return (a.order || 99) - (b.order || 99);
+                });
 
-                const roleBadge = isGroup
-                    ? `<span class="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-pink-500 text-white shadow-2xs">👥 KÊNH NHÓM • ${grpName.toUpperCase()}</span>`
-                    : `<span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${theme.badgeBg}">${theme.icon} ${grpName.toUpperCase()}</span>`;
+                // Lọc theo Tab filter & Tìm kiếm
+                const filteredMembers = grpAccounts.filter(acc => {
+                    const prog = getAccountWeeklyProgress(acc.id, activeWeek);
+                    if (currentDirectoryFilter === 'GROUP' && acc.role !== 'GROUP') return false;
+                    if (currentDirectoryFilter === 'IDOL' && acc.role !== 'IDOL') return false;
+                    if (currentDirectoryFilter === 'MISSING_KPI' && prog.isDonePosted) return false;
+                    if (currentDirectoryFilter === 'DONE_KPI' && !prog.isDonePosted) return false;
+                    if (keyword) {
+                        const hay = `${acc.name} ${extractCleanIdolName(acc)} ${acc.handle} ${grpName}`.toLowerCase();
+                        if (!hay.includes(keyword)) return false;
+                    }
+                    return true;
+                });
 
-                let kpiBadge = '';
-                if (prog.isDonePosted) {
-                    kpiBadge = isGroup
-                        ? `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap shrink-0">✅ Đủ 2/2 bài</span>`
-                        : `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0">✅ Đủ 2/2 bài</span>`;
-                } else if (prog.postedCount === 1) {
-                    kpiBadge = isGroup
-                        ? `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap shrink-0">⚠️ Thiếu 1 bài (1/2)</span>`
-                        : `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap shrink-0">⚠️ Thiếu 1 bài (1/2)</span>`;
-                } else {
-                    kpiBadge = isGroup
-                        ? `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 whitespace-nowrap shrink-0">⛔ Chưa có bài (0/2)</span>`
-                        : `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap shrink-0">⛔ Chưa có bài (0/2)</span>`;
+                if (filteredMembers.length === 0 && (keyword || currentDirectoryFilter !== 'ALL')) {
+                    return '';
                 }
 
-                // Chi tiết 2 vạch KPI trực quan có nhãn rõ ràng
-                const post1Box = prog.postedCount >= 1
-                    ? `<div class="p-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-circle-check text-emerald-600 text-[11px]"></i><span>Bài 1: Đã đăng</span></div>`
-                    : (prog.totalCount >= 1
-                        ? `<div class="p-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-clock text-sky-600 text-[11px]"></i><span>Bài 1: Lên lịch</span></div>`
-                        : `<div class="p-1 rounded-lg ${isGroup ? 'bg-white/10 text-slate-300 border-white/10' : 'bg-slate-100 text-slate-500 border-slate-200/80'} border text-[10px] font-medium flex items-center justify-center gap-1"><i class="fa-regular fa-circle text-[10px]"></i><span>Bài 1: Trống</span></div>`);
+                renderedGroupsCount++;
 
-                const post2Box = prog.postedCount >= 2
-                    ? `<div class="p-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-circle-check text-emerald-600 text-[11px]"></i><span>Bài 2: Đã đăng</span></div>`
-                    : (prog.totalCount >= 2
-                        ? `<div class="p-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-clock text-sky-600 text-[11px]"></i><span>Bài 2: Lên lịch</span></div>`
-                        : `<div class="p-1 rounded-lg ${isGroup ? 'bg-white/10 text-slate-300 border-white/10' : 'bg-slate-100 text-slate-500 border-slate-200/80'} border text-[10px] font-medium flex items-center justify-center gap-1"><i class="fa-regular fa-circle text-[10px]"></i><span>Bài 2: Trống</span></div>`);
+                const totalMembers = grpAccounts.length;
+                const doneMembers = grpAccounts.filter(a => getAccountWeeklyProgress(a.id, activeWeek).isDonePosted).length;
+                const totalPostsInGrp = grpAccounts.reduce((sum, a) => sum + getAccountWeeklyPosts(a.id, activeWeek).length, 0);
+                const percentDone = totalMembers > 0 ? Math.round((doneMembers / totalMembers) * 100) : 0;
+                const isExpanded = expandedGroupCards.has(grpName) || keyword !== '';
 
-                let scanAlertHtml = '';
-                if (isScanning) {
-                    scanAlertHtml = `
-                        <div class="mt-2 text-[11px] px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 font-semibold flex items-center gap-1.5">
-                            <i class="fa-solid fa-circle-notch animate-spin text-cyan-600"></i>
-                            <span class="truncate">Đang quét kênh TikTok...</span>
+                const memberCardsHtml = filteredMembers.map(acc => {
+                    const prog = getAccountWeeklyProgress(acc.id, activeWeek);
+                    const isGroupChannel = acc.role === 'GROUP';
+                    const idolShort = extractCleanIdolName(acc);
+                    const accPosts = getAccountWeeklyPosts(acc.id, activeWeek);
+
+                    let kpiBadge = '';
+                    if (prog.isDonePosted) {
+                        kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-400/30 whitespace-nowrap">
+                            ✅ Đủ KPI (${prog.postedCount}/2)
+                        </span>`;
+                    } else if (prog.postedCount === 1) {
+                        kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-400/30 whitespace-nowrap">
+                            ⚠️ Thiếu 1 bài (1/2)
+                        </span>`;
+                    } else {
+                        kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-400/30 whitespace-nowrap">
+                            ❌ Chưa đăng (0/2)
+                        </span>`;
+                    }
+
+                    let postsListHtml = '';
+                    if (accPosts.length === 0) {
+                        postsListHtml = `<div class="text-[11px] text-slate-400 italic py-1">Chưa có bài đăng nào trong tuần này</div>`;
+                    } else {
+                        postsListHtml = `<div class="space-y-1.5 pt-1">
+                            ${accPosts.slice(0, 2).map((p, idx) => `
+                                <div class="flex items-center justify-between text-[11px] bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+                                    <span class="font-bold truncate max-w-[140px] text-slate-700 dark:text-slate-300">
+                                        #${idx + 1}: ${formatDateVN(p.date)} • ${p.category}
+                                    </span>
+                                    <span class="text-[10px] font-extrabold ${p.status === 'ĐÃ ĐĂNG' ? 'text-emerald-600 dark:text-emerald-400' : 'text-sky-600 dark:text-sky-400'}">
+                                        ${p.status}
+                                    </span>
+                                </div>
+                            `).join('')}
+                            ${accPosts.length > 2 ? `<div class="text-[10px] text-slate-400 font-bold">+${accPosts.length - 2} bài khác...</div>` : ''}
+                        </div>`;
+                    }
+
+                    const cardBorderClass = isGroupChannel
+                        ? 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-indigo-400/60 shadow-md'
+                        : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 shadow-2xs hover:shadow-md hover:border-indigo-400/50';
+
+                    return `
+                        <div class="rounded-2xl p-3.5 transition flex flex-col justify-between gap-2.5 ${cardBorderClass}">
+                            <div>
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <div class="w-8 h-8 rounded-xl ${isGroupChannel ? 'bg-pink-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'} flex items-center justify-center font-bold text-xs shrink-0">
+                                            ${isGroupChannel ? '👥' : theme.icon}
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-1.5">
+                                                <h4 class="font-extrabold text-xs sm:text-sm truncate cursor-pointer hover:text-pink-500 transition" onclick="openIdolDetailModal('${acc.id}')">
+                                                    ${isGroupChannel ? `${acc.name} (Official)` : idolShort}
+                                                </h4>
+                                                ${isGroupChannel ? '<span class="text-[9px] bg-pink-500 text-white px-1.5 py-0.2 rounded font-extrabold shrink-0">NHÓM</span>' : ''}
+                                            </div>
+                                            <a href="${acc.url}" target="_blank" class="text-[11px] font-medium text-pink-600 dark:text-pink-400 hover:underline truncate block">
+                                                ${acc.handle}
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div class="shrink-0">${kpiBadge}</div>
+                                </div>
+                                <div class="mt-2 border-t border-slate-100 dark:border-slate-800/80 pt-1.5">
+                                    ${postsListHtml}
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                                <button type="button" onclick="openIdolDetailModal('${acc.id}', true)"
+                                    class="h-7 px-2.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="Thêm bài đăng cho kênh này">
+                                    <i class="fa-solid fa-plus text-[10px]"></i>
+                                    <span>+ Bài</span>
+                                </button>
+                                <button type="button" onclick="openIdolDetailModal('${acc.id}')"
+                                    class="h-7 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="Xem chi tiết và lịch sử">
+                                    <i class="fa-solid fa-eye text-[10px]"></i>
+                                    <span>Chi tiết</span>
+                                </button>
+                                <button type="button" onclick="toggleAccountChecked('${acc.id}')"
+                                    class="h-7 px-2 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${acc.checkedToday ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}"
+                                    title="Đánh dấu đã kiểm tra kênh hôm nay">
+                                    <i class="fa-solid ${acc.checkedToday ? 'fa-check text-emerald-600' : 'fa-clock text-amber-500'}"></i>
+                                </button>
+                            </div>
                         </div>
                     `;
-                } else if (hasActiveScanAlert(acc)) {
-                    scanAlertHtml = `
-                        <div onclick="event.stopPropagation(); openScanLogModal()" class="mt-2 text-[11px] px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 font-semibold flex items-center justify-between gap-1.5 hover:bg-amber-100/70 transition">
-                            <span class="truncate cursor-pointer flex-1"><i class="fa-solid fa-lock text-amber-600 mr-1"></i>${acc.scanMessage || 'Kênh Riêng Tư (Private)'}</span>
-                            <button onclick="dismissAccountScanAlert(event, '${acc.id}')" class="text-amber-600 hover:text-rose-600 px-1 shrink-0" title="Ẩn cảnh báo này">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
-                    `;
-                }
+                }).join('');
 
-                const card = document.createElement('div');
-                card.onclick = () => openIdolDetailModal(acc.id, false);
-                card.className = `rounded-2xl p-4 border transition duration-200 cursor-pointer flex flex-col justify-between gap-3 group ${cardBaseClass}`;
-                card.innerHTML = `
-                    <div class="space-y-2.5">
-                        <!-- Hàng 1: Nhãn Nhóm/Idol & Trạng thái KPI -->
-                        <div class="flex items-center justify-between gap-1.5">
-                            ${roleBadge}
-                            ${kpiBadge}
-                        </div>
+                return `
+                    <div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                        <!-- Group Hub Header -->
+                        <div class="p-4 bg-slate-50/80 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${isExpanded ? 'border-slate-200/80 dark:border-slate-800' : 'border-transparent'} cursor-pointer"
+                             onclick="toggleGroupCardExpand('${grpName}')">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 shadow-xs border ${theme.badgeBg}">
+                                    ${theme.icon}
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
+                                            NHÓM ${grpName.toUpperCase()}
+                                        </h3>
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${theme.badgeBg} border">
+                                            ${grpAccounts.length} Kênh (1 Nhóm + ${grpAccounts.length - 1} Idol)
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                        Tiến độ tuần: <strong class="text-emerald-600 dark:text-emerald-400">${doneMembers}/${totalMembers} kênh đủ KPI (${percentDone}%)</strong> • Đã đăng: <strong>${totalPostsInGrp} bài</strong>
+                                    </p>
+                                </div>
+                            </div>
 
-                        <!-- Hàng 2: Tên Idol / Nhóm nổi bật & icon chuyển hướng -->
-                        <div class="flex items-center justify-between gap-2">
-                            <h3 class="font-black text-base sm:text-[17px] leading-snug tracking-tight truncate ${isGroup ? 'text-white group-hover:text-pink-300' : 'text-slate-900 group-hover:text-indigo-600'} transition"
-                                title="${isGroup ? `${grpName} (Kênh Nhóm Chính Thức)` : `${grpName} - ${idolShort}`}">
-                                ${isGroup ? `${grpName} (Kênh Nhóm)` : idolShort}
-                            </h3>
-                            <span class="text-[11px] font-bold px-2 py-0.5 rounded-lg transition shrink-0 ${isGroup ? 'bg-white/10 text-cyan-200 group-hover:bg-pink-500 group-hover:text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600'}">
-                                Chi tiết <i class="fa-solid fa-chevron-right text-[8px] ml-0.5"></i>
-                            </span>
-                        </div>
-
-                        <!-- Hàng 3: Link TikTok gọn gàng trong 1 pill duy nhất -->
-                        <div class="flex items-center">
-                            <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
-                                onclick="event.stopPropagation(); markAccountCheckedOnVisit('${acc.id}')"
-                                title="Bấm để mở TikTok ${acc.handle} & tự động đánh dấu đã kiểm tra"
-                                class="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-xl text-xs font-semibold transition border ${isGroup ? 'bg-white/10 hover:bg-white/20 text-cyan-200 border-white/10' : 'bg-slate-50 hover:bg-pink-50 text-pink-600 hover:text-pink-700 border-slate-200/80 hover:border-pink-200'}">
-                                <i class="fa-brands fa-tiktok text-[11px] shrink-0 text-pink-500"></i>
-                                <span class="truncate whitespace-nowrap">${acc.handle}</span>
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-75 shrink-0"></i>
-                            </a>
+                            <div class="flex items-center gap-3 self-end sm:self-auto">
+                                <div class="w-32 bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden hidden sm:block">
+                                    <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-300" style="width: ${percentDone}%"></div>
+                                </div>
+                                <button type="button" class="h-8 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shadow-2xs pointer-events-none">
+                                    <span>${isExpanded ? 'Thu gọn' : `Xem ${filteredMembers.length} thành viên`}</span>
+                                    <i class="fa-solid fa-chevron-down transition-transform duration-200 ${isExpanded ? 'rotate-180 text-pink-500' : ''}"></i>
+                                </button>
+                            </div>
                         </div>
 
-                        ${scanAlertHtml}
-
-                        <!-- Hàng 4: 2 ô KPI trực quan phân tách rõ Bài 1 & Bài 2 -->
-                        <div class="grid grid-cols-2 gap-1.5 pt-1">
-                            ${post1Box}
-                            ${post2Box}
-                        </div>
-                    </div>
-
-                    <!-- Hàng 5: Thao tác nhanh bên dưới -->
-                    <div class="pt-2.5 border-t ${isGroup ? 'border-white/10 text-slate-300' : 'border-slate-100 text-slate-500'} flex items-center justify-between gap-1.5 text-xs">
-                        <button type="button" onclick="openIdolDetailModal('${acc.id}', false)"
-                            class="px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${isGroup ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">
-                            <i class="fa-solid fa-list-check text-[11px]"></i>
-                            <span>Xem bài</span>
-                        </button>
-
-                        <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
-                            <button type="button" onclick="scanSingleAccount('${acc.id}')"
-                                ${isScanning ? 'disabled' : ''}
-                                class="w-8 h-8 rounded-xl font-semibold transition flex items-center justify-center ${isGroup ? 'bg-white/10 hover:bg-white/20 text-cyan-300' : 'bg-slate-100 hover:bg-cyan-50 hover:text-cyan-600 text-slate-600 border border-slate-200/70'}"
-                                title="Tự động quét bài đăng mới trong tuần của ${acc.handle}">
-                                <i class="fa-solid fa-rotate text-xs ${isScanning ? 'animate-spin text-cyan-500' : ''}"></i>
-                            </button>
-                            <button type="button" onclick="openIdolDetailModal('${acc.id}', true)"
-                                class="px-2.5 py-1.5 rounded-xl text-xs font-extrabold transition shrink-0 bg-pink-600 hover:bg-pink-500 text-white shadow-xs"
-                                title="Thêm bài đăng mới cho ${grpName} - ${idolShort}">
-                                + Bài
-                            </button>
-                            <button type="button" onclick="toggleAccountChecked('${acc.id}')"
-                                class="px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${acc.checkedToday ? (isGroup ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200') : (isGroup ? 'bg-white/10 text-amber-300 border border-white/10' : 'bg-amber-50 text-amber-700 border border-amber-200')}"
-                                title="Đánh dấu đã kiểm tra kênh hôm nay">
-                                <i class="fa-solid ${acc.checkedToday ? 'fa-check text-emerald-600' : 'fa-clock text-amber-500'}"></i>
-                                <span>${acc.checkedToday ? 'Đã check' : 'Check'}</span>
-                            </button>
+                        <!-- Members Subgrid -->
+                        <div class="${isExpanded ? 'block' : 'hidden'} p-4 bg-slate-50/30 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800/60">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                ${memberCardsHtml}
+                            </div>
                         </div>
                     </div>
                 `;
-                grid.appendChild(card);
-            });
+            }).join('');
+
+            if (renderedGroupsCount === 0) {
+                grid.innerHTML = `
+                    <div class="py-8 text-center text-slate-400 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                        <p class="text-sm font-medium text-slate-600 dark:text-slate-300">Không tìm thấy nhóm hoặc idol nào phù hợp bộ lọc</p>
+                    </div>
+                `;
+            } else {
+                grid.innerHTML = groupsHtml;
+            }
 
             updateDashboardStats();
             populateAccountSelects();
@@ -4350,95 +4789,173 @@ service cloud.firestore {
             renderPostsTable();
         }
 
-        function getStatusBadgeHtml(status) {
-            switch (status) {
-                case 'ĐÃ ĐĂNG':
-                    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap"><i class="fa-solid fa-circle-check"></i> ĐÃ ĐĂNG</span>`;
-                case 'LÊN LỊCH':
-                    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 whitespace-nowrap"><i class="fa-solid fa-clock"></i> LÊN LỊCH</span>`;
-                case 'CẦN KIỂM TRA':
-                    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap"><i class="fa-solid fa-triangle-exclamation"></i> CẦN CHECK</span>`;
-                default:
-                    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap"><i class="fa-solid fa-file-pen"></i> NHÁP</span>`;
+        // ============================================================================
+        // 11. BẢNG THEO DÕI BÀI ĐĂNG GỘP 1 DÒNG / TÀI KHOẢN (BÀI 1 & BÀI 2 SONG SONG, KÊNH NHÓM LÊN ĐẦU)
+        // ============================================================================
+        function buildPostSlotHtml(acc, post, slotNum) {
+            if (!post) {
+                return `
+                    <div class="h-full min-h-[52px] p-2 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between gap-2">
+                        <span class="text-[11px] text-slate-400 italic">Chưa có bài #${slotNum}</span>
+                        <button type="button" onclick="openIdolDetailModal('${acc.id}', true)"
+                            class="h-6 px-2 rounded-lg bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 text-pink-600 dark:text-pink-400 text-[10px] font-bold border border-pink-200 dark:border-pink-800 transition flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-plus text-[9px]"></i>
+                            <span>Thêm bài ${slotNum}</span>
+                        </button>
+                    </div>
+                `;
             }
-        }
 
-        function buildPostTableRowHtml(post) {
-            const acc = getAccountById(post.accountId);
-            const accHandle = acc ? acc.handle : '';
-            const accUrl = acc ? acc.url : '#';
-            const isGroup = acc && acc.role === 'GROUP';
-            const grpName = extractCleanGroupName(acc);
-            const idolShort = extractCleanIdolName(acc);
-            const theme = getGroupTheme(grpName);
-            const wMon = getPostWeekMonday(post);
-            const cleanSheetLabel = sanitizeVietnameseText(post.sheet) || ('Tuần ' + formatShortDateVN(wMon));
-            const cleanNoteText = sanitizeVietnameseText(post.note || '');
+            const isPosted = post.status === 'ĐÃ ĐĂNG';
+            const statusBadge = isPosted
+                ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">✅ ĐÃ ĐĂNG</span>`
+                : `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 border border-sky-300 dark:border-sky-800">⏰ ${post.status}</span>`;
 
             const linkCellHtml = post.link
                 ? `<a href="${post.link}" target="_blank" rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-600 border border-pink-200/60 font-bold text-xs transition whitespace-nowrap">
-                      <i class="fa-brands fa-tiktok"></i>
-                      <span>Mở bài đăng</span>
-                      <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                      class="h-6 px-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-pink-50 text-slate-700 dark:text-slate-300 hover:text-pink-600 text-[10px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1 transition truncate max-w-[120px]" title="${post.link}">
+                      <i class="fa-brands fa-tiktok text-pink-500"></i>
+                      <span>Xem video</span>
+                      <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
                    </a>`
-                : `<button type="button" onclick="quickAttachLinkToPost('${post.id}')"
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-dashed border-slate-300 hover:border-indigo-300 font-semibold text-xs transition whitespace-nowrap"
-                      title="Bấm để dán nhanh link TikTok cho bài đăng này">
-                      <i class="fa-solid fa-link text-[10px]"></i>
-                      <span>+ Gắn link</span>
-                   </button>`;
+                : `<span class="text-[10px] text-slate-400 italic">Không có link</span>`;
 
             return `
-                <td class="py-3 px-3.5 whitespace-nowrap">
-                    <div class="font-bold text-slate-800">${formatDateVN(post.date)}</div>
-                    <div class="text-[10px] text-slate-400 font-medium">${cleanSheetLabel}</div>
-                </td>
-                <td class="py-3 px-3.5">
-                    <div class="flex flex-col gap-1">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded border whitespace-nowrap ${isGroup ? 'bg-slate-900 text-white border-slate-900' : theme.badgeBg}">
-                                ${isGroup ? ('👥 NHÓM ' + grpName.toUpperCase()) : (theme.icon + ' ' + grpName)}
-                            </span>
-                            <button type="button" onclick="openIdolDetailModal('${acc ? acc.id : ''}', false)"
-                                class="font-black text-slate-900 hover:text-indigo-600 text-xs sm:text-sm transition text-left"
-                                title="Bấm để xem chi tiết các bài đăng của ${isGroup ? grpName : idolShort}">
-                                ${isGroup ? 'Kênh Nhóm' : idolShort}
+                <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-2xs space-y-1.5">
+                    <div class="flex items-center justify-between gap-1.5">
+                        <span class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
+                            <i class="fa-solid fa-calendar-day text-indigo-500 text-[10px]"></i>
+                            <span>${formatDateVN(post.date)}</span>
+                        </span>
+                        <div class="flex items-center gap-1">
+                            ${statusBadge}
+                            <button type="button" onclick="editPost('${post.id}')" class="p-1 text-slate-400 hover:text-indigo-600 transition cursor-pointer" title="Sửa bài này">
+                                <i class="fa-solid fa-pen-to-square text-[11px]"></i>
+                            </button>
+                            <button type="button" onclick="deletePost('${post.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer" title="Xóa bài này">
+                                <i class="fa-solid fa-trash-can text-[11px]"></i>
                             </button>
                         </div>
-                        <a href="${accUrl}" target="_blank" rel="noopener noreferrer"
-                            onclick="markAccountCheckedOnVisit('${acc ? acc.id : ''}')"
-                            class="text-xs font-semibold text-indigo-600 hover:text-pink-600 hover:underline inline-flex items-center gap-1 w-fit max-w-[200px] truncate whitespace-nowrap">
-                            <i class="fa-brands fa-tiktok text-[10px] shrink-0"></i>
-                            <span class="truncate">${accHandle}</span>
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px] shrink-0"></i>
-                        </a>
                     </div>
-                </td>
-                <td class="py-3 px-3.5">
-                    <span class="inline-block px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">
-                        ${sanitizeVietnameseText(post.category)}
-                    </span>
-                </td>
-                <td class="py-3 px-3.5 whitespace-nowrap">
-                    ${linkCellHtml}
-                </td>
-                <td class="py-3 px-3.5 whitespace-nowrap">
-                    ${getStatusBadgeHtml(post.status)}
-                </td>
-                <td class="py-3 px-3.5 text-xs text-slate-600 max-w-[220px]">
-                    ${cleanNoteText ? cleanNoteText : '<span class="text-slate-300">—</span>'}
-                </td>
-                <td class="py-3 px-3.5 text-right whitespace-nowrap">
-                    <div class="inline-flex items-center gap-1">
-                        <button type="button" onclick="editPost('${post.id}')" class="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition" title="Sửa bài đăng">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                        <button type="button" onclick="deletePost('${post.id}')" class="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition" title="Xóa bài đăng">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
+                    <div class="flex items-center justify-between gap-1.5 pt-0.5">
+                        <span class="text-[11px] font-medium text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded truncate max-w-[140px]" title="${post.category}">
+                            🏷️ ${post.category}
+                        </span>
+                        ${linkCellHtml}
                     </div>
-                </td>
+                </div>
+            `;
+        }
+
+        function buildAccountUnifiedRowHtml(acc, weekPosts) {
+            const grpName = extractCleanGroupName(acc);
+            const theme = getGroupTheme(grpName);
+            const isGroupChannel = acc.role === 'GROUP';
+            const idolShort = extractCleanIdolName(acc);
+            const accPosts = weekPosts.filter(p => p.accountId === acc.id);
+            // Sắp xếp bài đăng theo ngày tăng dần
+            accPosts.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+            const post1 = accPosts[0] || null;
+            const post2 = accPosts[1] || null;
+            const extraPosts = accPosts.slice(2);
+
+            const postedCount = accPosts.filter(p => p.status === 'ĐÃ ĐĂNG').length;
+            let kpiProgressHtml = '';
+            if (postedCount >= 2) {
+                kpiProgressHtml = `
+                    <div class="flex flex-col items-center gap-0.5">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-400/30 whitespace-nowrap">
+                            ✅ ${postedCount}/2 Đủ KPI
+                        </span>
+                        <span class="text-[10px] text-emerald-600 font-semibold">Hoàn thành</span>
+                    </div>
+                `;
+            } else if (postedCount === 1) {
+                kpiProgressHtml = `
+                    <div class="flex flex-col items-center gap-0.5">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-400/30 whitespace-nowrap">
+                            ⚠️ 1/2 Thiếu 1 bài
+                        </span>
+                        <span class="text-[10px] text-amber-600 font-semibold">Cần thêm 1 bài</span>
+                    </div>
+                `;
+            } else {
+                kpiProgressHtml = `
+                    <div class="flex flex-col items-center gap-0.5">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-400/30 whitespace-nowrap">
+                            ❌ 0/2 Chưa đăng
+                        </span>
+                        <span class="text-[10px] text-rose-600 font-semibold">Chưa có bài</span>
+                    </div>
+                `;
+            }
+
+            const rowClass = isGroupChannel
+                ? 'bg-indigo-50/50 dark:bg-indigo-950/20 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 font-semibold'
+                : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60';
+
+            return `
+                <tr class="transition border-b border-slate-100 dark:border-slate-800 ${rowClass}">
+                    <!-- Cột 1: Kênh / Idol -->
+                    <td class="py-3 px-4 align-middle">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl ${isGroupChannel ? 'bg-pink-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'} flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                                ${isGroupChannel ? '👥' : theme.icon}
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded border ${theme.badgeBg}">
+                                        ${theme.icon} ${grpName}
+                                    </span>
+                                    ${isGroupChannel ? '<span class="text-[9px] font-extrabold bg-pink-500 text-white px-1.5 py-0.2 rounded">KÊNH NHÓM</span>' : ''}
+                                </div>
+                                <div class="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate cursor-pointer hover:text-pink-500 transition mt-0.5" onclick="openIdolDetailModal('${acc.id}')">
+                                    ${isGroupChannel ? `${acc.name} (Official)` : idolShort}
+                                </div>
+                                <a href="${acc.url}" target="_blank" class="text-[11px] font-medium text-pink-600 dark:text-pink-400 hover:underline truncate block">
+                                    ${acc.handle}
+                                </a>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Cột 2: Bài Đăng #1 -->
+                    <td class="py-3 px-4 align-middle">
+                        ${buildPostSlotHtml(acc, post1, 1)}
+                    </td>
+
+                    <!-- Cột 3: Bài Đăng #2 -->
+                    <td class="py-3 px-4 align-middle">
+                        ${buildPostSlotHtml(acc, post2, 2)}
+                        ${extraPosts.length > 0 ? `
+                            <div class="mt-1 text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">
+                                + Có thêm ${extraPosts.length} bài phụ trong tuần
+                            </div>
+                        ` : ''}
+                    </td>
+
+                    <!-- Cột 4: Tiến Độ KPI -->
+                    <td class="py-3 px-4 align-middle text-center">
+                        ${kpiProgressHtml}
+                    </td>
+
+                    <!-- Cột 5: Thao Tác -->
+                    <td class="py-3 px-4 align-middle text-right">
+                        <div class="flex items-center justify-end gap-1.5">
+                            <button type="button" onclick="openIdolDetailModal('${acc.id}', true)"
+                                class="h-8 px-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer" title="Thêm bài mới cho kênh này">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <span>Thêm bài</span>
+                            </button>
+                            <button type="button" onclick="openIdolDetailModal('${acc.id}')"
+                                class="h-8 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="Xem lịch sử và chi tiết">
+                                <i class="fa-solid fa-eye text-[10px]"></i>
+                                <span>Chi tiết</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
             `;
         }
 
@@ -4451,22 +4968,45 @@ service cloud.firestore {
 
             const weekPosts = getPostsForWeek(selectedWeekMonday);
 
-            const filtered = weekPosts.filter(post => {
-                const acc = getAccountById(post.accountId);
+            // Bảng theo dõi 1 dòng per account:
+            // Lọc danh sách accounts trước
+            let targetAccounts = accounts.filter(acc => {
                 const grpName = extractCleanGroupName(acc);
                 if (tableGroupFilter !== 'ALL' && grpName.toUpperCase() !== tableGroupFilter.toUpperCase()) return false;
-                if (currentRoleFilter !== 'ALL' && (!acc || acc.role !== currentRoleFilter)) return false;
-                if (selectedAccount !== 'ALL' && post.accountId !== selectedAccount) return false;
-                if (selectedStatus !== 'ALL' && post.status !== selectedStatus) return false;
+                if (currentRoleFilter !== 'ALL' && acc.role !== currentRoleFilter) return false;
+                if (selectedAccount !== 'ALL' && acc.id !== selectedAccount) return false;
+
+                // Nếu có lọc status: chỉ giữ account có ít nhất 1 bài khớp status
+                if (selectedStatus !== 'ALL') {
+                    const accPosts = weekPosts.filter(p => p.accountId === acc.id);
+                    if (!accPosts.some(p => p.status === selectedStatus)) return false;
+                }
+
+                // Nếu có tìm kiếm: tìm theo tên Idol, tên Nhóm, handle, hoặc nội dung bài đăng
                 if (searchQuery) {
-                    const hay = `${post.category} ${post.note} ${acc ? acc.name : ''} ${grpName} ${acc ? extractCleanIdolName(acc) : ''} ${acc ? acc.handle : ''}`.toLowerCase();
+                    const accPosts = weekPosts.filter(p => p.accountId === acc.id);
+                    const postsText = accPosts.map(p => `${p.category} ${p.note} ${p.status}`).join(' ');
+                    const hay = `${acc.name} ${extractCleanIdolName(acc)} ${acc.handle} ${grpName} ${postsText}`.toLowerCase();
                     if (!hay.includes(searchQuery)) return false;
                 }
                 return true;
             });
 
-            // 1. Nếu đang ở chế độ Gom theo 6 Nhóm (Accordion)
-            const groupedContainer = document.getElementById('groupedTableContainer') || document.getElementById('tableGroupedAccordionContainer');
+            // SẮP XẾP QUAN TRỌNG: KÊNH NHÓM LUÔN LÊN TRÊN ĐẦU BẢNG!
+            targetAccounts.sort((a, b) => {
+                if (a.role === 'GROUP' && b.role !== 'GROUP') return -1;
+                if (a.role !== 'GROUP' && b.role === 'GROUP') return 1;
+                return (a.order || 99) - (b.order || 99);
+            });
+
+            // Cập nhật badge tổng số bài & kênh
+            const tableTotalBadge = document.getElementById('tableTotalCountBadge');
+            if (tableTotalBadge) {
+                tableTotalBadge.textContent = `${weekPosts.length} bài (${targetAccounts.length} kênh)`;
+            }
+
+            // 1. Chế độ Gom theo 6 Nhóm (GROUPED)
+            const groupedContainer = document.getElementById('groupedTableContainer');
             if (tableViewMode === 'GROUPED' && groupedContainer) {
                 const groupOrder = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
                 const activeGroups = tableGroupFilter === 'ALL'
@@ -4475,27 +5015,28 @@ service cloud.firestore {
 
                 groupedContainer.innerHTML = activeGroups.map(gName => {
                     const theme = getGroupTheme(gName);
-                    const grpPosts = filtered.filter(p => {
+                    const grpAccounts = targetAccounts.filter(a => extractCleanGroupName(a).toUpperCase() === gName.toUpperCase());
+                    const grpPosts = weekPosts.filter(p => {
                         const a = getAccountById(p.accountId);
                         return extractCleanGroupName(a).toUpperCase() === gName.toUpperCase();
                     });
                     const postedInGrp = grpPosts.filter(p => p.status === 'ĐÃ ĐĂNG').length;
                     const isExpanded = expandedTableGroups.has(gName);
 
-                    const rowsHtml = grpPosts.length === 0
-                        ? `<tr><td colspan="7" class="py-6 text-center text-xs text-slate-400">Không có bài đăng nào của nhóm ${gName} khớp bộ lọc.</td></tr>`
-                        : grpPosts.map(p => `<tr class="hover:bg-slate-50/90 transition">${buildPostTableRowHtml(p)}</tr>`).join('');
+                    const rowsHtml = grpAccounts.length === 0
+                        ? `<tr><td colspan="5" class="py-6 text-center text-xs text-slate-400">Không có kênh nào của nhóm ${gName} khớp bộ lọc.</td></tr>`
+                        : grpAccounts.map(a => buildAccountUnifiedRowHtml(a, weekPosts)).join('');
 
                     return `
-                        <div class="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-xs">
+                        <div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
                             <button type="button" onclick="toggleTableGroupAccordion('${gName}')"
-                                class="w-full px-4 py-3 bg-slate-50/80 hover:bg-slate-100/80 transition flex items-center justify-between gap-3 border-b ${isExpanded ? 'border-slate-200/80' : 'border-transparent'}">
+                                class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/60 hover:bg-slate-100/80 dark:hover:bg-slate-800 transition flex items-center justify-between gap-3 border-b ${isExpanded ? 'border-slate-200/80 dark:border-slate-800' : 'border-transparent'}">
                                 <div class="flex items-center gap-2.5">
                                     <span class="text-xs font-extrabold px-2.5 py-1 rounded-lg border ${theme.badgeBg}">
                                         ${theme.icon} NHÓM ${gName.toUpperCase()}
                                     </span>
-                                    <span class="text-xs font-bold text-slate-700">
-                                        Tổng: <strong>${grpPosts.length} bài</strong> (<span class="text-emerald-600">${postedInGrp} đã đăng</span>)
+                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                        Tổng: <strong>${grpAccounts.length} kênh</strong> • <strong>${grpPosts.length} bài</strong> (<span class="text-emerald-600 dark:text-emerald-400">${postedInGrp} đã đăng</span>)
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-2 text-xs font-bold text-slate-500">
@@ -4505,7 +5046,16 @@ service cloud.firestore {
                             </button>
                             <div class="${isExpanded ? 'block' : 'hidden'} overflow-x-auto">
                                 <table class="w-full text-left border-collapse">
-                                    <tbody class="divide-y divide-slate-100 text-sm">
+                                    <thead>
+                                        <tr class="bg-slate-900 dark:bg-slate-950 text-white text-[11px] uppercase tracking-wider">
+                                            <th class="py-3 px-4 font-bold whitespace-nowrap min-w-[210px]">Kênh / Idol (Kênh Nhóm Ở Đầu)</th>
+                                            <th class="py-3 px-4 font-bold whitespace-nowrap min-w-[270px]">Bài Đăng #1 (KPI 1)</th>
+                                            <th class="py-3 px-4 font-bold whitespace-nowrap min-w-[270px]">Bài Đăng #2 (KPI 2)</th>
+                                            <th class="py-3 px-4 font-bold text-center whitespace-nowrap min-w-[150px]">Tiến Độ KPI</th>
+                                            <th class="py-3 px-4 font-bold text-right whitespace-nowrap min-w-[140px]">Thao Tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                                         ${rowsHtml}
                                     </tbody>
                                 </table>
@@ -4515,51 +5065,43 @@ service cloud.firestore {
                 }).join('');
             }
 
-            // 2. Chế độ Phân trang gọn gàng (Mặc định 10 bài / trang)
+            // 2. Chế độ Phân trang (PAGINATED)
             const paginationBar = document.getElementById('tablePaginationBar');
             const paginationInfo = document.getElementById('tablePaginationInfo');
             const paginationBtns = document.getElementById('tablePaginationButtons');
 
-            if (filtered.length === 0) {
+            if (targetAccounts.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="py-10 text-center text-slate-400">
-                            <div class="flex flex-col items-center gap-2">
-                                <i class="fa-solid fa-calendar-xmark text-2xl text-slate-300"></i>
-                                <p class="text-sm font-medium text-slate-500">Không có bài đăng nào khớp bộ lọc trong tuần này.</p>
-                            </div>
+                        <td colspan="5" class="py-12 text-center text-slate-400 dark:text-slate-500">
+                            <i class="fa-solid fa-inbox text-3xl mb-2 text-slate-300 dark:text-slate-600 block"></i>
+                            <p class="font-bold text-slate-600 dark:text-slate-400">Không có kênh hoặc bài đăng nào khớp bộ lọc trong tuần này.</p>
                         </td>
                     </tr>
                 `;
-                if (paginationInfo) paginationInfo.textContent = 'Hiển thị 0 / 0 bài đăng';
+                if (paginationInfo) paginationInfo.textContent = 'Hiển thị 0 / 0 kênh';
                 if (paginationBtns) paginationBtns.innerHTML = '';
                 return;
             }
 
-            const totalItems = filtered.length;
+            const totalItems = targetAccounts.length;
             const totalPages = Math.max(1, Math.ceil(totalItems / tablePageSize));
             if (tableCurrentPage > totalPages) tableCurrentPage = totalPages;
             if (tableCurrentPage < 1) tableCurrentPage = 1;
 
             const startIdx = (tableCurrentPage - 1) * tablePageSize;
             const endIdx = Math.min(startIdx + tablePageSize, totalItems);
-            const pageSlice = filtered.slice(startIdx, endIdx);
+            const pageSlice = targetAccounts.slice(startIdx, endIdx);
 
-            tbody.innerHTML = '';
-            pageSlice.forEach(post => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/90 transition smooth-fade';
-                tr.innerHTML = buildPostTableRowHtml(post);
-                tbody.appendChild(tr);
-            });
+            tbody.innerHTML = pageSlice.map(acc => buildAccountUnifiedRowHtml(acc, weekPosts)).join('');
 
             if (paginationBar && paginationInfo && paginationBtns) {
-                paginationInfo.innerHTML = `Đang hiển thị <strong class="text-slate-900">${startIdx + 1}–${endIdx}</strong> trên tổng số <strong class="text-indigo-600">${totalItems}</strong> bài đăng`;
+                paginationInfo.innerHTML = `Đang hiển thị <strong class="text-slate-900 dark:text-white">${startIdx + 1}–${endIdx}</strong> trên tổng số <strong class="text-indigo-600 dark:text-indigo-400">${totalItems}</strong> kênh/idol`;
 
                 let btnsHtml = `
                     <button type="button" onclick="goToTablePage(${tableCurrentPage - 1})"
                         ${tableCurrentPage <= 1 ? 'disabled' : ''}
-                        class="px-2.5 py-1.5 rounded-lg border text-xs font-bold transition ${tableCurrentPage <= 1 ? 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-2xs'}">
+                        class="px-2.5 py-1.5 rounded-lg border text-xs font-bold transition ${tableCurrentPage <= 1 ? 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-2xs dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700'}">
                         <i class="fa-solid fa-chevron-left text-[10px]"></i> Trước
                     </button>
                 `;
@@ -4569,7 +5111,7 @@ service cloud.firestore {
                         const isCurr = p === tableCurrentPage;
                         btnsHtml += `
                             <button type="button" onclick="goToTablePage(${p})"
-                                class="w-8 h-8 rounded-lg text-xs font-extrabold transition flex items-center justify-center ${isCurr ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'}">
+                                class="w-8 h-8 rounded-lg text-xs font-extrabold transition flex items-center justify-center ${isCurr ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'}">
                                 ${p}
                             </button>
                         `;
@@ -4581,7 +5123,7 @@ service cloud.firestore {
                 btnsHtml += `
                     <button type="button" onclick="goToTablePage(${tableCurrentPage + 1})"
                         ${tableCurrentPage >= totalPages ? 'disabled' : ''}
-                        class="px-2.5 py-1.5 rounded-lg border text-xs font-bold transition ${tableCurrentPage >= totalPages ? 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-2xs'}">
+                        class="px-2.5 py-1.5 rounded-lg border text-xs font-bold transition ${tableCurrentPage >= totalPages ? 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700' : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-2xs dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700'}">
                         Sau <i class="fa-solid fa-chevron-right text-[10px]"></i>
                     </button>
                 `;
@@ -5422,10 +5964,17 @@ service cloud.firestore {
             selectPostAccountValue, filterPostAccountDropdownList, selectPostStatusValue,
             openIdolDetailModal, closeIdolDetailModal, setIdolModalTab, toggleIdolModalForm,
             scanCurrentModalAccount, setTableViewMode, setTableGroupFilter, setTablePageSize,
-            goToTablePage, toggleTableGroupAccordion, resetTablePageAndRender, handleModalSmartLinkSubmit
+            goToTablePage, toggleTableGroupAccordion, resetTablePageAndRender, handleModalSmartLinkSubmit,
+            // Theme, Google Sheets & Phím tắt bàn phím
+            initTheme, applyTheme, toggleTheme,
+            openGoogleSheetModal, closeGoogleSheetModal, copySheetTemplateHeader, importGoogleSheetData,
+            openKeyboardShortcutsModal, closeKeyboardShortcutsModal, handleGlobalKeydown,
+            toggleGroupCardExpand, toggleAllGroupCards
         });
 
         window.onload = function () {
+            initTheme();
+            window.addEventListener('keydown', handleGlobalKeydown);
             document.getElementById('postDate').value = todayStr;
             const { uniquePosts } = deduplicatePostsArray(posts);
             posts = uniquePosts;
