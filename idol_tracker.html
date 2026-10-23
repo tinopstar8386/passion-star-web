@@ -1143,25 +1143,41 @@
                                         placeholder="VD: Media hỗ trợ, đăng trễ dự tính 1 ngày..."
                                         class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50/70 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition"></textarea>
                                 </div>
-
-                                <!-- Submit Button -->
-                                <button type="submit" id="submitPostBtn"
-                                    class="w-full py-3 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
-                                    <i class="fa-solid fa-floppy-disk"></i>
-                                    <span>Lưu Bài Đăng Lên Firebase</span>
-                                </button>
                             </form>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Modal Footer -->
-            <div class="px-5 sm:px-6 py-3 bg-white border-t border-slate-200 flex items-center justify-between text-xs">
-                <span class="text-slate-500">Mẹo: Dán link vào ô trên để hệ thống tự động nhận diện ngày giờ đăng chính xác.</span>
-                <button type="button" onclick="closeIdolDetailModal()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition cursor-pointer">
-                    Đóng
-                </button>
+            <!-- Modal Footer (Luôn hiển thị cố định ở đáy, không cần cuộn) -->
+            <div class="px-5 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+                <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs">
+                    <span class="inline-flex items-center gap-1">
+                        <i class="fa-solid fa-keyboard text-slate-400"></i>
+                        <span class="hidden sm:inline">Phím tắt:</span>
+                    </span>
+                    <span class="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-700 dark:text-slate-300">Enter</span>
+                    <span>Lưu</span>
+                    <span class="text-slate-300 dark:text-slate-600">•</span>
+                    <span class="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-700 dark:text-slate-300">Esc</span>
+                    <span>Đóng</span>
+                </div>
+
+                <div class="flex items-center gap-2.5 ml-auto">
+                    <!-- Nút Đóng: Màu xám/slate dịu, phân biệt với nút Lưu -->
+                    <button type="button" onclick="closeIdolDetailModal()"
+                        class="h-10 px-4 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm transition flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i>
+                        <span>Đóng</span>
+                    </button>
+
+                    <!-- Nút Lưu: Nằm ngay kế bên nút Đóng, màu Gradient hồng tím rực rỡ, liên kết trực tiếp với postForm -->
+                    <button type="submit" form="postForm" id="submitPostBtn"
+                        class="h-10 px-5 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Lưu Bài Đăng Lên Firebase</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -2216,7 +2232,11 @@ service cloud.firestore {
 
         function handleGlobalKeydown(e) {
             if (e.key === 'Escape') {
-                closeAllModernDropdowns();
+                const openDropdown = document.querySelector('.modern-dropdown.open');
+                if (openDropdown) {
+                    closeAllModernDropdowns();
+                    return;
+                }
                 closeIdolDetailModal();
                 closeGoogleSheetModal();
                 closeKeyboardShortcutsModal();
@@ -2227,6 +2247,27 @@ service cloud.firestore {
                     toggleKpiSidebar();
                 }
                 return;
+            }
+
+            if (e.key === 'Enter') {
+                const idolModal = document.getElementById('idolDetailModal');
+                if (idolModal && !idolModal.classList.contains('hidden')) {
+                    // Nếu đang gõ ghi chú trong textarea và không ấn Ctrl, cho phép Enter xuống dòng tự nhiên
+                    if (e.target && e.target.id === 'postNote' && !e.ctrlKey) {
+                        return;
+                    }
+                    e.preventDefault();
+                    const submitBtn = document.getElementById('submitPostBtn');
+                    if (submitBtn) submitBtn.click();
+                    return;
+                }
+                const sheetModal = document.getElementById('googleSheetModal');
+                if (sheetModal && !sheetModal.classList.contains('hidden')) {
+                    e.preventDefault();
+                    const btn = document.getElementById('btnStartSheetImport');
+                    if (btn) btn.click();
+                    return;
+                }
             }
 
             const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
