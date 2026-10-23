@@ -1,0 +1,51 @@
+name: Gemini Auto Optimizer
+
+on:
+  # Cho phép bạn bấm nút chạy bất cứ lúc nào và điền tên file + yêu cầu
+  workflow_dispatch:
+    inputs:
+      target_file:
+        description: 'Đường dẫn file muốn tối ưu (VD: index.html, Off.html)'
+        required: true
+        default: 'index.html'
+      custom_prompt:
+        description: 'Yêu cầu tối ưu cụ thể cho Gemini'
+        required: true
+        default: 'Tối ưu code gọn nhẹ, mượt hơn nhưng giữ nguyên tuyệt đối giao diện và logic hoạt động.'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tải code từ Repo về máy ảo GitHub
+        uses: actions/checkout@v4
+
+      - name: Cài đặt môi trường Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Chạy Gemini API để tối ưu code
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TARGET_FILE: ${{ github.event.inputs.target_file }}
+          CUSTOM_PROMPT: ${{ github.event.inputs.custom_prompt }}
+        run: node ai-optimizer.mjs
+
+      - name: Tự động tạo bản cập nhật (Pull Request)
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "⚡ Gemini tối ưu file ${{ github.event.inputs.target_file }}"
+          title: "🤖 Bản cập nhật tối ưu code từ Gemini cho ${{ github.event.inputs.target_file }}"
+          body: |
+            ### Chi tiết cập nhật tự động:
+            * **File được xử lý:** `${{ github.event.inputs.target_file }}`
+            * **Yêu cầu đã giao:** ${{ github.event.inputs.custom_prompt }}
+            
+            *Hãy kiểm tra mục **Files changed** bên trên để xem sự khác biệt (màu đỏ là code cũ, màu xanh là code mới) trước khi bấm Merge.*
+          branch: gemini-patch-${{ github.run_id }}
