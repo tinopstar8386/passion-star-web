@@ -1008,7 +1008,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <select id="postAccount" required class="hidden" onchange="updateFormAccountPreview(); analyzePostLinkInput(false);"></select>
+                                        <select id="postAccount" class="hidden" onchange="updateFormAccountPreview(); analyzePostLinkInput(false);"></select>
                                     </div>
 
                                     <!-- Ngày đăng (Custom Modern Date Selector) -->
@@ -1037,7 +1037,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <input type="text" id="postDate" required class="hidden">
+                                        <input type="text" id="postDate" class="hidden">
                                     </div>
                                 </div>
 
@@ -1087,7 +1087,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <input type="text" id="postCategory" required class="hidden">
+                                        <input type="text" id="postCategory" class="hidden">
                                     </div>
 
                                     <!-- Trạng thái (Custom Modern Dropdown) -->
@@ -1588,9 +1588,12 @@ service cloud.firestore {
         const app = initializeApp(defaultFirebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        window.db = db;
+        window.auth = auth;
         const appId = 'passion-media-tracker';
 
-        let currentUser = null;
+        // Luôn khởi tạo sẵn fallback user để không bao giờ bị nghẽn ghi dữ liệu lên Firebase
+        let currentUser = { uid: 'public-client-' + (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)) };
         let hasSeededInitialData = false;
         let hasSeededExcelPosts = false;
 
@@ -3821,12 +3824,13 @@ service cloud.firestore {
             renderIdolModalContent(currentModalAccountId);
             renderAllUI();
 
-            if (currentUser) {
+            if (db) {
                 try {
                     const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
                     await setDoc(postDocRef, postData, { merge: true });
                 } catch (err) {
                     console.error("Lỗi đồng bộ Firebase:", err);
+                    showToast('⚠️ Không thể lưu lên Firebase: ' + (err.message || 'Lỗi mạng'), 'error');
                 }
             }
         }
@@ -4567,13 +4571,18 @@ service cloud.firestore {
             }
 
             const catInput = document.getElementById('postCategory');
-            if (catInput && !catInput.value.trim() && (videoId || cleaned.includes('tiktok.com'))) {
-                catInput.value = /\/photo\//i.test(cleaned) ? 'Ảnh' : 'Clip nhảy';
+            if ((!catInput || !catInput.value.trim()) && (videoId || cleaned.includes('tiktok.com'))) {
+                const autoCat = /\/photo\//i.test(cleaned) ? 'Ảnh' : 'Clip nhảy';
+                const autoLabel = /\/photo\//i.test(cleaned) ? '📸 Ảnh' : '🎬 Clip nhảy';
+                selectPostCategoryValue(autoCat, autoLabel);
             }
 
             // Kiểm tra bài trùng lặp ngay lập tức
             const dupPost = findExistingPostByLinkOrVideoId(targetAccId, videoId, cleaned, editingId);
             if (dupPost) {
+                if (catInput && !catInput.value.trim() && dupPost.category) {
+                    selectPostCategoryValue(dupPost.category, `🏷️ ${dupPost.category}`);
+                }
                 const dupAcc = getAccountById(dupPost.accountId);
                 const dupName = dupAcc ? `${extractCleanGroupName(dupAcc)} - ${extractCleanIdolName(dupAcc)}` : '';
                 hintBox.classList.remove('hidden');
@@ -4621,10 +4630,41 @@ service cloud.firestore {
             let accountId = document.getElementById('postAccount').value;
             let category = document.getElementById('postCategory').value.trim();
             let rawLink = document.getElementById('postLink').value.trim();
-            const status = document.getElementById('postStatus').value;
+            const status = document.getElementById('postStatus').value || 'ĐÃ ĐĂNG';
             let note = document.getElementById('postNote').value.trim();
 
             let link = cleanTikTokUrl(rawLink);
+
+            // Tự động suy luận hạng mục nếu còn để trống
+            if (!category) {
+                if (link && /\/photo\//i.test(link)) {
+                    category = 'Ảnh';
+                    selectPostCategoryValue('Ảnh', '📸 Ảnh');
+                } else if (link) {
+                    category = 'Clip nhảy';
+                    selectPostCategoryValue('Clip nhảy', '🎬 Clip nhảy');
+                } else {
+                    category = 'Clip nhảy';
+                    selectPostCategoryValue('Clip nhảy', '🎬 Clip nhảy');
+                }
+            }
+
+            // Tự động điền ngày hôm nay nếu chưa có
+            if (!date) {
+                date = todayStr;
+                selectPostDateValue(todayStr);
+            }
+
+            // Kiểm tra kênh đăng
+            if (!accountId) {
+                showToast('Vui lòng chọn Kênh/Idol đăng bài!', 'error');
+                const dd = document.getElementById('postAccountCustomDropdown');
+                if (dd) {
+                    dd.classList.add('ring-2', 'ring-rose-500');
+                    setTimeout(() => dd.classList.remove('ring-2', 'ring-rose-500'), 2500);
+                }
+                return;
+            }
 
             // Nếu người dùng dán link rút gọn vt.tiktok.com mà chưa giải mã, tự động giải mã trước khi lưu
             if (link && /https?:\/\/(?:vt|vm)\.tiktok\.com\//i.test(link) && !extractTikTokVideoId(link)) {
@@ -4636,11 +4676,6 @@ service cloud.firestore {
                         if (resolved.dateStr) date = resolved.dateStr;
                     }
                 }
-            }
-
-            if (!date || !accountId || !category) {
-                showToast('Vui lòng điền đầy đủ Ngày đăng, Tài khoản và Hạng mục!', 'error');
-                return;
             }
 
             const videoId = extractTikTokVideoId(link);
@@ -4691,14 +4726,14 @@ service cloud.firestore {
             renderAllUI();
             resetPostForm();
 
-            if (currentUser) {
+            if (db) {
                 try {
                     const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
                     await setDoc(postDocRef, postData, { merge: true });
-                    showToast(editingId ? 'Đã cập nhật bài đăng (Chống trùng lặp) lên Firebase!' : 'Đã lưu bài đăng mới vào tuần & đồng bộ Firebase!');
+                    showToast(editingId ? '✅ Đã cập nhật bài đăng (Chống trùng lặp) lên Firebase!' : '✅ Đã lưu bài đăng mới vào tuần & đồng bộ Firebase!', 'success');
                 } catch (err) {
-                    console.error("Lỗi lưu bài đăng:", err);
-                    showToast('Đã lưu vào bảng hiện tại.', 'error');
+                    console.error("Lỗi lưu bài đăng Firebase:", err);
+                    showToast('⚠️ Không thể lưu lên Firebase: ' + (err.message || 'Lỗi mạng'), 'error');
                 }
             }
         }
@@ -4737,7 +4772,7 @@ service cloud.firestore {
             if (dup) {
                 // Nếu bài trùng là một bản scan tự động, xóa bản scan thừa và giữ bản gốc này
                 posts = posts.filter(p => p.id !== dup.id);
-                if (currentUser) {
+                if (db) {
                     const dupRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', dup.id);
                     deleteDoc(dupRef).catch(() => {});
                 }
@@ -4750,11 +4785,16 @@ service cloud.firestore {
             post.updatedAt = Date.now();
 
             renderAllUI();
-            if (currentUser) {
-                const postRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', post.id);
-                await setDoc(postRef, post, { merge: true });
+            if (db) {
+                try {
+                    const postRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', post.id);
+                    await setDoc(postRef, post, { merge: true });
+                    showToast(`✅ Đã gắn link và lưu trực tiếp lên Firebase cho ${accLabel}!`, 'success');
+                } catch (err) {
+                    console.error("Lỗi lưu link lên Firebase:", err);
+                    showToast('⚠️ Không thể lưu lên Firebase: ' + (err.message || 'Lỗi mạng'), 'error');
+                }
             }
-            showToast(`✅ Đã gắn link và chuyển trạng thái ĐÃ ĐĂNG cho ${accLabel}!`);
         }
 
         function getPostStatusLabelHtml(statusVal) {
@@ -4834,13 +4874,14 @@ service cloud.firestore {
         async function deletePost(postId) {
             posts = posts.filter(p => p.id !== postId);
             renderAllUI();
-            if (currentUser) {
+            if (db) {
                 try {
                     const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
                     await deleteDoc(postDocRef);
-                    showToast('Đã xóa bài đăng khỏi Firebase.');
+                    showToast('✅ Đã xóa bài đăng khỏi Firebase.', 'success');
                 } catch (err) {
-                    console.error("Lỗi xóa bài đăng:", err);
+                    console.error("Lỗi xóa bài đăng Firebase:", err);
+                    showToast('⚠️ Không thể xóa bài khỏi Firebase: ' + (err.message || 'Lỗi mạng'), 'error');
                 }
             }
         }
