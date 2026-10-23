@@ -77,17 +77,21 @@
         .smooth-modal {
             opacity: 0;
             visibility: hidden;
+            pointer-events: none;
             transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s;
         }
-        .smooth-modal.active {
+        .smooth-modal.active,
+        .smooth-modal:not(.hidden) {
             opacity: 1;
             visibility: visible;
+            pointer-events: auto;
         }
         .smooth-modal-card {
             transform: translateY(12px) scale(0.97);
             transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .smooth-modal.active .smooth-modal-card {
+        .smooth-modal.active .smooth-modal-card,
+        .smooth-modal:not(.hidden) .smooth-modal-card {
             transform: translateY(0) scale(1);
         }
         .smooth-fade {
@@ -100,7 +104,8 @@
             opacity: 0;
             transition: grid-template-rows 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, margin-top 0.22s ease;
         }
-        .collapsible-panel.expanded {
+        .collapsible-panel.expanded,
+        .collapsible-panel.open {
             grid-template-rows: 1fr;
             opacity: 1;
         }
@@ -837,7 +842,7 @@
     </main>
 
     <!-- MODAL CHI TIẾT IDOL & QUẢN LÝ BÀI ĐĂNG (MỞ KHI BẤM VÀO THẺ IDOL HOẶC NÚT + BÀI MỚI - THỨ 4, HÌNH 4) -->
-    <div id="idolDetailModal" onclick="if(event.target===this)closeIdolDetailModal()" class="smooth-modal fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+    <div id="idolDetailModal" onclick="if(event.target===this)closeIdolDetailModal()" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
         <div class="smooth-modal-card bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
             <!-- Modal Header: Thông tin Idol & Kênh TikTok -->
             <div id="idolModalHeader" class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white flex items-center justify-between gap-3">
@@ -901,6 +906,25 @@
                             class="h-9 px-3.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-extrabold transition flex items-center gap-1.5 shadow-xs cursor-pointer">
                             <i class="fa-solid fa-plus" id="toggleIdolAddFormIcon"></i>
                             <span id="toggleIdolAddFormText">Thêm Bài Đăng Mới</span>
+                        </button>
+                    </div>
+
+                    <!-- Dán nhanh link video cho riêng Idol này -->
+                    <div class="p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <div class="text-xs text-indigo-950 font-bold shrink-0 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bolt text-pink-500"></i>
+                            <span>Dán nhanh link TikTok của Idol này:</span>
+                        </div>
+                        <div class="relative flex-1">
+                            <input type="text" id="modalSmartLinkInput"
+                                placeholder="Dán link video/ảnh TikTok của Idol này..."
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();handleModalSmartLinkSubmit();}"
+                                class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-indigo-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30">
+                            <i class="fa-brands fa-tiktok absolute left-2.5 top-2.5 text-pink-500 text-xs"></i>
+                        </div>
+                        <button type="button" onclick="handleModalSmartLinkSubmit()" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 text-white text-xs font-bold shrink-0 transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Thêm ngay</span>
                         </button>
                     </div>
 
@@ -1822,8 +1846,19 @@ service cloud.firestore {
         }
 
         // Hệ thống Dropdown Hiện Đại (Mượt mà, đóng tự động khi click ra ngoài)
-        function toggleModernDropdown(event, dropdownId) {
-            if (event) event.stopPropagation();
+        function toggleModernDropdown(arg1, arg2) {
+            let event = null;
+            let dropdownId = '';
+            if (typeof arg1 === 'string') {
+                dropdownId = arg1;
+                event = arg2;
+            } else {
+                event = arg1;
+                dropdownId = typeof arg2 === 'string' ? arg2 : '';
+            }
+            if (event && typeof event.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
             const target = document.getElementById(dropdownId);
             if (!target) return;
             const isCurrentlyOpen = target.classList.contains('open');
@@ -2684,8 +2719,8 @@ service cloud.firestore {
         }
 
         function renderWeekCustomDropdown() {
-            const labelEl = document.getElementById('weekCustomDropdownLabel');
-            const listEl = document.getElementById('weekCustomDropdownList');
+            const labelEl = document.getElementById('weekDropdownLabel') || document.getElementById('weekCustomDropdownLabel');
+            const listEl = document.getElementById('weekDropdownMenu') || document.getElementById('weekCustomDropdownList');
             if (!labelEl || !listEl) return;
 
             const presetWeeks = [
@@ -2843,7 +2878,7 @@ service cloud.firestore {
 
         function selectDirectoryGroup(groupVal, labelText) {
             const selectEl = document.getElementById('directoryGroupSelect');
-            const labelEl = document.getElementById('dirGroupCustomDropdownLabel');
+            const labelEl = document.getElementById('dirGroupDropdownLabel') || document.getElementById('dirGroupCustomDropdownLabel');
             if (selectEl) selectEl.value = groupVal;
             if (labelEl) labelEl.textContent = labelText;
             closeAllModernDropdowns();
@@ -2913,33 +2948,51 @@ service cloud.firestore {
                 const isGroup = acc.role === 'GROUP';
                 const grpName = extractCleanGroupName(acc);
                 const idolShort = extractCleanIdolName(acc);
+                const theme = getGroupTheme(grpName);
                 const isScanning = scanningAccountIds.has(acc.id);
 
-                const cardBg = isGroup
-                    ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border-indigo-500/40 hover:border-pink-400/70'
-                    : (prog.isDonePosted
-                        ? 'bg-white text-slate-800 border-emerald-200/90 hover:border-emerald-400'
-                        : 'bg-white text-slate-800 border-amber-200/90 hover:border-pink-400');
+                // Thẻ nhóm chính thức: giao diện dark sang trọng. Thẻ Idol: nền trắng viền theme nhóm
+                const cardBaseClass = isGroup
+                    ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white border-2 border-indigo-400/50 shadow-md hover:border-pink-400 hover:shadow-xl'
+                    : `bg-white text-slate-800 border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-indigo-300 ${theme.cardAccent}`;
 
                 const roleBadge = isGroup
-                    ? `<span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-pink-500 text-white whitespace-nowrap">NHÓM • ${grpName.toUpperCase()}</span>`
-                    : `<span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-200 whitespace-nowrap">IDOL • ${grpName.toUpperCase()}</span>`;
+                    ? `<span class="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-pink-500 text-white shadow-2xs">👥 KÊNH NHÓM • ${grpName.toUpperCase()}</span>`
+                    : `<span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border ${theme.badgeBg}">${theme.icon} ${grpName.toUpperCase()}</span>`;
 
                 let kpiBadge = '';
                 if (prog.isDonePosted) {
                     kpiBadge = isGroup
-                        ? `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap shrink-0">✅ Đủ ${prog.postedCount}/2 bài</span>`
-                        : `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0">✅ Đủ ${prog.postedCount}/2 bài</span>`;
+                        ? `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap shrink-0">✅ Đủ 2/2 bài</span>`
+                        : `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0">✅ Đủ 2/2 bài</span>`;
+                } else if (prog.postedCount === 1) {
+                    kpiBadge = isGroup
+                        ? `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap shrink-0">⚠️ Thiếu 1 bài (1/2)</span>`
+                        : `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap shrink-0">⚠️ Thiếu 1 bài (1/2)</span>`;
                 } else {
-                    kpiBadge = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${prog.postedCount === 0 ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-amber-100 text-amber-800 border-amber-200'} border whitespace-nowrap shrink-0">⚠️ ${prog.postedCount}/2 bài</span>`;
+                    kpiBadge = isGroup
+                        ? `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 whitespace-nowrap shrink-0">⛔ Chưa có bài (0/2)</span>`
+                        : `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap shrink-0">⛔ Chưa có bài (0/2)</span>`;
                 }
 
-                // Chỉ hiển thị dòng báo trạng thái khi đang quét hoặc khi thực sự có log Riêng tư / Lỗi trong phiên hiện tại
+                // Chi tiết 2 vạch KPI trực quan có nhãn rõ ràng
+                const post1Box = prog.postedCount >= 1
+                    ? `<div class="p-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-circle-check text-emerald-600 text-[11px]"></i><span>Bài 1: Đã đăng</span></div>`
+                    : (prog.totalCount >= 1
+                        ? `<div class="p-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-clock text-sky-600 text-[11px]"></i><span>Bài 1: Lên lịch</span></div>`
+                        : `<div class="p-1 rounded-lg ${isGroup ? 'bg-white/10 text-slate-300 border-white/10' : 'bg-slate-100 text-slate-500 border-slate-200/80'} border text-[10px] font-medium flex items-center justify-center gap-1"><i class="fa-regular fa-circle text-[10px]"></i><span>Bài 1: Trống</span></div>`);
+
+                const post2Box = prog.postedCount >= 2
+                    ? `<div class="p-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-circle-check text-emerald-600 text-[11px]"></i><span>Bài 2: Đã đăng</span></div>`
+                    : (prog.totalCount >= 2
+                        ? `<div class="p-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-clock text-sky-600 text-[11px]"></i><span>Bài 2: Lên lịch</span></div>`
+                        : `<div class="p-1 rounded-lg ${isGroup ? 'bg-white/10 text-slate-300 border-white/10' : 'bg-slate-100 text-slate-500 border-slate-200/80'} border text-[10px] font-medium flex items-center justify-center gap-1"><i class="fa-regular fa-circle text-[10px]"></i><span>Bài 2: Trống</span></div>`);
+
                 let scanAlertHtml = '';
                 if (isScanning) {
                     scanAlertHtml = `
                         <div class="mt-2 text-[11px] px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 font-semibold flex items-center gap-1.5">
-                            <i class="fa-solid fa-circle-notch animate-spin"></i>
+                            <i class="fa-solid fa-circle-notch animate-spin text-cyan-600"></i>
                             <span class="truncate">Đang quét kênh TikTok...</span>
                         </div>
                     `;
@@ -2954,80 +3007,75 @@ service cloud.firestore {
                     `;
                 }
 
-                // Thanh tiến độ KPI 2 vạch trực quan
-                const seg1Class = prog.postedCount >= 1
-                    ? 'bg-emerald-500'
-                    : (prog.totalCount >= 1 ? 'bg-sky-400' : (isGroup ? 'bg-white/15' : 'bg-slate-200'));
-                const seg2Class = prog.postedCount >= 2
-                    ? 'bg-emerald-500'
-                    : (prog.totalCount >= 2 ? 'bg-sky-400' : (isGroup ? 'bg-white/15' : 'bg-slate-200'));
-
                 const card = document.createElement('div');
                 card.onclick = () => openIdolDetailModal(acc.id, false);
-                card.className = `rounded-2xl p-4 border shadow-xs transition tiktok-border cursor-pointer flex flex-col justify-between gap-3 group ${cardBg}`;
+                card.className = `rounded-2xl p-4 border transition duration-200 cursor-pointer flex flex-col justify-between gap-3 group ${cardBaseClass}`;
                 card.innerHTML = `
-                    <div>
+                    <div class="space-y-2.5">
                         <!-- Hàng 1: Nhãn Nhóm/Idol & Trạng thái KPI -->
-                        <div class="flex items-center justify-between gap-1.5 mb-2">
+                        <div class="flex items-center justify-between gap-1.5">
                             ${roleBadge}
                             ${kpiBadge}
                         </div>
 
-                        <!-- Hàng 2: Tên Idol / Nhóm rộng 100% không bị nút che khuất -->
+                        <!-- Hàng 2: Tên Idol / Nhóm nổi bật & icon chuyển hướng -->
                         <div class="flex items-center justify-between gap-2">
-                            <h3 class="font-extrabold text-[15px] leading-snug tracking-tight truncate ${isGroup ? 'text-white group-hover:text-pink-300' : 'text-slate-900 group-hover:text-indigo-600'} transition"
-                                title="${isGroup ? `${grpName} (Kênh Nhóm)` : `${grpName} - ${idolShort}`}">
-                                ${isGroup ? `${grpName} (Kênh Nhóm)` : `${grpName} - ${idolShort}`}
+                            <h3 class="font-black text-base sm:text-[17px] leading-snug tracking-tight truncate ${isGroup ? 'text-white group-hover:text-pink-300' : 'text-slate-900 group-hover:text-indigo-600'} transition"
+                                title="${isGroup ? `${grpName} (Kênh Nhóm Chính Thức)` : `${grpName} - ${idolShort}`}">
+                                ${isGroup ? `${grpName} (Kênh Nhóm)` : idolShort}
                             </h3>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition shrink-0 ${isGroup ? 'bg-white/10 text-cyan-200' : 'bg-slate-100 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600'}">
+                            <span class="text-[11px] font-bold px-2 py-0.5 rounded-lg transition shrink-0 ${isGroup ? 'bg-white/10 text-cyan-200 group-hover:bg-pink-500 group-hover:text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600'}">
                                 Chi tiết <i class="fa-solid fa-chevron-right text-[8px] ml-0.5"></i>
                             </span>
                         </div>
 
-                        <!-- Hàng 3: Link TikTok gọn gàng trong 1 pill duy nhất (Không bao giờ xuống 2 dòng) -->
-                        <div class="mt-2 flex items-center">
+                        <!-- Hàng 3: Link TikTok gọn gàng trong 1 pill duy nhất -->
+                        <div class="flex items-center">
                             <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
                                 onclick="event.stopPropagation(); markAccountCheckedOnVisit('${acc.id}')"
-                                title="Mở kênh TikTok ${acc.handle} trong tab mới"
-                                class="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-lg text-xs font-semibold transition border ${isGroup ? 'bg-white/10 hover:bg-white/20 text-cyan-300 border-white/10' : 'bg-slate-50 hover:bg-pink-50 text-pink-600 hover:text-pink-700 border-slate-200/80 hover:border-pink-200'}">
-                                <i class="fa-brands fa-tiktok text-[11px] shrink-0"></i>
+                                title="Bấm để mở TikTok ${acc.handle} & tự động đánh dấu đã kiểm tra"
+                                class="inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-xl text-xs font-semibold transition border ${isGroup ? 'bg-white/10 hover:bg-white/20 text-cyan-200 border-white/10' : 'bg-slate-50 hover:bg-pink-50 text-pink-600 hover:text-pink-700 border-slate-200/80 hover:border-pink-200'}">
+                                <i class="fa-brands fa-tiktok text-[11px] shrink-0 text-pink-500"></i>
                                 <span class="truncate whitespace-nowrap">${acc.handle}</span>
                                 <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-75 shrink-0"></i>
                             </a>
                         </div>
 
                         ${scanAlertHtml}
+
+                        <!-- Hàng 4: 2 ô KPI trực quan phân tách rõ Bài 1 & Bài 2 -->
+                        <div class="grid grid-cols-2 gap-1.5 pt-1">
+                            ${post1Box}
+                            ${post2Box}
+                        </div>
                     </div>
 
-                    <!-- Hàng 4: Tiến độ bài đăng & Cụm nút thao tác nhanh gọn gàng -->
-                    <div class="pt-2.5 border-t ${isGroup ? 'border-white/10 text-slate-300' : 'border-slate-100 text-slate-500'} flex flex-col gap-2">
-                        <div class="grid grid-cols-2 gap-1.5">
-                            <div class="h-1.5 rounded-full ${seg1Class} transition-all"></div>
-                            <div class="h-1.5 rounded-full ${seg2Class} transition-all"></div>
-                        </div>
-                        <div class="flex items-center justify-between gap-1.5 text-xs">
-                            <span class="truncate text-[11px]">
-                                Đã đăng: <strong class="${isGroup ? 'text-white' : 'text-slate-800'}">${prog.postedCount} bài</strong>
-                                ${prog.scheduledCount > 0 ? `<span class="text-sky-500 font-semibold">(+${prog.scheduledCount} lịch)</span>` : ''}
-                            </span>
-                            <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
-                                <button type="button" onclick="scanSingleAccount('${acc.id}')"
-                                    ${isScanning ? 'disabled' : ''}
-                                    class="w-7 h-7 rounded-lg font-semibold transition flex items-center justify-center ${isGroup ? 'bg-white/10 hover:bg-white/20 text-cyan-300' : 'bg-slate-100 hover:bg-cyan-50 hover:text-cyan-600 text-slate-600'}"
-                                    title="Tự động quét bài đăng mới trong tuần của ${acc.handle}">
-                                    <i class="fa-solid fa-rotate text-[11px] ${isScanning ? 'animate-spin text-cyan-500' : ''}"></i>
-                                </button>
-                                <button type="button" onclick="openIdolDetailModal('${acc.id}', true)"
-                                    class="px-2 py-1 rounded-lg text-[11px] font-bold transition shrink-0 ${isGroup ? 'bg-pink-500/90 hover:bg-pink-500 text-white' : 'bg-indigo-50 hover:bg-pink-600 text-indigo-700 hover:text-white border border-indigo-200/60'}"
-                                    title="Thêm bài đăng mới cho ${grpName} - ${idolShort}">
-                                    + Bài
-                                </button>
-                                <button type="button" onclick="toggleAccountChecked('${acc.id}')"
-                                    class="px-2 py-1 rounded-lg text-[11px] font-bold transition ${acc.checkedToday ? (isGroup ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-700') : (isGroup ? 'bg-white/10 text-amber-300' : 'bg-amber-50 text-amber-700')}"
-                                    title="Đánh dấu đã kiểm tra kênh hôm nay">
-                                    ${acc.checkedToday ? '✓ Check' : 'Check'}
-                                </button>
-                            </div>
+                    <!-- Hàng 5: Thao tác nhanh bên dưới -->
+                    <div class="pt-2.5 border-t ${isGroup ? 'border-white/10 text-slate-300' : 'border-slate-100 text-slate-500'} flex items-center justify-between gap-1.5 text-xs">
+                        <button type="button" onclick="openIdolDetailModal('${acc.id}', false)"
+                            class="px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${isGroup ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">
+                            <i class="fa-solid fa-list-check text-[11px]"></i>
+                            <span>Xem bài</span>
+                        </button>
+
+                        <div class="flex items-center gap-1 shrink-0" onclick="event.stopPropagation()">
+                            <button type="button" onclick="scanSingleAccount('${acc.id}')"
+                                ${isScanning ? 'disabled' : ''}
+                                class="w-8 h-8 rounded-xl font-semibold transition flex items-center justify-center ${isGroup ? 'bg-white/10 hover:bg-white/20 text-cyan-300' : 'bg-slate-100 hover:bg-cyan-50 hover:text-cyan-600 text-slate-600 border border-slate-200/70'}"
+                                title="Tự động quét bài đăng mới trong tuần của ${acc.handle}">
+                                <i class="fa-solid fa-rotate text-xs ${isScanning ? 'animate-spin text-cyan-500' : ''}"></i>
+                            </button>
+                            <button type="button" onclick="openIdolDetailModal('${acc.id}', true)"
+                                class="px-2.5 py-1.5 rounded-xl text-xs font-extrabold transition shrink-0 bg-pink-600 hover:bg-pink-500 text-white shadow-xs"
+                                title="Thêm bài đăng mới cho ${grpName} - ${idolShort}">
+                                + Bài
+                            </button>
+                            <button type="button" onclick="toggleAccountChecked('${acc.id}')"
+                                class="px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${acc.checkedToday ? (isGroup ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200') : (isGroup ? 'bg-white/10 text-amber-300 border border-white/10' : 'bg-amber-50 text-amber-700 border border-amber-200')}"
+                                title="Đánh dấu đã kiểm tra kênh hôm nay">
+                                <i class="fa-solid ${acc.checkedToday ? 'fa-check text-emerald-600' : 'fa-clock text-amber-500'}"></i>
+                                <span>${acc.checkedToday ? 'Đã check' : 'Check'}</span>
+                            </button>
                         </div>
                     </div>
                 `;
@@ -3091,6 +3139,10 @@ service cloud.firestore {
             resetPostForm(targetAcc.id);
             updateFormAccountPreview();
 
+            // Reset ô dán link nhanh trong modal
+            const smartLinkInput = document.getElementById('modalSmartLinkInput');
+            if (smartLinkInput) smartLinkInput.value = '';
+
             // Render danh sách bài đăng đã có của Idol này
             renderIdolModalContent(targetAcc.id);
 
@@ -3103,6 +3155,7 @@ service cloud.firestore {
             const modal = document.getElementById('idolDetailModal');
             if (modal) {
                 modal.classList.remove('hidden');
+                modal.classList.add('active');
             }
 
             if (forceOpenForm) {
@@ -3117,6 +3170,7 @@ service cloud.firestore {
             const modal = document.getElementById('idolDetailModal');
             if (modal) {
                 modal.classList.add('hidden');
+                modal.classList.remove('active');
             }
             closeAllModernDropdowns();
         }
@@ -3130,23 +3184,25 @@ service cloud.firestore {
 
         function toggleIdolModalForm(forceState) {
             const collapsible = document.getElementById('idolModalFormCollapsible');
-            const toggleBtn = document.getElementById('idolModalToggleFormBtn');
+            const toggleBtn = document.getElementById('toggleIdolAddFormBtn') || document.getElementById('idolModalToggleFormBtn');
             if (!collapsible) return;
 
-            const isCurrentlyOpen = collapsible.classList.contains('open');
+            const isCurrentlyOpen = collapsible.classList.contains('open') || collapsible.classList.contains('expanded');
             const nextState = typeof forceState === 'boolean' ? forceState : !isCurrentlyOpen;
 
             if (nextState) {
                 collapsible.classList.add('open');
+                collapsible.classList.add('expanded');
                 if (toggleBtn) {
-                    toggleBtn.innerHTML = `<i class="fa-solid fa-chevron-up text-xs"></i><span>Thu Gọn Khung Thêm Bài</span>`;
-                    toggleBtn.className = 'px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-extrabold transition flex items-center gap-1.5';
+                    toggleBtn.innerHTML = `<i class="fa-solid fa-chevron-up text-xs"></i><span>Thu Gọn Khung Điền</span>`;
+                    toggleBtn.className = 'h-9 px-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-extrabold transition flex items-center gap-1.5 cursor-pointer';
                 }
             } else {
                 collapsible.classList.remove('open');
+                collapsible.classList.remove('expanded');
                 if (toggleBtn) {
                     toggleBtn.innerHTML = `<i class="fa-solid fa-plus text-xs"></i><span>Thêm Bài Đăng Mới</span>`;
-                    toggleBtn.className = 'px-3.5 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 text-white text-xs font-extrabold shadow-md transition flex items-center gap-1.5';
+                    toggleBtn.className = 'h-9 px-3.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-extrabold transition flex items-center gap-1.5 shadow-xs cursor-pointer';
                 }
             }
         }
@@ -3155,6 +3211,97 @@ service cloud.firestore {
             if (!currentModalAccountId) return;
             await scanSingleAccount(currentModalAccountId, false);
             renderIdolModalContent(currentModalAccountId);
+        }
+
+        async function handleModalSmartLinkSubmit() {
+            const input = document.getElementById('modalSmartLinkInput');
+            if (!input || !currentModalAccountId) return;
+            const rawVal = input.value.trim();
+            if (!rawVal) {
+                showToast('Vui lòng dán link TikTok (video/ảnh)!', 'error');
+                input.focus();
+                return;
+            }
+
+            let link = cleanTikTokUrl(rawVal);
+            let date = todayStr;
+            let targetAccId = currentModalAccountId;
+            let category = /\/photo\//i.test(link) ? 'Ảnh' : 'Clip nhảy';
+
+            showToast('Đang phân tích link TikTok...');
+
+            if (/https?:\/\/(?:vt|vm)\.tiktok\.com\//i.test(link) && !extractTikTokVideoId(link)) {
+                const resolved = await parseAndResolveTikTokLink(link);
+                if (resolved && resolved.videoId) {
+                    link = resolved.cleanUrl;
+                    if (resolved.dateStr) date = resolved.dateStr;
+                    if (resolved.matchedAcc) targetAccId = resolved.matchedAcc.id;
+                }
+            } else {
+                const videoId = extractTikTokVideoId(link);
+                if (videoId) {
+                    const ts = decodeTikTokSnowflakeTimestamp(videoId);
+                    if (ts) {
+                        date = toLocalDateStr(new Date(ts));
+                    }
+                }
+            }
+
+            const videoId = extractTikTokVideoId(link);
+            const weekMonday = getMondayOfWeekStr(date);
+            const targetAcc = getAccountById(targetAccId);
+
+            // Kiểm tra trùng lặp hoặc gộp vào bài chưa gắn link
+            let editingId = '';
+            const existingDup = findExistingPostByLinkOrVideoId(targetAccId, videoId, link, '');
+            if (existingDup) {
+                editingId = existingDup.id;
+            } else {
+                const unlinkedMatch = findUnlinkedPostToMerge(targetAccId, weekMonday, date, '');
+                if (unlinkedMatch) {
+                    editingId = unlinkedMatch.id;
+                }
+            }
+
+            const postId = editingId ? editingId : (videoId ? `scan_${targetAccId}_${videoId}` : 'post_' + Date.now());
+            const existingPostObj = posts.find(p => p.id === postId);
+
+            const postData = {
+                ...(existingPostObj || {}),
+                id: postId,
+                weekMonday,
+                date,
+                accountId: targetAccId,
+                category: existingPostObj?.category || category,
+                link,
+                status: 'ĐÃ ĐĂNG',
+                note: existingPostObj?.note || '',
+                source: 'SMART_LINK',
+                updatedAt: Date.now()
+            };
+
+            const existingIdx = posts.findIndex(p => p.id === postId);
+            if (existingIdx >= 0) posts[existingIdx] = postData;
+            else posts.unshift(postData);
+
+            const { uniquePosts } = deduplicatePostsArray(posts);
+            posts = uniquePosts;
+
+            input.value = '';
+            showToast(`✅ Đã thêm bài đăng cho ${targetAcc ? extractCleanIdolName(targetAcc) : 'Idol'} thành công!`);
+
+            // Cập nhật lại giao diện modal và dashboard
+            renderIdolModalContent(currentModalAccountId);
+            renderAllUI();
+
+            if (currentUser) {
+                try {
+                    const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
+                    await setDoc(postDocRef, postData, { merge: true });
+                } catch (err) {
+                    console.error("Lỗi đồng bộ Firebase:", err);
+                }
+            }
         }
 
         function renderIdolModalContent(accId) {
@@ -3167,13 +3314,19 @@ service cloud.firestore {
             const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
             const sunStr = addDaysStr(activeWeek, 6);
             const prog = getAccountWeeklyProgress(acc.id, activeWeek);
+            const theme = getGroupTheme(grpName);
 
-            const roleBadgeEl = document.getElementById('idolModalRoleBadge');
+            const iconBoxEl = document.getElementById('idolModalIconBox');
+            if (iconBoxEl) {
+                iconBoxEl.textContent = isGroup ? '👥' : (theme.icon || '🌟');
+            }
+
+            const roleBadgeEl = document.getElementById('idolModalGroupBadge') || document.getElementById('idolModalRoleBadge');
             const kpiBadgeEl = document.getElementById('idolModalKpiBadge');
             const titleEl = document.getElementById('idolModalTitle');
             const handleLinkEl = document.getElementById('idolModalHandleLink');
             const handleTextEl = document.getElementById('idolModalHandleText');
-            const weekSummaryEl = document.getElementById('idolModalWeekSummary');
+            const weekSummaryEl = document.getElementById('idolModalWeekLabel') || document.getElementById('idolModalWeekSummary');
 
             if (roleBadgeEl) {
                 roleBadgeEl.textContent = isGroup ? `👥 NHÓM • ${grpName.toUpperCase()}` : `🌟 IDOL • NHÓM ${grpName.toUpperCase()}`;
@@ -3207,19 +3360,19 @@ service cloud.firestore {
             const allAccPosts = uniquePosts.filter(p => p.accountId === acc.id);
             const weekAccPosts = prog.posts;
 
-            const tabWeekBtn = document.getElementById('idolModalTabWeek');
-            const tabAllBtn = document.getElementById('idolModalTabAll');
+            const tabWeekBtn = document.getElementById('idolTabWeekPosts') || document.getElementById('idolModalTabWeek');
+            const tabAllBtn = document.getElementById('idolTabAllPosts') || document.getElementById('idolModalTabAll');
             if (tabWeekBtn) {
-                tabWeekBtn.textContent = `Tuần đang chọn (${weekAccPosts.length})`;
+                tabWeekBtn.textContent = `📋 Bài Đăng Tuần Này (${weekAccPosts.length})`;
                 tabWeekBtn.className = currentModalTab === 'WEEK'
-                    ? 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs transition'
-                    : 'px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+                    ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-2xs transition cursor-pointer'
+                    : 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition cursor-pointer';
             }
             if (tabAllBtn) {
-                tabAllBtn.textContent = `Tất cả các tuần (${allAccPosts.length})`;
+                tabAllBtn.textContent = `🕓 Lịch Sử Tất Cả Tuần (${allAccPosts.length})`;
                 tabAllBtn.className = currentModalTab === 'ALL'
-                    ? 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-xs transition'
-                    : 'px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition';
+                    ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 shadow-2xs transition cursor-pointer'
+                    : 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition cursor-pointer';
             }
 
             const displayPosts = currentModalTab === 'WEEK' ? weekAccPosts : allAccPosts;
@@ -3310,25 +3463,32 @@ service cloud.firestore {
             }
         }
 
-        // Các hàm xử lý Custom Modern Dropdown cho Tài Khoản & Trạng Thái
+        // ============================================================================
+        // CÁC HÀM XỬ LÝ DROPDOWN HIỆN ĐẠI CHO BỘ LỌC TÀI KHOẢN & TRẠNG THÁI
+        // ============================================================================
+        function resetTablePageAndRender() {
+            tableCurrentPage = 1;
+            renderPostsTable();
+        }
+
         function selectTableAccountFilter(accId) {
             const sel = document.getElementById('filterAccount');
             if (sel) sel.value = accId;
-            updateCustomAccountDropdownTrigger('filterAccount', 'filterAccountCustomLabel');
+            updateCustomAccountDropdownTrigger('filterAccount', 'filterAccountDropdownLabel');
             tableCurrentPage = 1;
             closeAllModernDropdowns();
             renderPostsTable();
         }
 
         function filterCustomAccountDropdownList() {
-            const searchEl = document.getElementById('filterAccountCustomSearch');
+            const searchEl = document.getElementById('filterAccountSearchInput') || document.getElementById('filterAccountCustomSearch');
             const kw = searchEl ? searchEl.value.trim().toLowerCase() : '';
             renderFilterAccountCustomList(kw);
         }
 
         function selectTableStatusFilter(statusVal, labelHtml) {
             const sel = document.getElementById('filterStatus');
-            const lbl = document.getElementById('filterStatusCustomLabel');
+            const lbl = document.getElementById('filterStatusDropdownLabel') || document.getElementById('filterStatusCustomLabel');
             if (sel) sel.value = statusVal;
             if (lbl) lbl.innerHTML = labelHtml;
             tableCurrentPage = 1;
@@ -3344,14 +3504,14 @@ service cloud.firestore {
         }
 
         function filterPostAccountDropdownList() {
-            const searchEl = document.getElementById('postAccountCustomSearch');
+            const searchEl = document.getElementById('postAccountSearchInput') || document.getElementById('postAccountCustomSearch');
             const kw = searchEl ? searchEl.value.trim().toLowerCase() : '';
             renderPostAccountCustomList(kw);
         }
 
         function selectPostStatusValue(statusVal, labelHtml) {
             const sel = document.getElementById('postStatus');
-            const lbl = document.getElementById('postStatusCustomLabel');
+            const lbl = document.getElementById('postStatusDropdownLabel') || document.getElementById('postStatusCustomLabel');
             if (sel) sel.value = statusVal;
             if (lbl) lbl.innerHTML = labelHtml;
             closeAllModernDropdowns();
@@ -3359,7 +3519,9 @@ service cloud.firestore {
 
         function updateCustomAccountDropdownTrigger(selectId, labelId) {
             const sel = document.getElementById(selectId);
-            const lbl = document.getElementById(labelId);
+            const lbl = document.getElementById(labelId) ||
+                document.getElementById(selectId + 'DropdownLabel') ||
+                document.getElementById(selectId + 'CustomLabel');
             if (!sel || !lbl) return;
             const val = sel.value;
             if (!val || val === 'ALL') {
@@ -3376,7 +3538,7 @@ service cloud.firestore {
         }
 
         function renderFilterAccountCustomList(keyword = '') {
-            const container = document.getElementById('filterAccountCustomList');
+            const container = document.getElementById('filterAccountDropdownList') || document.getElementById('filterAccountCustomList');
             const sel = document.getElementById('filterAccount');
             if (!container || !sel) return;
             const currentVal = sel.value || 'ALL';
@@ -3415,7 +3577,7 @@ service cloud.firestore {
         }
 
         function renderPostAccountCustomList(keyword = '') {
-            const container = document.getElementById('postAccountCustomList');
+            const container = document.getElementById('postAccountDropdownList') || document.getElementById('postAccountCustomList');
             const sel = document.getElementById('postAccount');
             if (!container || !sel) return;
             const currentVal = sel.value;
@@ -3498,7 +3660,7 @@ service cloud.firestore {
 
             renderFilterAccountCustomList();
             renderPostAccountCustomList();
-            updateCustomAccountDropdownTrigger('filterAccount', 'filterAccountCustomLabel');
+            updateCustomAccountDropdownTrigger('filterAccount', 'filterAccountDropdownLabel');
             updateFormAccountPreview();
         }
 
@@ -3510,7 +3672,7 @@ service cloud.firestore {
                 previewLink.href = acc.url;
                 previewLink.innerHTML = `<span>Mở ${acc.handle}</span> <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>`;
             }
-            updateCustomAccountDropdownTrigger('postAccount', 'postAccountCustomLabel');
+            updateCustomAccountDropdownTrigger('postAccount', 'postAccountDropdownLabel');
             renderPostAccountCustomList();
         }
 
@@ -4126,19 +4288,19 @@ service cloud.firestore {
 
         function setTableViewMode(mode) {
             tableViewMode = mode;
-            const btnPaginated = document.getElementById('tableModePaginatedBtn');
-            const btnGrouped = document.getElementById('tableModeGroupedBtn');
-            const paginatedWrap = document.getElementById('tablePaginatedContainer');
-            const groupedWrap = document.getElementById('tableGroupedAccordionContainer');
+            const btnPaginated = document.getElementById('viewModePaginatedBtn') || document.getElementById('tableModePaginatedBtn');
+            const btnGrouped = document.getElementById('viewModeGroupedBtn') || document.getElementById('tableModeGroupedBtn');
+            const paginatedWrap = document.getElementById('paginatedTableContainer') || document.getElementById('tablePaginatedContainer');
+            const groupedWrap = document.getElementById('groupedTableContainer') || document.getElementById('tableGroupedAccordionContainer');
 
             if (mode === 'PAGINATED') {
-                if (btnPaginated) btnPaginated.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-xs transition flex items-center gap-1.5';
-                if (btnGrouped) btnGrouped.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5';
+                if (btnPaginated) btnPaginated.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-xs transition flex items-center gap-1.5 cursor-pointer';
+                if (btnGrouped) btnGrouped.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer';
                 if (paginatedWrap) paginatedWrap.classList.remove('hidden');
                 if (groupedWrap) groupedWrap.classList.add('hidden');
             } else {
-                if (btnGrouped) btnGrouped.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-indigo-700 shadow-xs transition flex items-center gap-1.5';
-                if (btnPaginated) btnPaginated.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5';
+                if (btnGrouped) btnGrouped.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-pink-700 shadow-xs transition flex items-center gap-1.5 cursor-pointer';
+                if (btnPaginated) btnPaginated.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer';
                 if (groupedWrap) groupedWrap.classList.remove('hidden');
                 if (paginatedWrap) paginatedWrap.classList.add('hidden');
             }
@@ -4149,10 +4311,11 @@ service cloud.firestore {
             tableGroupFilter = grpVal;
             tableCurrentPage = 1;
             document.querySelectorAll('.table-grp-pill').forEach(btn => {
-                if (btn.dataset.grp === grpVal) {
-                    btn.className = 'table-grp-pill px-3 py-1 rounded-full text-xs font-bold bg-slate-900 text-white shadow-xs transition';
+                const bGrp = btn.dataset.group || btn.dataset.grp;
+                if (bGrp === grpVal) {
+                    btn.className = 'table-grp-pill px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-2xs transition cursor-pointer';
                 } else {
-                    btn.className = 'table-grp-pill px-3 py-1 rounded-full text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition';
+                    btn.className = 'table-grp-pill px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer';
                 }
             });
             renderPostsTable();
@@ -4165,9 +4328,9 @@ service cloud.firestore {
                 const btn = document.getElementById(`pageSizeBtn${sz}`);
                 if (!btn) return;
                 if (sz === tablePageSize) {
-                    btn.className = 'px-2 py-0.5 rounded text-[11px] font-bold bg-white text-slate-900 shadow-xs';
+                    btn.className = 'px-2 py-0.5 rounded-md text-[11px] font-bold bg-white text-slate-900 shadow-2xs cursor-pointer';
                 } else {
-                    btn.className = 'px-2 py-0.5 rounded text-[11px] font-bold text-slate-600 hover:text-slate-900';
+                    btn.className = 'px-2 py-0.5 rounded-md text-[11px] font-bold text-slate-600 hover:text-slate-900 cursor-pointer';
                 }
             });
             renderPostsTable();
@@ -4303,7 +4466,7 @@ service cloud.firestore {
             });
 
             // 1. Nếu đang ở chế độ Gom theo 6 Nhóm (Accordion)
-            const groupedContainer = document.getElementById('tableGroupedAccordionContainer');
+            const groupedContainer = document.getElementById('groupedTableContainer') || document.getElementById('tableGroupedAccordionContainer');
             if (tableViewMode === 'GROUPED' && groupedContainer) {
                 const groupOrder = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
                 const activeGroups = tableGroupFilter === 'ALL'
@@ -5259,7 +5422,7 @@ service cloud.firestore {
             selectPostAccountValue, filterPostAccountDropdownList, selectPostStatusValue,
             openIdolDetailModal, closeIdolDetailModal, setIdolModalTab, toggleIdolModalForm,
             scanCurrentModalAccount, setTableViewMode, setTableGroupFilter, setTablePageSize,
-            goToTablePage, toggleTableGroupAccordion
+            goToTablePage, toggleTableGroupAccordion, resetTablePageAndRender, handleModalSmartLinkSubmit
         });
 
         window.onload = function () {
