@@ -2430,6 +2430,12 @@ service cloud.firestore {
             };
         }
 
+        function getAccountWeeklyPosts(accId, weekMondayStr) {
+            const targetWeek = weekMondayStr === 'ALL' ? currentRealtimeMonday : weekMondayStr;
+            const weekPosts = getPostsForWeek(targetWeek);
+            return weekPosts.filter(p => p.accountId === accId);
+        }
+
         function getMissingAccountsForWeek(weekMondayStr, mode = 'POSTED') {
             const targetWeek = weekMondayStr === 'ALL' ? currentRealtimeMonday : weekMondayStr;
             return accounts.filter(acc => {
@@ -3282,7 +3288,8 @@ service cloud.firestore {
         // ============================================================================
         // 10. 6 NHÓM THẺ BUNG THÀNH VIÊN THEO ACCORDION (HÌNH 3 - GỌN GÀNG, TRỰC QUAN)
         // ============================================================================
-        let expandedGroupCards = new Set(['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion']);
+        // Mặc định hiển thị gọn 6 Nhóm Thẻ, bấm vào nhóm nào sẽ bung thành viên nhóm đó ra (Hình 3)
+        let expandedGroupCards = new Set();
 
         function toggleGroupCardExpand(grpName) {
             if (expandedGroupCards.has(grpName)) {
@@ -3741,6 +3748,19 @@ service cloud.firestore {
                     console.error("Lỗi đồng bộ Firebase:", err);
                 }
             }
+        }
+
+        function getStatusBadgeHtml(status) {
+            if (status === 'ĐÃ ĐĂNG') {
+                return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 whitespace-nowrap">✅ ĐÃ ĐĂNG</span>`;
+            }
+            if (status === 'LÊN LỊCH') {
+                return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 border border-sky-300 dark:border-sky-800 whitespace-nowrap">⏰ LÊN LỊCH</span>`;
+            }
+            if (status === 'CẦN KIỂM TRA') {
+                return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800 whitespace-nowrap">⚠️ CẦN KIỂM TRA</span>`;
+            }
+            return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 whitespace-nowrap">📝 ${status || 'BẢN NHÁP'}</span>`;
         }
 
         function renderIdolModalContent(accId) {
@@ -5972,17 +5992,26 @@ service cloud.firestore {
             toggleGroupCardExpand, toggleAllGroupCards
         });
 
-        window.onload = function () {
+        // Khởi tạo ứng dụng sau khi toàn bộ tài nguyên sẵn sàng
+        function initializeAppOnLoad() {
             initTheme();
             window.addEventListener('keydown', handleGlobalKeydown);
-            document.getElementById('postDate').value = todayStr;
+            const postDateEl = document.getElementById('postDate');
+            if (postDateEl) postDateEl.value = todayStr;
             const { uniquePosts } = deduplicatePostsArray(posts);
             posts = uniquePosts;
             syncWeekDropdownUI();
             renderAllUI();
             initFirebaseAndSync();
             setInterval(updateRealtimeDeadlineCounter, 60000);
-        };
+        }
+
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initializeAppOnLoad();
+        } else {
+            window.addEventListener('DOMContentLoaded', initializeAppOnLoad);
+            window.addEventListener('load', initializeAppOnLoad);
+        }
     </script>
 </body>
 </html>
