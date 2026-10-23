@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Media & Theo Dõi TikTok - THE AURA</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* TikTok inspired subtle gradient accents */
+        .tiktok-gradient {
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 45%, #ff0844 100%);
+        }
+        .tiktok-border:hover {
+            border-color: #ff0050;
+            box-shadow: 0 10px 25px -5px rgba(255, 0, 80, 0.12), 0 8px 10px -6px rgba(0, 242, 254, 0.12);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-lg border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl tiktok-gradient p-0.5 flex items-center justify-center shadow-md">
+                    <div class="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
+                        <i class="fa-brands fa-tiktok text-xl text-white"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg sm:text-xl font-extrabold tracking-tight">MEDIA TRACKER</h1>
+                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                            THE AURA & IDOL
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400">Hệ thống quản lý kênh, chống miss bài đăng & theo dõi tiến độ</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Cloud Status Badge -->
+                <button onclick="openCloudHelpModal()" id="cloudStatusBadge" class="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-300 text-xs font-medium border border-slate-700 transition flex items-center gap-2" title="Bấm để xem trạng thái kết nối & hướng dẫn cấu hình Firebase trên Vercel">
+                    <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span id="cloudStatusText">Đang kết nối Cloud...</span>
+                </button>
+                <button onclick="openAccountModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium border border-slate-700 transition flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-cyan-400"></i>
+                    <span>Thêm / Sửa Tài Khoản</span>
+                </button>
+                <button onclick="exportToCSV()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium border border-slate-700 transition flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-emerald-400"></i>
+                    <span>Xuất Excel (CSV)</span>
+                </button>
+                <button onclick="scrollToPostForm()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white text-xs sm:text-sm font-semibold shadow-md transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Ghi Nhận Bài Đăng</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+        <!-- Quick Stats & Anti-Miss Banner -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Tổng Tài Khoản</p>
+                    <p id="statTotalAccounts" class="text-2xl font-extrabold text-slate-900 mt-1">7</p>
+                    <p id="statAccountBreakdown" class="text-xs text-slate-500 mt-1">1 Nhóm • 6 Idol</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Đã Kiểm Tra Hôm Nay</p>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <p id="statCheckedToday" class="text-2xl font-extrabold text-emerald-600">0/7</p>
+                        <span id="statUncheckedAlert" class="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Cần kiểm tra!</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Bấm vào link TikTok để duyệt kênh</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Tổng Bài Đã Lưu</p>
+                    <p id="statTotalPosts" class="text-2xl font-extrabold text-slate-900 mt-1">0</p>
+                    <p id="statGroupVsIdolPosts" class="text-xs text-slate-500 mt-1">Nhóm: 0 • Idol: 0</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-pink-50 text-pink-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-photo-film"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Cần Duyệt / Lên Lịch</p>
+                    <p id="statPendingPosts" class="text-2xl font-extrabold text-amber-600 mt-1">0</p>
+                    <p class="text-xs text-slate-500 mt-1">Bài chưa đăng hoặc cần check lại</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-bell"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 1: DANH SÁCH TÀI KHOẢN NHÓM & IDOL (HYPERLINK TRỰC TIẾP) -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900">
+                            <i class="fa-brands fa-tiktok text-pink-600 mr-1.5"></i>
+                            Danh Bạ Kênh TikTok (Nhóm & Idol)
+                        </h2>
+                        <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                            Bấm vào ID để mở thẳng trang TikTok
+                        </span>
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                        Mẹo chống sót bài: Khi bạn bấm mở link TikTok của ai, hệ thống sẽ tự động đánh dấu <span class="text-emerald-600 font-semibold">"Đã check hôm nay"</span> cho tài khoản đó.
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-2 self-start sm:self-auto">
+                    <button onclick="resetDailyChecks()" class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition flex items-center gap-1.5" title="Làm mới trạng thái kiểm tra cho ngày mới">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Reset Check Ngày Mới</span>
+                    </button>
+                    <button onclick="openAccountModal()" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                        <span>Cập Nhật Link / ID</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Accounts Grid -->
+            <div id="accountsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-4">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </section>
+
+        <!-- SECTION 2: FORM ĐIỀN BÀI ĐĂNG MỚI & BẢNG THEO DÕI -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- Left Column: Form Thêm / Cập Nhật Bài Đăng (4 cols on desktop) -->
+            <section id="postFormSection" class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6 lg:sticky lg:top-24">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <h2 id="formTitle" class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-plus"></i>
+                        </span>
+                        <span>Điền Bài Đăng Mới</span>
+                    </h2>
+                    <button id="cancelEditBtn" onclick="resetPostForm()" class="hidden text-xs font-medium text-slate-500 hover:text-rose-600 transition">
+                        Hủy sửa
+                    </button>
+                </div>
+
+                <form id="postForm" onsubmit="handlePostSubmit(event)" class="space-y-4 mt-4">
+                    <input type="hidden" id="editingPostId" value="">
+
+                    <!-- Ngày đăng -->
+                    <div>
+                        <label for="postDate" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                            Ngày đăng <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="date" id="postDate" required
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
+                    </div>
+
+                    <!-- Chọn Tài khoản (Nhóm hoặc Idol) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <label for="postAccount" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                                Tài khoản đăng <span class="text-rose-500">*</span>
+                            </label>
+                            <a id="formAccountPreviewLink" href="https://www.tiktok.com/@the.aura8" target="_blank" rel="noopener noreferrer"
+                                class="text-xs font-medium text-pink-600 hover:underline flex items-center gap-1">
+                                <span>Mở kênh TikTok</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            </a>
+                        </div>
+                        <select id="postAccount" required onchange="updateFormAccountPreview()"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+
+                    <!-- Hạng mục đăng (Tự điền + gợi ý nhanh) -->
+                    <div>
+                        <label for="postCategory" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                            Hạng mục đăng (Tự điền hoặc chọn) <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" id="postCategory" list="categorySuggestions" required
+                            placeholder="VD: Clip nhảy, Video, Ảnh, Trend biến hình..."
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
+                        <datalist id="categorySuggestions">
+                            <option value="Video">
+                            <option value="Ảnh (Photo Mode)">
+                            <option value="Clip nhảy (Dance Cover)">
+                            <option value="Bắt trend">
+                            <option value="Hậu trường (BTS)">
+                            <option value="Vlog / Daily">
+                            <option value="Lip-sync / Nhép nhạc">
+                            <option value="Livestream">
+                        </datalist>
+                        <!-- Quick tags -->
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            <button type="button" onclick="setCategoryQuick('Video')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
+                                + Video
+                            </button>
+                            <button type="button" onclick="setCategoryQuick('Ảnh')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
+                                + Ảnh
+                            </button>
+                            <button type="button" onclick="setCategoryQuick('Clip nhảy')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
+                                + Clip nhảy
+                            </button>
+                            <button type="button" onclick="setCategoryQuick('Bắt trend')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
+                                + Bắt trend
+                            </button>
+                            <button type="button" onclick="setCategoryQuick('Hậu trường')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
+                                + Hậu trường
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Link bài đăng -->
+                    <div>
+                        <label for="postLink" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                            Link bài đăng TikTok
+                        </label>
+                        <div class="relative">
+                            <input type="url" id="postLink"
+                                placeholder="https://www.tiktok.com/@.../video/..."
+                                class="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
+                            <i class="fa-solid fa-link absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Có thể để trống nếu bài đang lên lịch, cập nhật link sau.</p>
+                    </div>
+
+                    <!-- Trạng thái -->
+                    <div>
+                        <label for="postStatus" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                            Trạng thái
+                        </label>
+                        <select id="postStatus"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
+                            <option value="ĐÃ ĐĂNG">✅ ĐÃ ĐĂNG</option>
+                            <option value="LÊN LỊCH">⏰ LÊN LỊCH / DỰ KIẾN</option>
+                            <option value="CẦN KIỂM TRA">⚠️ CẦN KIỂM TRA LẠI</option>
+                            <option value="NHÁP">📝 BẢN NHÁP</option>
+                        </select>
+                    </div>
+
+                    <!-- Ghi chú -->
+                    <div>
+                        <label for="postNote" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                            Ghi chú thêm
+                        </label>
+                        <textarea id="postNote" rows="2"
+                            placeholder="Tên nhạc, nội dung clip, nhắc nhở..."
+                            class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition"></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submitPostBtn"
+                        class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm shadow-md transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Lưu Bài Đăng Vào Bảng</span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Right Column: Bảng Quản Lý Bài Đăng (8 cols on desktop) -->
+            <section class="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
+                <!-- Filter Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-table-list text-indigo-600"></i>
+                            <span>Bảng Theo Dõi Bài Đăng (MEDIA)</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            Bấm vào tên hoặc <span class="font-semibold text-slate-700">@id</span> để mở trang TikTok của nhóm/idol, hoặc bấm <span class="font-semibold text-pink-600">Mở bài đăng</span> để xem clip.
+                        </p>
+                    </div>
+
+                    <!-- Quick Type Filter Tabs -->
+                    <div class="inline-flex p-1 rounded-xl bg-slate-100 self-start sm:self-auto">
+                        <button onclick="setRoleFilter('ALL')" id="tabFilterAll" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition">
+                            Tất cả
+                        </button>
+                        <button onclick="setRoleFilter('GROUP')" id="tabFilterGroup" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
+                            Tài khoản Nhóm
+                        </button>
+                        <button onclick="setRoleFilter('IDOL')" id="tabFilterIdol" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
+                            Tài khoản Idol
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Detailed Filters Row -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
+                    <!-- Filter by specific Account -->
+                    <div>
+                        <select id="filterAccount" onchange="renderPostsTable()"
+                            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+                            <option value="ALL">👤 Tất cả thành viên & nhóm</option>
+                        </select>
+                    </div>
+
+                    <!-- Filter by Status -->
+                    <div>
+                        <select id="filterStatus" onchange="renderPostsTable()"
+                            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+                            <option value="ALL">📌 Tất cả trạng thái</option>
+                            <option value="ĐÃ ĐĂNG">✅ ĐÃ ĐĂNG</option>
+                            <option value="LÊN LỊCH">⏰ LÊN LỊCH</option>
+                            <option value="CẦN KIỂM TRA">⚠️ CẦN KIỂM TRA</option>
+                            <option value="NHÁP">📝 BẢN NHÁP</option>
+                        </select>
+                    </div>
+
+                    <!-- Search by Category / Note -->
+                    <div class="relative">
+                        <input type="text" id="filterSearch" oninput="renderPostsTable()"
+                            placeholder="Tìm hạng mục (nhảy, ảnh...), ghi chú..."
+                            class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Posts Table -->
+                <div class="overflow-x-auto rounded-xl border border-slate-200/80">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 text-white text-[11px] uppercase tracking-wider">
+                                <th class="py-3 px-3.5 font-semibold">Ngày Đăng</th>
+                                <th class="py-3 px-3.5 font-semibold">Tài Khoản & Kênh TikTok</th>
+                                <th class="py-3 px-3.5 font-semibold">Hạng Mục</th>
+                                <th class="py-3 px-3.5 font-semibold">Link Bài Đăng</th>
+                                <th class="py-3 px-3.5 font-semibold">Trạng Thái</th>
+                                <th class="py-3 px-3.5 font-semibold">Ghi Chú</th>
+                                <th class="py-3 px-3.5 font-semibold text-right">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="postsTableBody" class="divide-y divide-slate-200 text-xs sm:text-sm">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- MODAL: QUẢN LÝ & CẬP NHẬT HYPERLINK TÀI KHOẢN NHÓM / IDOL -->
+    <div id="accountModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
+                        <i class="fa-brands fa-tiktok text-cyan-400"></i>
+                        <span>Quản Lý Tài Khoản & Hyperlink TikTok</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Cập nhật ID TikTok hoặc dán link trực tiếp để bấm vào là mở đúng trang</p>
+                </div>
+                <button onclick="closeAccountModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto space-y-6 flex-1">
+                <!-- Add / Edit Account Form -->
+                <form id="accountForm" onsubmit="handleAccountSubmit(event)" class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 id="accountFormHeading" class="text-xs font-bold uppercase tracking-wider text-slate-700">
+                            + Thêm Hoặc Cập Nhật Tài Khoản
+                        </h4>
+                        <button type="button" id="cancelAccountEditBtn" onclick="resetAccountForm()" class="hidden text-xs text-rose-600 font-semibold hover:underline">
+                            Hủy chỉnh sửa
+                        </button>
+                    </div>
+                    <input type="hidden" id="editAccountId" value="">
+
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                        <div class="sm:col-span-3">
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Phân loại</label>
+                            <select id="accRole" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white">
+                                <option value="IDOL">🌟 Tài khoản Idol</option>
+                                <option value="GROUP">👥 Tài khoản Nhóm</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tên Nhóm / Idol *</label>
+                            <input type="text" id="accName" required placeholder="VD: BẢO NGHI"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white">
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">ID TikTok *</label>
+                            <input type="text" id="accHandle" required placeholder="VD: @chubaonhi28" oninput="autoFillProfileUrl()"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white">
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Hyperlink Trang TikTok *</label>
+                            <input type="url" id="accUrl" required placeholder="https://www.tiktok.com/@..."
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-1">
+                        <button type="submit" id="saveAccountBtn" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Lưu Tài Khoản</span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Existing Accounts List -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5">
+                        Danh Sách Tài Khoản Hiện Có (Bấm "Sửa" để đổi Link/ID)
+                    </h4>
+                    <div id="modalAccountsList" class="divide-y divide-slate-200 border border-slate-200 rounded-2xl overflow-hidden bg-white">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeAccountModal()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-semibold hover:bg-slate-800 transition">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: HƯỚNG DẪN ĐỒNG BỘ FIREBASE & VERCEL -->
+    <div id="cloudHelpModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-emerald-400"></i>
+                        <span>Cấu Hình Lưu Trữ Firebase & Deploy Vercel</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Project ID: <span class="text-cyan-300 font-mono">passionstar-2014d</span></p>
+                </div>
+                <button onclick="closeCloudHelpModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm text-slate-700">
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-1">
+                    <span class="text-xs font-bold text-slate-500 uppercase">Phiên kết nối hiện tại (User ID):</span>
+                    <code id="displayUserId" class="text-xs font-mono text-indigo-600 break-all">Đang khởi tạo...</code>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="font-bold text-slate-900">1. Bật quyền ghi dữ liệu trên Firebase Console (Quan trọng khi chạy trên Vercel)</h4>
+                    <p class="text-slate-600">Để web trên Vercel lưu được bài đăng vào project <code class="px-1.5 py-0.5 rounded bg-slate-100 font-mono">passionstar-2014d</code>, bạn hãy vào <a href="https://console.firebase.google.com/project/passionstar-2014d/firestore/rules" target="_blank" rel="noopener noreferrer" class="text-pink-600 font-semibold hover:underline">Firebase Console &rarr; Firestore Database &rarr; tab Rules</a> và dán cấu hình sau rồi bấm <strong>Publish</strong>:</p>
+                    <pre class="p-3 rounded-xl bg-slate-900 text-emerald-300 font-mono text-xs overflow-x-auto">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+                </div>
+
+                <div class="space-y-2">
+                    <h4 class="font-bold text-slate-900">2. Bật Anonymous Auth (Tùy chọn khuyến nghị)</h4>
+                    <p class="text-slate-600">Vào mục <strong>Authentication &rarr; Sign-in method</strong> trên Firebase Console, bật <strong>Anonymous</strong> để định danh phiên truy cập an toàn.</p>
+                </div>
+
+                <div class="pt-2 border-t border-slate-200 flex items-center justify-between">
+                    <span class="text-xs text-slate-500">Nếu lỡ xóa nhầm tài khoản gốc, bạn có thể khôi phục:</span>
+                    <button onclick="restoreDefaultAccounts()" class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold text-xs transition">
+                        <i class="fa-solid fa-rotate-left mr-1"></i>Khôi phục 7 tài khoản mặc định
+                    </button>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeCloudHelpModal()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-semibold hover:bg-slate-800 transition">
+                    Đã hiểu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Application Logic with Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ============================================================================
+        // 1. CẤU HÌNH FIREBASE (Tương thích cả Vercel/GitHub của bạn & Preview)
+        // ============================================================================
+        const userFirebaseConfig = {
+            apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
+            authDomain: "passionstar-2014d.firebaseapp.com",
+            projectId: "passionstar-2014d",
+            storageBucket: "passionstar-2014d.firebasestorage.app",
+            messagingSenderId: "1079694484883",
+            appId: "1:1079694484883:web:e78ce21b7c222b58fef466"
+        };
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined'
+            ? JSON.parse(__firebase_config)
+            : userFirebaseConfig;
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'the-aura-media-tracker';
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let hasSeededInitialData = false;
+
+        // ============================================================================
+        // 2. DỮ LIỆU MẶC ĐỊNH (Dùng để khởi tạo lần đầu lên Firebase)
+        // ============================================================================
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        const DEFAULT_ACCOUNTS = [
+            {
+                id: 'acc_group_aura',
+                name: 'THE AURA',
+                handle: '@the.aura8',
+                url: 'https://www.tiktok.com/@the.aura8',
+                role: 'GROUP',
+                checkedToday: false,
+                order: 1
+            },
+            {
+                id: 'acc_idol_1',
+                name: 'BẢO NGHI',
+                handle: '@chubaonhi28',
+                url: 'https://www.tiktok.com/@chubaonhi28',
+                role: 'IDOL',
+                checkedToday: false,
+                order: 2
+            },
+            {
+                id: 'acc_idol_2',
+                name: 'MINH THƯ',
+                handle: '@_mthuxinhdep_',
+                url: 'https://www.tiktok.com/@_mthuxinhdep_',
+                role: 'IDOL',
+                checkedToday: false,
+                order: 3
+            },
+            {
+                id: 'acc_idol_3',
+                name: 'BẢO HÂN',
+                handle: '@n.b.h18082008',
+                url: 'https://www.tiktok.com/@n.b.h18082008',
+                role: 'IDOL',
+                checkedToday: false,
+                order: 4
+            },
+            {
+                id: 'acc_idol_4',
+                name: 'KHẢ HÂN',
+                handle: '@khahan0320',
+                url: 'https://www.tiktok.com/@khahan0320',
+                role: 'IDOL',
+                checkedToday: false,
+                order: 5
+            },
+            {
+                id: 'acc_idol_5',
+                name: 'YẾN LINH',
+                handle: '@linhyen659',
+                url: 'https://www.tiktok.com/@linhyen659',
+                role: 'IDOL',
+                checkedToday: false,
+                order: 6
+            },
+            {
+                id: 'acc_idol_6',
+                name: 'DIỄM HẰNG',
+                handle: '@tth.diim',
+                url: 'https://www.tiktok.com/@tth.diim',
+                role: 'IDOL',
+                checkedToday: false,
+                order: 7
+            }
+        ];
+
+        let accounts = [...DEFAULT_ACCOUNTS];
+        let posts = [];
+        let currentRoleFilter = 'ALL'; // 'ALL' | 'GROUP' | 'IDOL'
+
+        // ============================================================================
+        // 3. KẾT NỐI FIREBASE & LẮNG NGHE DỮ LIỆU THỜI GIAN THỰC (REALTIME)
+        // ============================================================================
+        function updateCloudBadge(status, text) {
+            const badge = document.getElementById('cloudStatusBadge');
+            const dot = document.getElementById('cloudStatusDot');
+            const label = document.getElementById('cloudStatusText');
+            if (!badge || !dot || !label) return;
+
+            label.textContent = text;
+            if (status === 'connected') {
+                badge.className = 'px-3 py-2 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/70 text-emerald-300 text-xs font-medium border border-emerald-700/60 transition flex items-center gap-2';
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+            } else if (status === 'error') {
+                badge.className = 'px-3 py-2 rounded-xl bg-rose-950/70 hover:bg-rose-900/80 text-rose-300 text-xs font-medium border border-rose-700/60 transition flex items-center gap-2';
+                dot.className = 'w-2 h-2 rounded-full bg-rose-400 animate-ping';
+            } else {
+                badge.className = 'px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-medium border border-slate-700 transition flex items-center gap-2';
+                dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+            }
+        }
+
+        async function initFirebaseAndSync() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    const cred = await signInWithCustomToken(auth, __initial_auth_token);
+                    currentUser = cred.user;
+                } else {
+                    const cred = await signInAnonymously(auth);
+                    currentUser = cred.user;
+                }
+            } catch (authErr) {
+                console.warn("Firebase Auth fallback (dành cho Vercel khi chưa bật Anonymous Auth):", authErr);
+                currentUser = auth.currentUser || { uid: 'vercel-public-' + crypto.randomUUID() };
+            }
+
+            const userId = auth.currentUser?.uid || currentUser?.uid || crypto.randomUUID();
+            const displayUserEl = document.getElementById('displayUserId');
+            if (displayUserEl) displayUserEl.textContent = userId;
+
+            if (!currentUser) return;
+
+            const accountsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'accounts');
+            const postsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'posts');
+
+            // Lắng nghe danh sách tài khoản theo thời gian thực
+            onSnapshot(
+                accountsColRef,
+                async (snapshot) => {
+                    updateCloudBadge('connected', 'Đã đồng bộ Firebase');
+                    if (snapshot.empty && !hasSeededInitialData) {
+                        hasSeededInitialData = true;
+                        await seedDefaultAccountsToCloud();
+                        return;
+                    }
+
+                    const loadedAccounts = [];
+                    snapshot.forEach((docSnap) => {
+                        loadedAccounts.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+
+                    // Sắp xếp Nhóm lên đầu, sau đó theo thứ tự
+                    loadedAccounts.sort((a, b) => {
+                        if (a.role === 'GROUP' && b.role !== 'GROUP') return -1;
+                        if (a.role !== 'GROUP' && b.role === 'GROUP') return 1;
+                        return (a.order || 99) - (b.order || 99);
+                    });
+
+                    if (loadedAccounts.length > 0) {
+                        accounts = loadedAccounts;
+                    }
+                    renderAccountsGrid();
+                    renderPostsTable();
+                    if (!document.getElementById('accountModal').classList.contains('hidden')) {
+                        renderModalAccountsList();
+                    }
+                },
+                (error) => {
+                    console.error("Lỗi đồng bộ Accounts từ Firestore:", error);
+                    updateCloudBadge('error', 'Cần mở quyền Firestore Rules');
+                    showToast('Chưa đọc được Firestore. Bấm vào nút trạng thái Cloud ở góc trên để xem cách bật Rules!', 'error');
+                }
+            );
+
+            // Lắng nghe danh sách bài đăng theo thời gian thực
+            onSnapshot(
+                postsColRef,
+                (snapshot) => {
+                    updateCloudBadge('connected', 'Đã đồng bộ Firebase');
+                    const loadedPosts = [];
+                    snapshot.forEach((docSnap) => {
+                        loadedPosts.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+
+                    // Sắp xếp bài mới nhất lên đầu trong bộ nhớ JS
+                    loadedPosts.sort((a, b) => {
+                        const dateCmp = (b.date || '').localeCompare(a.date || '');
+                        if (dateCmp !== 0) return dateCmp;
+                        return (b.updatedAt || 0) - (a.updatedAt || 0);
+                    });
+
+                    posts = loadedPosts;
+                    renderAccountsGrid();
+                    renderPostsTable();
+                },
+                (error) => {
+                    console.error("Lỗi đồng bộ Posts từ Firestore:", error);
+                    updateCloudBadge('error', 'Cần mở quyền Firestore Rules');
+                }
+            );
+        }
+
+        async function seedDefaultAccountsToCloud() {
+            if (!currentUser) return;
+            try {
+                for (const acc of DEFAULT_ACCOUNTS) {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', acc.id);
+                    await setDoc(docRef, acc);
+                }
+            } catch (err) {
+                console.error("Lỗi khởi tạo tài khoản mặc định:", err);
+            }
+        }
+
+        async function restoreDefaultAccounts() {
+            if (!currentUser) return;
+            await seedDefaultAccountsToCloud();
+            showToast('Đã khôi phục 7 tài khoản mặc định lên Firebase!');
+        }
+
+        // ============================================================================
+        // 4. HÀM TIỆN ÍCH & HIỂN THỊ THÔNG BÁO
+        // ============================================================================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-slate-900 text-white border-emerald-500' : 'bg-rose-600 text-white border-rose-400';
+            const iconClass = type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-white';
+
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border-l-4 ${bgClass} text-xs sm:text-sm font-medium transition-all duration-300`;
+            toast.innerHTML = `<i class="fa-solid ${iconClass}"></i><span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function formatDateVN(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function getAccountById(accId) {
+            return accounts.find(a => a.id === accId) || null;
+        }
+
+        function normalizeTikTokUrl(handle, customUrl) {
+            if (customUrl && customUrl.trim().startsWith('http')) {
+                return customUrl.trim();
+            }
+            const cleanHandle = handle.trim().startsWith('@') ? handle.trim() : `@${handle.trim()}`;
+            return `https://www.tiktok.com/${cleanHandle}`;
+        }
+
+        // ============================================================================
+        // 5. RENDER DANH SÁCH TÀI KHOẢN & HYPERLINK TIKTOK (CHỐNG SÓT BÀI)
+        // ============================================================================
+        function renderAccountsGrid() {
+            const grid = document.getElementById('accountsGrid');
+            grid.innerHTML = '';
+
+            accounts.forEach(acc => {
+                const accPosts = posts.filter(p => p.accountId === acc.id);
+                const postCount = accPosts.length;
+                const latestPost = accPosts.length > 0
+                    ? accPosts.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0]
+                    : null;
+
+                const isGroup = acc.role === 'GROUP';
+                const cardBg = isGroup
+                    ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border-indigo-500/40'
+                    : 'bg-white text-slate-800 border-slate-200/90';
+
+                const badgeHtml = isGroup
+                    ? `<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-pink-500 text-white">TÀI KHOẢN NHÓM</span>`
+                    : `<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-200">THÀNH VIÊN / IDOL</span>`;
+
+                const checkBtnClass = acc.checkedToday
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                    : (isGroup ? 'bg-white/10 text-slate-300 border-white/15 hover:bg-white/20' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100');
+
+                const checkBtnClassLight = acc.checkedToday
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100';
+
+                const activeCheckClass = isGroup ? checkBtnClass : checkBtnClassLight;
+
+                const card = document.createElement('div');
+                card.className = `rounded-2xl p-4 border shadow-xs transition tiktok-border flex flex-col justify-between gap-3 ${cardBg}`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            ${badgeHtml}
+                            <button onclick="toggleAccountChecked('${acc.id}')" 
+                                class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border transition flex items-center gap-1 ${activeCheckClass}"
+                                title="Đánh dấu đã kiểm tra kênh TikTok hôm nay để không bị miss bài">
+                                <i class="fa-solid ${acc.checkedToday ? 'fa-circle-check' : 'fa-clock'}"></i>
+                                <span>${acc.checkedToday ? 'Đã check hôm nay' : 'Chưa check'}</span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <h3 class="font-extrabold text-base tracking-tight ${isGroup ? 'text-white' : 'text-slate-900'}">
+                                    ${acc.name}
+                                </h3>
+                                <!-- HYPERLINK TRỰC TIẾP ĐẾN TRANG TIKTOK -->
+                                <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
+                                    onclick="markAccountCheckedOnVisit('${acc.id}')"
+                                    class="inline-flex items-center gap-1.5 text-xs font-semibold mt-0.5 ${isGroup ? 'text-cyan-300 hover:text-pink-300' : 'text-pink-600 hover:text-indigo-600'} hover:underline break-all">
+                                    <i class="fa-brands fa-tiktok text-[11px]"></i>
+                                    <span>${acc.handle}</span>
+                                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                                </a>
+                            </div>
+
+                            <button onclick="quickSelectAccountForPost('${acc.id}')"
+                                class="text-xs px-2.5 py-1.5 rounded-xl font-semibold transition shrink-0 ${isGroup ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-700'}"
+                                title="Điền bài đăng mới cho ${acc.name}">
+                                + Bài mới
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pt-2.5 border-t ${isGroup ? 'border-white/10 text-slate-300' : 'border-slate-100 text-slate-500'} flex items-center justify-between text-xs">
+                        <span>Đã lưu: <strong class="${isGroup ? 'text-white' : 'text-slate-800'}">${postCount} bài</strong></span>
+                        <span>${latestPost ? 'Gần nhất: ' + formatDateVN(latestPost.date) : 'Chưa có bài lưu'}</span>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            updateDashboardStats();
+            populateAccountSelects();
+        }
+
+        // Khi người dùng bấm vào hyperlink TikTok, tự động đánh dấu "Đã check hôm nay" và lưu lên Firebase
+        async function markAccountCheckedOnVisit(accId) {
+            if (!currentUser) return;
+            const acc = getAccountById(accId);
+            if (acc && !acc.checkedToday) {
+                acc.checkedToday = true;
+                renderAccountsGrid();
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
+                    await setDoc(docRef, { ...acc, checkedToday: true }, { merge: true });
+                    showToast(`Đã mở kênh ${acc.name} & lưu trạng thái đã kiểm tra!`);
+                } catch (err) {
+                    console.error("Lỗi cập nhật trạng thái check:", err);
+                }
+            }
+        }
+
+        async function toggleAccountChecked(accId) {
+            if (!currentUser) return;
+            const acc = getAccountById(accId);
+            if (!acc) return;
+            const newStatus = !acc.checkedToday;
+            acc.checkedToday = newStatus;
+            renderAccountsGrid();
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
+                await setDoc(docRef, { ...acc, checkedToday: newStatus }, { merge: true });
+            } catch (err) {
+                console.error("Lỗi lưu trạng thái check:", err);
+                showToast('Không thể lưu trạng thái lên Firebase.', 'error');
+            }
+        }
+
+        async function resetDailyChecks() {
+            if (!currentUser) return;
+            accounts.forEach(a => a.checkedToday = false);
+            renderAccountsGrid();
+            try {
+                for (const acc of accounts) {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', acc.id);
+                    await setDoc(docRef, { ...acc, checkedToday: false }, { merge: true });
+                }
+                showToast('Đã làm mới trạng thái kiểm tra kênh cho ngày mới trên Cloud!');
+            } catch (err) {
+                console.error("Lỗi reset check:", err);
+                showToast('Lỗi khi đồng bộ trạng thái reset lên Firebase.', 'error');
+            }
+        }
+
+        function quickSelectAccountForPost(accId) {
+            const select = document.getElementById('postAccount');
+            select.value = accId;
+            updateFormAccountPreview();
+            scrollToPostForm();
+            document.getElementById('postCategory').focus();
+        }
+
+        function scrollToPostForm() {
+            document.getElementById('postFormSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // ============================================================================
+        // 6. ĐỒNG BỘ DROPDOWN TÀI KHOẢN & THỐNG KÊ
+        // ============================================================================
+        function populateAccountSelects() {
+            const postAccountSelect = document.getElementById('postAccount');
+            const filterAccountSelect = document.getElementById('filterAccount');
+
+            const currentPostAcc = postAccountSelect.value;
+            const currentFilterAcc = filterAccountSelect.value || 'ALL';
+
+            const groupAccounts = accounts.filter(a => a.role === 'GROUP');
+            const idolAccounts = accounts.filter(a => a.role === 'IDOL');
+
+            let formOptionsHtml = '';
+            if (groupAccounts.length > 0) {
+                formOptionsHtml += `<optgroup label="👥 TÀI KHOẢN NHÓM">`;
+                groupAccounts.forEach(a => {
+                    formOptionsHtml += `<option value="${a.id}">${a.name} (${a.handle})</option>`;
+                });
+                formOptionsHtml += `</optgroup>`;
+            }
+            if (idolAccounts.length > 0) {
+                formOptionsHtml += `<optgroup label="🌟 TÀI KHOẢN THÀNH VIÊN / IDOL">`;
+                idolAccounts.forEach(a => {
+                    formOptionsHtml += `<option value="${a.id}">${a.name} (${a.handle})</option>`;
+                });
+                formOptionsHtml += `</optgroup>`;
+            }
+
+            postAccountSelect.innerHTML = formOptionsHtml;
+            if (currentPostAcc && accounts.some(a => a.id === currentPostAcc)) {
+                postAccountSelect.value = currentPostAcc;
+            }
+
+            let filterOptionsHtml = `<option value="ALL">👤 Tất cả thành viên & nhóm (${accounts.length})</option>`;
+            accounts.forEach(a => {
+                const prefix = a.role === 'GROUP' ? '👥 [Nhóm]' : '🌟 [Idol]';
+                filterOptionsHtml += `<option value="${a.id}">${prefix} ${a.name} (${a.handle})</option>`;
+            });
+            filterAccountSelect.innerHTML = filterOptionsHtml;
+            if (currentFilterAcc === 'ALL' || accounts.some(a => a.id === currentFilterAcc)) {
+                filterAccountSelect.value = currentFilterAcc;
+            }
+
+            updateFormAccountPreview();
+        }
+
+        function updateFormAccountPreview() {
+            const accId = document.getElementById('postAccount').value;
+            const acc = getAccountById(accId);
+            const previewLink = document.getElementById('formAccountPreviewLink');
+            if (acc && previewLink) {
+                previewLink.href = acc.url;
+                previewLink.innerHTML = `<span>Mở ${acc.handle}</span> <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>`;
+            }
+        }
+
+        function updateDashboardStats() {
+            const totalAcc = accounts.length;
+            const groupCount = accounts.filter(a => a.role === 'GROUP').length;
+            const idolCount = accounts.filter(a => a.role === 'IDOL').length;
+            const checkedCount = accounts.filter(a => a.checkedToday).length;
+
+            document.getElementById('statTotalAccounts').textContent = totalAcc;
+            document.getElementById('statAccountBreakdown').textContent = `${groupCount} Nhóm • ${idolCount} Idol`;
+            document.getElementById('statCheckedToday').textContent = `${checkedCount}/${totalAcc}`;
+
+            const uncheckedAlert = document.getElementById('statUncheckedAlert');
+            const unchecked = totalAcc - checkedCount;
+            if (unchecked === 0 && totalAcc > 0) {
+                uncheckedAlert.textContent = 'Đã check đủ 100%!';
+                uncheckedAlert.className = 'text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full';
+            } else {
+                uncheckedAlert.textContent = `Còn ${unchecked} kênh chưa check`;
+                uncheckedAlert.className = 'text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full';
+            }
+
+            const totalPosts = posts.length;
+            const groupPosts = posts.filter(p => {
+                const a = getAccountById(p.accountId);
+                return a && a.role === 'GROUP';
+            }).length;
+            const idolPosts = totalPosts - groupPosts;
+
+            document.getElementById('statTotalPosts').textContent = totalPosts;
+            document.getElementById('statGroupVsIdolPosts').textContent = `Nhóm: ${groupPosts} • Idol: ${idolPosts}`;
+
+            const pendingPosts = posts.filter(p => p.status !== 'ĐÃ ĐĂNG').length;
+            document.getElementById('statPendingPosts').textContent = pendingPosts;
+        }
+
+        // ============================================================================
+        // 7. QUẢN LÝ BÀI ĐĂNG (THÊM, SỬA, XÓA LÊN FIREBASE FIRESTORE)
+        // ============================================================================
+        function setCategoryQuick(categoryName) {
+            const input = document.getElementById('postCategory');
+            input.value = categoryName;
+            input.focus();
+        }
+
+        async function handlePostSubmit(event) {
+            event.preventDefault();
+            if (!currentUser) {
+                showToast('Đang kết nối Firebase, vui lòng thử lại sau giây lát!', 'error');
+                return;
+            }
+
+            const editingId = document.getElementById('editingPostId').value;
+            const date = document.getElementById('postDate').value;
+            const accountId = document.getElementById('postAccount').value;
+            const category = document.getElementById('postCategory').value.trim();
+            const link = document.getElementById('postLink').value.trim();
+            const status = document.getElementById('postStatus').value;
+            const note = document.getElementById('postNote').value.trim();
+
+            if (!date || !accountId || !category) {
+                showToast('Vui lòng điền đầy đủ Ngày đăng, Tài khoản và Hạng mục!', 'error');
+                return;
+            }
+
+            const postId = editingId ? editingId : 'post_' + Date.now();
+            const postData = {
+                id: postId,
+                date,
+                accountId,
+                category,
+                link,
+                status,
+                note,
+                updatedAt: Date.now()
+            };
+
+            try {
+                const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
+                await setDoc(postDocRef, postData);
+
+                if (editingId) {
+                    showToast('Đã cập nhật bài đăng lên Firebase!');
+                } else {
+                    const acc = getAccountById(accountId);
+                    if (acc && !acc.checkedToday) {
+                        const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accountId);
+                        await setDoc(accDocRef, { ...acc, checkedToday: true }, { merge: true });
+                    }
+                    showToast(`Đã lưu bài đăng mới của ${acc ? acc.name : 'kênh'} lên Cloud!`);
+                }
+                resetPostForm();
+            } catch (err) {
+                console.error("Lỗi lưu bài đăng lên Firestore:", err);
+                showToast('Không thể lưu lên Firebase! Hãy kiểm tra Firestore Rules.', 'error');
+                openCloudHelpModal();
+            }
+        }
+
+        function editPost(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            document.getElementById('editingPostId').value = post.id;
+            document.getElementById('postDate').value = post.date;
+            document.getElementById('postAccount').value = post.accountId;
+            document.getElementById('postCategory').value = post.category;
+            document.getElementById('postLink').value = post.link || '';
+            document.getElementById('postStatus').value = post.status;
+            document.getElementById('postNote').value = post.note || '';
+
+            updateFormAccountPreview();
+
+            document.getElementById('formTitle').innerHTML = `
+                <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-pen"></i>
+                </span>
+                <span>Chỉnh Sửa Bài Đăng</span>
+            `;
+            document.getElementById('submitPostBtn').innerHTML = `
+                <i class="fa-solid fa-check"></i>
+                <span>Cập Nhật Bài Đăng</span>
+            `;
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            scrollToPostForm();
+        }
+
+        async function deletePost(postId) {
+            if (!currentUser) return;
+            try {
+                const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
+                await deleteDoc(postDocRef);
+                showToast('Đã xóa bài đăng khỏi Firebase.');
+            } catch (err) {
+                console.error("Lỗi xóa bài đăng:", err);
+                showToast('Không thể xóa bài đăng trên Firebase.', 'error');
+            }
+        }
+
+        function resetPostForm() {
+            document.getElementById('editingPostId').value = '';
+            document.getElementById('postDate').value = todayStr;
+            document.getElementById('postCategory').value = '';
+            document.getElementById('postLink').value = '';
+            document.getElementById('postStatus').value = 'ĐÃ ĐĂNG';
+            document.getElementById('postNote').value = '';
+
+            document.getElementById('formTitle').innerHTML = `
+                <span class="w-7 h-7 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-plus"></i>
+                </span>
+                <span>Điền Bài Đăng Mới</span>
+            `;
+            document.getElementById('submitPostBtn').innerHTML = `
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>Lưu Bài Đăng Vào Bảng</span>
+            `;
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+        }
+
+        function setRoleFilter(role) {
+            currentRoleFilter = role;
+            const tabs = {
+                ALL: document.getElementById('tabFilterAll'),
+                GROUP: document.getElementById('tabFilterGroup'),
+                IDOL: document.getElementById('tabFilterIdol')
+            };
+
+            Object.keys(tabs).forEach(key => {
+                if (key === role) {
+                    tabs[key].className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition';
+                } else {
+                    tabs[key].className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
+                }
+            });
+
+            renderPostsTable();
+        }
+
+        function getStatusBadgeHtml(status) {
+            switch (status) {
+                case 'ĐÃ ĐĂNG':
+                    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-circle-check"></i> ĐÃ ĐĂNG</span>`;
+                case 'LÊN LỊCH':
+                    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200"><i class="fa-solid fa-clock"></i> LÊN LỊCH</span>`;
+                case 'CẦN KIỂM TRA':
+                    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200"><i class="fa-solid fa-triangle-exclamation"></i> CẦN CHECK</span>`;
+                default:
+                    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200"><i class="fa-solid fa-file-pen"></i> NHÁP</span>`;
+            }
+        }
+
+        function renderPostsTable() {
+            const tbody = document.getElementById('postsTableBody');
+            const selectedAccount = document.getElementById('filterAccount').value;
+            const selectedStatus = document.getElementById('filterStatus').value;
+            const searchQuery = document.getElementById('filterSearch').value.trim().toLowerCase();
+
+            const filtered = posts.filter(post => {
+                const acc = getAccountById(post.accountId);
+                if (currentRoleFilter !== 'ALL' && (!acc || acc.role !== currentRoleFilter)) {
+                    return false;
+                }
+                if (selectedAccount !== 'ALL' && post.accountId !== selectedAccount) {
+                    return false;
+                }
+                if (selectedStatus !== 'ALL' && post.status !== selectedStatus) {
+                    return false;
+                }
+                if (searchQuery) {
+                    const hay = `${post.category} ${post.note} ${acc ? acc.name : ''} ${acc ? acc.handle : ''}`.toLowerCase();
+                    if (!hay.includes(searchQuery)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-10 text-center text-slate-400">
+                            <div class="flex flex-col items-center gap-2">
+                                <i class="fa-solid fa-folder-open text-2xl text-slate-300"></i>
+                                <p class="text-sm font-medium text-slate-500">Chưa có bài đăng nào trong danh sách hiện tại.</p>
+                                <p class="text-xs text-slate-400">Hãy điền bài đăng mới ở khung bên trái để lưu lên Firebase!</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            filtered.forEach(post => {
+                const acc = getAccountById(post.accountId);
+                const accName = acc ? acc.name : 'Không xác định';
+                const accHandle = acc ? acc.handle : '';
+                const accUrl = acc ? acc.url : '#';
+                const isGroup = acc && acc.role === 'GROUP';
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/90 transition';
+
+                const linkCellHtml = post.link
+                    ? `<a href="${post.link}" target="_blank" rel="noopener noreferrer"
+                          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-600 font-semibold text-xs transition">
+                          <i class="fa-brands fa-tiktok"></i>
+                          <span>Mở bài đăng</span>
+                          <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                       </a>`
+                    : `<span class="text-xs text-slate-400 italic">Chưa gắn link</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-3.5 px-3.5 font-semibold text-slate-700 whitespace-nowrap">
+                        ${formatDateVN(post.date)}
+                    </td>
+                    <td class="py-3.5 px-3.5">
+                        <div class="flex flex-col">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${isGroup ? 'bg-slate-900 text-white' : 'bg-indigo-50 text-indigo-600'}">
+                                    ${isGroup ? 'NHÓM' : 'IDOL'}
+                                </span>
+                                <span class="font-bold text-slate-900">${accName}</span>
+                            </div>
+                            <!-- HYPERLINK ĐẾN TRANG TIKTOK CỦA NHÓM HOẶC IDOL -->
+                            <a href="${accUrl}" target="_blank" rel="noopener noreferrer"
+                                onclick="markAccountCheckedOnVisit('${acc ? acc.id : ''}')"
+                                class="text-xs font-semibold text-indigo-600 hover:text-pink-600 hover:underline inline-flex items-center gap-1 mt-0.5 w-fit">
+                                <span>${accHandle}</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                            </a>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-3.5">
+                        <span class="inline-block px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-semibold text-xs">
+                            ${post.category}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-3.5 whitespace-nowrap">
+                        ${linkCellHtml}
+                    </td>
+                    <td class="py-3.5 px-3.5 whitespace-nowrap">
+                        ${getStatusBadgeHtml(post.status)}
+                    </td>
+                    <td class="py-3.5 px-3.5 text-xs text-slate-600 max-w-[200px]">
+                        ${post.note ? post.note : '<span class="text-slate-300">—</span>'}
+                    </td>
+                    <td class="py-3.5 px-3.5 text-right whitespace-nowrap">
+                        <div class="inline-flex items-center gap-1">
+                            <button onclick="editPost('${post.id}')" class="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition" title="Sửa bài đăng">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deletePost('${post.id}')" class="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition" title="Xóa bài đăng">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ============================================================================
+        // 8. QUẢN LÝ TÀI KHOẢN & HYPERLINK MODAL (LƯU LÊN FIREBASE)
+        // ============================================================================
+        function openAccountModal() {
+            document.getElementById('accountModal').classList.remove('hidden');
+            renderModalAccountsList();
+        }
+
+        function closeAccountModal() {
+            document.getElementById('accountModal').classList.add('hidden');
+            resetAccountForm();
+        }
+
+        function openCloudHelpModal() {
+            document.getElementById('cloudHelpModal').classList.remove('hidden');
+        }
+
+        function closeCloudHelpModal() {
+            document.getElementById('cloudHelpModal').classList.add('hidden');
+        }
+
+        function autoFillProfileUrl() {
+            const handleInput = document.getElementById('accHandle').value.trim();
+            const urlInput = document.getElementById('accUrl');
+            if (handleInput) {
+                const clean = handleInput.startsWith('@') ? handleInput : `@${handleInput}`;
+                urlInput.value = `https://www.tiktok.com/${clean}`;
+            }
+        }
+
+        async function handleAccountSubmit(event) {
+            event.preventDefault();
+            if (!currentUser) return;
+
+            const editId = document.getElementById('editAccountId').value;
+            const role = document.getElementById('accRole').value;
+            const name = document.getElementById('accName').value.trim().toUpperCase();
+            let handle = document.getElementById('accHandle').value.trim();
+            if (!handle.startsWith('@')) handle = '@' + handle;
+            const url = normalizeTikTokUrl(handle, document.getElementById('accUrl').value);
+
+            const accId = editId ? editId : 'acc_' + Date.now();
+            const existingAcc = getAccountById(accId);
+
+            const accData = {
+                id: accId,
+                role,
+                name,
+                handle,
+                url,
+                checkedToday: existingAcc ? !!existingAcc.checkedToday : false,
+                order: existingAcc && existingAcc.order ? existingAcc.order : accounts.length + 1
+            };
+
+            try {
+                const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
+                await setDoc(accDocRef, accData);
+                showToast(editId ? `Đã cập nhật hyperlink cho ${name} lên Firebase!` : `Đã thêm tài khoản ${name} lên Firebase!`);
+                resetAccountForm();
+            } catch (err) {
+                console.error("Lỗi lưu tài khoản:", err);
+                showToast('Không thể lưu tài khoản lên Firebase. Hãy kiểm tra Firestore Rules!', 'error');
+            }
+        }
+
+        function editAccountInModal(accId) {
+            const acc = getAccountById(accId);
+            if (!acc) return;
+
+            document.getElementById('editAccountId').value = acc.id;
+            document.getElementById('accRole').value = acc.role;
+            document.getElementById('accName').value = acc.name;
+            document.getElementById('accHandle').value = acc.handle;
+            document.getElementById('accUrl').value = acc.url;
+
+            document.getElementById('accountFormHeading').textContent = `✏️ Đang sửa tài khoản: ${acc.name}`;
+            document.getElementById('saveAccountBtn').innerHTML = `<i class="fa-solid fa-check"></i><span>Cập Nhật Tài Khoản</span>`;
+            document.getElementById('cancelAccountEditBtn').classList.remove('hidden');
+        }
+
+        async function deleteAccountInModal(accId) {
+            if (!currentUser) return;
+            if (accounts.length <= 1) {
+                showToast('Cần giữ lại ít nhất 1 tài khoản!', 'error');
+                return;
+            }
+            const acc = getAccountById(accId);
+            try {
+                const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
+                await deleteDoc(accDocRef);
+                showToast(`Đã xóa tài khoản ${acc ? acc.name : ''} khỏi Firebase.`);
+            } catch (err) {
+                console.error("Lỗi xóa tài khoản:", err);
+                showToast('Không thể xóa tài khoản trên Firebase.', 'error');
+            }
+        }
+
+        function resetAccountForm() {
+            document.getElementById('editAccountId').value = '';
+            document.getElementById('accRole').value = 'IDOL';
+            document.getElementById('accName').value = '';
+            document.getElementById('accHandle').value = '';
+            document.getElementById('accUrl').value = '';
+            document.getElementById('accountFormHeading').textContent = '+ Thêm Hoặc Cập Nhật Tài Khoản';
+            document.getElementById('saveAccountBtn').innerHTML = `<i class="fa-solid fa-check"></i><span>Lưu Tài Khoản</span>`;
+            document.getElementById('cancelAccountEditBtn').classList.add('hidden');
+        }
+
+        function renderModalAccountsList() {
+            const container = document.getElementById('modalAccountsList');
+            container.innerHTML = '';
+
+            accounts.forEach(acc => {
+                const isGroup = acc.role === 'GROUP';
+                const row = document.createElement('div');
+                row.className = 'p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 hover:bg-slate-50 transition';
+                row.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded w-fit ${isGroup ? 'bg-pink-600 text-white' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'}">
+                            ${isGroup ? 'TÀI KHOẢN NHÓM' : 'IDOL'}
+                        </span>
+                        <span class="font-bold text-sm text-slate-900">${acc.name}</span>
+                        <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
+                            class="text-xs font-semibold text-pink-600 hover:underline flex items-center gap-1">
+                            <i class="fa-brands fa-tiktok"></i>
+                            <span>${acc.handle}</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        </a>
+                        <span class="text-xs text-slate-400 truncate max-w-xs hidden md:inline">(${acc.url})</span>
+                    </div>
+                    <div class="flex items-center gap-2 self-end sm:self-auto">
+                        <button onclick="editAccountInModal('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 text-xs font-semibold transition">
+                            Sửa Link / ID
+                        </button>
+                        <button onclick="deleteAccountInModal('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs font-semibold transition">
+                            Xóa
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // ============================================================================
+        // 9. XUẤT FILE CSV (TƯƠNG THÍCH BẢNG EXCEL MEDIA CỦA BẠN)
+        // ============================================================================
+        function exportToCSV() {
+            const headers = ['NGÀY ĐĂNG', 'PHÂN LOẠI', 'TÀI KHOẢN', 'ID TIKTOK', 'LINK KÊNH TIKTOK', 'HẠNG MỤC', 'LINK BÀI ĐĂNG', 'TRẠNG THÁI', 'GHI CHÚ'];
+            const rows = posts.map(p => {
+                const acc = getAccountById(p.accountId);
+                return [
+                    formatDateVN(p.date),
+                    acc && acc.role === 'GROUP' ? 'TÀI KHOẢN NHÓM' : 'THÀNH VIÊN',
+                    acc ? acc.name : '',
+                    acc ? acc.handle : '',
+                    acc ? acc.url : '',
+                    p.category,
+                    p.link || '',
+                    p.status,
+                    p.note || ''
+                ];
+            });
+
+            const csvContent = '\uFEFF' + [headers, ...rows]
+                .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                .join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `MEDIA_THE_AURA_${todayStr}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Đã xuất file Excel (CSV) thành công!');
+        }
+
+        // ============================================================================
+        // GẮN HÀM VÀO WINDOW ĐỂ TƯƠNG THÍCH VỚI SỰ KIỆN ONCLICK TRONG HTML
+        // ============================================================================
+        window.openAccountModal = openAccountModal;
+        window.closeAccountModal = closeAccountModal;
+        window.openCloudHelpModal = openCloudHelpModal;
+        window.closeCloudHelpModal = closeCloudHelpModal;
+        window.exportToCSV = exportToCSV;
+        window.scrollToPostForm = scrollToPostForm;
+        window.resetDailyChecks = resetDailyChecks;
+        window.resetPostForm = resetPostForm;
+        window.handlePostSubmit = handlePostSubmit;
+        window.updateFormAccountPreview = updateFormAccountPreview;
+        window.setCategoryQuick = setCategoryQuick;
+        window.setRoleFilter = setRoleFilter;
+        window.renderPostsTable = renderPostsTable;
+        window.handleAccountSubmit = handleAccountSubmit;
+        window.resetAccountForm = resetAccountForm;
+        window.autoFillProfileUrl = autoFillProfileUrl;
+        window.toggleAccountChecked = toggleAccountChecked;
+        window.markAccountCheckedOnVisit = markAccountCheckedOnVisit;
+        window.quickSelectAccountForPost = quickSelectAccountForPost;
+        window.editPost = editPost;
+        window.deletePost = deletePost;
+        window.editAccountInModal = editAccountInModal;
+        window.deleteAccountInModal = deleteAccountInModal;
+        window.restoreDefaultAccounts = restoreDefaultAccounts;
+
+        // ============================================================================
+        // KHỞI CHẠY ỨNG DỤNG KHI TẢI TRANG
+        // ============================================================================
+        window.onload = function () {
+            document.getElementById('postDate').value = todayStr;
+            renderAccountsGrid();
+            renderPostsTable();
+            initFirebaseAndSync();
+        };
+    </script>
+</body>
+</html>
