@@ -234,6 +234,47 @@
             animation: confirmBarSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
+        /* Hiệu ứng xổ xuống / rút lên đàn hồi mượt mà cho Group Accordion (Thứ 8) */
+        .group-accordion-spring {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.42s cubic-bezier(0.34, 1.25, 0.64, 1), opacity 0.28s ease;
+            opacity: 0.96;
+        }
+        .group-accordion-spring.is-open {
+            grid-template-rows: 1fr;
+            opacity: 1;
+        }
+        .group-accordion-inner {
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* Thẻ hoàn thành KPI đủ 2 bài nổi bật (Thứ 4) */
+        .kpi-card-done {
+            position: relative;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.03) 100%);
+            border: 2px solid #10b981 !important;
+            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.16), 0 4px 10px -3px rgba(16, 185, 129, 0.08);
+        }
+        html.dark .kpi-card-done {
+            background: linear-gradient(135deg, rgba(6, 78, 59, 0.35) 0%, rgba(15, 23, 42, 0.95) 100%);
+            border-color: #059669 !important;
+            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.25);
+        }
+        .kpi-card-done::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, transparent 50%, #10b981 50%);
+            border-top-right-radius: 14px;
+            pointer-events: none;
+            opacity: 0.9;
+        }
+
         /* Hiệu ứng thu gọn khung mượt mà khi xóa bài đăng */
         .post-item-collapsible {
             transition:
@@ -310,8 +351,14 @@
                 <!-- Google Sheets Import Button -->
                 <button onclick="openGoogleSheetModal()" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer" title="Nhập dữ liệu từ Google Sheets (Phím tắt: G)">
                     <i class="fa-solid fa-file-excel text-emerald-200"></i>
-                    <span>Nhập Google Sheet</span>
+                    <span>Nhập Sheet</span>
                     <kbd class="hidden sm:inline-block text-[9px] font-mono bg-black/20 px-1 py-0.5 rounded text-emerald-100">G</kbd>
+                </button>
+
+                <!-- Google Sheets Export / Excel Button (Thứ 6) -->
+                <button onclick="openExportSheetModal()" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer" title="Xuất dữ liệu ra Google Sheets hoặc file Excel (.xlsx)">
+                    <i class="fa-solid fa-file-export text-teal-200"></i>
+                    <span>Xuất Sheet</span>
                 </button>
 
                 <!-- Dark / Light Mode Toggle Button -->
@@ -417,6 +464,47 @@
 
     <!-- MAIN CONTENT CONTAINER -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
+
+        <!-- BANNER CHUYÊN BIỆT CHO NHÂN SỰ VẬN HÀNH NHÓM (KHI MỞ LINK RIÊNG ?group=...) (THỨ 7) -->
+        <section id="groupOperatorBanner" class="hidden p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-pink-950 text-white shadow-xl border-2 border-pink-500/40">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-start sm:items-center gap-3.5 min-w-0">
+                    <div id="operatorBannerIcon" class="w-12 h-12 rounded-2xl bg-pink-500/20 border border-pink-400/40 flex items-center justify-center text-2xl shrink-0 shadow-inner">
+                        ✨
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-pink-600 text-white shadow-xs">
+                                DÀNH RIÊNG CHO VẬN HÀNH
+                            </span>
+                            <h2 id="operatorBannerTitle" class="text-base sm:text-lg font-black tracking-tight text-white">
+                                KHU VỰC VẬN HÀNH & KIỂM TRA: NHÓM ANGELIK
+                            </h2>
+                        </div>
+                        <p id="operatorBannerDesc" class="text-xs text-pink-200/90 mt-1">
+                            👋 Chào bạn phụ trách! Đây là link kiểm tra riêng của nhóm. Bạn có thể dán link TikTok hoặc bấm "+ Bài" trên từng Idol để cập nhật tiến độ bài đăng tuần này.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 self-start md:self-auto shrink-0">
+                    <button type="button" id="operatorAddPostBtn" onclick="openIdolDetailModal(null, true)"
+                        class="h-9 px-4 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-400 hover:to-rose-500 text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Điền Bài Mới Cho Nhóm</span>
+                    </button>
+                    <button type="button" id="operatorCopyReportBtn" onclick="copyCurrentOperatorGroupReport()"
+                        class="h-9 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                        title="Sao chép tiến độ nhóm này gửi quản lý">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Copy Báo Cáo Nhóm</span>
+                    </button>
+                    <a href="idol_tracker.html" class="h-9 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition flex items-center gap-1" title="Quay lại xem toàn bộ 6 nhóm">
+                        <span>Tất cả nhóm</span>
+                    </a>
+                </div>
+            </div>
+        </section>
 
         <!-- TOP QUICK SMART PASTE BAR: DÁN NHANH LINK TIKTOK ĐẶT LÊN ĐẦU TRANG (THỨ 5) -->
         <section class="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 rounded-2xl p-4 sm:px-5 sm:py-4 shadow-md border border-indigo-500/30 text-white">
@@ -569,17 +657,23 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
-                <div>
-                    <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Đã Check Kênh Hôm Nay</p>
-                    <div class="flex items-baseline gap-2 mt-1">
-                        <p id="statCheckedToday" class="text-2xl font-extrabold text-slate-900">0/43</p>
-                        <span id="statUncheckedAlert" class="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Cần check!</span>
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                <div class="min-w-0">
+                    <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Báo Cáo & Vận Hành</p>
+                    <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                        <button onclick="copyGroupKpiReport('ALL')" class="h-8 px-2.5 rounded-xl bg-pink-50 hover:bg-pink-100 dark:bg-pink-950/60 dark:hover:bg-pink-900/80 text-pink-700 dark:text-pink-300 text-xs font-extrabold border border-pink-200 dark:border-pink-800 transition flex items-center gap-1 cursor-pointer" title="Sao chép danh sách ai thiếu & đủ để gửi cho vận hành (Phím: C)">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Copy Báo Cáo</span>
+                        </button>
+                        <button onclick="openExportSheetModal()" class="h-8 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold border border-emerald-200 dark:border-emerald-800 transition flex items-center gap-1 cursor-pointer" title="Xuất file Excel hoặc bảng Google Sheets">
+                            <i class="fa-solid fa-file-export"></i>
+                            <span>Xuất Sheet</span>
+                        </button>
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Bấm vào thẻ Idol để xem & duyệt</p>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 truncate">Gửi nhanh data ai thiếu / ai đủ</p>
                 </div>
-                <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg shrink-0">
-                    <i class="fa-solid fa-clipboard-check"></i>
+                <div class="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg shrink-0 ml-2">
+                    <i class="fa-solid fa-paper-plane"></i>
                 </div>
             </div>
         </section>
@@ -607,9 +701,19 @@
                         <span>Thêm Bài Mới</span>
                     </button>
 
-                    <button type="button" onclick="openGoogleSheetModal()" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer">
-                        <i class="fa-solid fa-file-excel"></i>
-                        <span>Nhập Google Sheet</span>
+                    <button type="button" onclick="openAccountModal()" class="h-9 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer" title="Thêm Idol mới hoặc Kênh nhóm mới">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>+ Thêm Idol / Nhóm</span>
+                    </button>
+
+                    <button type="button" onclick="openExportSheetModal()" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer" title="Xuất dữ liệu cho vận hành (Google Sheet / Excel)">
+                        <i class="fa-solid fa-file-export"></i>
+                        <span>Xuất Sheet</span>
+                    </button>
+
+                    <button type="button" onclick="copyGroupKpiReport('ALL')" class="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer" title="Sao chép báo cáo KPI tuần của tất cả 6 nhóm">
+                        <i class="fa-solid fa-copy text-pink-500"></i>
+                        <span>Copy Báo Cáo</span>
                     </button>
 
                     <button type="button" onclick="toggleAllGroupCards()" id="toggleAllGroupsBtn" class="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
@@ -1292,6 +1396,86 @@
         </div>
     </div>
 
+    <!-- MODAL XUẤT DỮ LIỆU GOOGLE SHEETS & EXCEL (THỨ 6) -->
+    <div id="exportSheetModal" onclick="if(event.target===this)closeExportSheetModal()" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
+            <div class="px-6 py-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-700 text-white flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-file-export"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-extrabold flex items-center gap-2">
+                            <span>Xuất Báo Cáo Google Sheets & Excel</span>
+                        </h3>
+                        <p class="text-xs text-emerald-100 mt-0.5">
+                            Gửi dữ liệu trực tiếp cho nhân sự vận hành nắm rõ ai thiếu và ai đủ KPI
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeExportSheetModal()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 sm:p-6 space-y-4 overflow-y-auto text-xs sm:text-sm">
+                <!-- Card 1: Copy Bảng Để Dán Vào Google Sheets -->
+                <div class="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="font-extrabold text-sm text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+                            <i class="fa-brands fa-google-drive text-emerald-600"></i>
+                            <span>Dán Trực Tiếp Vào Google Sheets (1 Click)</span>
+                        </div>
+                        <span class="text-[10px] bg-emerald-200/80 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 px-2 py-0.5 rounded-full font-bold">Khuyên dùng</span>
+                    </div>
+                    <p class="text-xs text-slate-600 dark:text-slate-300">
+                        Sao chép toàn bộ bảng tiến độ tuần gồm: Nhóm, Idol, Đủ/Thiếu, Link bài dạng cột chuẩn. Bạn chỉ cần mở Google Sheet & bấm <kbd class="px-1.5 py-0.5 bg-white dark:bg-slate-800 border rounded font-mono font-bold">Ctrl + V</kbd> là dán đẹp ngay lập tức.
+                    </p>
+                    <button type="button" onclick="copyTableForGoogleSheets()" class="w-full mt-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Sao Chép Bảng Cho Google Sheets (Ctrl + V)</span>
+                    </button>
+                </div>
+
+                <!-- Card 2: Tải File Excel .xlsx Đầy Đủ 2 Sheet -->
+                <div class="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 space-y-2">
+                    <div class="font-extrabold text-sm text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel text-indigo-600"></i>
+                        <span>Tải File Excel (.xlsx) Đầy Đủ</span>
+                    </div>
+                    <p class="text-xs text-slate-600 dark:text-slate-300">
+                        File Excel gồm 2 Sheet: Sheet 1 là <strong>TIẾN ĐỘ KPI (Đủ / Thiếu)</strong> và Sheet 2 là <strong>CHI TIẾT BÀI ĐĂNG</strong> đầy đủ link và ngày đăng.
+                    </p>
+                    <button type="button" onclick="downloadFullExcelFile()" class="w-full mt-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Tải File Excel .xlsx Về Máy</span>
+                    </button>
+                </div>
+
+                <!-- Card 3: Copy Báo Cáo Dạng Tin Nhắn Telegram / Zalo -->
+                <div class="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
+                    <div class="font-extrabold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-comments text-pink-500"></i>
+                        <span>Báo Cáo Tin Nhắn Gửi Cho Vận Hành (Thứ 3)</span>
+                    </div>
+                    <p class="text-xs text-slate-600 dark:text-slate-300">
+                        Sao chép định dạng text chuẩn: <em>"Tài khoản nhóm: Thiếu 1 bài, đã đăng 1 bài vào 19/10... Nya: Thiếu 2 bài... Koni: Đăng đủ"</em> để gửi qua Zalo / Messenger.
+                    </p>
+                    <button type="button" onclick="copyGroupKpiReport('ALL')" class="w-full mt-2 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        <span>Sao Chép Tin Nhắn Báo Cáo 6 Nhóm</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                <button type="button" onclick="closeExportSheetModal()" class="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold transition cursor-pointer">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL NHẬP DỮ LIỆU TỪ GOOGLE SHEETS -->
     <div id="googleSheetModal" onclick="if(event.target===this)closeGoogleSheetModal()" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
         <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
@@ -1599,10 +1783,17 @@
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">Hyperlink Trang TikTok *</label>
-                        <input type="url" id="accUrl" required placeholder="https://www.tiktok.com/@..."
-                            class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Hyperlink Trang TikTok Chính *</label>
+                            <input type="url" id="accUrl" required placeholder="https://www.tiktok.com/@..."
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Kênh Phụ (ID hoặc Link nếu có) (Thứ 2)</label>
+                            <input type="text" id="accSubHandle" placeholder="VD: @dolia.live hoặc link kênh phụ"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white">
+                        </div>
                     </div>
 
                     <div class="flex justify-end pt-1">
@@ -1832,10 +2023,10 @@ service cloud.firestore {
                 name: g.name,
                 idolName: g.idolName,
                 handle: g.handle,
+                subHandle: g.subHandle || '',
                 groupName: g.groupName,
                 url: `https://www.tiktok.com/${g.handle}`,
                 role: 'GROUP',
-                checkedToday: false,
                 order: idx + 1
             })),
             ...RAW_IDOLS.map((item, idx) => ({
@@ -1843,10 +2034,10 @@ service cloud.firestore {
                 name: item.name,
                 idolName: item.idolName,
                 handle: item.handle,
+                subHandle: item.subHandle || '',
                 groupName: item.groupName,
                 url: `https://www.tiktok.com/${item.handle}`,
                 role: 'IDOL',
-                checkedToday: false,
                 order: RAW_GROUPS.length + idx + 1
             }))
         ];
@@ -3303,6 +3494,7 @@ service cloud.firestore {
             tableCurrentPage = 1;
             closeAllModernDropdowns();
             syncWeekDropdownUI();
+            initGroupFromUrlQuery();
             renderAllUI();
         }
 
@@ -3314,6 +3506,7 @@ service cloud.firestore {
             }
             tableCurrentPage = 1;
             syncWeekDropdownUI();
+            initGroupFromUrlQuery();
             renderAllUI();
         }
 
@@ -3321,6 +3514,7 @@ service cloud.firestore {
             selectedWeekMonday = currentRealtimeMonday;
             tableCurrentPage = 1;
             syncWeekDropdownUI();
+            initGroupFromUrlQuery();
             renderAllUI();
         }
 
@@ -3507,32 +3701,66 @@ service cloud.firestore {
         }
 
         // ============================================================================
-        // 10. 6 NHÓM THẺ BUNG THÀNH VIÊN THEO ACCORDION (HÌNH 3 - GỌN GÀNG, TRỰC QUAN)
+        // 10. 6 NHÓM THẺ BUNG THÀNH VIÊN THEO ACCORDION (HÌNH 3 - ĐÀN HỒI MƯỢT MÀ, THỨ 8)
         // ============================================================================
-        // Mặc định hiển thị gọn 6 Nhóm Thẻ, bấm vào nhóm nào sẽ bung thành viên nhóm đó ra (Hình 3)
         let expandedGroupCards = new Set();
+        let currentOperatorGroup = null;
 
         function toggleGroupCardExpand(grpName) {
-            if (expandedGroupCards.has(grpName)) {
-                expandedGroupCards.delete(grpName);
-            } else {
+            const cleanId = String(grpName).replace(/[^a-zA-Z0-9]/g, '_');
+            const accordionEl = document.getElementById(`group-accordion-${cleanId}`);
+            const chevronEl = document.getElementById(`group-chevron-${cleanId}`);
+            const btnTextEl = document.getElementById(`group-btn-text-${cleanId}`);
+            const isNowOpen = !expandedGroupCards.has(grpName);
+
+            if (isNowOpen) {
                 expandedGroupCards.add(grpName);
+                if (accordionEl) accordionEl.classList.add('is-open');
+                if (chevronEl) chevronEl.classList.add('rotate-180', 'text-pink-500');
+                if (btnTextEl) btnTextEl.textContent = 'Thu gọn';
+            } else {
+                expandedGroupCards.delete(grpName);
+                if (accordionEl) accordionEl.classList.remove('is-open');
+                if (chevronEl) chevronEl.classList.remove('rotate-180', 'text-pink-500');
+                const grpAccs = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
+                if (btnTextEl) btnTextEl.textContent = `Xem ${grpAccs.length} thành viên`;
             }
-            renderAccountsGrid();
+
+            const allGroups = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
+            const toggleAllBtnText = document.getElementById('toggleAllGroupsText');
+            if (toggleAllBtnText) {
+                toggleAllBtnText.textContent = expandedGroupCards.size === allGroups.length ? 'Thu Gọn Tất Cả' : 'Mở Tất Cả Nhóm';
+            }
         }
 
         function toggleAllGroupCards() {
             const allGroups = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
-            if (expandedGroupCards.size === allGroups.length) {
-                expandedGroupCards.clear();
-            } else {
-                allGroups.forEach(g => expandedGroupCards.add(g));
-            }
+            const shouldOpenAll = expandedGroupCards.size !== allGroups.length;
+
+            allGroups.forEach(grpName => {
+                const cleanId = String(grpName).replace(/[^a-zA-Z0-9]/g, '_');
+                const accordionEl = document.getElementById(`group-accordion-${cleanId}`);
+                const chevronEl = document.getElementById(`group-chevron-${cleanId}`);
+                const btnTextEl = document.getElementById(`group-btn-text-${cleanId}`);
+
+                if (shouldOpenAll) {
+                    expandedGroupCards.add(grpName);
+                    if (accordionEl) accordionEl.classList.add('is-open');
+                    if (chevronEl) chevronEl.classList.add('rotate-180', 'text-pink-500');
+                    if (btnTextEl) btnTextEl.textContent = 'Thu gọn';
+                } else {
+                    expandedGroupCards.delete(grpName);
+                    if (accordionEl) accordionEl.classList.remove('is-open');
+                    if (chevronEl) chevronEl.classList.remove('rotate-180', 'text-pink-500');
+                    const grpAccs = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
+                    if (btnTextEl) btnTextEl.textContent = `Xem ${grpAccs.length} thành viên`;
+                }
+            });
+
             const btnText = document.getElementById('toggleAllGroupsText');
             if (btnText) {
-                btnText.textContent = expandedGroupCards.size === allGroups.length ? 'Thu Gọn Tất Cả' : 'Mở Tất Cả Nhóm';
+                btnText.textContent = shouldOpenAll ? 'Thu Gọn Tất Cả' : 'Mở Tất Cả Nhóm';
             }
-            renderAccountsGrid();
         }
 
         function renderAccountsGrid() {
@@ -3565,6 +3793,7 @@ service cloud.firestore {
 
             const groupsHtml = targetGroups.map(grpName => {
                 const theme = getGroupTheme(grpName);
+                const cleanGrpId = String(grpName).replace(/[^a-zA-Z0-9]/g, '_');
                 
                 // Lọc danh sách account thuộc nhóm này
                 let grpAccounts = accounts.filter(acc => extractCleanGroupName(acc).toUpperCase() === grpName.toUpperCase());
@@ -3584,7 +3813,7 @@ service cloud.firestore {
                     if (currentDirectoryFilter === 'MISSING_KPI' && prog.isDonePosted) return false;
                     if (currentDirectoryFilter === 'DONE_KPI' && !prog.isDonePosted) return false;
                     if (keyword) {
-                        const hay = `${acc.name} ${extractCleanIdolName(acc)} ${acc.handle} ${grpName}`.toLowerCase();
+                        const hay = `${acc.name} ${extractCleanIdolName(acc)} ${acc.handle} ${acc.subHandle || ''} ${grpName}`.toLowerCase();
                         if (!hay.includes(keyword)) return false;
                     }
                     return true;
@@ -3607,18 +3836,19 @@ service cloud.firestore {
                     const isGroupChannel = acc.role === 'GROUP';
                     const idolShort = extractCleanIdolName(acc);
                     const accPosts = getAccountWeeklyPosts(acc.id, activeWeek);
+                    const isDone = prog.isDonePosted;
 
                     let kpiBadge = '';
-                    if (prog.isDonePosted) {
-                        kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-400/30 whitespace-nowrap">
-                            ✅ Đủ KPI (${prog.postedCount}/2)
+                    if (isDone) {
+                        kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-white shadow-xs whitespace-nowrap">
+                            ✅ ĐỦ KPI (${prog.postedCount}/2)
                         </span>`;
                     } else if (prog.postedCount === 1) {
-                        kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-400/30 whitespace-nowrap">
+                        kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-400/40 whitespace-nowrap">
                             ⚠️ Thiếu 1 bài (1/2)
                         </span>`;
                     } else {
-                        kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-400/30 whitespace-nowrap">
+                        kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-400/40 whitespace-nowrap">
                             ❌ Chưa đăng (0/2)
                         </span>`;
                     }
@@ -3638,16 +3868,37 @@ service cloud.firestore {
                                     </span>
                                 </div>
                             `).join('')}
-                            ${accPosts.length > 2 ? `<div class="text-[10px] text-slate-400 font-bold">+${accPosts.length - 2} bài khác...</div>` : ''}
+                            ${accPosts.length > 2 ? `<div class="text-[10px] text-slate-400 font-bold">+ ${accPosts.length - 2} bài khác...</div>` : ''}
                         </div>`;
                     }
 
-                    const cardBorderClass = isGroupChannel
-                        ? 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-indigo-400/60 shadow-md'
-                        : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 shadow-2xs hover:shadow-md hover:border-indigo-400/50';
+                    // Tách biệt nổi bật thẻ hoàn thành đủ KPI 2 bài (Thứ 4)
+                    let cardHighlightClass = '';
+                    if (isDone) {
+                        cardHighlightClass = isGroupChannel
+                            ? 'kpi-card-done text-white border-2 border-emerald-400 shadow-lg'
+                            : 'kpi-card-done text-slate-800 dark:text-slate-100 shadow-md';
+                    } else if (isGroupChannel) {
+                        cardHighlightClass = 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-indigo-400/60 shadow-md';
+                    } else if (prog.postedCount === 1) {
+                        cardHighlightClass = 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border-2 border-amber-300 dark:border-amber-700/80 shadow-2xs';
+                    } else {
+                        cardHighlightClass = 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-800 shadow-2xs';
+                    }
+
+                    // Kênh phụ hiển thị ngay cạnh nick chính (Thứ 2)
+                    const subHandleHtml = acc.subHandle ? `
+                        <a href="https://www.tiktok.com/@${acc.subHandle.replace(/^@/, '')}" target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-50 hover:bg-pink-100 text-pink-700 dark:bg-pink-950/60 dark:hover:bg-pink-900/80 dark:text-pink-300 border border-pink-200/80 dark:border-pink-800/80 transition"
+                           title="Kênh phụ: @${acc.subHandle.replace(/^@/, '')}">
+                            <i class="fa-brands fa-tiktok text-[9px] text-pink-500"></i>
+                            <span>Phụ: @${acc.subHandle.replace(/^@/, '')}</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[8px] opacity-70"></i>
+                        </a>
+                    ` : '';
 
                     return `
-                        <div class="rounded-2xl p-3.5 transition flex flex-col justify-between gap-2.5 ${cardBorderClass}">
+                        <div class="rounded-2xl p-3.5 transition flex flex-col justify-between gap-2.5 ${cardHighlightClass}">
                             <div>
                                 <div class="flex items-center justify-between gap-2">
                                     <div class="flex items-center gap-2 min-w-0">
@@ -3661,9 +3912,13 @@ service cloud.firestore {
                                                 </h4>
                                                 ${isGroupChannel ? '<span class="text-[9px] bg-pink-500 text-white px-1.5 py-0.2 rounded font-extrabold shrink-0">NHÓM</span>' : ''}
                                             </div>
-                                            <a href="${acc.url}" target="_blank" class="text-[11px] font-medium text-pink-600 dark:text-pink-400 hover:underline truncate block">
-                                                ${acc.handle}
-                                            </a>
+                                            <!-- Nick chính & Kênh phụ gần nhau (Thứ 2) -->
+                                            <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                                <a href="${acc.url}" target="_blank" rel="noopener noreferrer" class="text-[11px] font-semibold text-pink-600 dark:text-pink-400 hover:underline truncate">
+                                                    ${acc.handle}
+                                                </a>
+                                                ${subHandleHtml}
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="shrink-0">${kpiBadge}</div>
@@ -3673,22 +3928,33 @@ service cloud.firestore {
                                 </div>
                             </div>
 
-                            <div class="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                                <button type="button" onclick="openIdolDetailModal('${acc.id}', true)"
-                                    class="h-7 px-2.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="Thêm bài đăng cho kênh này">
-                                    <i class="fa-solid fa-plus text-[10px]"></i>
-                                    <span>+ Bài</span>
-                                </button>
-                                <button type="button" onclick="openIdolDetailModal('${acc.id}')"
-                                    class="h-7 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="Xem chi tiết và lịch sử">
-                                    <i class="fa-solid fa-eye text-[10px]"></i>
-                                    <span>Chi tiết</span>
-                                </button>
-                                <button type="button" onclick="toggleAccountChecked('${acc.id}')"
-                                    class="h-7 px-2 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${acc.checkedToday ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}"
-                                    title="Đánh dấu đã kiểm tra kênh hôm nay">
-                                    <i class="fa-solid ${acc.checkedToday ? 'fa-check text-emerald-600' : 'fa-clock text-amber-500'}"></i>
-                                </button>
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 gap-1.5">
+                                <!-- Nút Sửa & Xóa Kênh (Thứ 1) -->
+                                <div class="flex items-center gap-1">
+                                    <button type="button" onclick="openAccountModal('${acc.id}')"
+                                        class="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs transition flex items-center justify-center cursor-pointer"
+                                        title="Chỉnh sửa kênh hoặc thêm kênh phụ">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button type="button" onclick="deleteAccountWithConfirm('${acc.id}')"
+                                        class="h-7 w-7 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50 text-slate-400 dark:text-slate-500 text-xs transition flex items-center justify-center cursor-pointer"
+                                        title="Xóa tài khoản này khỏi danh bạ">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" onclick="openIdolDetailModal('${acc.id}', true)"
+                                        class="h-7 px-2.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="Thêm bài đăng cho kênh này">
+                                        <i class="fa-solid fa-plus text-[10px]"></i>
+                                        <span>+ Bài</span>
+                                    </button>
+                                    <button type="button" onclick="openIdolDetailModal('${acc.id}')"
+                                        class="h-7 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="Xem chi tiết và lịch sử">
+                                        <i class="fa-solid fa-eye text-[10px]"></i>
+                                        <span>Chi tiết</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -3697,14 +3963,14 @@ service cloud.firestore {
                 return `
                     <div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
                         <!-- Group Hub Header -->
-                        <div class="p-4 bg-slate-50/80 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b ${isExpanded ? 'border-slate-200/80 dark:border-slate-800' : 'border-transparent'} cursor-pointer"
+                        <div class="p-4 bg-slate-50/80 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 cursor-pointer"
                              onclick="toggleGroupCardExpand('${grpName}')">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 shadow-xs border ${theme.badgeBg}">
                                     ${theme.icon}
                                 </div>
                                 <div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex flex-wrap items-center gap-2">
                                         <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
                                             NHÓM ${grpName.toUpperCase()}
                                         </h3>
@@ -3718,21 +3984,53 @@ service cloud.firestore {
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-3 self-end sm:self-auto">
-                                <div class="w-32 bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden hidden sm:block">
+                            <!-- Group Quick Action Buttons: Copy Báo Cáo, Link Nhóm Riêng, Thêm Idol, Thu gọn (Thứ 1, 3, 7, 8) -->
+                            <div class="flex flex-wrap items-center gap-2 self-start lg:self-auto" onclick="event.stopPropagation()">
+                                <div class="w-28 bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden hidden xl:block mr-1">
                                     <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-300" style="width: ${percentDone}%"></div>
                                 </div>
-                                <button type="button" class="h-8 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shadow-2xs pointer-events-none">
-                                    <span>${isExpanded ? 'Thu gọn' : `Xem ${filteredMembers.length} thành viên`}</span>
-                                    <i class="fa-solid fa-chevron-down transition-transform duration-200 ${isExpanded ? 'rotate-180 text-pink-500' : ''}"></i>
+
+                                <!-- Nút Copy Báo Cáo Nhóm (Thứ 3) -->
+                                <button type="button" onclick="copyGroupKpiReport('${grpName}')"
+                                    class="h-8 px-2.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:hover:bg-pink-900/60 dark:text-pink-300 border border-pink-200 dark:border-pink-800 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                    title="Sao chép tiến độ riêng nhóm ${grpName} để gửi cho nhân viên phụ trách">
+                                    <i class="fa-solid fa-copy"></i>
+                                    <span>Báo Cáo</span>
+                                </button>
+
+                                <!-- Nút Copy Link Nhóm Riêng (Thứ 7) -->
+                                <button type="button" onclick="copyGroupShareLink('${grpName}')"
+                                    class="h-8 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                    title="Sao chép link riêng của nhóm ${grpName} cho nhân sự vận hành tự vào điền bài">
+                                    <i class="fa-solid fa-link"></i>
+                                    <span>Link Nhóm</span>
+                                </button>
+
+                                <!-- Nút Thêm Idol Cho Nhóm Này (Thứ 1) -->
+                                <button type="button" onclick="openAccountModal(null, '${grpName}', 'IDOL')"
+                                    class="h-8 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                    title="Thêm Idol mới vào nhóm ${grpName}">
+                                    <i class="fa-solid fa-user-plus text-indigo-500"></i>
+                                    <span>+ Idol</span>
+                                </button>
+
+                                <!-- Nút Toggle Accordion với animation nảy đàn hồi (Thứ 8) -->
+                                <button type="button" onclick="toggleGroupCardExpand('${grpName}')"
+                                    class="h-8 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shadow-2xs hover:border-pink-300 transition cursor-pointer">
+                                    <span id="group-btn-text-${cleanGrpId}">${isExpanded ? 'Thu gọn' : `Xem ${filteredMembers.length} thành viên`}</span>
+                                    <i id="group-chevron-${cleanGrpId}" class="fa-solid fa-chevron-down transition-transform duration-300 ${isExpanded ? 'rotate-180 text-pink-500' : ''}"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Members Subgrid -->
-                        <div class="${isExpanded ? 'block' : 'hidden'} p-4 bg-slate-50/30 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800/60">
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                ${memberCardsHtml}
+                        <!-- Members Subgrid with Smooth Spring Expansion (Thứ 8) -->
+                        <div id="group-accordion-${cleanGrpId}" class="group-accordion-spring ${isExpanded ? 'is-open' : ''}">
+                            <div class="group-accordion-inner">
+                                <div class="p-4 bg-slate-50/30 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-800/60">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                        ${memberCardsHtml}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3752,7 +4050,6 @@ service cloud.firestore {
             updateDashboardStats();
             populateAccountSelects();
         }
-
         async function markAccountCheckedOnVisit(accId) {
             const acc = getAccountById(accId);
             if (acc && !acc.checkedToday) {
@@ -4976,6 +5273,7 @@ service cloud.firestore {
 
             selectedWeekMonday = weekMonday;
             syncWeekDropdownUI();
+            initGroupFromUrlQuery();
             renderAllUI();
             resetPostForm();
 
@@ -5821,24 +6119,43 @@ service cloud.firestore {
         }
 
         // ============================================================================
-        // 12. QUẢN LÝ TÀI KHOẢN & XUẤT CSV
+        // 12. QUẢN LÝ TÀI KHOẢN, XUẤT GOOGLE SHEETS & COPY BÁO CÁO (THỨ 1, 2, 3, 6, 7)
         // ============================================================================
-        function openAccountModal() {
-            document.getElementById('accountModal').classList.remove('hidden');
+        function openAccountModal(editingAccId = null, defaultGroupName = '', defaultRole = 'IDOL') {
+            const modal = document.getElementById('accountModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+
+            if (editingAccId) {
+                editAccountInModal(editingAccId);
+            } else {
+                resetAccountForm();
+                if (defaultGroupName) {
+                    const grpEl = document.getElementById('accGroupName');
+                    if (grpEl) grpEl.value = defaultGroupName;
+                }
+                if (defaultRole) {
+                    const roleEl = document.getElementById('accRole');
+                    if (roleEl) roleEl.value = defaultRole;
+                }
+            }
             renderModalAccountsList();
         }
 
         function closeAccountModal() {
-            document.getElementById('accountModal').classList.add('hidden');
+            const modal = document.getElementById('accountModal');
+            if (modal) modal.classList.add('hidden');
             resetAccountForm();
         }
 
         function openCloudHelpModal() {
-            document.getElementById('cloudHelpModal').classList.remove('hidden');
+            const modal = document.getElementById('cloudHelpModal');
+            if (modal) modal.classList.remove('hidden');
         }
 
         function closeCloudHelpModal() {
-            document.getElementById('cloudHelpModal').classList.add('hidden');
+            const modal = document.getElementById('cloudHelpModal');
+            if (modal) modal.classList.add('hidden');
         }
 
         function autoFillProfileUrl() {
@@ -5859,6 +6176,11 @@ service cloud.firestore {
             let handle = document.getElementById('accHandle').value.trim();
             if (!handle.startsWith('@')) handle = '@' + handle;
             const url = normalizeTikTokUrl(handle, document.getElementById('accUrl').value);
+            const subHandleInput = document.getElementById('accSubHandle');
+            let subHandle = subHandleInput ? subHandleInput.value.trim() : '';
+            if (subHandle && !subHandle.startsWith('@') && !subHandle.startsWith('http')) {
+                subHandle = '@' + subHandle;
+            }
 
             const accId = editId ? editId : 'acc_' + Date.now();
             const existingAcc = getAccountById(accId);
@@ -5871,8 +6193,8 @@ service cloud.firestore {
                 idolName: role === 'GROUP' ? 'Kênh Nhóm' : idolName,
                 name: fullName,
                 handle,
+                subHandle,
                 url,
-                checkedToday: existingAcc ? !!existingAcc.checkedToday : false,
                 order: existingAcc && existingAcc.order ? existingAcc.order : accounts.length + 1
             };
 
@@ -5884,10 +6206,15 @@ service cloud.firestore {
             renderModalAccountsList();
             resetAccountForm();
 
-            if (currentUser) {
-                const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
-                await setDoc(accDocRef, accData);
-                showToast(`Đã lưu tài khoản ${fullName} lên Firebase!`);
+            if (db) {
+                try {
+                    const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
+                    await setDoc(accDocRef, accData);
+                    showToast(`✅ Đã lưu tài khoản ${fullName} lên Firebase!`, 'success');
+                } catch (err) {
+                    console.error('Lỗi lưu tài khoản Firebase:', err);
+                    showToast('⚠️ Lỗi khi lưu lên Firebase: ' + (err.message || 'Lỗi mạng'), 'error');
+                }
             }
         }
 
@@ -5901,21 +6228,47 @@ service cloud.firestore {
             document.getElementById('accName').value = extractCleanIdolName(acc);
             document.getElementById('accHandle').value = acc.handle;
             document.getElementById('accUrl').value = acc.url;
+            const subEl = document.getElementById('accSubHandle');
+            if (subEl) subEl.value = acc.subHandle || '';
 
             document.getElementById('accountFormHeading').textContent = `✏️ Đang sửa: ${extractCleanGroupName(acc)} - ${extractCleanIdolName(acc)}`;
             document.getElementById('saveAccountBtn').innerHTML = `<i class="fa-solid fa-check"></i><span>Cập Nhật</span>`;
             document.getElementById('cancelAccountEditBtn').classList.remove('hidden');
         }
 
+        async function deleteAccountWithConfirm(accId) {
+            const acc = getAccountById(accId);
+            if (!acc) return;
+            const isGroup = acc.role === 'GROUP';
+            const accLabel = isGroup ? `Kênh nhóm ${acc.groupName} (${acc.handle})` : `Idol ${extractCleanIdolName(acc)} (${acc.handle})`;
+
+            const confirmed = window.confirm(`⚠️ BẠN CÓ CHẮC MUỐN XÓA TÀI KHOẢN:\n"${accLabel}"?\n\nTài khoản sẽ bị gỡ khỏi danh bạ và Firebase. Toàn bộ bài đăng đã có của kênh này vẫn được bảo lưu an toàn.`);
+            if (!confirmed) return;
+
+            await deleteAccountInModal(accId);
+        }
+
         async function deleteAccountInModal(accId) {
-            if (accounts.length <= 1) return;
+            if (accounts.length <= 1) {
+                showToast('Không thể xóa tài khoản cuối cùng!', 'error');
+                return;
+            }
+            const target = getAccountById(accId);
+            const targetName = target ? target.name : accId;
+
             accounts = accounts.filter(a => a.id !== accId);
             renderAllUI();
             renderModalAccountsList();
-            if (currentUser) {
-                const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
-                await deleteDoc(accDocRef);
-                showToast('Đã xóa tài khoản khỏi Firebase.');
+
+            if (db) {
+                try {
+                    const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
+                    await deleteDoc(accDocRef);
+                    showToast(`✅ Đã xóa tài khoản ${targetName} khỏi Firebase.`, 'success');
+                } catch (err) {
+                    console.error('Lỗi xóa Firebase:', err);
+                    showToast('⚠️ Không thể xóa khỏi Firebase: ' + (err.message || 'Lỗi mạng'), 'error');
+                }
             }
         }
 
@@ -5926,6 +6279,8 @@ service cloud.firestore {
             document.getElementById('accName').value = '';
             document.getElementById('accHandle').value = '';
             document.getElementById('accUrl').value = '';
+            const subEl = document.getElementById('accSubHandle');
+            if (subEl) subEl.value = '';
             document.getElementById('accountFormHeading').textContent = '+ Thêm Hoặc Cập Nhật Tài Khoản';
             document.getElementById('saveAccountBtn').innerHTML = `<i class="fa-solid fa-check"></i><span>Lưu Tài Khoản</span>`;
             document.getElementById('cancelAccountEditBtn').classList.add('hidden');
@@ -5942,7 +6297,14 @@ service cloud.firestore {
                 const iName = extractCleanIdolName(acc);
                 const theme = getGroupTheme(gName);
                 const row = document.createElement('div');
-                row.className = 'p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 hover:bg-slate-50 transition';
+                row.className = 'p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 hover:bg-slate-50 transition border-b border-slate-100 last:border-b-0';
+                
+                const subTag = acc.subHandle ? `
+                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-50 text-pink-700 border border-pink-200">
+                        Phụ: ${acc.subHandle}
+                    </span>
+                ` : '';
+
                 row.innerHTML = `
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-[10px] font-extrabold px-2 py-0.5 rounded border ${isGroup ? 'bg-slate-900 text-white border-slate-900' : theme.badgeBg}">
@@ -5954,12 +6316,13 @@ service cloud.firestore {
                             <i class="fa-brands fa-tiktok"></i>
                             <span>${acc.handle}</span>
                         </a>
+                        ${subTag}
                     </div>
                     <div class="flex items-center gap-2 self-end sm:self-auto">
-                        <button onclick="editAccountInModal('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 text-xs font-semibold transition">
+                        <button onclick="editAccountInModal('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 text-xs font-semibold transition cursor-pointer">
                             Sửa
                         </button>
-                        <button onclick="deleteAccountInModal('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs font-semibold transition">
+                        <button onclick="deleteAccountWithConfirm('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs font-semibold transition cursor-pointer">
                             Xóa
                         </button>
                     </div>
@@ -5968,45 +6331,274 @@ service cloud.firestore {
             });
         }
 
-        function exportToCSV() {
-            const weekPosts = getPostsForWeek(selectedWeekMonday);
-            const headers = ['TUẦN', 'NGÀY ĐĂNG', 'PHÂN LOẠI', 'NHÓM', 'TÊN IDOL / KÊNH', 'HIỂN THỊ ĐẦY ĐỦ', 'ID TIKTOK', 'HẠNG MỤC', 'LINK BÀI ĐĂNG', 'TRẠNG THÁI', 'GHI CHÚ'];
-            const rows = weekPosts.map(p => {
-                const acc = getAccountById(p.accountId);
-                const gName = extractCleanGroupName(acc);
-                const iName = extractCleanIdolName(acc);
-                return [
-                    p.sheet || getPostWeekMonday(p),
-                    formatDateVN(p.date),
-                    acc && acc.role === 'GROUP' ? 'NHÓM' : 'IDOL',
-                    gName,
-                    iName,
-                    acc ? `${gName} - ${iName}` : '',
-                    acc ? acc.handle : '',
-                    p.category,
-                    p.link || '',
-                    p.status,
-                    p.note || ''
-                ];
-            });
-
-            const csvContent = '\uFEFF' + [headers, ...rows]
-                .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-                .join('\n');
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `PASSION_MEDIA_WEEK_${selectedWeekMonday}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('Đã xuất file CSV thành công!');
+        function getWeekDisplayTitle(mondayStr) {
+            if (!mondayStr || mondayStr === 'ALL') return 'Tất cả các tuần';
+            const sunStr = addDaysStr(mondayStr, 6);
+            return `Tuần ${formatShortDateVN(mondayStr)} - ${formatShortDateVN(sunStr)}`;
         }
 
         // ============================================================================
+        // COPY BÁO CÁO TIẾN ĐỘ KPI GỬI VẬN HÀNH (THỨ 3)
+        // ============================================================================
+        function generateGroupKpiReportText(targetGroupName = 'ALL') {
+            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            const weekTitle = getWeekDisplayTitle(activeWeek);
+
+            const GROUP_NAMES = (targetGroupName && targetGroupName !== 'ALL')
+                ? [targetGroupName]
+                : ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
+
+            let lines = [];
+            lines.push(`📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()}`);
+            lines.push(`(KPI bắt buộc: 2 bài / tuần)`);
+            lines.push('');
+
+            GROUP_NAMES.forEach(grpName => {
+                let grpAccounts = accounts.filter(acc => extractCleanGroupName(acc).toUpperCase() === grpName.toUpperCase());
+                grpAccounts.sort((a, b) => {
+                    if (a.role === 'GROUP' && b.role !== 'GROUP') return -1;
+                    if (a.role !== 'GROUP' && b.role === 'GROUP') return 1;
+                    return (a.order || 99) - (b.order || 99);
+                });
+
+                if (grpAccounts.length === 0) return;
+
+                lines.push(`════════════════════════════════════`);
+                lines.push(`📌 [NHÓM ${grpName.toUpperCase()}]`);
+                lines.push(`────────────────────────────────────`);
+
+                grpAccounts.forEach(acc => {
+                    const prog = getAccountWeeklyProgress(acc.id, activeWeek);
+                    const isGroup = acc.role === 'GROUP';
+                    const nameLabel = isGroup ? 'Tài khoản nhóm' : `Tài khoản ${extractCleanIdolName(acc)}`;
+                    const accPosts = getAccountWeeklyPosts(acc.id, activeWeek).filter(p => p.status === 'ĐÃ ĐĂNG');
+
+                    if (prog.isDonePosted) {
+                        lines.push(`• ${nameLabel} : Đăng đủ (${prog.postedCount}/2 bài)`);
+                    } else if (prog.postedCount === 1) {
+                        const p1 = accPosts[0];
+                        const dateText = p1 ? formatDateVN(p1.date) : 'đã ghi nhận';
+                        lines.push(`• ${nameLabel} : Thiếu 1 bài, đã đăng 1 bài vào ${dateText}`);
+                    } else {
+                        lines.push(`• ${nameLabel} : Thiếu 2 bài (Chưa có bài nào)`);
+                    }
+                });
+                lines.push('');
+            });
+
+            lines.push(`⏰ Hạn chót Chủ Nhật tuần này! Nhờ các bạn vận hành kiểm tra & nhắc idol lên bài đầy đủ.`);
+            return lines.join('\n');
+        }
+
+        function copyGroupKpiReport(targetGroupName = 'ALL') {
+            const reportText = generateGroupKpiReportText(targetGroupName);
+            if (!navigator.clipboard) {
+                showToast('Trình duyệt không hỗ trợ sao chép tự động', 'error');
+                return;
+            }
+            navigator.clipboard.writeText(reportText).then(() => {
+                const label = targetGroupName === 'ALL' ? 'cả 6 nhóm' : `nhóm ${targetGroupName}`;
+                showToast(`📋 Đã copy báo cáo tiến độ ${label} vào clipboard! Hãy dán gửi cho vận hành.`, 'success');
+            }).catch(err => {
+                console.error('Clipboard copy error:', err);
+                showToast('Lỗi khi sao chép báo cáo vào clipboard', 'error');
+            });
+        }
+
+        function copyCurrentOperatorGroupReport() {
+            if (currentOperatorGroup) {
+                copyGroupKpiReport(currentOperatorGroup);
+            } else {
+                copyGroupKpiReport('ALL');
+            }
+        }
+
+        // ============================================================================
+        // LINK RIÊNG TỪNG NHÓM CHO NHÂN SỰ VẬN HÀNH (THỨ 7)
+        // ============================================================================
+        function copyGroupShareLink(groupName) {
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('group', groupName);
+                const fullUrl = url.toString();
+
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(fullUrl).then(() => {
+                        showToast(`🔗 Đã copy link riêng của nhóm ${groupName}! Gửi link này cho nhân sự vận hành nhóm để tự kiểm tra & điền link.`, 'success');
+                    });
+                } else {
+                    window.prompt(`Sao chép đường link riêng cho nhóm ${groupName}:`, fullUrl);
+                }
+            } catch (e) {
+                console.error('copyGroupShareLink error:', e);
+            }
+        }
+
+        function initGroupFromUrlQuery() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const grpQuery = params.get('group');
+                if (!grpQuery) return;
+
+                const matchedGrp = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'].find(
+                    g => g.toLowerCase() === grpQuery.toLowerCase()
+                );
+
+                if (matchedGrp) {
+                    currentOperatorGroup = matchedGrp;
+                    expandedGroupCards.clear();
+                    expandedGroupCards.add(matchedGrp);
+
+                    const bannerEl = document.getElementById('groupOperatorBanner');
+                    const titleEl = document.getElementById('operatorBannerTitle');
+                    const iconEl = document.getElementById('operatorBannerIcon');
+                    const descEl = document.getElementById('operatorBannerDesc');
+                    const theme = getGroupTheme(matchedGrp);
+
+                    if (bannerEl) bannerEl.classList.remove('hidden');
+                    if (titleEl) titleEl.textContent = `KHU VỰC VẬN HÀNH & KIỂM TRA: NHÓM ${matchedGrp.toUpperCase()}`;
+                    if (iconEl) iconEl.textContent = theme.icon;
+                    if (descEl) descEl.textContent = `👋 Chào bạn phụ trách nhóm ${matchedGrp}! Bạn có thể dán link video hoặc bấm "+ Bài" trên từng Idol để hoàn thành KPI tuần này.`;
+
+                    // Chọn sẵn nhóm trong bộ lọc dropdown
+                    const groupSelectEl = document.getElementById('directoryGroupSelect');
+                    if (groupSelectEl) groupSelectEl.value = matchedGrp;
+                    const groupLabelEl = document.getElementById('dirGroupDropdownLabel');
+                    if (groupLabelEl) groupLabelEl.textContent = `${theme.icon} Nhóm ${matchedGrp}`;
+
+                    showToast(`👋 Đang mở link chuyên biệt cho nhóm ${matchedGrp}!`, 'success');
+                }
+            } catch (err) {
+                console.warn('initGroupFromUrlQuery error:', err);
+            }
+        }
+
+        // ============================================================================
+        // XUẤT GOOGLE SHEETS & EXCEL .XLSX (THỨ 6)
+        // ============================================================================
+        function openExportSheetModal() {
+            const modal = document.getElementById('exportSheetModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeExportSheetModal() {
+            const modal = document.getElementById('exportSheetModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function downloadFullExcelFile() {
+            if (typeof XLSX === 'undefined') {
+                showToast('Thư viện Excel đang tải, vui lòng thử lại sau vài giây!', 'error');
+                return;
+            }
+            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            const weekLabel = getWeekDisplayTitle(activeWeek);
+
+            // Sheet 1: Tiến độ KPI tuần
+            const kpiRows = [];
+            accounts.forEach(acc => {
+                const prog = getAccountWeeklyProgress(acc.id, activeWeek);
+                const gName = extractCleanGroupName(acc);
+                const iName = extractCleanIdolName(acc);
+                const isGroup = acc.role === 'GROUP';
+                const postsList = getAccountWeeklyPosts(acc.id, activeWeek).filter(p => p.status === 'ĐÃ ĐĂNG');
+                
+                let statusKpi = 'Thiếu 2 bài';
+                if (prog.isDonePosted) statusKpi = 'Đã đủ KPI (2/2 bài)';
+                else if (prog.postedCount === 1) statusKpi = 'Thiếu 1 bài (1/2 bài)';
+
+                kpiRows.push({
+                    'NHÓM': gName,
+                    'PHÂN LOẠI': isGroup ? 'KÊNH NHÓM' : 'IDOL',
+                    'TÊN IDOL / KÊNH': isGroup ? `${gName} (Official)` : iName,
+                    'ID TIKTOK CHÍNH': acc.handle,
+                    'KÊNH PHỤ': acc.subHandle || '',
+                    'SỐ BÀI ĐÃ ĐĂNG': prog.postedCount,
+                    'ĐÁNH GIÁ KPI': statusKpi,
+                    'BÀI 1 (NGÀY & HẠNG MỤC)': postsList[0] ? `${formatDateVN(postsList[0].date)} (${postsList[0].category || 'Clip'})` : '',
+                    'LINK BÀI 1': postsList[0] ? (postsList[0].link || '') : '',
+                    'BÀI 2 (NGÀY & HẠNG MỤC)': postsList[1] ? `${formatDateVN(postsList[1].date)} (${postsList[1].category || 'Clip'})` : '',
+                    'LINK BÀI 2': postsList[1] ? (postsList[1].link || '') : ''
+                });
+            });
+
+            // Sheet 2: Chi tiết toàn bộ bài đăng tuần
+            const detailRows = getPostsForWeek(activeWeek).map(p => {
+                const acc = getAccountById(p.accountId);
+                const gName = extractCleanGroupName(acc);
+                const iName = extractCleanIdolName(acc);
+                return {
+                    'TUẦN': p.sheet || weekLabel,
+                    'NGÀY ĐĂNG': formatDateVN(p.date),
+                    'NHÓM': gName,
+                    'TÊN IDOL / KÊNH': acc && acc.role === 'GROUP' ? `${gName} (Kênh Nhóm)` : iName,
+                    'ID TIKTOK': acc ? acc.handle : '',
+                    'HẠNG MỤC': p.category,
+                    'LINK BÀI ĐĂNG': p.link || '',
+                    'TRẠNG THÁI': p.status,
+                    'GHI CHÚ': p.note || ''
+                };
+            });
+
+            const wb = XLSX.utils.book_new();
+            const wsKpi = XLSX.utils.json_to_sheet(kpiRows);
+            const wsDetail = XLSX.utils.json_to_sheet(detailRows);
+
+            XLSX.utils.book_append_sheet(wb, wsKpi, "TIEN_DO_KPI");
+            XLSX.utils.book_append_sheet(wb, wsDetail, "CHI_TIET_BAI_DANG");
+
+            const cleanDate = activeWeek.replace(/-/g, '');
+            XLSX.writeFile(wb, `PASSION_MEDIA_TIEN_DO_TUAN_${cleanDate}.xlsx`);
+            showToast('✅ Đã tải file Excel báo cáo tiến độ tuần thành công!', 'success');
+        }
+
+        function copyTableForGoogleSheets() {
+            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            const headers = ['NHÓM', 'PHÂN LOẠI', 'TÊN IDOL / KÊNH', 'ID TIKTOK CHÍNH', 'KÊNH PHỤ', 'SỐ BÀI ĐÃ ĐĂNG', 'TIẾN ĐỘ KPI', 'BÀI 1 (NGÀY)', 'LINK BÀI 1', 'BÀI 2 (NGÀY)', 'LINK BÀI 2'];
+            const rows = [];
+
+            accounts.forEach(acc => {
+                const prog = getAccountWeeklyProgress(acc.id, activeWeek);
+                const gName = extractCleanGroupName(acc);
+                const iName = extractCleanIdolName(acc);
+                const isGroup = acc.role === 'GROUP';
+                const postsList = getAccountWeeklyPosts(acc.id, activeWeek).filter(p => p.status === 'ĐÃ ĐĂNG');
+                
+                let statusKpi = 'Thiếu 2 bài';
+                if (prog.isDonePosted) statusKpi = 'Đăng đủ';
+                else if (prog.postedCount === 1) statusKpi = 'Thiếu 1 bài';
+
+                rows.push([
+                    gName,
+                    isGroup ? 'Kênh Nhóm' : 'Idol',
+                    isGroup ? `${gName} (Official)` : iName,
+                    acc.handle,
+                    acc.subHandle || '',
+                    prog.postedCount,
+                    statusKpi,
+                    postsList[0] ? formatDateVN(postsList[0].date) : '',
+                    postsList[0] ? (postsList[0].link || '') : '',
+                    postsList[1] ? formatDateVN(postsList[1].date) : '',
+                    postsList[1] ? (postsList[1].link || '') : ''
+                ]);
+            });
+
+            const tsvContent = [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n');
+            if (!navigator.clipboard) {
+                showToast('Trình duyệt không hỗ trợ sao chép tự động', 'error');
+                return;
+            }
+            navigator.clipboard.writeText(tsvContent).then(() => {
+                showToast('✅ Đã sao chép bảng Google Sheets vào clipboard! Chỉ cần mở Google Sheet và bấm Ctrl + V.', 'success');
+            }).catch(err => {
+                console.error('Clipboard copy error:', err);
+                showToast('Lỗi khi sao chép bảng Google Sheets', 'error');
+            });
+        }
+
+        function exportToCSV() {
+            downloadFullExcelFile();
+        }
         // 13. HỆ THỐNG TỰ ĐỘNG QUÉT BÀI ĐĂNG TIKTOK THEO TUẦN & LOG KÊNH RIÊNG TƯ
         // ============================================================================
         function decodeTikTokSnowflakeTimestamp(videoIdStr) {
@@ -6604,6 +7196,9 @@ service cloud.firestore {
             // Theme, Google Sheets & Phím tắt bàn phím
             initTheme, applyTheme, toggleTheme,
             openGoogleSheetModal, closeGoogleSheetModal, copySheetTemplateHeader, importGoogleSheetData,
+            openExportSheetModal, closeExportSheetModal, downloadFullExcelFile, copyTableForGoogleSheets,
+            generateGroupKpiReportText, copyGroupKpiReport, copyCurrentOperatorGroupReport, copyGroupShareLink, initGroupFromUrlQuery,
+            deleteAccountWithConfirm,
             openKeyboardShortcutsModal, closeKeyboardShortcutsModal, handleGlobalKeydown,
             toggleGroupCardExpand, toggleAllGroupCards
         });
@@ -6617,6 +7212,7 @@ service cloud.firestore {
             const { uniquePosts } = deduplicatePostsArray(posts);
             posts = uniquePosts;
             syncWeekDropdownUI();
+            initGroupFromUrlQuery();
             renderAllUI();
             initFirebaseAndSync();
             setInterval(updateRealtimeDeadlineCounter, 60000);
