@@ -190,10 +190,11 @@
                 </div>
 
                 <!-- Toggle Sidebar Button (Accounts < 2 posts/week) -->
-                <button onclick="toggleKpiSidebar()" class="h-9 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold border border-rose-400/40 transition flex items-center gap-1.5 shadow-sm" title="Ẩn/Hiện danh sách tài khoản chưa đủ 2 bài/tuần">
+                <button onclick="toggleKpiSidebar()" class="h-9 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold border border-rose-400/40 transition flex items-center gap-1.5 shadow-sm cursor-pointer" title="Ẩn/Hiện danh sách tài khoản chưa đủ 2 bài/tuần (Phím tắt: S)">
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     <span>Thiếu Bài</span>
                     <span id="headerMissingBadge" class="px-1.5 py-0.2 rounded-full bg-white text-rose-700 text-[11px] font-extrabold">0</span>
+                    <kbd class="hidden sm:inline-block text-[9px] font-mono bg-white/20 px-1 py-0.5 rounded text-white">S</kbd>
                 </button>
 
                 <!-- Google Sheets Import Button -->
@@ -1010,35 +1011,83 @@
                                         <select id="postAccount" required class="hidden" onchange="updateFormAccountPreview(); analyzePostLinkInput(false);"></select>
                                     </div>
 
-                                    <!-- Ngày đăng -->
+                                    <!-- Ngày đăng (Custom Modern Date Selector) -->
                                     <div>
-                                        <label for="postDate" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                                             Ngày đăng (Tuần T2 &rarr; CN) <span class="text-rose-500">*</span>
                                         </label>
-                                        <input type="date" id="postDate" required
-                                            class="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50/70 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
+                                        <div class="modern-dropdown" id="postDateCustomDropdown">
+                                            <button type="button" onclick="toggleModernDropdown('postDateCustomDropdown', event)"
+                                                class="w-full h-10 px-3.5 rounded-xl bg-slate-50/70 hover:bg-white border border-slate-200 text-xs sm:text-sm font-bold text-slate-800 flex items-center justify-between gap-2 transition cursor-pointer">
+                                                <span id="postDateDropdownLabel" class="truncate">📅 Chọn ngày đăng...</span>
+                                                <i class="fa-solid fa-calendar-day text-xs text-indigo-500 dropdown-chevron shrink-0"></i>
+                                            </button>
+                                            <div class="modern-dropdown-menu left-0 w-full sm:w-80 p-3 space-y-2.5">
+                                                <div class="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                                                    <span>Chọn nhanh ngày tuần này</span>
+                                                    <button type="button" onclick="selectPostDateValue(todayStr)" class="text-indigo-600 hover:text-pink-600 font-extrabold cursor-pointer">Hôm nay</button>
+                                                </div>
+                                                <div class="grid grid-cols-4 sm:grid-cols-7 gap-1" id="postDateQuickDays">
+                                                    <!-- Sẽ được điền bằng JS: T2, T3, T4, T5, T6, T7, CN -->
+                                                </div>
+                                                <div class="pt-2 border-t border-slate-100 flex items-center gap-2">
+                                                    <span class="text-[11px] text-slate-500 whitespace-nowrap">Chọn ngày khác:</span>
+                                                    <input type="date" id="postDateManualPicker" onchange="selectPostDateValue(this.value)"
+                                                        class="flex-1 h-8 px-2 rounded-lg border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-pink-500">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="postDate" required class="hidden">
                                     </div>
                                 </div>
 
                                 <!-- Grid 2 Cột: Hạng mục đăng + Trạng thái -->
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                                    <!-- Hạng mục đăng -->
+                                    <!-- Hạng mục đăng (Custom Modern Dropdown) -->
                                     <div>
-                                        <label for="postCategory" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                                             Hạng mục đăng <span class="text-rose-500">*</span>
                                         </label>
-                                        <input type="text" id="postCategory" list="categorySuggestions" required
-                                            placeholder="VD: Clip nhảy, Ảnh, Đăng capcut 2 ảnh..."
-                                            class="w-full h-10 px-3.5 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50/70 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
-                                        <datalist id="categorySuggestions">
-                                            <option value="Clip nhảy">
-                                            <option value="Ảnh">
-                                            <option value="Đăng capcut 2 ảnh">
-                                            <option value="Đăng ảnh cá nhân">
-                                            <option value="Video nhảy cute trend">
-                                            <option value="Thi giữa tháng">
-                                            <option value="Video cám ơn">
-                                        </datalist>
+                                        <div class="modern-dropdown" id="postCategoryCustomDropdown">
+                                            <button type="button" onclick="toggleModernDropdown('postCategoryCustomDropdown', event)"
+                                                class="w-full h-10 px-3.5 rounded-xl bg-slate-50/70 hover:bg-white border border-slate-200 text-xs sm:text-sm font-bold text-slate-800 flex items-center justify-between gap-2 transition cursor-pointer">
+                                                <span id="postCategoryDropdownLabel" class="truncate">🏷️ Chọn hạng mục đăng...</span>
+                                                <i class="fa-solid fa-chevron-down text-xs text-slate-400 dropdown-chevron shrink-0"></i>
+                                            </button>
+                                            <div class="modern-dropdown-menu left-0 w-full max-h-72 flex flex-col">
+                                                <div class="p-1.5 border-b border-slate-100">
+                                                    <input type="text" id="postCategoryCustomInput"
+                                                        placeholder="Nhập hạng mục mới hoặc tìm kiếm..."
+                                                        onclick="event.stopPropagation()"
+                                                        oninput="handleCustomCategoryInput(this.value)"
+                                                        class="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none">
+                                                </div>
+                                                <div class="overflow-y-auto flex-1 p-1 space-y-0.5 max-h-52" id="postCategoryOptionsList">
+                                                    <button type="button" onclick="selectPostCategoryValue('Clip nhảy', '🎬 Clip nhảy')" class="w-full px-3 py-2 rounded-xl hover:bg-pink-50 text-left text-xs font-bold text-slate-700 hover:text-pink-600 flex items-center justify-between">
+                                                        <span>🎬 Clip nhảy</span>
+                                                    </button>
+                                                    <button type="button" onclick="selectPostCategoryValue('Ảnh', '📸 Ảnh')" class="w-full px-3 py-2 rounded-xl hover:bg-purple-50 text-left text-xs font-bold text-slate-700 hover:text-purple-600 flex items-center justify-between">
+                                                        <span>📸 Ảnh</span>
+                                                    </button>
+                                                    <button type="button" onclick="selectPostCategoryValue('Đăng capcut 2 ảnh', '✨ Đăng capcut 2 ảnh')" class="w-full px-3 py-2 rounded-xl hover:bg-indigo-50 text-left text-xs font-bold text-slate-700 hover:text-indigo-600 flex items-center justify-between">
+                                                        <span>✨ Đăng capcut 2 ảnh</span>
+                                                    </button>
+                                                    <button type="button" onclick="selectPostCategoryValue('Đăng ảnh cá nhân', '👤 Đăng ảnh cá nhân')" class="w-full px-3 py-2 rounded-xl hover:bg-cyan-50 text-left text-xs font-bold text-slate-700 hover:text-cyan-600 flex items-center justify-between">
+                                                        <span>👤 Đăng ảnh cá nhân</span>
+                                                    </button>
+                                                    <button type="button" onclick="selectPostCategoryValue('Video nhảy cute trend', '🎵 Video nhảy cute trend')" class="w-full px-3 py-2 rounded-xl hover:bg-amber-50 text-left text-xs font-bold text-slate-700 hover:text-amber-600 flex items-center justify-between">
+                                                        <span>🎵 Video nhảy cute trend</span>
+                                                    </button>
+                                                    <button type="button" onclick="selectPostCategoryValue('Thi giữa tháng', '🏆 Thi giữa tháng')" class="w-full px-3 py-2 rounded-xl hover:bg-emerald-50 text-left text-xs font-bold text-slate-700 hover:text-emerald-600 flex items-center justify-between">
+                                                        <span>🏆 Thi giữa tháng</span>
+                                                    </button>
+                                                    <button type="button" onclick="selectPostCategoryValue('Video cám ơn', '🙏 Video cám ơn')" class="w-full px-3 py-2 rounded-xl hover:bg-rose-50 text-left text-xs font-bold text-slate-700 hover:text-rose-600 flex items-center justify-between">
+                                                        <span>🙏 Video cám ơn</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <input type="text" id="postCategory" required class="hidden">
                                     </div>
 
                                     <!-- Trạng thái (Custom Modern Dropdown) -->
@@ -1288,6 +1337,10 @@
                     <div class="py-2.5 flex items-center justify-between">
                         <span class="font-medium text-slate-700 dark:text-slate-300">Gửi biểu mẫu / Dán nhanh link</span>
                         <kbd class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs shadow-2xs">Enter</kbd>
+                    </div>
+                    <div class="py-2.5 flex items-center justify-between">
+                        <span class="font-medium text-slate-700 dark:text-slate-300">Ẩn / Hiện Sidebar tài khoản chưa đủ 2 bài/tuần</span>
+                        <kbd class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-800 dark:text-slate-200 text-xs shadow-2xs">S</kbd>
                     </div>
                     <div class="py-2.5 flex items-center justify-between">
                         <span class="font-medium text-slate-700 dark:text-slate-300">Bật / Tắt giao diện Sáng - Tối (Dark Mode)</span>
@@ -2167,12 +2220,21 @@ service cloud.firestore {
                 closeAccountModal();
                 closeCloudHelpModal();
                 closeLastWeekReportModal();
+                if (isSidebarOpen) {
+                    toggleKpiSidebar();
+                }
                 return;
             }
 
             const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
             const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable);
             if (isEditing) return;
+
+            if (e.key === 's' || e.key === 'S' || e.key === 'k' || e.key === 'K') {
+                e.preventDefault();
+                toggleKpiSidebar();
+                return;
+            }
 
             if (e.key === 'd' || e.key === 'D') {
                 e.preventDefault();
@@ -2636,19 +2698,15 @@ service cloud.firestore {
                             <span>${acc.handle}</span>
                         </a>
                         <div class="flex items-center gap-1 shrink-0">
-                            <button onclick="scanSingleAccount('${acc.id}')"
-                                class="px-2 py-1 rounded-lg bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 text-[11px] font-bold transition"
-                                title="Tự động quét kênh này">
-                                <i class="fa-solid fa-rotate"></i> Quét
-                            </button>
-                            <button onclick="quickSelectAccountForPost('${acc.id}')"
-                                class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-pink-600 text-white text-[11px] font-semibold transition">
-                                + Bù ${missingNum}
+                            <button onclick="openIdolDetailModal('${acc.id}', true)"
+                                class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-pink-600 text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                                title="Mở form thêm bài mới để bù KPI cho ${idolShort}">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <span>+ Bù ${missingNum}</span>
                             </button>
                         </div>
                     </div>
                     ${schedNote}
-                    ${privateNote}
                 `;
                 container.appendChild(item);
             });
@@ -3571,32 +3629,55 @@ service cloud.firestore {
         // MODAL CHI TIẾT BÀI ĐĂNG CỦA TỪNG IDOL / NHÓM (MỞ KHI BẤM VÀO THẺ IDOL)
         // ============================================================================
         function openIdolDetailModal(accId, forceOpenForm = false) {
-            const targetAcc = getAccountById(accId) || accounts[0];
-            if (!targetAcc) return;
+            const isStandalone = !accId;
+            const targetAcc = accId ? getAccountById(accId) : null;
 
-            currentModalAccountId = targetAcc.id;
+            currentModalAccountId = targetAcc ? targetAcc.id : null;
             currentModalTab = 'WEEK';
 
-            // Đồng bộ tài khoản đang chọn vào Form Thêm/Sửa bài đăng
-            const select = document.getElementById('postAccount');
-            if (select) {
-                select.value = targetAcc.id;
+            const existingWrapper = document.getElementById('idolExistingPostsWrapper');
+            const kpiBadgeEl = document.getElementById('idolModalKpiBadge');
+            const handleLinkEl = document.getElementById('idolModalHandleLink');
+            const iconBoxEl = document.getElementById('idolModalIconBox');
+            const groupBadgeEl = document.getElementById('idolModalGroupBadge');
+            const titleEl = document.getElementById('idolModalTitle');
+            const weekLabelEl = document.getElementById('idolModalWeekLabel');
+
+            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            const sunStr = addDaysStr(activeWeek, 6);
+
+            if (isStandalone) {
+                // CHẾ ĐỘ ĐIỀN BÀI ĐĂNG MỚI LẺ: KHÔNG HIỆN THÔNG TIN CỦA BẤT KỲ IDOL NÀO CÓ SẴN (THỨ 3)
+                if (existingWrapper) existingWrapper.style.display = 'none';
+                if (kpiBadgeEl) kpiBadgeEl.classList.add('hidden');
+                if (handleLinkEl) handleLinkEl.classList.add('hidden');
+                if (iconBoxEl) iconBoxEl.textContent = '➕';
+                if (groupBadgeEl) {
+                    groupBadgeEl.textContent = 'BÀI ĐĂNG MỚI';
+                    groupBadgeEl.className = 'text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-500 text-white';
+                }
+                if (titleEl) titleEl.textContent = 'Điền Bài Đăng Mới';
+                if (weekLabelEl) weekLabelEl.textContent = `Tuần ${formatShortDateVN(activeWeek)} → ${formatShortDateVN(sunStr)} • Chọn tài khoản bất kỳ để lưu bài`;
+
+                resetPostForm('');
+                toggleIdolModalForm(true);
+            } else {
+                // CHẾ ĐỘ XEM CHI TIẾT CỦA ĐÚNG IDOL ĐƯỢC CHỌN
+                if (existingWrapper) existingWrapper.style.display = 'block';
+                if (kpiBadgeEl) kpiBadgeEl.classList.remove('hidden');
+                if (handleLinkEl) handleLinkEl.classList.remove('hidden');
+
+                resetPostForm(targetAcc.id);
+                renderIdolModalContent(targetAcc.id);
+
+                const prog = getAccountWeeklyProgress(targetAcc.id, activeWeek);
+                const shouldExpandForm = forceOpenForm || prog.posts.length === 0;
+                toggleIdolModalForm(shouldExpandForm);
             }
-            resetPostForm(targetAcc.id);
-            updateFormAccountPreview();
 
             // Reset ô dán link nhanh trong modal
             const smartLinkInput = document.getElementById('modalSmartLinkInput');
             if (smartLinkInput) smartLinkInput.value = '';
-
-            // Render danh sách bài đăng đã có của Idol này
-            renderIdolModalContent(targetAcc.id);
-
-            // Nếu tài khoản chưa có bài nào trong tuần hoặc người dùng bấm "+ Bài" -> Mở sẵn khung Thêm Bài Đăng
-            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
-            const prog = getAccountWeeklyProgress(targetAcc.id, activeWeek);
-            const shouldExpandForm = forceOpenForm || prog.posts.length === 0;
-            toggleIdolModalForm(shouldExpandForm);
 
             const modal = document.getElementById('idolDetailModal');
             if (modal) {
@@ -3604,10 +3685,10 @@ service cloud.firestore {
                 modal.classList.add('active');
             }
 
-            if (forceOpenForm) {
+            if (forceOpenForm || isStandalone) {
                 setTimeout(() => {
-                    const catInput = document.getElementById('postCategory');
-                    if (catInput) catInput.focus();
+                    const linkInput = document.getElementById('postLink');
+                    if (linkInput) linkInput.focus();
                 }, 150);
             }
         }
@@ -4177,10 +4258,70 @@ service cloud.firestore {
         // ============================================================================
         // 11. BẢNG QUẢN LÝ BÀI ĐĂNG THEO TUẦN & TRÌNH PHÂN TÍCH LINK THÔNG MINH
         // ============================================================================
-        function setCategoryQuick(categoryName) {
+        function selectPostCategoryValue(catVal, labelText) {
             const input = document.getElementById('postCategory');
-            input.value = categoryName;
-            input.focus();
+            const label = document.getElementById('postCategoryDropdownLabel');
+            if (input) input.value = catVal;
+            if (label) {
+                label.textContent = labelText || (catVal ? `🏷️ ${catVal}` : '🏷️ Chọn hạng mục đăng...');
+            }
+            closeAllModernDropdowns();
+        }
+
+        function handleCustomCategoryInput(typedVal) {
+            const input = document.getElementById('postCategory');
+            const label = document.getElementById('postCategoryDropdownLabel');
+            if (input) input.value = typedVal;
+            if (label) {
+                label.textContent = typedVal ? `✏️ ${typedVal}` : '🏷️ Chọn hạng mục đăng...';
+            }
+        }
+
+        function selectPostDateValue(dateVal) {
+            if (!dateVal) return;
+            const input = document.getElementById('postDate');
+            const label = document.getElementById('postDateDropdownLabel');
+            const manualPicker = document.getElementById('postDateManualPicker');
+            if (input) input.value = dateVal;
+            if (manualPicker) manualPicker.value = dateVal;
+
+            const d = new Date(dateVal + 'T00:00:00');
+            const dayNames = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+            const dayName = isNaN(d.getTime()) ? '' : dayNames[d.getDay()];
+
+            if (label) {
+                label.innerHTML = `📅 <span class="text-indigo-600 font-extrabold mr-1">${dayName}</span> (${formatDateVN(dateVal)})`;
+            }
+
+            renderPostDateQuickDays(dateVal);
+            closeAllModernDropdowns();
+        }
+
+        function renderPostDateQuickDays(currentVal) {
+            const container = document.getElementById('postDateQuickDays');
+            if (!container) return;
+            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            const dayLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+            let html = '';
+            for (let i = 0; i < 7; i++) {
+                const dStr = addDaysStr(activeWeek, i);
+                const isSelected = dStr === currentVal;
+                const isToday = dStr === todayStr;
+                const dayNum = dStr.split('-')[2];
+                html += `
+                    <button type="button" onclick="selectPostDateValue('${dStr}')"
+                        class="flex flex-col items-center justify-center p-1.5 rounded-xl border text-center transition cursor-pointer ${isSelected ? 'bg-gradient-to-br from-indigo-600 to-pink-600 text-white border-transparent shadow-xs font-extrabold' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200 font-bold'}">
+                        <span class="text-[9px] uppercase ${isSelected ? 'text-white/80' : 'text-slate-400'}">${dayLabels[i]}</span>
+                        <span class="text-xs ${isToday && !isSelected ? 'text-pink-600 font-black' : ''}">${dayNum}</span>
+                    </button>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function setCategoryQuick(categoryName) {
+            selectPostCategoryValue(categoryName, `🏷️ ${categoryName}`);
         }
 
         function clearPostLinkField() {
@@ -4643,11 +4784,20 @@ service cloud.firestore {
             }
 
             document.getElementById('editingPostId').value = post.id;
-            document.getElementById('postDate').value = post.date;
-            document.getElementById('postAccount').value = post.accountId;
-            document.getElementById('postCategory').value = post.category;
+            selectPostDateValue(post.date);
+
+            const accSelect = document.getElementById('postAccount');
+            if (accSelect) accSelect.value = post.accountId;
+            const acc = getAccountById(post.accountId);
+            const accLabel = document.getElementById('postAccountDropdownLabel');
+            if (accLabel && acc) {
+                accLabel.innerHTML = `<span>${getGroupTheme(extractCleanGroupName(acc)).icon} [${extractCleanGroupName(acc)}] ▸ ${extractCleanIdolName(acc)} (${acc.handle})</span>`;
+            }
+
+            selectPostCategoryValue(post.category, `🏷️ ${post.category}`);
+            selectPostStatusValue(post.status, post.status === 'ĐÃ ĐĂNG' ? '✅ ĐÃ ĐĂNG (Tính vào KPI)' : (post.status === 'LÊN LỊCH' ? '⏰ LÊN LỊCH' : `⚠️ ${post.status}`));
+
             document.getElementById('postLink').value = post.link || '';
-            document.getElementById('postStatus').value = post.status;
             document.getElementById('postNote').value = sanitizeVietnameseText(post.note || '');
 
             const statusLbl = document.getElementById('postStatusCustomLabel');
@@ -4697,17 +4847,30 @@ service cloud.firestore {
 
         function resetPostForm(keepAccountId = '') {
             document.getElementById('editingPostId').value = '';
-            document.getElementById('postDate').value = todayStr;
-            const targetAcc = keepAccountId || currentModalAccountId || document.getElementById('postAccount')?.value;
-            if (targetAcc && document.getElementById('postAccount')) {
-                document.getElementById('postAccount').value = targetAcc;
+            const targetAcc = keepAccountId || currentModalAccountId || '';
+            const accSelect = document.getElementById('postAccount');
+            if (accSelect) {
+                accSelect.value = targetAcc;
             }
-            document.getElementById('postCategory').value = '';
+            if (targetAcc) {
+                const acc = getAccountById(targetAcc);
+                const accLabel = document.getElementById('postAccountDropdownLabel');
+                if (accLabel && acc) {
+                    accLabel.innerHTML = `<span>${getGroupTheme(extractCleanGroupName(acc)).icon} [${extractCleanGroupName(acc)}] ▸ ${extractCleanIdolName(acc)} (${acc.handle})</span>`;
+                }
+            } else {
+                const accLabel = document.getElementById('postAccountDropdownLabel');
+                if (accLabel) {
+                    accLabel.textContent = 'Chọn kênh đăng (43 kênh)...';
+                }
+            }
+
+            selectPostDateValue(todayStr);
+            selectPostCategoryValue('', '🏷️ Chọn hạng mục đăng...');
+            selectPostStatusValue('ĐÃ ĐĂNG', '✅ ĐÃ ĐĂNG (Tính vào KPI)');
+
             document.getElementById('postLink').value = '';
-            document.getElementById('postStatus').value = 'ĐÃ ĐĂNG';
             document.getElementById('postNote').value = '';
-            const statusLbl = document.getElementById('postStatusCustomLabel');
-            if (statusLbl) statusLbl.innerHTML = getPostStatusLabelHtml('ĐÃ ĐĂNG');
             clearPostLinkField();
             updateFormAccountPreview();
 
@@ -5982,6 +6145,7 @@ service cloud.firestore {
             toggleModernDropdown, closeAllModernDropdowns, selectDirectoryGroup,
             selectTableAccountFilter, filterCustomAccountDropdownList, selectTableStatusFilter,
             selectPostAccountValue, filterPostAccountDropdownList, selectPostStatusValue,
+            selectPostCategoryValue, handleCustomCategoryInput, selectPostDateValue, renderPostDateQuickDays,
             openIdolDetailModal, closeIdolDetailModal, setIdolModalTab, toggleIdolModalForm,
             scanCurrentModalAccount, setTableViewMode, setTableGroupFilter, setTablePageSize,
             goToTablePage, toggleTableGroupAccordion, resetTablePageAndRender, handleModalSmartLinkSubmit,
