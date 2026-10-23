@@ -138,7 +138,7 @@
             display: grid;
             grid-template-rows: 0fr;
             opacity: 0;
-            transition: grid-template-rows 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease, margin-top 0.22s ease;
+            transition: grid-template-rows 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease, margin-top 0.28s ease;
         }
         .collapsible-panel.expanded,
         .collapsible-panel.open {
@@ -147,6 +147,116 @@
         }
         .collapsible-inner {
             overflow: hidden;
+        }
+
+        /* Hiệu ứng xuất hiện & đóng mượt mà cho Modal Chi Tiết Idol */
+        @keyframes modalBackdropFadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        @keyframes modalBackdropFadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        @keyframes idolModalCardSpringIn {
+            0% {
+                opacity: 0;
+                transform: translateY(26px) scale(0.94);
+            }
+            65% {
+                opacity: 1;
+                transform: translateY(-3px) scale(1.006);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        @keyframes idolModalCardSpringOut {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(16px) scale(0.96);
+            }
+        }
+        @keyframes idolHeaderIconPop {
+            0% { transform: scale(0.6) rotate(-10deg); opacity: 0; }
+            70% { transform: scale(1.08) rotate(3deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes postCardStaggerSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(12px) scale(0.985);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        @keyframes confirmBarSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateX(8px) scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        #idolDetailModal.modal-entering {
+            animation: modalBackdropFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        #idolDetailModal.modal-entering .smooth-modal-card {
+            animation: idolModalCardSpringIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        #idolDetailModal.modal-entering #idolModalIconBox {
+            animation: idolHeaderIconPop 0.38s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
+        }
+        #idolDetailModal.modal-closing {
+            animation: modalBackdropFadeOut 0.19s ease forwards;
+            pointer-events: none;
+        }
+        #idolDetailModal.modal-closing .smooth-modal-card {
+            animation: idolModalCardSpringOut 0.19s cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+
+        .post-card-stagger-in {
+            animation: postCardStaggerSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+            animation-delay: var(--stagger-delay, 0ms);
+        }
+
+        .confirm-delete-bar {
+            animation: confirmBarSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Hiệu ứng thu gọn khung mượt mà khi xóa bài đăng */
+        .post-item-collapsible {
+            transition:
+                max-height 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 0.26s ease,
+                transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+                margin 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+                padding 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.2s ease,
+                background-color 0.2s ease;
+            transform-origin: center top;
+        }
+        .post-item-deleting {
+            opacity: 0 !important;
+            transform: translateX(-16px) scale(0.95) !important;
+            max-height: 0px !important;
+            margin-top: 0px !important;
+            margin-bottom: 0px !important;
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+            border-top-width: 0px !important;
+            border-bottom-width: 0px !important;
+            pointer-events: none !important;
         }
     </style>
 </head>
@@ -2237,6 +2347,10 @@ service cloud.firestore {
                     closeAllModernDropdowns();
                     return;
                 }
+                if (pendingDeletePostId) {
+                    cancelDeletePost(pendingDeletePostId);
+                    return;
+                }
                 closeIdolDetailModal();
                 closeGoogleSheetModal();
                 closeKeyboardShortcutsModal();
@@ -2250,8 +2364,13 @@ service cloud.firestore {
             }
 
             if (e.key === 'Enter') {
+                if (pendingDeletePostId) {
+                    e.preventDefault();
+                    confirmDeletePost(pendingDeletePostId);
+                    return;
+                }
                 const idolModal = document.getElementById('idolDetailModal');
-                if (idolModal && !idolModal.classList.contains('hidden')) {
+                if (idolModal && !idolModal.classList.contains('hidden') && !idolModal.classList.contains('modal-closing')) {
                     // Nếu đang gõ ghi chú trong textarea và không ấn Ctrl, cho phép Enter xuống dòng tự nhiên
                     if (e.target && e.target.id === 'postNote' && !e.ctrlKey) {
                         return;
@@ -3269,8 +3388,8 @@ service cloud.firestore {
             updateRealtimeDeadlineCounter();
             if (currentModalAccountId) {
                 const modal = document.getElementById('idolDetailModal');
-                if (modal && !modal.classList.contains('hidden')) {
-                    renderIdolModalContent(currentModalAccountId);
+                if (modal && !modal.classList.contains('hidden') && !modal.classList.contains('modal-closing')) {
+                    renderIdolModalContent(currentModalAccountId, true);
                 }
             }
         }
@@ -3672,7 +3791,21 @@ service cloud.firestore {
         // ============================================================================
         // MODAL CHI TIẾT BÀI ĐĂNG CỦA TỪNG IDOL / NHÓM (MỞ KHI BẤM VÀO THẺ IDOL)
         // ============================================================================
+        let idolModalCloseTimer = null;
+        let pendingDeletePostId = null;
+        let pendingDeleteTimer = null;
+
         function openIdolDetailModal(accId, forceOpenForm = false) {
+            if (idolModalCloseTimer) {
+                clearTimeout(idolModalCloseTimer);
+                idolModalCloseTimer = null;
+            }
+            if (pendingDeleteTimer) {
+                clearTimeout(pendingDeleteTimer);
+                pendingDeleteTimer = null;
+            }
+            pendingDeletePostId = null;
+
             const isStandalone = !accId;
             const targetAcc = accId ? getAccountById(accId) : null;
 
@@ -3686,6 +3819,12 @@ service cloud.firestore {
             const groupBadgeEl = document.getElementById('idolModalGroupBadge');
             const titleEl = document.getElementById('idolModalTitle');
             const weekLabelEl = document.getElementById('idolModalWeekLabel');
+            const listContainer = document.getElementById('idolModalPostsList');
+            if (listContainer) {
+                listContainer.style.height = '';
+                listContainer.style.overflow = '';
+                listContainer.style.transition = '';
+            }
 
             const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
             const sunStr = addDaysStr(activeWeek, 6);
@@ -3712,7 +3851,7 @@ service cloud.firestore {
                 if (handleLinkEl) handleLinkEl.classList.remove('hidden');
 
                 resetPostForm(targetAcc.id);
-                renderIdolModalContent(targetAcc.id);
+                renderIdolModalContent(targetAcc.id, false);
 
                 const prog = getAccountWeeklyProgress(targetAcc.id, activeWeek);
                 const shouldExpandForm = forceOpenForm || prog.posts.length === 0;
@@ -3725,8 +3864,10 @@ service cloud.firestore {
 
             const modal = document.getElementById('idolDetailModal');
             if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('active');
+                modal.classList.remove('hidden', 'modal-closing', 'modal-entering');
+                // Kích hoạt lại animation xuất hiện mượt mà mỗi lần bấm xem chi tiết Idol
+                void modal.offsetWidth;
+                modal.classList.add('active', 'modal-entering');
             }
 
             if (forceOpenForm || isStandalone) {
@@ -3739,17 +3880,46 @@ service cloud.firestore {
 
         function closeIdolDetailModal() {
             const modal = document.getElementById('idolDetailModal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('active');
-            }
+            if (!modal || modal.classList.contains('hidden')) return;
             closeAllModernDropdowns();
+            if (pendingDeleteTimer) {
+                clearTimeout(pendingDeleteTimer);
+                pendingDeleteTimer = null;
+            }
+            pendingDeletePostId = null;
+
+            modal.classList.remove('modal-entering', 'active');
+            modal.classList.add('modal-closing');
+            if (idolModalCloseTimer) clearTimeout(idolModalCloseTimer);
+            idolModalCloseTimer = setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('modal-closing');
+                idolModalCloseTimer = null;
+            }, 185);
         }
 
         function setIdolModalTab(tabMode) {
+            if (currentModalTab === tabMode) return;
             currentModalTab = tabMode;
             if (currentModalAccountId) {
-                renderIdolModalContent(currentModalAccountId);
+                const listContainer = document.getElementById('idolModalPostsList');
+                const beforeH = listContainer ? listContainer.offsetHeight : 0;
+                renderIdolModalContent(currentModalAccountId, false);
+                if (listContainer && beforeH > 0) {
+                    const afterH = listContainer.scrollHeight;
+                    if (Math.abs(afterH - beforeH) > 4) {
+                        listContainer.style.height = `${beforeH}px`;
+                        listContainer.style.overflow = 'hidden';
+                        void listContainer.offsetHeight;
+                        listContainer.style.transition = 'height 0.32s cubic-bezier(0.22, 1, 0.36, 1)';
+                        listContainer.style.height = `${afterH}px`;
+                        setTimeout(() => {
+                            listContainer.style.height = '';
+                            listContainer.style.overflow = '';
+                            listContainer.style.transition = '';
+                        }, 330);
+                    }
+                }
             }
         }
 
@@ -3861,8 +4031,25 @@ service cloud.firestore {
             input.value = '';
             showToast(`✅ Đã thêm bài đăng cho ${targetAcc ? extractCleanIdolName(targetAcc) : 'Idol'} thành công!`);
 
-            // Cập nhật lại giao diện modal và dashboard
-            renderIdolModalContent(currentModalAccountId);
+            // Cập nhật lại giao diện modal và dashboard với hiệu ứng giãn khung mượt
+            const listContainer = document.getElementById('idolModalPostsList');
+            const beforeH = listContainer ? listContainer.offsetHeight : 0;
+            renderIdolModalContent(currentModalAccountId, false);
+            if (listContainer && beforeH > 0) {
+                const afterH = listContainer.scrollHeight;
+                if (Math.abs(afterH - beforeH) > 4) {
+                    listContainer.style.height = `${beforeH}px`;
+                    listContainer.style.overflow = 'hidden';
+                    void listContainer.offsetHeight;
+                    listContainer.style.transition = 'height 0.34s cubic-bezier(0.22, 1, 0.36, 1)';
+                    listContainer.style.height = `${afterH}px`;
+                    setTimeout(() => {
+                        listContainer.style.height = '';
+                        listContainer.style.overflow = '';
+                        listContainer.style.transition = '';
+                    }, 350);
+                }
+            }
             renderAllUI();
 
             if (db) {
@@ -3889,7 +4076,7 @@ service cloud.firestore {
             return `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 whitespace-nowrap">📝 ${status || 'BẢN NHÁP'}</span>`;
         }
 
-        function renderIdolModalContent(accId) {
+        function renderIdolModalContent(accId, skipEntranceAnim = false) {
             const acc = getAccountById(accId);
             if (!acc) return;
 
@@ -3966,7 +4153,7 @@ service cloud.firestore {
 
             if (displayPosts.length === 0) {
                 listContainer.innerHTML = `
-                    <div class="p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-300 text-center">
+                    <div class="post-card-stagger-in p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-300 text-center">
                         <div class="w-10 h-10 rounded-2xl bg-pink-50 text-pink-500 flex items-center justify-center mx-auto mb-2">
                             <i class="fa-solid fa-folder-open text-lg"></i>
                         </div>
@@ -3980,6 +4167,13 @@ service cloud.firestore {
             listContainer.innerHTML = displayPosts.map((post, idx) => {
                 const wMon = getPostWeekMonday(post);
                 const weekLabel = sanitizeVietnameseText(post.sheet) || `Tuần ${formatShortDateVN(wMon)}`;
+                const isConfirming = pendingDeletePostId === post.id;
+                const staggerClass = skipEntranceAnim ? '' : 'post-card-stagger-in';
+                const staggerStyle = skipEntranceAnim ? '' : `style="--stagger-delay: ${Math.min(idx * 55, 330)}ms"`;
+                const confirmCardClass = isConfirming
+                    ? 'border-rose-400 bg-rose-50/80 ring-2 ring-rose-500/20'
+                    : 'bg-white border-slate-200/90 hover:border-indigo-300';
+
                 const linkActionHtml = post.link
                     ? `<a href="${post.link}" target="_blank" rel="noopener noreferrer"
                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-600 border border-pink-200/70 font-bold text-xs transition shrink-0">
@@ -3988,13 +4182,14 @@ service cloud.firestore {
                           <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                        </a>`
                     : `<button type="button" onclick="quickAttachLinkToPost('${post.id}')"
-                          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-indigo-50 text-amber-700 hover:text-indigo-600 border border-dashed border-amber-300 hover:border-indigo-300 font-bold text-xs transition shrink-0">
+                          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-indigo-50 text-amber-700 hover:text-indigo-600 border border-dashed border-amber-300 hover:border-indigo-300 font-bold text-xs transition shrink-0 cursor-pointer">
                           <i class="fa-solid fa-link text-[10px]"></i>
                           <span>+ Gắn link TikTok</span>
                        </button>`;
 
                 return `
-                    <div class="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-indigo-300 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div id="modalPostCard_${post.id}" data-modal-post-id="${post.id}" ${staggerStyle}
+                        class="post-item-collapsible ${staggerClass} p-3.5 rounded-2xl border ${confirmCardClass} shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div class="flex items-start gap-3 min-w-0">
                             <div class="w-7 h-7 rounded-xl bg-slate-100 text-slate-700 font-extrabold text-xs flex items-center justify-center shrink-0 mt-0.5">
                                 #${idx + 1}
@@ -4013,17 +4208,34 @@ service cloud.firestore {
                         </div>
 
                         <div class="flex items-center gap-1.5 self-end sm:self-center shrink-0">
-                            ${linkActionHtml}
-                            <button type="button" onclick="editPost('${post.id}')"
-                                class="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition text-xs"
-                                title="Chỉnh sửa bài đăng này">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button type="button" onclick="deletePost('${post.id}')"
-                                class="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition text-xs"
-                                title="Xóa bài đăng này">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
+                            <div id="modalPostActions_${post.id}" class="${isConfirming ? 'hidden' : 'flex'} items-center gap-1.5">
+                                ${linkActionHtml}
+                                <button type="button" onclick="editPost('${post.id}')"
+                                    class="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition text-xs cursor-pointer"
+                                    title="Chỉnh sửa bài đăng này">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button type="button" onclick="requestDeletePost('${post.id}', event)"
+                                    class="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition text-xs cursor-pointer"
+                                    title="Xóa bài đăng này">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                            <div id="modalPostConfirm_${post.id}" class="${isConfirming ? 'flex' : 'hidden'} confirm-delete-bar items-center gap-1.5 bg-rose-100/90 px-2.5 py-1.5 rounded-xl border border-rose-300 shadow-2xs">
+                                <span class="text-[11px] font-extrabold text-rose-700 flex items-center gap-1 whitespace-nowrap">
+                                    <i class="fa-solid fa-triangle-exclamation text-rose-600 text-[10px]"></i>
+                                    <span>Xóa bài này?</span>
+                                </span>
+                                <button type="button" onclick="confirmDeletePost('${post.id}', event)"
+                                    class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                                    <i class="fa-solid fa-check text-[10px]"></i>
+                                    <span>Xóa</span>
+                                </button>
+                                <button type="button" onclick="cancelDeletePost('${post.id}', event)"
+                                    class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs transition cursor-pointer whitespace-nowrap">
+                                    Hủy
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -4912,8 +5124,155 @@ service cloud.firestore {
             }, 80);
         }
 
+        function togglePostConfirmUI(postId, isConfirming) {
+            const modalCardEl = document.getElementById(`modalPostCard_${postId}`);
+            const modalActionsEl = document.getElementById(`modalPostActions_${postId}`);
+            const modalConfirmEl = document.getElementById(`modalPostConfirm_${postId}`);
+
+            if (modalCardEl && modalActionsEl && modalConfirmEl) {
+                if (isConfirming) {
+                    modalActionsEl.classList.add('hidden');
+                    modalActionsEl.classList.remove('flex');
+                    modalConfirmEl.classList.remove('hidden');
+                    modalConfirmEl.classList.add('flex');
+                    modalCardEl.classList.remove('bg-white', 'border-slate-200/90', 'hover:border-indigo-300');
+                    modalCardEl.classList.add('border-rose-400', 'bg-rose-50/80', 'ring-2', 'ring-rose-500/20');
+                } else {
+                    modalConfirmEl.classList.add('hidden');
+                    modalConfirmEl.classList.remove('flex');
+                    modalActionsEl.classList.remove('hidden');
+                    modalActionsEl.classList.add('flex');
+                    modalCardEl.classList.remove('border-rose-400', 'bg-rose-50/80', 'ring-2', 'ring-rose-500/20');
+                    modalCardEl.classList.add('bg-white', 'border-slate-200/90', 'hover:border-indigo-300');
+                }
+            }
+
+            const tableCardEl = document.getElementById(`tablePostCard_${postId}`);
+            const tableActionsEl = document.getElementById(`tablePostActions_${postId}`);
+            const tableConfirmEl = document.getElementById(`tablePostConfirm_${postId}`);
+
+            if (tableCardEl && tableActionsEl && tableConfirmEl) {
+                if (isConfirming) {
+                    tableActionsEl.classList.add('hidden');
+                    tableActionsEl.classList.remove('flex');
+                    tableConfirmEl.classList.remove('hidden');
+                    tableConfirmEl.classList.add('flex');
+                    tableCardEl.classList.add('border-rose-400', 'bg-rose-50/40', 'dark:bg-rose-950/30', 'ring-1', 'ring-rose-500/20');
+                } else {
+                    tableConfirmEl.classList.add('hidden');
+                    tableConfirmEl.classList.remove('flex');
+                    tableActionsEl.classList.remove('hidden');
+                    tableActionsEl.classList.add('flex');
+                    tableCardEl.classList.remove('border-rose-400', 'bg-rose-50/40', 'dark:bg-rose-950/30', 'ring-1', 'ring-rose-500/20');
+                }
+            }
+        }
+
+        function requestDeletePost(postId, event) {
+            if (event) event.stopPropagation();
+            if (pendingDeleteTimer) {
+                clearTimeout(pendingDeleteTimer);
+                pendingDeleteTimer = null;
+            }
+            const prevId = pendingDeletePostId;
+            pendingDeletePostId = postId;
+
+            if (prevId && prevId !== postId) {
+                togglePostConfirmUI(prevId, false);
+            }
+            togglePostConfirmUI(postId, true);
+
+            // Tự động đóng nút xác nhận sau 6 giây nếu không thao tác
+            pendingDeleteTimer = setTimeout(() => {
+                if (pendingDeletePostId === postId) {
+                    cancelDeletePost(postId);
+                }
+            }, 6000);
+        }
+
+        function cancelDeletePost(postId, event) {
+            if (event) event.stopPropagation();
+            if (pendingDeleteTimer) {
+                clearTimeout(pendingDeleteTimer);
+                pendingDeleteTimer = null;
+            }
+            if (pendingDeletePostId === postId) {
+                pendingDeletePostId = null;
+            }
+            togglePostConfirmUI(postId, false);
+        }
+
+        async function confirmDeletePost(postId, event) {
+            if (event) event.stopPropagation();
+            if (pendingDeleteTimer) {
+                clearTimeout(pendingDeleteTimer);
+                pendingDeleteTimer = null;
+            }
+            pendingDeletePostId = null;
+            await deletePost(postId);
+        }
+
         async function deletePost(postId) {
-            posts = posts.filter(p => p.id !== postId);
+            const modalCardEl = document.getElementById(`modalPostCard_${postId}`);
+            const tableCardEl = document.getElementById(`tablePostCard_${postId}`);
+            const listContainer = document.getElementById('idolModalPostsList');
+            const modal = document.getElementById('idolDetailModal');
+            const isModalOpen = modal && !modal.classList.contains('hidden') && !modal.classList.contains('modal-closing');
+
+            if (isModalOpen && modalCardEl && listContainer) {
+                const startListH = listContainer.offsetHeight;
+                const cardH = modalCardEl.offsetHeight;
+                const siblingsCount = listContainer.querySelectorAll('[data-modal-post-id]').length;
+                const gap = siblingsCount > 1 ? 10 : 0;
+                const targetListH = Math.max(0, startListH - cardH - gap);
+
+                // Khóa chiều cao danh sách để khung modal thu gọn mượt mà từ từ
+                listContainer.style.height = `${startListH}px`;
+                listContainer.style.overflow = 'hidden';
+                listContainer.style.transition = 'height 0.36s cubic-bezier(0.22, 1, 0.36, 1)';
+
+                modalCardEl.style.maxHeight = `${cardH}px`;
+                modalCardEl.style.overflow = 'hidden';
+
+                // Force reflow
+                void listContainer.offsetHeight;
+
+                modalCardEl.classList.add('post-item-deleting');
+                listContainer.style.height = `${targetListH}px`;
+
+                await new Promise(resolve => setTimeout(resolve, 360));
+
+                posts = posts.filter(p => p.id !== postId);
+
+                if (currentModalAccountId) {
+                    renderIdolModalContent(currentModalAccountId, true);
+                    if (siblingsCount === 1) {
+                        const emptyStateH = listContainer.scrollHeight;
+                        if (emptyStateH > 0) {
+                            listContainer.style.height = '0px';
+                            void listContainer.offsetHeight;
+                            listContainer.style.transition = 'height 0.32s cubic-bezier(0.22, 1, 0.36, 1)';
+                            listContainer.style.height = `${emptyStateH}px`;
+                            await new Promise(resolve => setTimeout(resolve, 320));
+                        }
+                    }
+                }
+
+                listContainer.style.height = '';
+                listContainer.style.overflow = '';
+                listContainer.style.transition = '';
+            } else if (tableCardEl) {
+                const cardH = tableCardEl.offsetHeight;
+                tableCardEl.style.maxHeight = `${cardH}px`;
+                tableCardEl.style.overflow = 'hidden';
+                void tableCardEl.offsetHeight;
+                tableCardEl.classList.add('post-item-deleting');
+                await new Promise(resolve => setTimeout(resolve, 320));
+                posts = posts.filter(p => p.id !== postId);
+            } else {
+                posts = posts.filter(p => p.id !== postId);
+            }
+
             renderAllUI();
             if (db) {
                 try {
@@ -5085,20 +5444,31 @@ service cloud.firestore {
                    </a>`
                 : `<span class="text-[10px] text-slate-400 italic">Không có link</span>`;
 
+            const isConfirming = pendingDeletePostId === post.id;
             return `
-                <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-2xs space-y-1.5">
+                <div id="tablePostCard_${post.id}" data-table-post-id="${post.id}"
+                    class="post-item-collapsible p-2.5 rounded-xl border ${isConfirming ? 'border-rose-400 bg-rose-50/40 dark:bg-rose-950/30 ring-1 ring-rose-500/20' : 'border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900'} shadow-2xs space-y-1.5">
                     <div class="flex items-center justify-between gap-1.5">
                         <span class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1">
                             <i class="fa-solid fa-calendar-day text-indigo-500 text-[10px]"></i>
                             <span>${formatDateVN(post.date)}</span>
                         </span>
-                        <div class="flex items-center gap-1">
+                        <div id="tablePostActions_${post.id}" class="${isConfirming ? 'hidden' : 'flex'} items-center gap-1">
                             ${statusBadge}
                             <button type="button" onclick="editPost('${post.id}')" class="p-1 text-slate-400 hover:text-indigo-600 transition cursor-pointer" title="Sửa bài này">
                                 <i class="fa-solid fa-pen-to-square text-[11px]"></i>
                             </button>
-                            <button type="button" onclick="deletePost('${post.id}')" class="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer" title="Xóa bài này">
+                            <button type="button" onclick="requestDeletePost('${post.id}', event)" class="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer" title="Xóa bài này">
                                 <i class="fa-solid fa-trash-can text-[11px]"></i>
+                            </button>
+                        </div>
+                        <div id="tablePostConfirm_${post.id}" class="${isConfirming ? 'flex' : 'hidden'} confirm-delete-bar items-center gap-1 bg-rose-50 dark:bg-rose-950/70 px-1.5 py-0.5 rounded-lg border border-rose-200 dark:border-rose-800">
+                            <span class="text-[10px] font-extrabold text-rose-600 dark:text-rose-400">Xóa?</span>
+                            <button type="button" onclick="confirmDeletePost('${post.id}', event)" class="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-[10px] transition cursor-pointer">
+                                Xóa
+                            </button>
+                            <button type="button" onclick="cancelDeletePost('${post.id}', event)" class="px-1.5 py-0.5 rounded bg-white hover:bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-bold text-[10px] transition cursor-pointer">
+                                Hủy
                             </button>
                         </div>
                     </div>
@@ -6214,7 +6584,7 @@ service cloud.firestore {
             updateFormAccountPreview, setCategoryQuick, setRoleFilter, setDirectoryFilter,
             renderAccountsGrid, renderPostsTable, handleAccountSubmit, resetAccountForm,
             autoFillProfileUrl, toggleAccountChecked, markAccountCheckedOnVisit,
-            quickSelectAccountForPost, editPost, deletePost, editAccountInModal,
+            quickSelectAccountForPost, editPost, deletePost, requestDeletePost, confirmDeletePost, cancelDeletePost, togglePostConfirmUI, editAccountInModal,
             deleteAccountInModal, restoreDefaultAccounts, toggleKpiSidebar, setSidebarKpiMode,
             handleQuickWeekSelect, shiftSelectedWeek, jumpToCurrentRealtimeWeek,
             openLastWeekReportModal, closeLastWeekReportModal, renderLastWeekReportContent,
