@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Passion Media Tracker - Quản Lý & Theo Dõi TikTok</title>
+    <title>Passion Media Tracker - Quản Lý & Theo Dõi TikTok Theo Tuần</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (Hỗ trợ đọc trực tiếp file Excel .xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Google Fonts: Inter -->
@@ -15,7 +17,6 @@
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
         }
-        /* TikTok inspired subtle gradient accents */
         .tiktok-gradient {
             background: linear-gradient(135deg, #00f2fe 0%, #4facfe 45%, #ff0844 100%);
         }
@@ -23,7 +24,6 @@
             border-color: #ff0050;
             box-shadow: 0 10px 25px -5px rgba(255, 0, 80, 0.12), 0 8px 10px -6px rgba(0, 242, 254, 0.12);
         }
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -43,81 +43,230 @@
 <body class="text-slate-800 min-h-screen flex flex-col">
 
     <!-- Top Navigation Bar -->
-    <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-lg border-b border-slate-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <!-- Left: Brand & Title -->
             <div class="flex items-center gap-3">
-                <div class="w-11 h-11 rounded-2xl tiktok-gradient p-0.5 flex items-center justify-center shadow-md">
+                <div class="w-11 h-11 rounded-2xl tiktok-gradient p-0.5 flex items-center justify-center shadow-md shrink-0">
                     <div class="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
                         <i class="fa-brands fa-tiktok text-xl text-white"></i>
                     </div>
                 </div>
                 <div>
-                    <div class="flex items-center gap-2">
-                        <h1 class="text-lg sm:text-xl font-extrabold tracking-tight">PASSION MEDIA TRACKER</h1>
-                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-base sm:text-xl font-extrabold tracking-tight">PASSION MEDIA TRACKER</h1>
+                        <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
                             6 NHÓM & 37 IDOL
                         </span>
+                        <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            KPI: 2 BÀI / TUẦN
+                        </span>
                     </div>
-                    <p class="text-xs text-slate-400">Hệ thống quản lý kênh TikTok, chống miss bài đăng & theo dõi tiến độ Passion</p>
+                    <p class="text-xs text-slate-400">Theo dõi tiến độ tuần (Thứ 2 bắt đầu &rarr; Chủ Nhật Deadline) • Đồng bộ Cloud Firebase</p>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Right: Real-time Weekly Deadline Counter (Day-only) & Action Buttons -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Real-time Deadline Counter on Top-Right of Title -->
+                <div id="deadlineHeaderBadge" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 border border-amber-400/40 text-amber-200 text-xs font-bold flex items-center gap-2.5 shadow-sm">
+                    <div class="w-8 h-8 rounded-lg bg-amber-400/20 text-amber-300 flex items-center justify-center text-sm shrink-0">
+                        <i class="fa-solid fa-calendar-day"></i>
+                    </div>
+                    <div>
+                        <div id="deadlineCountdownText" class="leading-tight text-white font-extrabold text-xs sm:text-sm">
+                            Deadline CN: Còn -- ngày
+                        </div>
+                        <div id="deadlineWeekRangeText" class="text-[10px] text-amber-300 font-medium">
+                            Tuần hiện tại: T2 --/-- &rarr; CN --/--
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Toggle Sidebar Button (Accounts < 2 posts/week) -->
+                <button onclick="toggleKpiSidebar()" class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold border border-rose-400/40 transition flex items-center gap-2 shadow-md" title="Ẩn/Hiện danh sách tài khoản chưa đủ 2 bài/tuần">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Chưa Đủ 2 Bài</span>
+                    <span id="headerMissingBadge" class="px-1.5 py-0.5 rounded-full bg-white text-rose-700 text-[11px] font-extrabold">0</span>
+                </button>
+
+                <!-- Sync Excel Data to Firebase Button -->
+                <button onclick="syncExcelDatasetToFirebase(true)" class="px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold border border-emerald-500/30 transition flex items-center gap-1.5" title="Đẩy toàn bộ dữ liệu từ file MEDIA (1).xlsx lên Firebase">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Đồng Bộ Excel</span>
+                </button>
+
+                <!-- Upload Additional Excel File -->
+                <label class="cursor-pointer px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700 transition flex items-center gap-1.5" title="Nhập thêm file Excel (.xlsx) mới vào hệ thống">
+                    <i class="fa-solid fa-file-import text-cyan-400"></i>
+                    <span>Nhập .xlsx</span>
+                    <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="hidden" onchange="handleExcelFileUpload(event)">
+                </label>
+
                 <!-- Cloud Status Badge -->
-                <button onclick="openCloudHelpModal()" id="cloudStatusBadge" class="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-300 text-xs font-medium border border-slate-700 transition flex items-center gap-2" title="Bấm để xem trạng thái kết nối & hướng dẫn cấu hình Firebase trên Vercel">
+                <button onclick="openCloudHelpModal()" id="cloudStatusBadge" class="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-amber-300 text-xs font-medium border border-slate-700 transition flex items-center gap-2" title="Trạng thái kết nối Firebase">
                     <span id="cloudStatusDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                    <span id="cloudStatusText">Đang kết nối Cloud...</span>
-                </button>
-                <button onclick="openAccountModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium border border-slate-700 transition flex items-center gap-2">
-                    <i class="fa-solid fa-user-plus text-cyan-400"></i>
-                    <span>Thêm / Sửa Tài Khoản</span>
-                </button>
-                <button onclick="exportToCSV()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-medium border border-slate-700 transition flex items-center gap-2">
-                    <i class="fa-solid fa-file-excel text-emerald-400"></i>
-                    <span>Xuất Excel (CSV)</span>
-                </button>
-                <button onclick="scrollToPostForm()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white text-xs sm:text-sm font-semibold shadow-md transition flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>Ghi Nhận Bài Đăng</span>
+                    <span id="cloudStatusText">Đang kết nối...</span>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+    <!-- Banner Cảnh Báo Khi Bước Sang Thứ 2 Tuần Mới -->
+    <div id="mondayNewWeekBanner" class="hidden bg-gradient-to-r from-rose-600 via-pink-600 to-indigo-700 text-white px-4 py-3 shadow-md border-b border-rose-400/30">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm">
+            <div class="flex items-center gap-2.5">
+                <span class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-bell animate-bounce"></i>
+                </span>
+                <div>
+                    <strong id="mondayBannerTitle" class="font-extrabold">THÔNG BÁO THỨ 2 ĐẦU TUẦN MỚI:</strong>
+                    <span id="mondayBannerDesc" class="ml-1 text-rose-100">Hệ thống đã chuyển sang tuần mới và tổng kết danh sách chưa đủ 2 bài/tuần của tuần trước.</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 self-end sm:self-auto">
+                <button onclick="openLastWeekReportModal()" class="px-3 py-1.5 rounded-xl bg-white text-rose-700 font-bold text-xs hover:bg-rose-50 transition shadow-xs">
+                    Xem danh sách chưa đủ tuần trước
+                </button>
+                <button onclick="dismissMondayBanner()" class="p-1.5 text-white/80 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
-        <!-- Quick Stats & Anti-Miss Banner -->
+    <!-- SIDEBAR NHỎ ẨN/HIỆN: DANH SÁCH TÀI KHOẢN CHƯA ĐỦ 2 BÀI / TUẦN -->
+    <aside id="kpiSidebar" class="fixed top-[68px] right-0 bottom-0 w-80 sm:w-96 bg-white shadow-2xl border-l border-slate-200 z-40 transform translate-x-full transition-transform duration-300 flex flex-col">
+        <!-- Sidebar Header -->
+        <div class="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                    <h3 class="font-extrabold text-sm uppercase tracking-wider">Tài Khoản Chưa Đủ 2 Bài/Tuần</h3>
+                </div>
+                <p id="sidebarWeekSubtitle" class="text-[11px] text-slate-400 mt-0.5">Tuần đang chọn: T2 &rarr; CN</p>
+            </div>
+            <button onclick="toggleKpiSidebar()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Sidebar Filter Controls -->
+        <div class="p-3 bg-slate-50 border-b border-slate-200 space-y-2">
+            <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-200/70 text-xs font-semibold">
+                <button id="sidebarModePosted" onclick="setSidebarKpiMode('POSTED')" class="py-1.5 px-2 rounded-lg bg-white text-slate-900 shadow-xs transition">
+                    Tính bài Đã Đăng
+                </button>
+                <button id="sidebarModeAll" onclick="setSidebarKpiMode('ALL')" class="py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                    Tính cả Lên Lịch
+                </button>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-slate-600 px-1">
+                <span>Đang thiếu: <strong id="sidebarMissingCountText" class="text-rose-600">0 tài khoản</strong></span>
+                <button onclick="openLastWeekReportModal()" class="text-indigo-600 hover:underline font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-clock-rotate-left text-[10px]"></i>
+                    <span>Báo cáo tuần trước</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sidebar Account List -->
+        <div id="sidebarAccountsList" class="flex-1 overflow-y-auto p-3 space-y-2.5">
+            <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
+            <span class="text-slate-500">Chỉ tiêu: <strong>2 bài / acc / tuần</strong></span>
+            <button onclick="toggleKpiSidebar()" class="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
+                Đóng Sidebar
+            </button>
+        </div>
+    </aside>
+
+    <!-- Nút Nổi Cạnh Phải Để Bấm Ẩn/Hiện Nhanh Sidebar -->
+    <button onclick="toggleKpiSidebar()" id="floatingSidebarBtn"
+        class="fixed right-0 top-1/2 -translate-y-1/2 z-30 bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-3.5 rounded-l-2xl shadow-xl border border-r-0 border-rose-400/40 flex flex-col items-center gap-1.5 transition"
+        title="Bấm để Ẩn/Hiện danh sách tài khoản chưa đủ 2 bài/tuần">
+        <i class="fa-solid fa-list-check text-sm"></i>
+        <span class="text-[11px] font-extrabold tracking-wider" style="writing-mode: vertical-rl;">CHƯA ĐỦ 2 BÀI</span>
+        <span id="floatingMissingCount" class="w-5 h-5 rounded-full bg-white text-rose-700 text-[10px] font-extrabold flex items-center justify-center">0</span>
+    </button>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- THANH ĐIỀU KHIỂN TUẦN (THỨ 2 BẮT ĐẦU -> CHỦ NHẬT DEADLINE) -->
+        <section class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg font-bold shrink-0 border border-indigo-100">
+                    <i class="fa-solid fa-calendar-week"></i>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Theo Dõi Theo Tuần (T2 &rarr; CN)</span>
+                        <span id="activeWeekSheetTag" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Tuần Hiện Tại
+                        </span>
+                    </div>
+                    <h2 id="activeWeekTitle" class="text-base sm:text-lg font-extrabold text-slate-900 mt-0.5">
+                        Tuần: 19/10/2026 (Thứ 2) &rarr; 25/10/2026 (Chủ Nhật)
+                    </h2>
+                </div>
+            </div>
+
+            <!-- Bộ Chuyển Tuần & Chọn Nhanh Các Tuần Trong File Excel -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="shiftSelectedWeek(-7)" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1">
+                    <i class="fa-solid fa-chevron-left"></i>
+                    <span>Tuần trước</span>
+                </button>
+
+                <select id="weekQuickSelect" onchange="handleQuickWeekSelect(this.value)"
+                    class="px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
+                    <option value="2026-10-19">📌 Tuần 19/10 - 25/10/2026 (Excel: 10月份-W3)</option>
+                    <option value="2026-09-14">📁 Tuần 14/09 - 20/09/2026 (Excel: 9月份-W3)</option>
+                    <option value="2026-09-07">📁 Tuần 07/09 - 13/09/2026 (Excel: 9月份-W2)</option>
+                    <option value="ALL">🌐 Xem tất cả các tuần (Toàn bộ lịch sử)</option>
+                </select>
+
+                <button onclick="shiftSelectedWeek(7)" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition flex items-center gap-1">
+                    <span>Tuần sau</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+
+                <button onclick="jumpToCurrentRealtimeWeek()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition shadow-xs">
+                    Tuần Hôm Nay
+                </button>
+
+                <button onclick="openLastWeekReportModal()" class="px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition flex items-center gap-1.5" title="Xem thông báo tổng kết những ai chưa đủ 2 bài">
+                    <i class="fa-solid fa-bullhorn text-amber-600"></i>
+                    <span>Thông Báo Ai Chưa Đủ</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- THỐNG KÊ NHANH THEO TUẦN -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Tổng Tài Khoản</p>
-                    <p id="statTotalAccounts" class="text-2xl font-extrabold text-slate-900 mt-1">43</p>
-                    <p id="statAccountBreakdown" class="text-xs text-slate-500 mt-1">6 Nhóm • 37 Idol</p>
-                </div>
-                <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-users"></i>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Đã Kiểm Tra Hôm Nay</p>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Đạt KPI Tuần (&ge;2 Bài)</p>
                     <div class="flex items-baseline gap-2 mt-1">
-                        <p id="statCheckedToday" class="text-2xl font-extrabold text-emerald-600">0/43</p>
-                        <span id="statUncheckedAlert" class="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Cần kiểm tra!</span>
+                        <p id="statWeeklyCompleted" class="text-2xl font-extrabold text-emerald-600">0/43</p>
+                        <span id="statWeeklyMissingBadge" onclick="toggleKpiSidebar()" class="cursor-pointer text-xs font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full hover:bg-rose-100">
+                            0 kênh thiếu bài
+                        </span>
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Bấm vào link TikTok để duyệt kênh</p>
+                    <p id="statWeeklyCompletedSub" class="text-xs text-slate-500 mt-1">Tính cả Lên lịch: 0/43 kênh đủ</p>
                 </div>
                 <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-clipboard-check"></i>
+                    <i class="fa-solid fa-bullseye"></i>
                 </div>
             </div>
 
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Tổng Bài Đã Lưu</p>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Tổng Bài Trong Tuần</p>
                     <p id="statTotalPosts" class="text-2xl font-extrabold text-slate-900 mt-1">0</p>
                     <p id="statGroupVsIdolPosts" class="text-xs text-slate-500 mt-1">Nhóm: 0 • Idol: 0</p>
                 </div>
@@ -128,42 +277,61 @@
 
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Cần Duyệt / Lên Lịch</p>
-                    <p id="statPendingPosts" class="text-2xl font-extrabold text-amber-600 mt-1">0</p>
-                    <p class="text-xs text-slate-500 mt-1">Bài chưa đăng hoặc cần check lại</p>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Đã Đăng / Chờ Duyệt</p>
+                    <p id="statPostedVsPending" class="text-2xl font-extrabold text-indigo-600 mt-1">0 / 0</p>
+                    <p class="text-xs text-slate-500 mt-1">Đã đăng thực tế vs Lên lịch/Duyệt</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Đã Check Kênh Hôm Nay</p>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <p id="statCheckedToday" class="text-2xl font-extrabold text-slate-900">0/43</p>
+                        <span id="statUncheckedAlert" class="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Cần check!</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Bấm vào @id TikTok để duyệt kênh</p>
                 </div>
                 <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
-                    <i class="fa-solid fa-bell"></i>
+                    <i class="fa-solid fa-clipboard-check"></i>
                 </div>
             </div>
         </section>
 
-        <!-- SECTION 1: DANH SÁCH TÀI KHOẢN NHÓM & IDOL (HYPERLINK TRỰC TIẾP) -->
+        <!-- SECTION 1: DANH BẠ 43 KÊNH TIKTOK & TIẾN ĐỘ KPI TUẦN (2 BÀI/TUẦN) -->
         <section class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                     <div class="flex items-center gap-2">
                         <h2 class="text-base sm:text-lg font-bold text-slate-900">
                             <i class="fa-brands fa-tiktok text-pink-600 mr-1.5"></i>
-                            Danh Bạ Kênh TikTok (Nhóm & Idol)
+                            Danh Bạ Kênh TikTok & Tiến Độ KPI Tuần (2 Bài / Tuần)
                         </h2>
-                        <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                            Bấm vào ID để mở thẳng trang TikTok
-                        </span>
                     </div>
                     <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
-                        Mẹo chống sót bài: Khi bạn bấm mở link TikTok của ai, hệ thống sẽ tự động đánh dấu <span class="text-emerald-600 font-semibold">"Đã check hôm nay"</span> cho tài khoản đó.
+                        Hiển thị tiến độ bài đăng của từng tài khoản trong tuần đang chọn (<span class="text-emerald-600 font-semibold">X/2 bài</span>). Bấm vào <span class="font-semibold text-pink-600">@id</span> để mở thẳng trang TikTok.
                     </p>
                 </div>
 
-                <div class="flex items-center gap-2 self-start sm:self-auto">
-                    <button onclick="resetDailyChecks()" class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition flex items-center gap-1.5" title="Làm mới trạng thái kiểm tra cho ngày mới">
+                <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                    <button onclick="toggleKpiSidebar()" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-table-columns"></i>
+                        <span>Mở Sidebar Thiếu Bài</span>
+                    </button>
+                    <button onclick="resetDailyChecks()" class="text-xs font-medium px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition flex items-center gap-1.5">
                         <i class="fa-solid fa-rotate-right"></i>
-                        <span>Reset Check Ngày Mới</span>
+                        <span>Reset Check Ngày</span>
                     </button>
                     <button onclick="openAccountModal()" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition flex items-center gap-1.5">
                         <i class="fa-solid fa-pen-to-square"></i>
                         <span>Cập Nhật Link / ID</span>
+                    </button>
+                    <button onclick="exportToCSV()" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>Xuất CSV</span>
                     </button>
                 </div>
             </div>
@@ -174,20 +342,23 @@
                     <button onclick="setDirectoryFilter('ALL')" id="dirTabAll" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition">
                         Tất cả (43)
                     </button>
+                    <button onclick="setDirectoryFilter('MISSING_KPI')" id="dirTabMissingKpi" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 hover:bg-rose-50 transition">
+                        ⚠️ Chưa đủ 2 bài
+                    </button>
+                    <button onclick="setDirectoryFilter('DONE_KPI')" id="dirTabDoneKpi" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition">
+                        ✅ Đã đủ KPI (&ge;2 bài)
+                    </button>
                     <button onclick="setDirectoryFilter('GROUP')" id="dirTabGroup" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
                         👥 6 Nhóm
                     </button>
                     <button onclick="setDirectoryFilter('IDOL')" id="dirTabIdol" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
                         🌟 37 Idol
                     </button>
-                    <button onclick="setDirectoryFilter('UNCHECKED')" id="dirTabUnchecked" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-700 hover:bg-amber-50 transition">
-                        ⏳ Chưa check hôm nay
-                    </button>
                 </div>
 
                 <div class="relative w-full sm:w-72">
                     <input type="text" id="directorySearch" oninput="renderAccountsGrid()"
-                        placeholder="Tìm nhanh tên Nhóm, Idol hoặc @id..."
+                        placeholder="Tìm tên Nhóm, Idol hoặc @id..."
                         class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
                 </div>
@@ -199,10 +370,10 @@
             </div>
         </section>
 
-        <!-- SECTION 2: FORM ĐIỀN BÀI ĐĂNG MỚI & BẢNG THEO DÕI -->
+        <!-- SECTION 2: FORM ĐIỀN BÀI ĐĂNG MỚI & BẢNG THEO DÕI THEO TUẦN -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            <!-- Left Column: Form Thêm / Cập Nhật Bài Đăng (4 cols on desktop) -->
+            <!-- Left Column: Form Thêm / Cập Nhật Bài Đăng (4 cols) -->
             <section id="postFormSection" class="lg:col-span-4 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6 lg:sticky lg:top-24">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                     <h2 id="formTitle" class="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -222,13 +393,13 @@
                     <!-- Ngày đăng -->
                     <div>
                         <label for="postDate" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                            Ngày đăng <span class="text-rose-500">*</span>
+                            Ngày đăng (Tự động tính vào tuần T2 &rarr; CN) <span class="text-rose-500">*</span>
                         </label>
                         <input type="date" id="postDate" required
                             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
                     </div>
 
-                    <!-- Chọn Tài khoản (Nhóm hoặc Idol) -->
+                    <!-- Chọn Tài khoản -->
                     <div>
                         <div class="flex items-center justify-between mb-1">
                             <label for="postAccount" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
@@ -242,52 +413,38 @@
                         </div>
                         <select id="postAccount" required onchange="updateFormAccountPreview()"
                             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
-                            <!-- Populated by JS -->
                         </select>
                     </div>
 
-                    <!-- Hạng mục đăng (Tự điền + gợi ý nhanh) -->
+                    <!-- Hạng mục đăng -->
                     <div>
                         <label for="postCategory" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                            Hạng mục đăng (Tự điền hoặc chọn) <span class="text-rose-500">*</span>
+                            Hạng mục đăng <span class="text-rose-500">*</span>
                         </label>
                         <input type="text" id="postCategory" list="categorySuggestions" required
-                            placeholder="VD: Clip nhảy, Video, Ảnh, Trend biến hình..."
+                            placeholder="VD: Clip nhảy, Ảnh, Đăng capcut 2 ảnh..."
                             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
                         <datalist id="categorySuggestions">
-                            <option value="Video">
-                            <option value="Ảnh (Photo Mode)">
-                            <option value="Clip nhảy (Dance Cover)">
-                            <option value="Bắt trend">
-                            <option value="Hậu trường (BTS)">
-                            <option value="Vlog / Daily">
-                            <option value="Lip-sync / Nhép nhạc">
-                            <option value="Livestream">
+                            <option value="Clip nhảy">
+                            <option value="Ảnh">
+                            <option value="Đăng capcut 2 ảnh">
+                            <option value="Đăng ảnh cá nhân">
+                            <option value="Video nhảy cute trend">
+                            <option value="Thi giữa tháng">
+                            <option value="Video cám ơn">
                         </datalist>
-                        <!-- Quick tags -->
                         <div class="flex flex-wrap gap-1.5 mt-2">
-                            <button type="button" onclick="setCategoryQuick('Video')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
-                                + Video
-                            </button>
-                            <button type="button" onclick="setCategoryQuick('Ảnh')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
-                                + Ảnh
-                            </button>
-                            <button type="button" onclick="setCategoryQuick('Clip nhảy')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
-                                + Clip nhảy
-                            </button>
-                            <button type="button" onclick="setCategoryQuick('Bắt trend')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
-                                + Bắt trend
-                            </button>
-                            <button type="button" onclick="setCategoryQuick('Hậu trường')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">
-                                + Hậu trường
-                            </button>
+                            <button type="button" onclick="setCategoryQuick('Clip nhảy')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">+ Clip nhảy</button>
+                            <button type="button" onclick="setCategoryQuick('Ảnh')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">+ Ảnh</button>
+                            <button type="button" onclick="setCategoryQuick('Đăng capcut 2 ảnh')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">+ Capcut 2 ảnh</button>
+                            <button type="button" onclick="setCategoryQuick('Đăng ảnh cá nhân')" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-600 transition font-medium">+ Ảnh cá nhân</button>
                         </div>
                     </div>
 
                     <!-- Link bài đăng -->
                     <div>
                         <label for="postLink" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                            Link bài đăng TikTok
+                            Link bài đăng / Video TikTok
                         </label>
                         <div class="relative">
                             <input type="url" id="postLink"
@@ -295,7 +452,6 @@
                                 class="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
                             <i class="fa-solid fa-link absolute left-3.5 top-3 text-slate-400 text-xs"></i>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-1">Có thể để trống nếu bài đang lên lịch, cập nhật link sau.</p>
                     </div>
 
                     <!-- Trạng thái -->
@@ -305,10 +461,10 @@
                         </label>
                         <select id="postStatus"
                             class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition">
-                            <option value="ĐÃ ĐĂNG">✅ ĐÃ ĐĂNG</option>
+                            <option value="ĐÃ ĐĂNG">✅ ĐÃ ĐĂNG (Tính đủ KPI)</option>
                             <option value="LÊN LỊCH">⏰ LÊN LỊCH / DỰ KIẾN</option>
-                            <option value="CẦN KIỂM TRA">⚠️ CẦN KIỂM TRA LẠI</option>
-                            <option value="NHÁP">📝 BẢN NHÁP</option>
+                            <option value="CẦN KIỂM TRA">⚠️ CẦN KIỂM TRA / ĐỢI DUYỆT</option>
+                            <option value="NHÁP">📝 BẢN NHÁP / Ý TƯỞNG</option>
                         </select>
                     </div>
 
@@ -318,7 +474,7 @@
                             Ghi chú thêm
                         </label>
                         <textarea id="postNote" rows="2"
-                            placeholder="Tên nhạc, nội dung clip, nhắc nhở..."
+                            placeholder="VD: Media hỗ trợ, đăng sớm/trễ dự tính..."
                             class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500 transition"></textarea>
                     </div>
 
@@ -326,42 +482,39 @@
                     <button type="submit" id="submitPostBtn"
                         class="w-full py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm shadow-md transition flex items-center justify-center gap-2">
                         <i class="fa-solid fa-floppy-disk"></i>
-                        <span>Lưu Bài Đăng Vào Bảng</span>
+                        <span>Lưu Bài Đăng Lên Firebase</span>
                     </button>
                 </form>
             </section>
 
-            <!-- Right Column: Bảng Quản Lý Bài Đăng (8 cols on desktop) -->
+            <!-- Right Column: Bảng Quản Lý Bài Đăng Theo Tuần (8 cols) -->
             <section class="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sm:p-6">
-                <!-- Filter Header -->
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
                     <div>
                         <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
                             <i class="fa-solid fa-table-list text-indigo-600"></i>
-                            <span>Bảng Theo Dõi Bài Đăng (MEDIA)</span>
+                            <span>Bảng Theo Dõi Bài Đăng Theo Tuần (MEDIA)</span>
                         </h2>
-                        <p class="text-xs text-slate-500 mt-0.5">
-                            Bấm vào tên hoặc <span class="font-semibold text-slate-700">@id</span> để mở trang TikTok của nhóm/idol, hoặc bấm <span class="font-semibold text-pink-600">Mở bài đăng</span> để xem clip.
+                        <p id="tableSubHeader" class="text-xs text-slate-500 mt-0.5">
+                            Đang hiển thị dữ liệu bài đăng của tuần được chọn.
                         </p>
                     </div>
 
-                    <!-- Quick Type Filter Tabs -->
                     <div class="inline-flex p-1 rounded-xl bg-slate-100 self-start sm:self-auto">
                         <button onclick="setRoleFilter('ALL')" id="tabFilterAll" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-sm transition">
                             Tất cả
                         </button>
                         <button onclick="setRoleFilter('GROUP')" id="tabFilterGroup" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
-                            Tài khoản Nhóm
+                            Nhóm
                         </button>
                         <button onclick="setRoleFilter('IDOL')" id="tabFilterIdol" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition">
-                            Tài khoản Idol
+                            Idol
                         </button>
                     </div>
                 </div>
 
                 <!-- Detailed Filters Row -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
-                    <!-- Filter by specific Account -->
                     <div>
                         <select id="filterAccount" onchange="renderPostsTable()"
                             class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
@@ -369,7 +522,6 @@
                         </select>
                     </div>
 
-                    <!-- Filter by Status -->
                     <div>
                         <select id="filterStatus" onchange="renderPostsTable()"
                             class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
@@ -381,10 +533,9 @@
                         </select>
                     </div>
 
-                    <!-- Search by Category / Note -->
                     <div class="relative">
                         <input type="text" id="filterSearch" oninput="renderPostsTable()"
-                            placeholder="Tìm hạng mục (nhảy, ảnh...), ghi chú..."
+                            placeholder="Tìm hạng mục, tên idol, ghi chú..."
                             class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
                     </div>
@@ -395,7 +546,7 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-900 text-white text-[11px] uppercase tracking-wider">
-                                <th class="py-3 px-3.5 font-semibold">Ngày Đăng</th>
+                                <th class="py-3 px-3.5 font-semibold">Ngày / Tuần</th>
                                 <th class="py-3 px-3.5 font-semibold">Tài Khoản & Kênh TikTok</th>
                                 <th class="py-3 px-3.5 font-semibold">Hạng Mục</th>
                                 <th class="py-3 px-3.5 font-semibold">Link Bài Đăng</th>
@@ -405,7 +556,6 @@
                             </tr>
                         </thead>
                         <tbody id="postsTableBody" class="divide-y divide-slate-200 text-xs sm:text-sm">
-                            <!-- Populated dynamically via JS -->
                         </tbody>
                     </table>
                 </div>
@@ -413,26 +563,65 @@
         </div>
     </main>
 
+    <!-- MODAL THÔNG BÁO QUA TUẦN MỚI (THỨ 2): TỔNG KẾT AI CHƯA ĐỦ 2 BÀI/TUẦN -->
+    <div id="lastWeekReportModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[88vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-rose-600 to-pink-600 text-white flex items-center justify-between">
+                <div>
+                    <h3 class="text-base sm:text-lg font-extrabold flex items-center gap-2">
+                        <i class="fa-solid fa-bell"></i>
+                        <span>Thông Báo Tuần Mới: Danh Sách Chưa Đủ 2 Bài/Tuần</span>
+                    </h3>
+                    <p id="lastWeekModalSubtitle" class="text-xs text-rose-100 mt-0.5">Tổng kết các tài khoản chưa hoàn thành KPI 2 bài/tuần</p>
+                </div>
+                <button onclick="closeLastWeekReportModal()" class="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4 flex-1">
+                <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div class="text-xs font-semibold text-slate-700">
+                        Chọn tuần cần xem thông báo tổng kết:
+                    </div>
+                    <select id="reportWeekSelect" onchange="renderLastWeekReportContent(this.value)"
+                        class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold bg-white">
+                        <option value="2026-10-19">Tuần 19/10 - 25/10/2026 (10月份-W3)</option>
+                        <option value="2026-09-14">Tuần 14/09 - 20/09/2026 (9月份-W3)</option>
+                        <option value="2026-09-07">Tuần 07/09 - 13/09/2026 (9月份-W2)</option>
+                    </select>
+                </div>
+
+                <div id="lastWeekReportBody" class="space-y-2.5">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="closeLastWeekReportModal()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-semibold hover:bg-slate-800 transition">
+                    Đã xem & Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: QUẢN LÝ & CẬP NHẬT HYPERLINK TÀI KHOẢN NHÓM / IDOL -->
     <div id="accountModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
-            <!-- Modal Header -->
             <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
                 <div>
                     <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
                         <i class="fa-brands fa-tiktok text-cyan-400"></i>
                         <span>Quản Lý Tài Khoản & Hyperlink TikTok</span>
                     </h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Cập nhật ID TikTok hoặc dán link trực tiếp để bấm vào là mở đúng trang</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Cập nhật ID TikTok hoặc dán link trực tiếp</p>
                 </div>
                 <button onclick="closeAccountModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <!-- Modal Body -->
             <div class="p-6 overflow-y-auto space-y-6 flex-1">
-                <!-- Add / Edit Account Form -->
                 <form id="accountForm" onsubmit="handleAccountSubmit(event)" class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
                     <div class="flex items-center justify-between">
                         <h4 id="accountFormHeading" class="text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -454,12 +643,12 @@
                         </div>
                         <div class="sm:col-span-3">
                             <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tên Nhóm / Idol *</label>
-                            <input type="text" id="accName" required placeholder="VD: BẢO NGHI"
+                            <input type="text" id="accName" required placeholder="VD: DOLIA"
                                 class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white">
                         </div>
                         <div class="sm:col-span-3">
                             <label class="block text-[11px] font-semibold text-slate-600 mb-1">ID TikTok *</label>
-                            <input type="text" id="accHandle" required placeholder="VD: @chubaonhi28" oninput="autoFillProfileUrl()"
+                            <input type="text" id="accHandle" required placeholder="VD: @dolia1012" oninput="autoFillProfileUrl()"
                                 class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white">
                         </div>
                         <div class="sm:col-span-3">
@@ -477,18 +666,15 @@
                     </div>
                 </form>
 
-                <!-- Existing Accounts List -->
                 <div>
                     <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5">
-                        Danh Sách Tài Khoản Hiện Có (Bấm "Sửa" để đổi Link/ID)
+                        Danh Sách Tài Khoản Hiện Có
                     </h4>
                     <div id="modalAccountsList" class="divide-y divide-slate-200 border border-slate-200 rounded-2xl overflow-hidden bg-white">
-                        <!-- Populated via JS -->
                     </div>
                 </div>
             </div>
 
-            <!-- Modal Footer -->
             <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
                 <button onclick="closeAccountModal()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-semibold hover:bg-slate-800 transition">
                     Đóng
@@ -497,14 +683,14 @@
         </div>
     </div>
 
-    <!-- MODAL: HƯỚNG DẪN ĐỒNG BỘ FIREBASE & VERCEL -->
+    <!-- MODAL: HƯỚNG DẪN ĐỒNG BỘ FIREBASE & EXCEL -->
     <div id="cloudHelpModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
             <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
                 <div>
                     <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
                         <i class="fa-solid fa-cloud-arrow-up text-emerald-400"></i>
-                        <span>Cấu Hình Lưu Trữ Firebase & Deploy Vercel</span>
+                        <span>Đồng Bộ Dữ Liệu Excel & Cấu Hình Firebase</span>
                     </h3>
                     <p class="text-xs text-slate-400 mt-0.5">Project ID: <span class="text-cyan-300 font-mono">passionstar-2014d</span></p>
                 </div>
@@ -514,14 +700,23 @@
             </div>
 
             <div class="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm text-slate-700">
+                <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <p class="font-bold text-emerald-900">Đẩy toàn bộ dữ liệu từ file MEDIA (1).xlsx lên Firebase</p>
+                        <p class="text-xs text-emerald-700 mt-0.5">Bao gồm 145 bài đăng của 43 tài khoản qua 3 tuần (9月份-W2, 9月份-W3, 10月份-W3).</p>
+                    </div>
+                    <button onclick="syncExcelDatasetToFirebase(true)" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0 transition shadow-xs">
+                        Đồng Bộ Ngay
+                    </button>
+                </div>
+
                 <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-1">
                     <span class="text-xs font-bold text-slate-500 uppercase">Phiên kết nối hiện tại (User ID):</span>
                     <code id="displayUserId" class="text-xs font-mono text-indigo-600 break-all">Đang khởi tạo...</code>
                 </div>
 
                 <div class="space-y-2">
-                    <h4 class="font-bold text-slate-900">1. Bật quyền ghi dữ liệu trên Firebase Console (Quan trọng khi chạy trên Vercel)</h4>
-                    <p class="text-slate-600">Để web trên Vercel lưu được bài đăng vào project <code class="px-1.5 py-0.5 rounded bg-slate-100 font-mono">passionstar-2014d</code>, bạn hãy vào <a href="https://console.firebase.google.com/project/passionstar-2014d/firestore/rules" target="_blank" rel="noopener noreferrer" class="text-pink-600 font-semibold hover:underline">Firebase Console &rarr; Firestore Database &rarr; tab Rules</a> và dán cấu hình sau rồi bấm <strong>Publish</strong>:</p>
+                    <h4 class="font-bold text-slate-900">Cấu hình Firestore Rules trên Firebase Console:</h4>
                     <pre class="p-3 rounded-xl bg-slate-900 text-emerald-300 font-mono text-xs overflow-x-auto">rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -532,22 +727,17 @@ service cloud.firestore {
 }</pre>
                 </div>
 
-                <div class="space-y-2">
-                    <h4 class="font-bold text-slate-900">2. Bật Anonymous Auth (Tùy chọn khuyến nghị)</h4>
-                    <p class="text-slate-600">Vào mục <strong>Authentication &rarr; Sign-in method</strong> trên Firebase Console, bật <strong>Anonymous</strong> để định danh phiên truy cập an toàn.</p>
-                </div>
-
                 <div class="pt-2 border-t border-slate-200 flex items-center justify-between">
-                    <span class="text-xs text-slate-500">Nếu lỡ xóa nhầm tài khoản gốc, bạn có thể khôi phục:</span>
+                    <span class="text-xs text-slate-500">Khôi phục danh sách 43 tài khoản gốc:</span>
                     <button onclick="restoreDefaultAccounts()" class="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold text-xs transition">
-                        <i class="fa-solid fa-rotate-left mr-1"></i>Khôi phục 43 tài khoản Passion mặc định
+                        <i class="fa-solid fa-rotate-left mr-1"></i>Khôi phục 43 tài khoản
                     </button>
                 </div>
             </div>
 
             <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
                 <button onclick="closeCloudHelpModal()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-semibold hover:bg-slate-800 transition">
-                    Đã hiểu
+                    Đóng
                 </button>
             </div>
         </div>
@@ -559,11 +749,11 @@ service cloud.firestore {
     <!-- Application Logic with Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ============================================================================
-        // 1. CẤU HÌNH & KHỞI TẠO FIREBASE (PASSIONSTAR-2014D)
+        // 1. CẤU HÌNH FIREBASE (PASSIONSTAR-2014D)
         // ============================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
@@ -581,59 +771,58 @@ service cloud.firestore {
 
         let currentUser = null;
         let hasSeededInitialData = false;
+        let hasAutoSyncedExcel = false;
 
         // ============================================================================
-        // 2. DỮ LIỆU MẶC ĐỊNH: 6 NHÓM & 37 IDOL PASSION MEDIA TRACKER
+        // 2. DANH SÁCH 43 TÀI KHOẢN (6 NHÓM & 37 IDOL)
         // ============================================================================
-        const todayStr = new Date().toISOString().split('T')[0];
-
         const RAW_GROUPS = [
-            { id: 'grp_bee', name: 'BEE', handle: '@psbee.official' },
-            { id: 'grp_angelik', name: 'PS✨ANGELIK', handle: '@angelik_276' },
-            { id: 'grp_bnart', name: '✨ BNART ✨', handle: '@bnart.foryou' },
-            { id: 'grp_fashion', name: 'FASHION 👑', handle: '@novarch_here' },
-            { id: 'grp_royen', name: '💫 ROYEN:ONE 💫', handle: '@royen.one_here' },
-            { id: 'grp_orion', name: '✨ PS_ORION ✨', handle: '@orion.here' }
+            { id: 'grp_bee', name: 'BEE', handle: '@psbee.official', groupName: 'BEE' },
+            { id: 'grp_angelik', name: 'PS✨ANGELIK', handle: '@angelik_276', groupName: 'ANGELIK' },
+            { id: 'grp_bnart', name: '✨ BNART ✨', handle: '@bnart.foryou', groupName: 'BNART' },
+            { id: 'grp_fashion', name: 'FASHION 👑', handle: '@novarch_here', groupName: 'FASHION' },
+            { id: 'grp_royen', name: '💫 ROYEN:ONE 💫', handle: '@royen.one_here', groupName: 'ROYEN:ONE' },
+            { id: 'grp_orion', name: '✨ PS_ORION ✨', handle: '@orion.here', groupName: 'ORION' }
         ];
 
         const RAW_IDOLS = [
-            { id: 'idol_dolia', name: 'Dolia', handle: '@dolia1012' },
-            { id: 'idol_carrot', name: 'Carrot', handle: '@rabbitvibes_' },
-            { id: 'idol_chloe', name: 'Chloe', handle: '@chloe.cutene' },
-            { id: 'idol_sunny', name: 'Sunny', handle: '@sunny_peacefull' },
-            { id: 'idol_sweetie', name: 'Sweetie', handle: '@ps_sweetie' },
-            { id: 'idol_naul', name: 'Naul', handle: '@nnaul0000' },
-            { id: 'idol_dylan', name: 'Dylan', handle: '@_.dylanisme._' },
-            { id: 'idol_tboo', name: 'Tboo', handle: '@tboohere_198' },
-            { id: 'idol_feng', name: 'Feng', handle: '@feng__22' },
-            { id: 'idol_tat', name: 'TAT', handle: '@ttotheatothet' },
-            { id: 'idol_kai', name: 'Kai', handle: '@toilakaiday' },
-            { id: 'idol_cobra', name: 'Cobra', handle: '@cobra.here1' },
-            { id: 'idol_vinct', name: 'Vinct', handle: '@vinncent.pty' },
-            { id: 'idol_sugar', name: 'Sugar', handle: '@xxibsugarr' },
-            { id: 'idol_wren', name: 'Wren', handle: '@wrxnvibe' },
-            { id: 'idol_kyo', name: 'Kyo', handle: '@kyo_10122' },
-            { id: 'idol_maryz', name: 'Maryz', handle: '@ps_maryz' },
-            { id: 'idol_drake', name: 'Drake', handle: '@drake_demonking' },
-            { id: 'idol_zeno', name: 'Zeno', handle: '@zenoisme.1' },
-            { id: 'idol_alice', name: 'Alice', handle: '@alice_royal' },
-            { id: 'idol_bunie', name: 'Bunie', handle: '@buniedangyeu' },
-            { id: 'idol_duri', name: 'Duri', handle: '@duri_xinh' },
-            { id: 'idol_suri', name: 'Suri', handle: '@suri.667' },
-            { id: 'idol_wendy', name: 'Wendy', handle: '@wendybayby' },
-            { id: 'idol_sofie', name: 'Sofie', handle: '@dairycow_311' },
-            { id: 'idol_jenny', name: 'Jenny', handle: '@jenny_psbee8386' },
-            { id: 'idol_hakira', name: 'Hakira', handle: '@hakiradesu' },
-            { id: 'idol_koni', name: 'Koni', handle: '@koni_004' },
-            { id: 'idol_nya', name: 'Nya', handle: '@nyaandbee' },
-            { id: 'idol_milka', name: 'Milka', handle: '@milka.dacow' },
-            { id: 'idol_willy', name: 'Willy', handle: '@willytop1congt' },
-            { id: 'idol_roy', name: 'Roy', handle: '@roy1m83' },
-            { id: 'idol_neko', name: 'Neko', handle: '@poisycomehere' },
-            { id: 'idol_soren', name: 'Soren', handle: '@sorenidol' },
-            { id: 'idol_desnas', name: 'Desnas', handle: '@desnas.here' },
-            { id: 'idol_tarmix', name: 'TarMix', handle: '@tarmix201_' },
-            { id: 'idol_christ', name: 'Christ', handle: '@pstnnkij6i3' }
+            { id: 'idol_dolia', name: 'Dolia', handle: '@dolia1012', groupName: 'ANGELIK' },
+            { id: 'idol_carrot', name: 'Carrot', handle: '@rabbitvibes_', groupName: 'ANGELIK' },
+            { id: 'idol_chloe', name: 'Chloe', handle: '@chloe.cutene', groupName: 'ANGELIK' },
+            { id: 'idol_sunny', name: 'Sunny', handle: '@sunny_peacefull', groupName: 'ANGELIK' },
+            { id: 'idol_sweetie', name: 'Sweetie', handle: '@ps_sweetie', groupName: 'ANGELIK' },
+            { id: 'idol_naul', name: 'Naul', handle: '@nnaul0000', groupName: 'FASHION' },
+            { id: 'idol_dylan', name: 'Dylan', handle: '@_.dylanisme._', groupName: 'FASHION' },
+            { id: 'idol_tboo', name: 'Tboo', handle: '@tboohere_198', groupName: 'FASHION' },
+            { id: 'idol_feng', name: 'Feng', handle: '@feng__22', groupName: 'FASHION' },
+            { id: 'idol_tat', name: 'TAT', handle: '@ttotheatothet', groupName: 'FASHION' },
+            { id: 'idol_kai', name: 'Kai', handle: '@toilakaiday', groupName: 'ROYEN:ONE' },
+            { id: 'idol_cobra', name: 'Cobra', handle: '@cobra.here1', groupName: 'ROYEN:ONE' },
+            { id: 'idol_vinct', name: 'Vinct', handle: '@vinncent.pty', groupName: 'ROYEN:ONE' },
+            { id: 'idol_sugar', name: 'Sugar', handle: '@xxibsugarr', groupName: 'ROYEN:ONE' },
+            { id: 'idol_wren', name: 'Wren', handle: '@wrxnvibe', groupName: 'ROYEN:ONE' },
+            { id: 'idol_kyo', name: 'Kyo', handle: '@kyo_10122', groupName: 'ROYEN:ONE' },
+            { id: 'idol_maryz', name: 'Maryz', handle: '@ps_maryz', groupName: 'ROYEN:ONE' },
+            { id: 'idol_drake', name: 'Drake', handle: '@drake_demonking', groupName: 'ROYEN:ONE' },
+            { id: 'idol_zeno', name: 'Zeno', handle: '@zenoisme.1', groupName: 'ROYEN:ONE' },
+            { id: 'idol_alice', name: 'Alice', handle: '@alice_royal', groupName: 'BNART' },
+            { id: 'idol_bunie', name: 'Bunie', handle: '@buniedangyeu', groupName: 'BNART' },
+            { id: 'idol_duri', name: 'Duri', handle: '@duri_xinh', groupName: 'BNART' },
+            { id: 'idol_suri', name: 'Suri', handle: '@suri.667', groupName: 'BNART' },
+            { id: 'idol_wendy', name: 'Wendy', handle: '@wendybayby', groupName: 'BNART' },
+            { id: 'idol_sofie', name: 'Sofie', handle: '@dairycow_311', groupName: 'BNART' },
+            { id: 'idol_jenny', name: 'Jenny', handle: '@jenny_psbee8386', groupName: 'BEE' },
+            { id: 'idol_hakira', name: 'Hakira', handle: '@hakiradesu', groupName: 'BEE' },
+            { id: 'idol_koni', name: 'Koni', handle: '@koni_004', groupName: 'BEE' },
+            { id: 'idol_nya', name: 'Nya', handle: '@nyaandbee', groupName: 'BEE' },
+            { id: 'idol_milka', name: 'Milka', handle: '@milka.dacow', groupName: 'BEE' },
+            { id: 'idol_willy', name: 'Willy', handle: '@willytop1congt', groupName: 'ORION' },
+            { id: 'idol_roy', name: 'Roy', handle: '@roy1m83', groupName: 'ORION' },
+            { id: 'idol_neko', name: 'Neko', handle: '@poisycomehere', groupName: 'ORION' },
+            { id: 'idol_soren', name: 'Soren', handle: '@sorenidol', groupName: 'ORION' },
+            { id: 'idol_desnas', name: 'Desnas', handle: '@desnas.here', groupName: 'ORION' },
+            { id: 'idol_tarmix', name: 'TarMix', handle: '@tarmix201_', groupName: 'ORION' },
+            { id: 'idol_christ', name: 'Christ', handle: '@pstnnkij6i3', groupName: 'ORION' }
         ];
 
         const DEFAULT_ACCOUNTS = [
@@ -641,6 +830,7 @@ service cloud.firestore {
                 id: g.id,
                 name: g.name,
                 handle: g.handle,
+                groupName: g.groupName,
                 url: `https://www.tiktok.com/${g.handle}`,
                 role: 'GROUP',
                 checkedToday: false,
@@ -650,6 +840,7 @@ service cloud.firestore {
                 id: item.id,
                 name: item.name,
                 handle: item.handle,
+                groupName: item.groupName,
                 url: `https://www.tiktok.com/${item.handle}`,
                 role: 'IDOL',
                 checkedToday: false,
@@ -657,23 +848,565 @@ service cloud.firestore {
             }))
         ];
 
-        const LEGACY_ACCOUNT_IDS = [
-            'acc_group_aura',
-            'acc_idol_1',
-            'acc_idol_2',
-            'acc_idol_3',
-            'acc_idol_4',
-            'acc_idol_5',
-            'acc_idol_6'
+        // ============================================================================
+        // 3. DỮ LIỆU 145 BÀI ĐĂNG TRÍCH XUẤT TỪ FILE MEDIA (1).XLSX (3 SHEET TUẦN)
+        // Format nén gọn: [id, weekMonday, sheetName, accountId, date, category, link, status, note]
+        // ============================================================================
+        const COMPACT_EXCEL_ROWS = [
+            // --- SHEET 10月份-W3 (Tuần 19/10/2026 - 25/10/2026: 60 bài) ---
+            ['ex_10w3_01','2026-10-19','10月份-W3','grp_bnart','2026-10-19','Video nhảy cute trend','https://www.tiktok.com/@bnart.foryou/video/7697998420224576774','ĐÃ ĐĂNG',''],
+            ['ex_10w3_02','2026-10-19','10月份-W3','grp_bnart','2026-10-20','Bài Đăng Ảnh chúc mừng','https://www.tiktok.com/@bnart.foryou/photo/7698565541090413830','ĐÃ ĐĂNG',''],
+            ['ex_10w3_03','2026-10-19','10月份-W3','grp_angelik','2026-10-13','Ảnh','https://vt.tiktok.com/ZSgMeBD7j/','ĐÃ ĐĂNG','Sheet 10月份-W3'],
+            ['ex_10w3_04','2026-10-19','10月份-W3','grp_angelik','2026-10-20','Video cám ơn','https://www.tiktok.com/@angelik_276/video/7698281101344705808','ĐÃ ĐĂNG',''],
+            ['ex_10w3_05','2026-10-19','10月份-W3','grp_angelik','2026-10-20','Video cám ơn','https://www.tiktok.com/@angelik_276/video/7698282012863434002','ĐÃ ĐĂNG',''],
+            ['ex_10w3_06','2026-10-19','10月份-W3','grp_fashion','2026-10-21','Video nhảy','https://www.tiktok.com/@novarch_here/video/7698728895448698130','ĐÃ ĐĂNG',''],
+            ['ex_10w3_07','2026-10-19','10月份-W3','grp_fashion','2026-10-21','Video nhảy','https://www.tiktok.com/@novarch_here/video/7698729957282893063','ĐÃ ĐĂNG',''],
+            ['ex_10w3_08','2026-10-19','10月份-W3','grp_fashion','2026-10-22','Video nhảy','https://www.tiktok.com/@novarch_here/video/7699070102712552722','ĐÃ ĐĂNG',''],
+            ['ex_10w3_09','2026-10-19','10月份-W3','grp_bee','2026-10-22','Ảnh','https://www.tiktok.com/@psbee.official/photo/7698422956975820050','ĐÃ ĐĂNG',''],
+            ['ex_10w3_10','2026-10-19','10月份-W3','grp_orion','2026-10-20','Clip chúc','https://www.tiktok.com/@orion.here/video/7699039266021575943','ĐÃ ĐĂNG',''],
+            ['ex_10w3_11','2026-10-19','10月份-W3','grp_royen','2026-10-20','Video chúc mừng 20/10','https://www.tiktok.com/@royen.one_here/video/7698753412829138197','ĐÃ ĐĂNG',''],
+            ['ex_10w3_12','2026-10-19','10月份-W3','grp_royen','2026-10-19','Video nhảy','https://www.tiktok.com/@royen.one_here/video/7697902386592943381','ĐÃ ĐĂNG',''],
+            ['ex_10w3_13','2026-10-19','10月份-W3','grp_royen','2026-10-23','Video trend tiktok','https://www.tiktok.com/@kovacs.robert69/video/7697188442169511190','LÊN LỊCH','Video mẫu tham khảo'],
+            ['ex_10w3_14','2026-10-19','10月份-W3','idol_alice','2026-10-22','Ảnh','https://www.tiktok.com/@alice_royal/photo/7699000647340789013','ĐÃ ĐĂNG',''],
+            ['ex_10w3_15','2026-10-19','10月份-W3','idol_wendy','2026-10-20','Ảnh','https://www.tiktok.com/@wendybayby/video/7698583725977767175','ĐÃ ĐĂNG',''],
+            ['ex_10w3_16','2026-10-19','10月份-W3','idol_sofie','2026-10-19','Clip tự quay','https://www.tiktok.com/@dairycow_311/video/7697955491246345524','ĐÃ ĐĂNG',''],
+            ['ex_10w3_17','2026-10-19','10月份-W3','idol_sofie','2026-10-22','Clip nhảy','https://www.tiktok.com/@dairycow_311/video/7699021602742357269','ĐÃ ĐĂNG',''],
+            ['ex_10w3_18','2026-10-19','10月份-W3','idol_sweetie','2026-10-22','Ảnh','https://www.tiktok.com/@ps_sweetie/video/7695415573655653650','ĐÃ ĐĂNG',''],
+            ['ex_10w3_19','2026-10-19','10月份-W3','idol_sunny','2026-10-19','Ảnh','https://www.tiktok.com/@sunny_peacefull/video/7697997959073500432','ĐÃ ĐĂNG',''],
+            ['ex_10w3_20','2026-10-19','10月份-W3','idol_dolia','2026-10-19','Nhảy','https://www.tiktok.com/@dolia1012/video/7697902719276797200','ĐÃ ĐĂNG',''],
+            ['ex_10w3_21','2026-10-19','10月份-W3','idol_dolia','2026-10-21','Ảnh','https://www.tiktok.com/@dolia1012/photo/7698678698475621640','ĐÃ ĐĂNG',''],
+            ['ex_10w3_22','2026-10-19','10月份-W3','idol_chloe','2026-10-20','Ảnh','https://www.tiktok.com/@chloe.cutene/photo/7697558347733650709','ĐÃ ĐĂNG',''],
+            ['ex_10w3_23','2026-10-19','10月份-W3','idol_chloe','2026-10-20','Bài nhảy','https://www.tiktok.com/@chloe.cutene/video/7698395483433258261','ĐÃ ĐĂNG',''],
+            ['ex_10w3_24','2026-10-19','10月份-W3','idol_chloe','2026-10-22','Ảnh','https://www.tiktok.com/@chloe.cutene/photo/7698995970931182868','ĐÃ ĐĂNG',''],
+            ['ex_10w3_25','2026-10-19','10月份-W3','idol_carrot','2026-10-19','Ảnh','https://www.tiktok.com/@rabbitvibes_/video/7697902116991552776','ĐÃ ĐĂNG',''],
+            ['ex_10w3_26','2026-10-19','10月份-W3','idol_tat','2026-10-19','Ảnh','https://www.tiktok.com/@ttotheatothet/video/7698701892230171925','ĐÃ ĐĂNG',''],
+            ['ex_10w3_27','2026-10-19','10月份-W3','idol_tat','2026-10-21','Ảnh','https://www.tiktok.com/@ttotheatothet/video/7698701892230171925','ĐÃ ĐĂNG',''],
+            ['ex_10w3_28','2026-10-19','10月份-W3','idol_tboo','2026-10-19','Ảnh','https://www.tiktok.com/@tboohere_198/video/7697955442550492437','ĐÃ ĐĂNG',''],
+            ['ex_10w3_29','2026-10-19','10月份-W3','idol_tboo','2026-10-19','Ảnh','https://www.tiktok.com/@tboohere_198/photo/7697960297512013077','ĐÃ ĐĂNG',''],
+            ['ex_10w3_30','2026-10-19','10月份-W3','idol_feng','2026-10-22','Clip nhảy','https://www.tiktok.com/@feng__22/video/7699328754643897620','ĐÃ ĐĂNG',''],
+            ['ex_10w3_31','2026-10-19','10月份-W3','idol_feng','2026-10-23','Clip nhảy','https://www.tiktok.com/@feng__22/video/7699464526026050824','ĐÃ ĐĂNG',''],
+            ['ex_10w3_32','2026-10-19','10月份-W3','idol_koni','2026-10-19','Ảnh','https://www.tiktok.com/@koni_004/photo/7698216505518968072','ĐÃ ĐĂNG',''],
+            ['ex_10w3_33','2026-10-19','10月份-W3','idol_koni','2026-10-21','Clip nhảy','https://www.tiktok.com/@koni_004/video/7698619166202350856','ĐÃ ĐĂNG',''],
+            ['ex_10w3_34','2026-10-19','10月份-W3','idol_nya','2026-10-19','Clip nhảy','https://www.tiktok.com/@nyaandbee/video/7697572641296698630','ĐÃ ĐĂNG',''],
+            ['ex_10w3_35','2026-10-19','10月份-W3','idol_nya','2026-10-22','Clip edit','https://www.tiktok.com/@nyaandbee/video/7699129953241124148','ĐÃ ĐĂNG',''],
+            ['ex_10w3_36','2026-10-19','10月份-W3','idol_milka','2026-10-19','Clip nhảy','https://www.tiktok.com/@milka.dacow/video/7697527916090969360','ĐÃ ĐĂNG','Đã gắn link video'],
+            ['ex_10w3_37','2026-10-19','10月份-W3','idol_jenny','2026-10-22','Ảnh','https://www.tiktok.com/@jenny_psbee8386/video/7699142715463814407','ĐÃ ĐĂNG',''],
+            ['ex_10w3_38','2026-10-19','10月份-W3','idol_hakira','2026-10-19','Clip nhảy','https://www.tiktok.com/@hakiradesu/video/7697812612901244181','ĐÃ ĐĂNG','Đã gắn link video'],
+            ['ex_10w3_39','2026-10-19','10月份-W3','idol_hakira','2026-10-23','Clip nhảy','https://www.tiktok.com/@hakiradesu/video/7699689887536106753','ĐÃ ĐĂNG','Đã gắn link video'],
+            ['ex_10w3_40','2026-10-19','10月份-W3','idol_kai','2026-10-21','Đăng capcut 2 ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_10w3_41','2026-10-19','10月份-W3','idol_kai','2026-10-24','Đăng ảnh cá nhân','','LÊN LỊCH','Dự kiến 24/10'],
+            ['ex_10w3_42','2026-10-19','10月份-W3','idol_sugar','2026-10-21','Đăng capcut 2 ảnh','','LÊN LỊCH','Chờ cập nhật trạng thái'],
+            ['ex_10w3_43','2026-10-19','10月份-W3','idol_sugar','2026-10-24','Đăng ảnh cá nhân','','LÊN LỊCH','Dự kiến 24/10'],
+            ['ex_10w3_44','2026-10-19','10月份-W3','idol_cobra','2026-10-22','Đăng video nhảy','','ĐÃ ĐĂNG','đăng trễ dự tính 1 ngày'],
+            ['ex_10w3_45','2026-10-19','10月份-W3','idol_cobra','2026-10-24','Đăng ảnh cá nhân','','LÊN LỊCH','Dự kiến 24/10'],
+            ['ex_10w3_46','2026-10-19','10月份-W3','idol_kyo','2026-10-20','Đăng capcut 2 ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_10w3_47','2026-10-19','10月份-W3','idol_kyo','2026-10-24','Đăng ảnh cá nhân','','LÊN LỊCH','Dự kiến 24/10'],
+            ['ex_10w3_48','2026-10-19','10月份-W3','idol_drake','2026-10-19','Đăng ảnh cá nhân','','ĐÃ ĐĂNG','sớm hơn dự tính 2 ngày'],
+            ['ex_10w3_49','2026-10-19','10月份-W3','idol_drake','2026-10-22','Đăng capcut 2 ảnh','','ĐÃ ĐĂNG','sớm hơn dự tính 2 ngày'],
+            ['ex_10w3_50','2026-10-19','10月份-W3','idol_maryz','2026-10-21','Đăng capcut 2 ảnh','','LÊN LỊCH','Chờ cập nhật trạng thái'],
+            ['ex_10w3_51','2026-10-19','10月份-W3','idol_maryz','2026-10-24','Đăng ảnh cá nhân','','LÊN LỊCH','Dự kiến 24/10'],
+            ['ex_10w3_52','2026-10-19','10月份-W3','idol_vinct','2026-10-21','Đăng capcut 2 ảnh','','LÊN LỊCH','Chờ cập nhật trạng thái'],
+            ['ex_10w3_53','2026-10-19','10月份-W3','idol_vinct','2026-10-24','Đăng ảnh cá nhân','','LÊN LỊCH','Dự kiến 24/10'],
+            ['ex_10w3_54','2026-10-19','10月份-W3','idol_wren','2026-10-22','Đăng capcut 2 ảnh','','ĐÃ ĐĂNG','đăng trễ dự tính 1 ngày'],
+            ['ex_10w3_55','2026-10-19','10月份-W3','idol_wren','2026-10-24','Đăng ảnh cá nhân','','LÊN LỊCH','Dự kiến 24/10'],
+            ['ex_10w3_56','2026-10-19','10月份-W3','idol_willy','2026-10-20','Ảnh','https://www.tiktok.com/@stephentaplamidol/video/7697915282588749076','ĐÃ ĐĂNG','Kênh phụ @stephentaplamidol'],
+            ['ex_10w3_57','2026-10-19','10月份-W3','idol_roy','2026-10-19','Clip nhảy','https://www.tiktok.com/@roy1m83/video/7697916766684515600','ĐÃ ĐĂNG',''],
+            ['ex_10w3_58','2026-10-19','10月份-W3','idol_roy','2026-10-20','Ảnh','https://www.tiktok.com/@roy1m83/photo/7698321788945698066','ĐÃ ĐĂNG',''],
+            ['ex_10w3_59','2026-10-19','10月份-W3','idol_soren','2026-10-23','Clip nhảy trend','https://www.tiktok.com/@sorenidol/video/7699677671160106261','ĐÃ ĐĂNG',''],
+            ['ex_10w3_60','2026-10-19','10月份-W3','idol_neko','2026-10-21','Ảnh','https://www.tiktok.com/@poisycomehere/photo/7698755363369389332','ĐÃ ĐĂNG',''],
+
+            // --- SHEET 9月份-W3 (Tuần 14/09/2026 - 20/09/2026: 39 bài) ---
+            ['ex_9w3_01','2026-09-14','9月份-W3','grp_bnart','2026-09-14','Intro chuyển cảnh','','ĐÃ ĐĂNG','Đã gửi media • Media hỗ trợ - Quy Nguyen'],
+            ['ex_9w3_02','2026-09-14','9月份-W3','grp_bnart','2026-09-17','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_03','2026-09-14','9月份-W3','grp_bnart','2026-09-18','CLip dance','','NHÁP','Ý tưởng'],
+            ['ex_9w3_04','2026-09-14','9月份-W3','grp_angelik','2026-09-16','Intro chuyển cảnh (AI)','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_05','2026-09-14','9月份-W3','grp_angelik','2026-09-17','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_06','2026-09-14','9月份-W3','grp_angelik','2026-09-18','chụp cá nhân và team','','CẦN KIỂM TRA','Đang quay'],
+            ['ex_9w3_07','2026-09-14','9月份-W3','grp_fashion','2026-09-14','New idol','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_08','2026-09-14','9月份-W3','grp_fashion','2026-09-17','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_09','2026-09-14','9月份-W3','grp_bee','2026-09-17','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_10','2026-09-14','9月份-W3','grp_royen','2026-09-17','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_11','2026-09-14','9月份-W3','grp_royen','2026-09-19','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_12','2026-09-14','9月份-W3','idol_bunie','2026-09-16','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_13','2026-09-14','9月份-W3','idol_bunie','2026-09-20','Poster sinh nhật','','LÊN LỊCH','Dự kiến 26/09 • Media hỗ trợ - Mỹ'],
+            ['ex_9w3_14','2026-09-14','9月份-W3','idol_alice','2026-09-20','Clip dance','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_15','2026-09-14','9月份-W3','idol_alice','2026-09-19','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_16','2026-09-14','9月份-W3','idol_suri','2026-09-14','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_17','2026-09-14','9月份-W3','idol_wendy','2026-09-16','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_18','2026-09-14','9月份-W3','idol_sunny','2026-09-16','Clip cá nhân','','LÊN LỊCH','Media hỗ trợ - Quy Nguyen'],
+            ['ex_9w3_19','2026-09-14','9月份-W3','idol_sunny','2026-09-17','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_20','2026-09-14','9月份-W3','idol_dolia','2026-09-18','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_21','2026-09-14','9月份-W3','idol_dolia','2026-09-19','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_22','2026-09-14','9月份-W3','idol_carrot','2026-09-15','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_23','2026-09-14','9月份-W3','idol_carrot','2026-09-17','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_24','2026-09-14','9月份-W3','idol_tat','2026-09-20','Ảnh cá nhân','','CẦN KIỂM TRA','Đợi duyệt • Media hỗ trợ - My'],
+            ['ex_9w3_25','2026-09-14','9月份-W3','idol_tboo','2026-09-19','Ảnh cá nhân','','CẦN KIỂM TRA','Đợi duyệt • Media hỗ trợ - My'],
+            ['ex_9w3_26','2026-09-14','9月份-W3','idol_tboo','2026-09-18','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_27','2026-09-14','9月份-W3','idol_dylan','2026-09-19','Ảnh cá nhân','','CẦN KIỂM TRA','Đợi duyệt • Media hỗ trợ - My'],
+            ['ex_9w3_28','2026-09-14','9月份-W3','idol_naul','2026-09-19','Ảnh cá nhân','','CẦN KIỂM TRA','Đợi duyệt • Media hỗ trợ - My'],
+            ['ex_9w3_29','2026-09-14','9月份-W3','idol_koni','2026-09-15','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_30','2026-09-14','9月份-W3','idol_koni','2026-09-17','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_31','2026-09-14','9月份-W3','idol_nya','2026-09-15','Chụp cá nhân','','CẦN KIỂM TRA','Đã duyệt'],
+            ['ex_9w3_32','2026-09-14','9月份-W3','idol_nya','2026-09-17','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_33','2026-09-14','9月份-W3','idol_nya','2026-09-16','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_34','2026-09-14','9月份-W3','idol_jenny','2026-09-20','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_35','2026-09-14','9月份-W3','idol_jenny','2026-09-18','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_36','2026-09-14','9月份-W3','idol_kai','2026-09-18','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_37','2026-09-14','9月份-W3','idol_sugar','2026-09-17','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_38','2026-09-14','9月份-W3','idol_kyo','2026-09-19','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w3_39','2026-09-14','9月份-W3','idol_zeno','2026-09-17','Clip','','ĐÃ ĐĂNG',''],
+
+            // --- SHEET 9月份-W2 (Tuần 07/09/2026 - 13/09/2026: 46 bài) ---
+            ['ex_9w2_01','2026-09-07','9月份-W2','grp_bnart','2026-09-07','Video quà','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_02','2026-09-07','9月份-W2','grp_bnart','2026-09-11','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_03','2026-09-07','9月份-W2','grp_bnart','2026-09-12','Nhảy nhóm','','CẦN KIỂM TRA','Đợi duyệt • Media hỗ trợ - Quy Nguyen'],
+            ['ex_9w2_04','2026-09-07','9月份-W2','grp_angelik','2026-09-07','Video quà','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_05','2026-09-07','9月份-W2','grp_angelik','2026-09-11','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_06','2026-09-07','9月份-W2','grp_fashion','2026-09-11','Quay content trending tiktok nước ngoài','','ĐÃ ĐĂNG','Đã gửi media • Media hỗ trợ - Cam'],
+            ['ex_9w2_07','2026-09-07','9月份-W2','grp_fashion','2026-09-11','Quay content trending tiktok (nhảy, hài hước)','','ĐÃ ĐĂNG','Media hỗ trợ - Cam'],
+            ['ex_9w2_08','2026-09-07','9月份-W2','grp_fashion','2026-09-07','Video quà','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_09','2026-09-07','9月份-W2','grp_bee','2026-09-11','Quay trend biến hình nhảy','','ĐÃ ĐĂNG','Đã gửi media • Media hỗ trợ - Quy Nguyen'],
+            ['ex_9w2_10','2026-09-07','9月份-W2','grp_bee','2026-09-11','Ảnh thành viên','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_11','2026-09-07','9月份-W2','grp_royen','2026-09-10','Behind the scenes: idol cầm gimbal quay team','','CẦN KIỂM TRA','Đợi duyệt • Media hỗ trợ - Cam'],
+            ['ex_9w2_12','2026-09-07','9月份-W2','grp_royen','2026-09-11','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_13','2026-09-07','9月份-W2','grp_royen','2026-09-11','Quay video edit bài nhảy trend cho nhóm','https://www.tiktok.com/@jilleebeani/video/7659993276933590302','NHÁP','Ý tưởng • Media hỗ trợ - Cam'],
+            ['ex_9w2_14','2026-09-07','9月份-W2','idol_bunie','2026-09-07','Clip ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_15','2026-09-07','9月份-W2','idol_bunie','2026-09-09','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_16','2026-09-07','9月份-W2','idol_alice','2026-09-13','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_17','2026-09-07','9月份-W2','idol_alice','2026-09-11','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_18','2026-09-07','9月份-W2','idol_suri','2026-09-09','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_19','2026-09-07','9月份-W2','idol_suri','2026-09-13','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_20','2026-09-07','9月份-W2','idol_wendy','2026-09-09','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_21','2026-09-07','9月份-W2','idol_sweetie','2026-09-09','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_22','2026-09-07','9月份-W2','idol_sweetie','2026-09-13','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_23','2026-09-07','9月份-W2','idol_sunny','2026-09-10','Clip solo','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_24','2026-09-07','9月份-W2','idol_dolia','2026-09-10','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_25','2026-09-07','9月份-W2','idol_tat','2026-09-09','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_26','2026-09-07','9月份-W2','idol_tat','2026-09-12','Clip dance','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_27','2026-09-07','9月份-W2','idol_koni','2026-09-07','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_28','2026-09-07','9月份-W2','idol_koni','2026-09-09','Clip ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_29','2026-09-07','9月份-W2','idol_nya','2026-09-07','Quay clip nhảy solo','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_30','2026-09-07','9月份-W2','idol_nya','2026-09-07','Ảnh (06/09)','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_31','2026-09-07','9月份-W2','idol_nya','2026-09-09','Clip ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_32','2026-09-07','9月份-W2','idol_jenny','2026-09-09','Quay clip nhảy solo','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_33','2026-09-07','9月份-W2','idol_jenny','2026-09-08','Khoảnh khắc trên live','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_34','2026-09-07','9月份-W2','idol_kai','2026-09-08','Ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_35','2026-09-07','9月份-W2','idol_kai','2026-09-09','Quay clip nhảy với thành viên team','https://www.tiktok.com/@backwitnblakely/video/7590268973841714463','CẦN KIỂM TRA','Hậu kỳ • Có thể tự quay'],
+            ['ex_9w2_36','2026-09-07','9月份-W2','idol_sugar','2026-09-08','Clip ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_37','2026-09-07','9月份-W2','idol_sugar','2026-09-10','Quay clip nhảy với thành viên team','https://www.tiktok.com/@be.haven/video/7681596288885935367','ĐÃ ĐĂNG','Có thể tự quay'],
+            ['ex_9w2_38','2026-09-07','9月份-W2','idol_cobra','2026-09-09','Quay clip nhảy với thành viên team','https://www.tiktok.com/@rubensandez5/video/7669653876227755282','NHÁP','Ý tưởng • Media hỗ trợ'],
+            ['ex_9w2_39','2026-09-07','9月份-W2','idol_kyo','2026-09-08','Clip ảnh','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_40','2026-09-07','9月份-W2','idol_kyo','2026-09-09','Quay clip nhảy với thành viên team','https://www.tiktok.com/@backwitnblakely/video/7590268973841714463','CẦN KIỂM TRA','Hậu kỳ • Có thể tự quay'],
+            ['ex_9w2_41','2026-09-07','9月份-W2','idol_kyo','2026-09-09','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_42','2026-09-07','9月份-W2','idol_drake','2026-09-07','Clip','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_43','2026-09-07','9月份-W2','idol_drake','2026-09-11','Thi giữa tháng','','ĐÃ ĐĂNG',''],
+            ['ex_9w2_44','2026-09-07','9月份-W2','idol_drake','2026-09-09','Quay clip nhảy với thành viên team','https://www.tiktok.com/@rubensandez5/video/7669653876227755282','NHÁP','Ý tưởng • Media hỗ trợ'],
+            ['ex_9w2_45','2026-09-07','9月份-W2','idol_zeno','2026-09-09','Quay clip nhảy với thành viên team','https://www.tiktok.com/@backwitnblakely/video/7590268973841714463','CẦN KIỂM TRA','Hậu kỳ • Có thể tự quay'],
+            ['ex_9w2_46','2026-09-07','9月份-W2','idol_vinct','2026-09-09','Quay clip nhảy với thành viên team','https://www.tiktok.com/@be.haven/video/7681596288885935367','CẦN KIỂM TRA','Hậu kỳ • Có thể tự quay']
         ];
 
-        let accounts = [...DEFAULT_ACCOUNTS];
-        let posts = [];
-        let currentRoleFilter = 'ALL'; // 'ALL' | 'GROUP' | 'IDOL'
-        let currentDirectoryFilter = 'ALL'; // 'ALL' | 'GROUP' | 'IDOL' | 'UNCHECKED'
+        const EXCEL_SEED_POSTS = COMPACT_EXCEL_ROWS.map(([id, weekMonday, sheet, accountId, date, category, link, status, note], idx) => ({
+            id,
+            weekMonday,
+            sheet,
+            accountId,
+            date,
+            category,
+            link,
+            status,
+            note,
+            updatedAt: 1761200000000 + idx
+        }));
 
         // ============================================================================
-        // 3. KẾT NỐI FIREBASE & LẮNG NGHE DỮ LIỆU THỜI GIAN THỰC (REALTIME)
+        // 4. HÀM XỬ LÝ TUẦN (THỨ 2 BẮT ĐẦU -> CHỦ NHẬT DEADLINE) & ĐẾM NGÀY THỜI GIAN THỰC
+        // ============================================================================
+        function toLocalDateStr(d) {
+            const yr = d.getFullYear();
+            const mo = String(d.getMonth() + 1).padStart(2, '0');
+            const da = String(d.getDate()).padStart(2, '0');
+            return `${yr}-${mo}-${da}`;
+        }
+
+        function parseLocalDate(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d, 0, 0, 0, 0);
+        }
+
+        function getMondayOfWeekStr(dateObjOrStr) {
+            const d = typeof dateObjOrStr === 'string' ? parseLocalDate(dateObjOrStr) : new Date(dateObjOrStr.getFullYear(), dateObjOrStr.getMonth(), dateObjOrStr.getDate());
+            const day = d.getDay(); // 0 is Sunday, 1 is Monday ... 6 is Saturday
+            const diffToMonday = day === 0 ? -6 : 1 - day;
+            d.setDate(d.getDate() + diffToMonday);
+            return toLocalDateStr(d);
+        }
+
+        function addDaysStr(dateStr, days) {
+            const d = parseLocalDate(dateStr);
+            d.setDate(d.getDate() + days);
+            return toLocalDateStr(d);
+        }
+
+        function formatDateVN(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function formatShortDateVN(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}`;
+        }
+
+        const todayRealtimeStr = toLocalDateStr(new Date());
+        const currentRealtimeMonday = getMondayOfWeekStr(new Date());
+
+        // State quản lý tuần đang xem
+        let selectedWeekMonday = currentRealtimeMonday; // Mặc định mở đúng tuần hiện tại (VD: 2026-10-19)
+        let accounts = [...DEFAULT_ACCOUNTS];
+        let posts = [...EXCEL_SEED_POSTS];
+        let currentRoleFilter = 'ALL';
+        let currentDirectoryFilter = 'ALL';
+        let sidebarKpiMode = 'POSTED'; // 'POSTED' (Chỉ tính ĐÃ ĐĂNG) | 'ALL' (Gồm cả Lên lịch)
+
+        // Xác định một bài đăng thuộc tuần nào (Thứ 2 -> Chủ Nhật)
+        function getPostWeekMonday(post) {
+            if (post.weekMonday) return post.weekMonday;
+            if (post.date) return getMondayOfWeekStr(post.date);
+            return currentRealtimeMonday;
+        }
+
+        function getPostsForWeek(weekMonday) {
+            if (weekMonday === 'ALL') return posts;
+            return posts.filter(p => getPostWeekMonday(p) === weekMonday);
+        }
+
+        // Cập nhật bộ đếm ngày tới hạn Deadline Chủ Nhật trên góc phải tiêu đề (Không đếm giờ)
+        function updateRealtimeDeadlineCounter() {
+            const now = new Date();
+            const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const thisMondayStr = getMondayOfWeekStr(todayMidnight);
+            const thisSundayStr = addDaysStr(thisMondayStr, 6);
+            const sundayMidnight = parseLocalDate(thisSundayStr);
+
+            const diffDays = Math.round((sundayMidnight - todayMidnight) / (1000 * 60 * 60 * 24));
+            const dayNames = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+            const currentDayName = dayNames[todayMidnight.getDay()];
+
+            const countdownEl = document.getElementById('deadlineCountdownText');
+            const rangeEl = document.getElementById('deadlineWeekRangeText');
+            const badgeEl = document.getElementById('deadlineHeaderBadge');
+
+            if (diffDays === 0) {
+                countdownEl.innerHTML = `<span class="text-rose-300">Hôm nay là Deadline CN (${formatShortDateVN(thisSundayStr)})!</span>`;
+                badgeEl.className = 'px-3.5 py-2 rounded-xl bg-rose-600/30 border border-rose-400 text-rose-100 text-xs font-bold flex items-center gap-2.5 shadow-sm animate-pulse';
+            } else if (diffDays === 1) {
+                countdownEl.innerHTML = `Deadline CN (${formatShortDateVN(thisSundayStr)}): <span class="text-amber-300">Còn 1 ngày</span>`;
+            } else {
+                countdownEl.innerHTML = `Deadline CN (${formatShortDateVN(thisSundayStr)}): <span class="text-emerald-300">Còn ${diffDays} ngày</span>`;
+            }
+
+            rangeEl.textContent = `Hôm nay ${currentDayName} (${formatShortDateVN(toLocalDateStr(todayMidnight))}) • Tuần: T2 ${formatShortDateVN(thisMondayStr)} → CN ${formatShortDateVN(thisSundayStr)}`;
+
+            // Kiểm tra nếu bước qua Thứ 2 tuần mới
+            checkNewWeekMondayRollover(thisMondayStr);
+        }
+
+        function checkNewWeekMondayRollover(thisMondayStr) {
+            const lastSeenMonday = localStorage.getItem('passion_tracker_last_week_monday');
+            const isMondayToday = new Date().getDay() === 1;
+
+            if (lastSeenMonday && lastSeenMonday !== thisMondayStr) {
+                // Đã bước sang tuần mới! Tự động chuyển sang tuần mới & bật thông báo tuần trước ai chưa đủ
+                localStorage.setItem('passion_tracker_last_week_monday', thisMondayStr);
+                selectedWeekMonday = thisMondayStr;
+                showMondayRolloverAlert(lastSeenMonday);
+            } else if (!lastSeenMonday) {
+                localStorage.setItem('passion_tracker_last_week_monday', thisMondayStr);
+                if (isMondayToday) {
+                    const prevMonday = addDaysStr(thisMondayStr, -7);
+                    showMondayRolloverAlert(prevMonday);
+                }
+            }
+        }
+
+        function showMondayRolloverAlert(prevWeekMonday) {
+            const prevSunday = addDaysStr(prevWeekMonday, 6);
+            const missingAccounts = getMissingAccountsForWeek(prevWeekMonday, 'POSTED');
+            const banner = document.getElementById('mondayNewWeekBanner');
+            const title = document.getElementById('mondayBannerTitle');
+            const desc = document.getElementById('mondayBannerDesc');
+
+            if (banner) {
+                banner.classList.remove('hidden');
+                title.textContent = `ĐÃ QUA THỨ 2 TUẦN MỚI!`;
+                desc.textContent = `Tổng kết tuần trước (${formatShortDateVN(prevWeekMonday)} - ${formatShortDateVN(prevSunday)}): Có ${missingAccounts.length}/${accounts.length} tài khoản chưa đủ 2 bài đăng.`;
+            }
+        }
+
+        function dismissMondayBanner() {
+            document.getElementById('mondayNewWeekBanner').classList.add('hidden');
+        }
+
+        // ============================================================================
+        // 5. SIDEBAR & KIỂM TRA TÀI KHOẢN CHƯA ĐỦ 2 BÀI / TUẦN
+        // ============================================================================
+        function getAccountWeeklyProgress(accId, weekMonday) {
+            const weekPosts = getPostsForWeek(weekMonday).filter(p => p.accountId === accId);
+            const postedCount = weekPosts.filter(p => p.status === 'ĐÃ ĐĂNG').length;
+            const totalCount = weekPosts.length;
+            const scheduledCount = totalCount - postedCount;
+            return {
+                postedCount,
+                totalCount,
+                scheduledCount,
+                isDonePosted: postedCount >= 2,
+                isDoneTotal: totalCount >= 2
+            };
+        }
+
+        function getMissingAccountsForWeek(weekMonday, mode = 'POSTED') {
+            return accounts.filter(acc => {
+                const prog = getAccountWeeklyProgress(acc.id, weekMonday);
+                return mode === 'POSTED' ? !prog.isDonePosted : !prog.isDoneTotal;
+            });
+        }
+
+        function toggleKpiSidebar() {
+            const sidebar = document.getElementById('kpiSidebar');
+            sidebar.classList.toggle('translate-x-full');
+            renderKpiSidebar();
+        }
+
+        function setSidebarKpiMode(mode) {
+            sidebarKpiMode = mode;
+            const btnPosted = document.getElementById('sidebarModePosted');
+            const btnAll = document.getElementById('sidebarModeAll');
+            if (mode === 'POSTED') {
+                btnPosted.className = 'py-1.5 px-2 rounded-lg bg-white text-slate-900 shadow-xs transition';
+                btnAll.className = 'py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900 transition';
+            } else {
+                btnAll.className = 'py-1.5 px-2 rounded-lg bg-white text-slate-900 shadow-xs transition';
+                btnPosted.className = 'py-1.5 px-2 rounded-lg text-slate-600 hover:text-slate-900 transition';
+            }
+            renderKpiSidebar();
+        }
+
+        function renderKpiSidebar() {
+            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            const sundayStr = addDaysStr(activeWeek, 6);
+            document.getElementById('sidebarWeekSubtitle').textContent =
+                `Tuần: T2 ${formatShortDateVN(activeWeek)} → CN ${formatShortDateVN(sundayStr)} (2 bài/tuần)`;
+
+            const missingList = getMissingAccountsForWeek(activeWeek, sidebarKpiMode);
+            const missingPostedCount = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
+
+            // Update badges
+            document.getElementById('headerMissingBadge').textContent = missingPostedCount;
+            document.getElementById('floatingMissingCount').textContent = missingPostedCount;
+            document.getElementById('sidebarMissingCountText').textContent = `${missingList.length}/${accounts.length} tài khoản thiếu bài`;
+
+            const container = document.getElementById('sidebarAccountsList');
+            container.innerHTML = '';
+
+            if (missingList.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 text-center bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-800">
+                        <i class="fa-solid fa-circle-check text-2xl text-emerald-500 mb-2"></i>
+                        <p class="font-bold text-sm">Tuyệt vời! 100% Đạt KPI</p>
+                        <p class="text-xs text-emerald-600 mt-1">Tất cả 43 tài khoản đều đã đủ tối thiểu 2 bài trong tuần này.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            missingList.forEach(acc => {
+                const prog = getAccountWeeklyProgress(acc.id, activeWeek);
+                const countUsed = sidebarKpiMode === 'POSTED' ? prog.postedCount : prog.totalCount;
+                const missingNum = Math.max(0, 2 - countUsed);
+                const isGroup = acc.role === 'GROUP';
+
+                const statusBadge = countUsed === 0
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200">0/2 bài • Thiếu 2</span>`
+                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">1/2 bài • Thiếu 1</span>`;
+
+                const schedNote = prog.scheduledCount > 0
+                    ? `<div class="text-[11px] text-sky-600 font-medium mt-1"><i class="fa-solid fa-clock mr-1"></i>Có ${prog.scheduledCount} bài đang lên lịch/chờ duyệt</div>`
+                    : '';
+
+                const item = document.createElement('div');
+                item.className = `p-3 rounded-xl border ${countUsed === 0 ? 'bg-rose-50/40 border-rose-200' : 'bg-amber-50/40 border-amber-200'} flex flex-col gap-1.5 transition hover:shadow-xs`;
+                item.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${isGroup ? 'bg-slate-900 text-white' : 'bg-indigo-100 text-indigo-700'}">
+                                ${isGroup ? 'NHÓM' : (acc.groupName || 'IDOL')}
+                            </span>
+                            <span class="font-bold text-xs sm:text-sm text-slate-900 truncate">${acc.name}</span>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <div class="flex items-center justify-between gap-2 mt-0.5">
+                        <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
+                            onclick="markAccountCheckedOnVisit('${acc.id}')"
+                            class="text-xs font-semibold text-pink-600 hover:underline inline-flex items-center gap-1 truncate">
+                            <i class="fa-brands fa-tiktok text-[10px]"></i>
+                            <span>${acc.handle}</span>
+                        </a>
+                        <button onclick="quickSelectAccountForPost('${acc.id}')"
+                            class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-pink-600 text-white text-[11px] font-semibold transition shrink-0">
+                            + Bù ${missingNum} bài
+                        </button>
+                    </div>
+                    ${schedNote}
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Modal báo cáo tổng kết tuần (Ai chưa đủ 2 bài)
+        function openLastWeekReportModal() {
+            const modal = document.getElementById('lastWeekReportModal');
+            modal.classList.remove('hidden');
+            const select = document.getElementById('reportWeekSelect');
+            const targetWeek = selectedWeekMonday === 'ALL' ? '2026-10-19' : selectedWeekMonday;
+            if ([...select.options].some(o => o.value === targetWeek)) {
+                select.value = targetWeek;
+            }
+            renderLastWeekReportContent(select.value);
+        }
+
+        function closeLastWeekReportModal() {
+            document.getElementById('lastWeekReportModal').classList.add('hidden');
+        }
+
+        function renderLastWeekReportContent(weekMonday) {
+            const sundayStr = addDaysStr(weekMonday, 6);
+            const missingPosted = getMissingAccountsForWeek(weekMonday, 'POSTED');
+            const missingTotal = getMissingAccountsForWeek(weekMonday, 'ALL');
+            const container = document.getElementById('lastWeekReportBody');
+
+            document.getElementById('lastWeekModalSubtitle').textContent =
+                `Tuần từ Thứ 2 (${formatDateVN(weekMonday)}) đến Chủ Nhật (${formatDateVN(sundayStr)})`;
+
+            const zeroPostsList = missingPosted.filter(a => getAccountWeeklyProgress(a.id, weekMonday).postedCount === 0);
+            const onePostList = missingPosted.filter(a => getAccountWeeklyProgress(a.id, weekMonday).postedCount === 1);
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">
+                    <div class="p-3 rounded-xl bg-rose-50 border border-rose-200">
+                        <div class="text-[11px] font-bold text-rose-600 uppercase">Chưa đủ 2 bài Đã đăng</div>
+                        <div class="text-xl font-extrabold text-rose-700 mt-0.5">${missingPosted.length} / ${accounts.length} kênh</div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                        <div class="text-[11px] font-bold text-amber-700 uppercase">Mới đăng 1/2 bài</div>
+                        <div class="text-xl font-extrabold text-amber-800 mt-0.5">${onePostList.length} kênh</div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-100 border border-slate-200">
+                        <div class="text-[11px] font-bold text-slate-600 uppercase">Chưa đăng bài nào (0/2)</div>
+                        <div class="text-xl font-extrabold text-slate-900 mt-0.5">${zeroPostsList.length} kênh</div>
+                    </div>
+                </div>
+                <div class="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    ${missingPosted.map(acc => {
+                        const prog = getAccountWeeklyProgress(acc.id, weekMonday);
+                        return `
+                            <div class="p-2.5 rounded-xl border border-slate-200 flex items-center justify-between gap-2 bg-white">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded ${acc.role === 'GROUP' ? 'bg-slate-900 text-white' : 'bg-indigo-50 text-indigo-700'}">
+                                        ${acc.role === 'GROUP' ? 'NHÓM' : acc.groupName}
+                                    </span>
+                                    <span class="font-bold text-xs sm:text-sm text-slate-900">${acc.name}</span>
+                                    <a href="${acc.url}" target="_blank" class="text-xs text-pink-600 hover:underline">${acc.handle}</a>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    ${prog.scheduledCount > 0 ? `<span class="text-[11px] text-sky-600 font-semibold">(${prog.scheduledCount} bài lên lịch)</span>` : ''}
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${prog.postedCount === 0 ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800'}">
+                                        Đã đăng: ${prog.postedCount}/2 bài
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        // ============================================================================
+        // 6. ĐIỀU HƯỚNG TUẦN (CHỌN TUẦN T2 -> CN)
+        // ============================================================================
+        function updateWeekHeaderUI() {
+            const titleEl = document.getElementById('activeWeekTitle');
+            const tagEl = document.getElementById('activeWeekSheetTag');
+            const quickSelect = document.getElementById('weekQuickSelect');
+
+            if (selectedWeekMonday === 'ALL') {
+                titleEl.textContent = 'Đang xem: Tất cả các tuần (Toàn bộ 145+ bài đăng)';
+                tagEl.textContent = 'Toàn bộ lịch sử';
+                tagEl.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200';
+                quickSelect.value = 'ALL';
+                return;
+            }
+
+            const sundayStr = addDaysStr(selectedWeekMonday, 6);
+            titleEl.textContent = `Tuần: ${formatDateVN(selectedWeekMonday)} (Thứ 2) → ${formatDateVN(sundayStr)} (Chủ Nhật)`;
+
+            const sheetMap = {
+                '2026-10-19': 'Excel: 10月份-W3 • Tuần Hiện Tại',
+                '2026-09-14': 'Excel: 9月份-W3',
+                '2026-09-07': 'Excel: 9月份-W2'
+            };
+
+            if (selectedWeekMonday === currentRealtimeMonday) {
+                tagEl.textContent = sheetMap[selectedWeekMonday] || 'Tuần Hiện Tại';
+                tagEl.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200';
+            } else {
+                tagEl.textContent = sheetMap[selectedWeekMonday] || `Tuần ${formatShortDateVN(selectedWeekMonday)}`;
+                tagEl.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200';
+            }
+
+            // Đồng bộ select nếu khớp option
+            const hasOption = [...quickSelect.options].some(opt => opt.value === selectedWeekMonday);
+            if (!hasOption) {
+                const newOpt = document.createElement('option');
+                newOpt.value = selectedWeekMonday;
+                newOpt.textContent = `📅 Tuần ${formatShortDateVN(selectedWeekMonday)} - ${formatShortDateVN(sundayStr)}`;
+                quickSelect.appendChild(newOpt);
+            }
+            quickSelect.value = selectedWeekMonday;
+        }
+
+        function handleQuickWeekSelect(val) {
+            selectedWeekMonday = val;
+            updateWeekHeaderUI();
+            renderAccountsGrid();
+            renderPostsTable();
+            renderKpiSidebar();
+        }
+
+        function shiftSelectedWeek(daysOffset) {
+            const baseMonday = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            selectedWeekMonday = addDaysStr(baseMonday, daysOffset);
+            updateWeekHeaderUI();
+            renderAccountsGrid();
+            renderPostsTable();
+            renderKpiSidebar();
+        }
+
+        function jumpToCurrentRealtimeWeek() {
+            selectedWeekMonday = currentRealtimeMonday;
+            updateWeekHeaderUI();
+            renderAccountsGrid();
+            renderPostsTable();
+            renderKpiSidebar();
+            showToast(`Đã chuyển về tuần hiện tại (T2 ${formatShortDateVN(currentRealtimeMonday)})`);
+        }
+
+        // ============================================================================
+        // 7. KẾT NỐI FIREBASE & ĐỒNG BỘ DỮ LIỆU TỪ EXCEL LÊN CLOUD
         // ============================================================================
         function updateCloudBadge(status, text) {
             const badge = document.getElementById('cloudStatusBadge');
@@ -699,7 +1432,7 @@ service cloud.firestore {
                 const cred = await signInAnonymously(auth);
                 currentUser = cred.user;
             } catch (authErr) {
-                console.warn("Firebase Auth fallback (dành cho Vercel khi chưa bật Anonymous Auth):", authErr);
+                console.warn("Firebase Auth fallback:", authErr);
                 currentUser = auth.currentUser || { uid: 'vercel-public-' + crypto.randomUUID() };
             }
 
@@ -712,11 +1445,11 @@ service cloud.firestore {
             const accountsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'accounts');
             const postsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'posts');
 
-            // Lắng nghe danh sách tài khoản theo thời gian thực
+            // Lắng nghe Accounts
             onSnapshot(
                 accountsColRef,
                 async (snapshot) => {
-                    updateCloudBadge('connected', 'Đã đồng bộ Firebase');
+                    updateCloudBadge('connected', 'Đã đồng bộ Cloud');
                     if (snapshot.empty && !hasSeededInitialData) {
                         hasSeededInitialData = true;
                         await seedDefaultAccountsToCloud();
@@ -724,79 +1457,73 @@ service cloud.firestore {
                     }
 
                     const loadedAccounts = [];
-                    let hasLegacyAuraAccounts = false;
-
                     snapshot.forEach((docSnap) => {
-                        if (LEGACY_ACCOUNT_IDS.includes(docSnap.id)) {
-                            hasLegacyAuraAccounts = true;
-                        } else {
-                            loadedAccounts.push({ id: docSnap.id, ...docSnap.data() });
-                        }
-                    });
-
-                    // Tự động dọn dữ liệu mẫu cũ (THE AURA) và nạp 43 kênh Passion mới nếu cần
-                    if ((hasLegacyAuraAccounts || loadedAccounts.length === 0) && !hasSeededInitialData) {
-                        hasSeededInitialData = true;
-                        for (const oldId of LEGACY_ACCOUNT_IDS) {
-                            try {
-                                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'accounts', oldId));
-                            } catch (e) {
-                                console.warn("Bỏ qua xóa id cũ:", oldId);
-                            }
-                        }
-                        if (loadedAccounts.length === 0) {
-                            await seedDefaultAccountsToCloud();
-                            return;
-                        }
-                    }
-
-                    // Sắp xếp Nhóm lên đầu, sau đó theo thứ tự
-                    loadedAccounts.sort((a, b) => {
-                        if (a.role === 'GROUP' && b.role !== 'GROUP') return -1;
-                        if (a.role !== 'GROUP' && b.role === 'GROUP') return 1;
-                        return (a.order || 999) - (b.order || 999);
+                        loadedAccounts.push({ id: docSnap.id, ...docSnap.data() });
                     });
 
                     if (loadedAccounts.length > 0) {
+                        // Bổ sung groupName mặc định nếu thiếu
+                        loadedAccounts.forEach(acc => {
+                            if (!acc.groupName) {
+                                const found = DEFAULT_ACCOUNTS.find(d => d.id === acc.id);
+                                if (found) acc.groupName = found.groupName;
+                            }
+                        });
+                        loadedAccounts.sort((a, b) => {
+                            if (a.role === 'GROUP' && b.role !== 'GROUP') return -1;
+                            if (a.role !== 'GROUP' && b.role === 'GROUP') return 1;
+                            return (a.order || 999) - (b.order || 999);
+                        });
                         accounts = loadedAccounts;
                     }
                     renderAccountsGrid();
                     renderPostsTable();
-                    if (!document.getElementById('accountModal').classList.contains('hidden')) {
-                        renderModalAccountsList();
-                    }
+                    renderKpiSidebar();
                 },
                 (error) => {
-                    console.error("Lỗi đồng bộ Accounts từ Firestore:", error);
-                    updateCloudBadge('error', 'Cần mở quyền Firestore Rules');
-                    showToast('Chưa đọc được Firestore. Bấm vào nút trạng thái Cloud ở góc trên để xem cách bật Rules!', 'error');
+                    console.error("Lỗi đồng bộ Accounts:", error);
+                    updateCloudBadge('error', 'Cần mở Firestore Rules');
                 }
             );
 
-            // Lắng nghe danh sách bài đăng theo thời gian thực
+            // Lắng nghe Posts & Tự động đẩy 145 bài từ file Excel lên Firebase nếu chưa có
             onSnapshot(
                 postsColRef,
-                (snapshot) => {
-                    updateCloudBadge('connected', 'Đã đồng bộ Firebase');
+                async (snapshot) => {
+                    updateCloudBadge('connected', 'Đã đồng bộ Cloud');
                     const loadedPosts = [];
+                    const existingIds = new Set();
+
                     snapshot.forEach((docSnap) => {
-                        loadedPosts.push({ id: docSnap.id, ...docSnap.data() });
+                        const data = docSnap.data();
+                        existingIds.add(docSnap.id);
+                        loadedPosts.push({ id: docSnap.id, ...data });
                     });
 
-                    // Sắp xếp bài mới nhất lên đầu trong bộ nhớ JS
-                    loadedPosts.sort((a, b) => {
-                        const dateCmp = (b.date || '').localeCompare(a.date || '');
-                        if (dateCmp !== 0) return dateCmp;
-                        return (b.updatedAt || 0) - (a.updatedAt || 0);
-                    });
+                    // Tự động đẩy dữ liệu Excel lên Firebase lần đầu tiên
+                    const missingExcelPosts = EXCEL_SEED_POSTS.filter(p => !existingIds.has(p.id));
+                    if (missingExcelPosts.length > 0 && !hasAutoSyncedExcel) {
+                        hasAutoSyncedExcel = true;
+                        await syncExcelDatasetToFirebase(false);
+                        return;
+                    }
 
-                    posts = loadedPosts;
+                    if (loadedPosts.length > 0) {
+                        loadedPosts.sort((a, b) => {
+                            const dateCmp = (b.date || '').localeCompare(a.date || '');
+                            if (dateCmp !== 0) return dateCmp;
+                            return (b.updatedAt || 0) - (a.updatedAt || 0);
+                        });
+                        posts = loadedPosts;
+                    }
+
                     renderAccountsGrid();
                     renderPostsTable();
+                    renderKpiSidebar();
                 },
                 (error) => {
-                    console.error("Lỗi đồng bộ Posts từ Firestore:", error);
-                    updateCloudBadge('error', 'Cần mở quyền Firestore Rules');
+                    console.error("Lỗi đồng bộ Posts:", error);
+                    updateCloudBadge('error', 'Cần mở Firestore Rules');
                 }
             );
         }
@@ -804,24 +1531,165 @@ service cloud.firestore {
         async function seedDefaultAccountsToCloud() {
             if (!currentUser) return;
             try {
-                for (const acc of DEFAULT_ACCOUNTS) {
+                await Promise.all(DEFAULT_ACCOUNTS.map(acc => {
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', acc.id);
-                    await setDoc(docRef, acc);
-                }
+                    return setDoc(docRef, acc, { merge: true });
+                }));
             } catch (err) {
-                console.error("Lỗi khởi tạo tài khoản mặc định:", err);
+                console.error("Lỗi khởi tạo tài khoản:", err);
             }
         }
 
-        async function restoreDefaultAccounts() {
-            if (!currentUser) return;
-            await seedDefaultAccountsToCloud();
-            showToast('Đã khôi phục 6 Nhóm & 37 Idol của Passion lên Firebase!');
+        async function syncExcelDatasetToFirebase(showNotification = true) {
+            if (!currentUser) {
+                showToast('Đang kết nối Firebase, vui lòng đợi 1 giây...', 'error');
+                return;
+            }
+            try {
+                if (showNotification) {
+                    showToast('Đang đẩy 145 bài đăng từ file Excel lên Firebase...');
+                }
+                // Chia batch song song để đẩy nhanh lên Firestore
+                const chunkSize = 25;
+                for (let i = 0; i < EXCEL_SEED_POSTS.length; i += chunkSize) {
+                    const chunk = EXCEL_SEED_POSTS.slice(i, i + chunkSize);
+                    await Promise.all(chunk.map(post => {
+                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', post.id);
+                        return setDoc(docRef, post, { merge: true });
+                    }));
+                }
+                showToast('Đã đồng bộ thành công 145 bài đăng từ file Excel lên Firebase!');
+            } catch (err) {
+                console.error("Lỗi đẩy dữ liệu Excel lên Firebase:", err);
+                showToast('Chưa ghi được lên Firebase. Hãy kiểm tra Firestore Rules!', 'error');
+            }
+        }
+
+        // Hỗ trợ người dùng chọn thêm file Excel (.xlsx) từ máy tính để đẩy thẳng lên Firebase
+        function handleExcelFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    let importedCount = 0;
+
+                    for (const sheetName of workbook.SheetNames) {
+                        const ws = workbook.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+
+                        let mode = null;
+                        let colMap = {};
+                        let currentGroup = '';
+                        let currentIdol = '';
+
+                        for (let r = 0; r < rows.length; r++) {
+                            const row = rows[r] || [];
+                            const rowStr = row.join(' ');
+                            if (rowStr.includes('HẠNG MỤC') && !rowStr.includes('THÀNH VIÊN')) {
+                                mode = 'GROUP';
+                                colMap = {};
+                                row.forEach((val, idx) => {
+                                    const s = String(val || '');
+                                    if (s.includes('NHÓM')) colMap.group = idx;
+                                    else if (s.includes('HẠNG MỤC')) colMap.category = idx;
+                                    else if (s.includes('NGÀY ĐĂNG')) colMap.date = idx;
+                                    else if (s.includes('BÀI/VIDEO')) colMap.link = idx;
+                                    else if (s.includes('TRẠNG THÁI')) colMap.status = idx;
+                                    else if (s.includes('GHI CHÚ')) colMap.note = idx;
+                                });
+                                continue;
+                            } else if (rowStr.includes('HẠNG MỤC') && rowStr.includes('THÀNH VIÊN')) {
+                                mode = 'IDOL';
+                                colMap = {};
+                                row.forEach((val, idx) => {
+                                    const s = String(val || '');
+                                    if (s.includes('NHÓM')) colMap.group = idx;
+                                    else if (s.includes('THÀNH VIÊN')) colMap.idol = idx;
+                                    else if (s.includes('HẠNG MỤC')) colMap.category = idx;
+                                    else if (s.includes('NGÀY ĐĂNG')) colMap.date = idx;
+                                    else if (s.includes('BÀI/VIDEO')) colMap.link = idx;
+                                    else if (s.includes('TRẠNG THÁI')) colMap.status = idx;
+                                    else if (s.includes('GHI CHÚ')) colMap.note = idx;
+                                });
+                                continue;
+                            }
+
+                            if (!mode) continue;
+                            if (row[colMap.group]) currentGroup = String(row[colMap.group]).trim();
+                            if (mode === 'IDOL' && row[colMap.idol]) currentIdol = String(row[colMap.idol]).trim();
+
+                            const cat = String(row[colMap.category] || '').trim();
+                            const rawDate = String(row[colMap.date] || '').trim();
+                            const link = String(row[colMap.link] || '').trim();
+                            const rawStatus = String(row[colMap.status] || '').trim();
+                            const note = String(row[colMap.note] || '').trim();
+
+                            if (!cat && !link && !rawStatus) continue;
+
+                            const matchedAcc = findAccountByExcelName(mode, currentGroup, currentIdol);
+                            if (!matchedAcc) continue;
+
+                            const cleanDate = normalizeExcelDate(rawDate, sheetName);
+                            const weekMon = getMondayOfWeekStr(cleanDate);
+                            const appStatus = rawStatus.includes('Đã đăng') || link.startsWith('https://www.tiktok.com/@') ? 'ĐÃ ĐĂNG' : (rawStatus.includes('Ý tưởng') ? 'NHÁP' : 'LÊN LỊCH');
+
+                            const postId = `import_${sheetName.replace(/[^a-zA-Z0-9]/g, '')}_r${r}`;
+                            const postObj = {
+                                id: postId,
+                                weekMonday: weekMon,
+                                sheet: sheetName,
+                                accountId: matchedAcc.id,
+                                date: cleanDate,
+                                category: cat || 'Bài đăng',
+                                link: link.startsWith('http') ? link : '',
+                                status: appStatus,
+                                note: note,
+                                updatedAt: Date.now() + importedCount
+                            };
+
+                            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
+                            await setDoc(docRef, postObj, { merge: true });
+                            importedCount++;
+                        }
+                    }
+                    showToast(`Đã nhập và đồng bộ ${importedCount} bài đăng từ file ${file.name} lên Firebase!`);
+                } catch (err) {
+                    console.error("Lỗi đọc file Excel:", err);
+                    showToast('Không thể đọc file Excel. Vui lòng kiểm tra định dạng .xlsx!', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function findAccountByExcelName(role, groupStr, idolStr) {
+            if (role === 'GROUP') {
+                const gUp = (groupStr || '').toUpperCase();
+                return accounts.find(a => a.role === 'GROUP' && (a.name.toUpperCase().includes(gUp) || (a.groupName || '').toUpperCase() === gUp));
+            } else {
+                const iUp = (idolStr || '').split('\n')[0].trim().toUpperCase();
+                if (iUp === 'VINNCT') return getAccountById('idol_vinct');
+                return accounts.find(a => a.role === 'IDOL' && a.name.toUpperCase() === iUp);
+            }
+        }
+
+        function normalizeExcelDate(rawDate, sheetName) {
+            if (/^\d{4}-\d{2}-\d{2}/.test(rawDate)) return rawDate.slice(0, 10);
+            if (sheetName.includes('10')) return '2026-10-19';
+            if (sheetName.includes('W3')) return '2026-09-14';
+            return '2026-09-07';
         }
 
         // ============================================================================
-        // 4. HÀM TIỆN ÍCH & HIỂN THỊ THÔNG BÁO
+        // 8. RENDER DANH BẠ 43 KÊNH TIKTOK & BẢNG BÀI ĐĂNG THEO TUẦN
         // ============================================================================
+        function getAccountById(accId) {
+            return accounts.find(a => a.id === accId) || null;
+        }
+
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -838,35 +1706,14 @@ service cloud.firestore {
             }, 3500);
         }
 
-        function formatDateVN(dateStr) {
-            if (!dateStr) return '';
-            const parts = dateStr.split('-');
-            if (parts.length !== 3) return dateStr;
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-
-        function getAccountById(accId) {
-            return accounts.find(a => a.id === accId) || null;
-        }
-
-        function normalizeTikTokUrl(handle, customUrl) {
-            if (customUrl && customUrl.trim().startsWith('http')) {
-                return customUrl.trim();
-            }
-            const cleanHandle = handle.trim().startsWith('@') ? handle.trim() : `@${handle.trim()}`;
-            return `https://www.tiktok.com/${cleanHandle}`;
-        }
-
-        // ============================================================================
-        // 5. RENDER DANH SÁCH TÀI KHOẢN & HYPERLINK TIKTOK (CHỐNG SÓT BÀI)
-        // ============================================================================
         function setDirectoryFilter(filterType) {
             currentDirectoryFilter = filterType;
             const tabMap = {
                 ALL: document.getElementById('dirTabAll'),
+                MISSING_KPI: document.getElementById('dirTabMissingKpi'),
+                DONE_KPI: document.getElementById('dirTabDoneKpi'),
                 GROUP: document.getElementById('dirTabGroup'),
-                IDOL: document.getElementById('dirTabIdol'),
-                UNCHECKED: document.getElementById('dirTabUnchecked')
+                IDOL: document.getElementById('dirTabIdol')
             };
 
             Object.keys(tabMap).forEach(key => {
@@ -874,8 +1721,10 @@ service cloud.firestore {
                 if (!btn) return;
                 if (key === filterType) {
                     btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition';
-                } else if (key === 'UNCHECKED') {
-                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-700 hover:bg-amber-50 transition';
+                } else if (key === 'MISSING_KPI') {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 hover:bg-rose-50 transition';
+                } else if (key === 'DONE_KPI') {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition';
                 } else {
                     btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
                 }
@@ -888,30 +1737,25 @@ service cloud.firestore {
             const grid = document.getElementById('accountsGrid');
             grid.innerHTML = '';
 
+            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
             const searchEl = document.getElementById('directorySearch');
             const keyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
 
-            // Cập nhật số lượng trên các nút tab danh bạ
-            const totalCount = accounts.length;
-            const groupCount = accounts.filter(a => a.role === 'GROUP').length;
-            const idolCount = accounts.filter(a => a.role === 'IDOL').length;
-            const uncheckedCount = accounts.filter(a => !a.checkedToday).length;
+            const missingKpiCount = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
+            const doneKpiCount = accounts.length - missingKpiCount;
 
-            const dirTabAll = document.getElementById('dirTabAll');
-            const dirTabGroup = document.getElementById('dirTabGroup');
-            const dirTabIdol = document.getElementById('dirTabIdol');
-            const dirTabUnchecked = document.getElementById('dirTabUnchecked');
-            if (dirTabAll) dirTabAll.textContent = `Tất cả (${totalCount})`;
-            if (dirTabGroup) dirTabGroup.textContent = `👥 ${groupCount} Nhóm`;
-            if (dirTabIdol) dirTabIdol.textContent = `🌟 ${idolCount} Idol`;
-            if (dirTabUnchecked) dirTabUnchecked.textContent = `⏳ Chưa check (${uncheckedCount})`;
+            document.getElementById('dirTabAll').textContent = `Tất cả (${accounts.length})`;
+            document.getElementById('dirTabMissingKpi').textContent = `⚠️ Chưa đủ 2 bài (${missingKpiCount})`;
+            document.getElementById('dirTabDoneKpi').textContent = `✅ Đã đủ KPI (${doneKpiCount})`;
 
             const filteredAccounts = accounts.filter(acc => {
+                const prog = getAccountWeeklyProgress(acc.id, activeWeek);
                 if (currentDirectoryFilter === 'GROUP' && acc.role !== 'GROUP') return false;
                 if (currentDirectoryFilter === 'IDOL' && acc.role !== 'IDOL') return false;
-                if (currentDirectoryFilter === 'UNCHECKED' && acc.checkedToday) return false;
+                if (currentDirectoryFilter === 'MISSING_KPI' && prog.isDonePosted) return false;
+                if (currentDirectoryFilter === 'DONE_KPI' && !prog.isDonePosted) return false;
                 if (keyword) {
-                    const hay = `${acc.name} ${acc.handle}`.toLowerCase();
+                    const hay = `${acc.name} ${acc.handle} ${acc.groupName || ''}`.toLowerCase();
                     if (!hay.includes(keyword)) return false;
                 }
                 return true;
@@ -920,8 +1764,7 @@ service cloud.firestore {
             if (filteredAccounts.length === 0) {
                 grid.innerHTML = `
                     <div class="col-span-full py-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                        <p class="text-sm font-medium text-slate-600">Không tìm thấy kênh TikTok phù hợp</p>
-                        <p class="text-xs text-slate-400 mt-1">Thử đổi bộ lọc hoặc từ khóa tìm kiếm khác.</p>
+                        <p class="text-sm font-medium text-slate-600">Không tìm thấy tài khoản nào phù hợp bộ lọc</p>
                     </div>
                 `;
                 updateDashboardStats();
@@ -930,44 +1773,34 @@ service cloud.firestore {
             }
 
             filteredAccounts.forEach(acc => {
-                const accPosts = posts.filter(p => p.accountId === acc.id);
-                const postCount = accPosts.length;
-                const latestPost = accPosts.length > 0
-                    ? accPosts.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0]
-                    : null;
-
+                const prog = getAccountWeeklyProgress(acc.id, activeWeek);
                 const isGroup = acc.role === 'GROUP';
+
                 const cardBg = isGroup
                     ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border-indigo-500/40'
-                    : 'bg-white text-slate-800 border-slate-200/90';
+                    : (prog.isDonePosted ? 'bg-white text-slate-800 border-emerald-200' : 'bg-amber-50/30 text-slate-800 border-amber-300/80');
 
-                const badgeHtml = isGroup
-                    ? `<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-pink-500 text-white">NHÓM PASSION</span>`
-                    : `<span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-200">IDOL</span>`;
+                const roleBadge = isGroup
+                    ? `<span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-pink-500 text-white">NHÓM PASSION</span>`
+                    : `<span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">IDOL • ${acc.groupName || ''}</span>`;
 
-                const checkBtnClass = acc.checkedToday
-                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                    : (isGroup ? 'bg-white/10 text-slate-300 border-white/15 hover:bg-white/20' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100');
-
-                const checkBtnClassLight = acc.checkedToday
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100';
-
-                const activeCheckClass = isGroup ? checkBtnClass : checkBtnClassLight;
+                let kpiBadge = '';
+                if (prog.isDonePosted) {
+                    kpiBadge = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">✅ Đủ ${prog.postedCount}/2 bài</span>`;
+                    if (!isGroup) {
+                        kpiBadge = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">✅ Đủ ${prog.postedCount}/2 bài</span>`;
+                    }
+                } else {
+                    kpiBadge = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full ${prog.postedCount === 0 ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-amber-100 text-amber-800 border-amber-200'} border">⚠️ ${prog.postedCount}/2 bài</span>`;
+                }
 
                 const card = document.createElement('div');
                 card.className = `rounded-2xl p-4 border shadow-xs transition tiktok-border flex flex-col justify-between gap-3 ${cardBg}`;
-
                 card.innerHTML = `
                     <div>
                         <div class="flex items-center justify-between gap-2 mb-2">
-                            ${badgeHtml}
-                            <button onclick="toggleAccountChecked('${acc.id}')" 
-                                class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border transition flex items-center gap-1 ${activeCheckClass}"
-                                title="Đánh dấu đã kiểm tra kênh TikTok hôm nay để không bị miss bài">
-                                <i class="fa-solid ${acc.checkedToday ? 'fa-circle-check' : 'fa-clock'}"></i>
-                                <span>${acc.checkedToday ? 'Đã check hôm nay' : 'Chưa check'}</span>
-                            </button>
+                            ${roleBadge}
+                            ${kpiBadge}
                         </div>
 
                         <div class="flex items-start justify-between gap-2">
@@ -975,7 +1808,6 @@ service cloud.firestore {
                                 <h3 class="font-extrabold text-base tracking-tight ${isGroup ? 'text-white' : 'text-slate-900'}">
                                     ${acc.name}
                                 </h3>
-                                <!-- HYPERLINK TRỰC TIẾP ĐẾN TRANG TIKTOK -->
                                 <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
                                     onclick="markAccountCheckedOnVisit('${acc.id}')"
                                     class="inline-flex items-center gap-1.5 text-xs font-semibold mt-0.5 ${isGroup ? 'text-cyan-300 hover:text-pink-300' : 'text-pink-600 hover:text-indigo-600'} hover:underline break-all">
@@ -986,19 +1818,19 @@ service cloud.firestore {
                             </div>
 
                             <button onclick="quickSelectAccountForPost('${acc.id}')"
-                                class="text-xs px-2.5 py-1.5 rounded-xl font-semibold transition shrink-0 ${isGroup ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-700'}"
-                                title="Điền bài đăng mới cho ${acc.name}">
+                                class="text-xs px-2.5 py-1.5 rounded-xl font-semibold transition shrink-0 ${isGroup ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-slate-100 hover:bg-pink-50 hover:text-pink-600 text-slate-700'}">
                                 + Bài mới
                             </button>
                         </div>
                     </div>
 
-                    <div class="pt-2.5 border-t ${isGroup ? 'border-white/10 text-slate-300' : 'border-slate-100 text-slate-500'} flex items-center justify-between text-xs">
-                        <span>Đã lưu: <strong class="${isGroup ? 'text-white' : 'text-slate-800'}">${postCount} bài</strong></span>
-                        <span>${latestPost ? 'Gần nhất: ' + formatDateVN(latestPost.date) : 'Chưa có bài lưu'}</span>
+                    <div class="pt-2.5 border-t ${isGroup ? 'border-white/10 text-slate-300' : 'border-slate-200/70 text-slate-500'} flex items-center justify-between text-xs">
+                        <span>Tuần này: <strong class="${isGroup ? 'text-white' : 'text-slate-800'}">${prog.postedCount} đã đăng</strong> ${prog.scheduledCount > 0 ? `(+${prog.scheduledCount} lịch)` : ''}</span>
+                        <button onclick="toggleAccountChecked('${acc.id}')" class="text-[11px] font-semibold ${acc.checkedToday ? 'text-emerald-500' : 'text-amber-500'} hover:underline">
+                            ${acc.checkedToday ? '✓ Đã check kênh' : 'Chưa check'}
+                        </button>
                     </div>
                 `;
-
                 grid.appendChild(card);
             });
 
@@ -1006,70 +1838,42 @@ service cloud.firestore {
             populateAccountSelects();
         }
 
-        // Khi người dùng bấm vào hyperlink TikTok, tự động đánh dấu "Đã check hôm nay" và lưu lên Firebase
-        async function markAccountCheckedOnVisit(accId) {
-            if (!currentUser) return;
-            const acc = getAccountById(accId);
-            if (acc && !acc.checkedToday) {
-                acc.checkedToday = true;
-                renderAccountsGrid();
-                try {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
-                    await setDoc(docRef, { ...acc, checkedToday: true }, { merge: true });
-                    showToast(`Đã mở kênh ${acc.name} & lưu trạng thái đã kiểm tra!`);
-                } catch (err) {
-                    console.error("Lỗi cập nhật trạng thái check:", err);
-                }
-            }
+        function updateDashboardStats() {
+            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            const totalAcc = accounts.length;
+
+            const missingPosted = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
+            const completedPosted = totalAcc - missingPosted;
+
+            const missingTotal = getMissingAccountsForWeek(activeWeek, 'ALL').length;
+            const completedTotal = totalAcc - missingTotal;
+
+            document.getElementById('statWeeklyCompleted').textContent = `${completedPosted}/${totalAcc}`;
+            const missingBadge = document.getElementById('statWeeklyMissingBadge');
+            missingBadge.textContent = `${missingPosted} kênh chưa đủ`;
+            document.getElementById('statWeeklyCompletedSub').textContent = `Tính cả Lên lịch: ${completedTotal}/${totalAcc} kênh đủ`;
+
+            const weekPosts = getPostsForWeek(selectedWeekMonday);
+            const groupPosts = weekPosts.filter(p => {
+                const a = getAccountById(p.accountId);
+                return a && a.role === 'GROUP';
+            }).length;
+            const idolPosts = weekPosts.length - groupPosts;
+
+            document.getElementById('statTotalPosts').textContent = weekPosts.length;
+            document.getElementById('statGroupVsIdolPosts').textContent = `Nhóm: ${groupPosts} • Idol: ${idolPosts}`;
+
+            const postedCount = weekPosts.filter(p => p.status === 'ĐÃ ĐĂNG').length;
+            const pendingCount = weekPosts.length - postedCount;
+            document.getElementById('statPostedVsPending').textContent = `${postedCount} / ${pendingCount}`;
+
+            const checkedCount = accounts.filter(a => a.checkedToday).length;
+            document.getElementById('statCheckedToday').textContent = `${checkedCount}/${totalAcc}`;
+            const uncheckedAlert = document.getElementById('statUncheckedAlert');
+            const unchecked = totalAcc - checkedCount;
+            uncheckedAlert.textContent = unchecked === 0 ? 'Đã check 100%!' : `Còn ${unchecked} kênh`;
         }
 
-        async function toggleAccountChecked(accId) {
-            if (!currentUser) return;
-            const acc = getAccountById(accId);
-            if (!acc) return;
-            const newStatus = !acc.checkedToday;
-            acc.checkedToday = newStatus;
-            renderAccountsGrid();
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
-                await setDoc(docRef, { ...acc, checkedToday: newStatus }, { merge: true });
-            } catch (err) {
-                console.error("Lỗi lưu trạng thái check:", err);
-                showToast('Không thể lưu trạng thái lên Firebase.', 'error');
-            }
-        }
-
-        async function resetDailyChecks() {
-            if (!currentUser) return;
-            accounts.forEach(a => a.checkedToday = false);
-            renderAccountsGrid();
-            try {
-                for (const acc of accounts) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', acc.id);
-                    await setDoc(docRef, { ...acc, checkedToday: false }, { merge: true });
-                }
-                showToast('Đã làm mới trạng thái kiểm tra kênh cho ngày mới trên Cloud!');
-            } catch (err) {
-                console.error("Lỗi reset check:", err);
-                showToast('Lỗi khi đồng bộ trạng thái reset lên Firebase.', 'error');
-            }
-        }
-
-        function quickSelectAccountForPost(accId) {
-            const select = document.getElementById('postAccount');
-            select.value = accId;
-            updateFormAccountPreview();
-            scrollToPostForm();
-            document.getElementById('postCategory').focus();
-        }
-
-        function scrollToPostForm() {
-            document.getElementById('postFormSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        // ============================================================================
-        // 6. ĐỒNG BỘ DROPDOWN TÀI KHOẢN & THỐNG KÊ
-        // ============================================================================
         function populateAccountSelects() {
             const postAccountSelect = document.getElementById('postAccount');
             const filterAccountSelect = document.getElementById('filterAccount');
@@ -1089,9 +1893,9 @@ service cloud.firestore {
                 formOptionsHtml += `</optgroup>`;
             }
             if (idolAccounts.length > 0) {
-                formOptionsHtml += `<optgroup label="🌟 TÀI KHOẢN THÀNH VIÊN / IDOL">`;
+                formOptionsHtml += `<optgroup label="🌟 TÀI KHOẢN IDOL">`;
                 idolAccounts.forEach(a => {
-                    formOptionsHtml += `<option value="${a.id}">${a.name} (${a.handle})</option>`;
+                    formOptionsHtml += `<option value="${a.id}">[${a.groupName || 'IDOL'}] ${a.name} (${a.handle})</option>`;
                 });
                 formOptionsHtml += `</optgroup>`;
             }
@@ -1103,7 +1907,7 @@ service cloud.firestore {
 
             let filterOptionsHtml = `<option value="ALL">👤 Tất cả thành viên & nhóm (${accounts.length})</option>`;
             accounts.forEach(a => {
-                const prefix = a.role === 'GROUP' ? '👥 [Nhóm]' : '🌟 [Idol]';
+                const prefix = a.role === 'GROUP' ? '👥 [Nhóm]' : `🌟 [${a.groupName || 'Idol'}]`;
                 filterOptionsHtml += `<option value="${a.id}">${prefix} ${a.name} (${a.handle})</option>`;
             });
             filterAccountSelect.innerHTML = filterOptionsHtml;
@@ -1122,183 +1926,6 @@ service cloud.firestore {
                 previewLink.href = acc.url;
                 previewLink.innerHTML = `<span>Mở ${acc.handle}</span> <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>`;
             }
-        }
-
-        function updateDashboardStats() {
-            const totalAcc = accounts.length;
-            const groupCount = accounts.filter(a => a.role === 'GROUP').length;
-            const idolCount = accounts.filter(a => a.role === 'IDOL').length;
-            const checkedCount = accounts.filter(a => a.checkedToday).length;
-
-            document.getElementById('statTotalAccounts').textContent = totalAcc;
-            document.getElementById('statAccountBreakdown').textContent = `${groupCount} Nhóm • ${idolCount} Idol`;
-            document.getElementById('statCheckedToday').textContent = `${checkedCount}/${totalAcc}`;
-
-            const uncheckedAlert = document.getElementById('statUncheckedAlert');
-            const unchecked = totalAcc - checkedCount;
-            if (unchecked === 0 && totalAcc > 0) {
-                uncheckedAlert.textContent = 'Đã check đủ 100%!';
-                uncheckedAlert.className = 'text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full';
-            } else {
-                uncheckedAlert.textContent = `Còn ${unchecked} kênh chưa check`;
-                uncheckedAlert.className = 'text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full';
-            }
-
-            const totalPosts = posts.length;
-            const groupPosts = posts.filter(p => {
-                const a = getAccountById(p.accountId);
-                return a && a.role === 'GROUP';
-            }).length;
-            const idolPosts = totalPosts - groupPosts;
-
-            document.getElementById('statTotalPosts').textContent = totalPosts;
-            document.getElementById('statGroupVsIdolPosts').textContent = `Nhóm: ${groupPosts} • Idol: ${idolPosts}`;
-
-            const pendingPosts = posts.filter(p => p.status !== 'ĐÃ ĐĂNG').length;
-            document.getElementById('statPendingPosts').textContent = pendingPosts;
-        }
-
-        // ============================================================================
-        // 7. QUẢN LÝ BÀI ĐĂNG (THÊM, SỬA, XÓA LÊN FIREBASE FIRESTORE)
-        // ============================================================================
-        function setCategoryQuick(categoryName) {
-            const input = document.getElementById('postCategory');
-            input.value = categoryName;
-            input.focus();
-        }
-
-        async function handlePostSubmit(event) {
-            event.preventDefault();
-            if (!currentUser) {
-                showToast('Đang kết nối Firebase, vui lòng thử lại sau giây lát!', 'error');
-                return;
-            }
-
-            const editingId = document.getElementById('editingPostId').value;
-            const date = document.getElementById('postDate').value;
-            const accountId = document.getElementById('postAccount').value;
-            const category = document.getElementById('postCategory').value.trim();
-            const link = document.getElementById('postLink').value.trim();
-            const status = document.getElementById('postStatus').value;
-            const note = document.getElementById('postNote').value.trim();
-
-            if (!date || !accountId || !category) {
-                showToast('Vui lòng điền đầy đủ Ngày đăng, Tài khoản và Hạng mục!', 'error');
-                return;
-            }
-
-            const postId = editingId ? editingId : 'post_' + Date.now();
-            const postData = {
-                id: postId,
-                date,
-                accountId,
-                category,
-                link,
-                status,
-                note,
-                updatedAt: Date.now()
-            };
-
-            try {
-                const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
-                await setDoc(postDocRef, postData);
-
-                if (editingId) {
-                    showToast('Đã cập nhật bài đăng lên Firebase!');
-                } else {
-                    const acc = getAccountById(accountId);
-                    if (acc && !acc.checkedToday) {
-                        const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accountId);
-                        await setDoc(accDocRef, { ...acc, checkedToday: true }, { merge: true });
-                    }
-                    showToast(`Đã lưu bài đăng mới của ${acc ? acc.name : 'kênh'} lên Cloud!`);
-                }
-                resetPostForm();
-            } catch (err) {
-                console.error("Lỗi lưu bài đăng lên Firestore:", err);
-                showToast('Không thể lưu lên Firebase! Hãy kiểm tra Firestore Rules.', 'error');
-                openCloudHelpModal();
-            }
-        }
-
-        function editPost(postId) {
-            const post = posts.find(p => p.id === postId);
-            if (!post) return;
-
-            document.getElementById('editingPostId').value = post.id;
-            document.getElementById('postDate').value = post.date;
-            document.getElementById('postAccount').value = post.accountId;
-            document.getElementById('postCategory').value = post.category;
-            document.getElementById('postLink').value = post.link || '';
-            document.getElementById('postStatus').value = post.status;
-            document.getElementById('postNote').value = post.note || '';
-
-            updateFormAccountPreview();
-
-            document.getElementById('formTitle').innerHTML = `
-                <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-xs">
-                    <i class="fa-solid fa-pen"></i>
-                </span>
-                <span>Chỉnh Sửa Bài Đăng</span>
-            `;
-            document.getElementById('submitPostBtn').innerHTML = `
-                <i class="fa-solid fa-check"></i>
-                <span>Cập Nhật Bài Đăng</span>
-            `;
-            document.getElementById('cancelEditBtn').classList.remove('hidden');
-            scrollToPostForm();
-        }
-
-        async function deletePost(postId) {
-            if (!currentUser) return;
-            try {
-                const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
-                await deleteDoc(postDocRef);
-                showToast('Đã xóa bài đăng khỏi Firebase.');
-            } catch (err) {
-                console.error("Lỗi xóa bài đăng:", err);
-                showToast('Không thể xóa bài đăng trên Firebase.', 'error');
-            }
-        }
-
-        function resetPostForm() {
-            document.getElementById('editingPostId').value = '';
-            document.getElementById('postDate').value = todayStr;
-            document.getElementById('postCategory').value = '';
-            document.getElementById('postLink').value = '';
-            document.getElementById('postStatus').value = 'ĐÃ ĐĂNG';
-            document.getElementById('postNote').value = '';
-
-            document.getElementById('formTitle').innerHTML = `
-                <span class="w-7 h-7 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center text-xs">
-                    <i class="fa-solid fa-plus"></i>
-                </span>
-                <span>Điền Bài Đăng Mới</span>
-            `;
-            document.getElementById('submitPostBtn').innerHTML = `
-                <i class="fa-solid fa-floppy-disk"></i>
-                <span>Lưu Bài Đăng Vào Bảng</span>
-            `;
-            document.getElementById('cancelEditBtn').classList.add('hidden');
-        }
-
-        function setRoleFilter(role) {
-            currentRoleFilter = role;
-            const tabs = {
-                ALL: document.getElementById('tabFilterAll'),
-                GROUP: document.getElementById('tabFilterGroup'),
-                IDOL: document.getElementById('tabFilterIdol')
-            };
-
-            Object.keys(tabs).forEach(key => {
-                if (key === role) {
-                    tabs[key].className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition';
-                } else {
-                    tabs[key].className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
-                }
-            });
-
-            renderPostsTable();
         }
 
         function getStatusBadgeHtml(status) {
@@ -1320,19 +1947,15 @@ service cloud.firestore {
             const selectedStatus = document.getElementById('filterStatus').value;
             const searchQuery = document.getElementById('filterSearch').value.trim().toLowerCase();
 
-            const filtered = posts.filter(post => {
+            const weekPosts = getPostsForWeek(selectedWeekMonday);
+
+            const filtered = weekPosts.filter(post => {
                 const acc = getAccountById(post.accountId);
-                if (currentRoleFilter !== 'ALL' && (!acc || acc.role !== currentRoleFilter)) {
-                    return false;
-                }
-                if (selectedAccount !== 'ALL' && post.accountId !== selectedAccount) {
-                    return false;
-                }
-                if (selectedStatus !== 'ALL' && post.status !== selectedStatus) {
-                    return false;
-                }
+                if (currentRoleFilter !== 'ALL' && (!acc || acc.role !== currentRoleFilter)) return false;
+                if (selectedAccount !== 'ALL' && post.accountId !== selectedAccount) return false;
+                if (selectedStatus !== 'ALL' && post.status !== selectedStatus) return false;
                 if (searchQuery) {
-                    const hay = `${post.category} ${post.note} ${acc ? acc.name : ''} ${acc ? acc.handle : ''}`.toLowerCase();
+                    const hay = `${post.category} ${post.note} ${acc ? acc.name : ''} ${acc ? acc.handle : ''} ${acc ? acc.groupName : ''}`.toLowerCase();
                     if (!hay.includes(searchQuery)) return false;
                 }
                 return true;
@@ -1344,8 +1967,7 @@ service cloud.firestore {
                         <td colspan="7" class="py-10 text-center text-slate-400">
                             <div class="flex flex-col items-center gap-2">
                                 <i class="fa-solid fa-folder-open text-2xl text-slate-300"></i>
-                                <p class="text-sm font-medium text-slate-500">Chưa có bài đăng nào trong danh sách hiện tại.</p>
-                                <p class="text-xs text-slate-400">Hãy điền bài đăng mới ở khung bên trái để lưu lên Firebase!</p>
+                                <p class="text-sm font-medium text-slate-500">Chưa có bài đăng nào trong tuần / bộ lọc hiện tại.</p>
                             </div>
                         </td>
                     </tr>
@@ -1360,6 +1982,7 @@ service cloud.firestore {
                 const accHandle = acc ? acc.handle : '';
                 const accUrl = acc ? acc.url : '#';
                 const isGroup = acc && acc.role === 'GROUP';
+                const wMon = getPostWeekMonday(post);
 
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/90 transition';
@@ -1374,18 +1997,18 @@ service cloud.firestore {
                     : `<span class="text-xs text-slate-400 italic">Chưa gắn link</span>`;
 
                 tr.innerHTML = `
-                    <td class="py-3.5 px-3.5 font-semibold text-slate-700 whitespace-nowrap">
-                        ${formatDateVN(post.date)}
+                    <td class="py-3.5 px-3.5 whitespace-nowrap">
+                        <div class="font-bold text-slate-800">${formatDateVN(post.date)}</div>
+                        <div class="text-[10px] text-slate-400 font-medium">${post.sheet || ('Tuần ' + formatShortDateVN(wMon))}</div>
                     </td>
                     <td class="py-3.5 px-3.5">
                         <div class="flex flex-col">
                             <div class="flex items-center gap-1.5">
                                 <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${isGroup ? 'bg-slate-900 text-white' : 'bg-indigo-50 text-indigo-600'}">
-                                    ${isGroup ? 'NHÓM' : 'IDOL'}
+                                    ${isGroup ? 'NHÓM' : (acc?.groupName || 'IDOL')}
                                 </span>
                                 <span class="font-bold text-slate-900">${accName}</span>
                             </div>
-                            <!-- HYPERLINK ĐẾN TRANG TIKTOK CỦA NHÓM HOẶC IDOL -->
                             <a href="${accUrl}" target="_blank" rel="noopener noreferrer"
                                 onclick="markAccountCheckedOnVisit('${acc ? acc.id : ''}')"
                                 class="text-xs font-semibold text-indigo-600 hover:text-pink-600 hover:underline inline-flex items-center gap-1 mt-0.5 w-fit">
@@ -1424,22 +2047,183 @@ service cloud.firestore {
         }
 
         // ============================================================================
-        // 8. QUẢN LÝ TÀI KHOẢN & HYPERLINK MODAL (LƯU LÊN FIREBASE)
+        // 9. THÊM / SỬA / XÓA BÀI ĐĂNG & TÀI KHOẢN TRÊN FIREBASE
         // ============================================================================
+        function setCategoryQuick(categoryName) {
+            const input = document.getElementById('postCategory');
+            input.value = categoryName;
+            input.focus();
+        }
+
+        async function handlePostSubmit(event) {
+            event.preventDefault();
+            if (!currentUser) {
+                showToast('Đang kết nối Firebase, vui lòng thử lại!', 'error');
+                return;
+            }
+
+            const editingId = document.getElementById('editingPostId').value;
+            const date = document.getElementById('postDate').value;
+            const accountId = document.getElementById('postAccount').value;
+            const category = document.getElementById('postCategory').value.trim();
+            const link = document.getElementById('postLink').value.trim();
+            const status = document.getElementById('postStatus').value;
+            const note = document.getElementById('postNote').value.trim();
+
+            const postId = editingId ? editingId : 'post_' + Date.now();
+            const weekMonday = getMondayOfWeekStr(date);
+
+            const postData = {
+                id: postId,
+                weekMonday,
+                date,
+                accountId,
+                category,
+                link,
+                status,
+                note,
+                updatedAt: Date.now()
+            };
+
+            try {
+                const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
+                await setDoc(postDocRef, postData, { merge: true });
+                selectedWeekMonday = weekMonday;
+                updateWeekHeaderUI();
+                showToast(editingId ? 'Đã cập nhật bài đăng lên Firebase!' : 'Đã lưu bài đăng mới lên Firebase!');
+                resetPostForm();
+            } catch (err) {
+                console.error("Lỗi lưu bài đăng:", err);
+                showToast('Không thể lưu lên Firebase! Hãy kiểm tra Firestore Rules.', 'error');
+            }
+        }
+
+        function editPost(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            document.getElementById('editingPostId').value = post.id;
+            document.getElementById('postDate').value = post.date;
+            document.getElementById('postAccount').value = post.accountId;
+            document.getElementById('postCategory').value = post.category;
+            document.getElementById('postLink').value = post.link || '';
+            document.getElementById('postStatus').value = post.status;
+            document.getElementById('postNote').value = post.note || '';
+
+            updateFormAccountPreview();
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            scrollToPostForm();
+        }
+
+        async function deletePost(postId) {
+            if (!currentUser) return;
+            try {
+                const postDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
+                await deleteDoc(postDocRef);
+                posts = posts.filter(p => p.id !== postId);
+                renderAccountsGrid();
+                renderPostsTable();
+                renderKpiSidebar();
+                showToast('Đã xóa bài đăng khỏi Firebase.');
+            } catch (err) {
+                console.error("Lỗi xóa bài đăng:", err);
+                showToast('Không thể xóa bài đăng trên Firebase.', 'error');
+            }
+        }
+
+        function resetPostForm() {
+            document.getElementById('editingPostId').value = '';
+            document.getElementById('postDate').value = todayRealtimeStr;
+            document.getElementById('postCategory').value = '';
+            document.getElementById('postLink').value = '';
+            document.getElementById('postStatus').value = 'ĐÃ ĐĂNG';
+            document.getElementById('postNote').value = '';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+        }
+
+        function setRoleFilter(role) {
+            currentRoleFilter = role;
+            const tabs = {
+                ALL: document.getElementById('tabFilterAll'),
+                GROUP: document.getElementById('tabFilterGroup'),
+                IDOL: document.getElementById('tabFilterIdol')
+            };
+            Object.keys(tabs).forEach(key => {
+                tabs[key].className = key === role
+                    ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition'
+                    : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
+            });
+            renderPostsTable();
+        }
+
+        async function markAccountCheckedOnVisit(accId) {
+            if (!currentUser) return;
+            const acc = getAccountById(accId);
+            if (acc && !acc.checkedToday) {
+                acc.checkedToday = true;
+                renderAccountsGrid();
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
+                    await setDoc(docRef, { ...acc, checkedToday: true }, { merge: true });
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
+
+        async function toggleAccountChecked(accId) {
+            if (!currentUser) return;
+            const acc = getAccountById(accId);
+            if (!acc) return;
+            acc.checkedToday = !acc.checkedToday;
+            renderAccountsGrid();
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
+                await setDoc(docRef, { ...acc, checkedToday: acc.checkedToday }, { merge: true });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function resetDailyChecks() {
+            if (!currentUser) return;
+            accounts.forEach(a => a.checkedToday = false);
+            renderAccountsGrid();
+            try {
+                await Promise.all(accounts.map(acc => {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', acc.id);
+                    return setDoc(docRef, { ...acc, checkedToday: false }, { merge: true });
+                }));
+                showToast('Đã reset trạng thái kiểm tra kênh!');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function quickSelectAccountForPost(accId) {
+            const select = document.getElementById('postAccount');
+            select.value = accId;
+            updateFormAccountPreview();
+            scrollToPostForm();
+            document.getElementById('postCategory').focus();
+        }
+
+        function scrollToPostForm() {
+            document.getElementById('postFormSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Quản lý Modal Tài khoản
         function openAccountModal() {
             document.getElementById('accountModal').classList.remove('hidden');
             renderModalAccountsList();
         }
-
         function closeAccountModal() {
             document.getElementById('accountModal').classList.add('hidden');
             resetAccountForm();
         }
-
         function openCloudHelpModal() {
             document.getElementById('cloudHelpModal').classList.remove('hidden');
         }
-
         function closeCloudHelpModal() {
             document.getElementById('cloudHelpModal').classList.add('hidden');
         }
@@ -1456,67 +2240,56 @@ service cloud.firestore {
         async function handleAccountSubmit(event) {
             event.preventDefault();
             if (!currentUser) return;
-
             const editId = document.getElementById('editAccountId').value;
             const role = document.getElementById('accRole').value;
-            const name = document.getElementById('accName').value.trim().toUpperCase();
+            const name = document.getElementById('accName').value.trim();
             let handle = document.getElementById('accHandle').value.trim();
             if (!handle.startsWith('@')) handle = '@' + handle;
-            const url = normalizeTikTokUrl(handle, document.getElementById('accUrl').value);
+            const url = document.getElementById('accUrl').value.trim() || `https://www.tiktok.com/${handle}`;
 
             const accId = editId ? editId : 'acc_' + Date.now();
             const existingAcc = getAccountById(accId);
-
             const accData = {
                 id: accId,
                 role,
                 name,
                 handle,
                 url,
+                groupName: existingAcc?.groupName || (role === 'GROUP' ? name : 'PASSION'),
                 checkedToday: existingAcc ? !!existingAcc.checkedToday : false,
-                order: existingAcc && existingAcc.order ? existingAcc.order : accounts.length + 1
+                order: existingAcc?.order || accounts.length + 1
             };
 
             try {
                 const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
-                await setDoc(accDocRef, accData);
-                showToast(editId ? `Đã cập nhật hyperlink cho ${name} lên Firebase!` : `Đã thêm tài khoản ${name} lên Firebase!`);
+                await setDoc(accDocRef, accData, { merge: true });
+                showToast(`Đã lưu tài khoản ${name} lên Firebase!`);
                 resetAccountForm();
             } catch (err) {
-                console.error("Lỗi lưu tài khoản:", err);
-                showToast('Không thể lưu tài khoản lên Firebase. Hãy kiểm tra Firestore Rules!', 'error');
+                console.error(err);
+                showToast('Lỗi lưu tài khoản!', 'error');
             }
         }
 
         function editAccountInModal(accId) {
             const acc = getAccountById(accId);
             if (!acc) return;
-
             document.getElementById('editAccountId').value = acc.id;
             document.getElementById('accRole').value = acc.role;
             document.getElementById('accName').value = acc.name;
             document.getElementById('accHandle').value = acc.handle;
             document.getElementById('accUrl').value = acc.url;
-
-            document.getElementById('accountFormHeading').textContent = `✏️ Đang sửa tài khoản: ${acc.name}`;
-            document.getElementById('saveAccountBtn').innerHTML = `<i class="fa-solid fa-check"></i><span>Cập Nhật Tài Khoản</span>`;
             document.getElementById('cancelAccountEditBtn').classList.remove('hidden');
         }
 
         async function deleteAccountInModal(accId) {
-            if (!currentUser) return;
-            if (accounts.length <= 1) {
-                showToast('Cần giữ lại ít nhất 1 tài khoản!', 'error');
-                return;
-            }
-            const acc = getAccountById(accId);
+            if (!currentUser || accounts.length <= 1) return;
             try {
                 const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
                 await deleteDoc(accDocRef);
-                showToast(`Đã xóa tài khoản ${acc ? acc.name : ''} khỏi Firebase.`);
+                showToast('Đã xóa tài khoản.');
             } catch (err) {
-                console.error("Lỗi xóa tài khoản:", err);
-                showToast('Không thể xóa tài khoản trên Firebase.', 'error');
+                console.error(err);
             }
         }
 
@@ -1526,59 +2299,50 @@ service cloud.firestore {
             document.getElementById('accName').value = '';
             document.getElementById('accHandle').value = '';
             document.getElementById('accUrl').value = '';
-            document.getElementById('accountFormHeading').textContent = '+ Thêm Hoặc Cập Nhật Tài Khoản';
-            document.getElementById('saveAccountBtn').innerHTML = `<i class="fa-solid fa-check"></i><span>Lưu Tài Khoản</span>`;
             document.getElementById('cancelAccountEditBtn').classList.add('hidden');
         }
 
         function renderModalAccountsList() {
             const container = document.getElementById('modalAccountsList');
             container.innerHTML = '';
-
             accounts.forEach(acc => {
                 const isGroup = acc.role === 'GROUP';
                 const row = document.createElement('div');
                 row.className = 'p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 hover:bg-slate-50 transition';
                 row.innerHTML = `
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded w-fit ${isGroup ? 'bg-pink-600 text-white' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'}">
-                            ${isGroup ? 'TÀI KHOẢN NHÓM' : 'IDOL'}
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded ${isGroup ? 'bg-pink-600 text-white' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'}">
+                            ${isGroup ? 'NHÓM' : (acc.groupName || 'IDOL')}
                         </span>
                         <span class="font-bold text-sm text-slate-900">${acc.name}</span>
-                        <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
-                            class="text-xs font-semibold text-pink-600 hover:underline flex items-center gap-1">
-                            <i class="fa-brands fa-tiktok"></i>
-                            <span>${acc.handle}</span>
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                        </a>
-                        <span class="text-xs text-slate-400 truncate max-w-xs hidden md:inline">(${acc.url})</span>
+                        <a href="${acc.url}" target="_blank" class="text-xs font-semibold text-pink-600 hover:underline">${acc.handle}</a>
                     </div>
-                    <div class="flex items-center gap-2 self-end sm:self-auto">
-                        <button onclick="editAccountInModal('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 text-xs font-semibold transition">
-                            Sửa Link / ID
-                        </button>
-                        <button onclick="deleteAccountInModal('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs font-semibold transition">
-                            Xóa
-                        </button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="editAccountInModal('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 text-xs font-semibold">Sửa</button>
+                        <button onclick="deleteAccountInModal('${acc.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 text-xs font-semibold">Xóa</button>
                     </div>
                 `;
                 container.appendChild(row);
             });
         }
 
-        // ============================================================================
-        // 9. XUẤT FILE CSV (TƯƠNG THÍCH BẢNG EXCEL MEDIA CỦA BẠN)
-        // ============================================================================
+        async function restoreDefaultAccounts() {
+            await seedDefaultAccountsToCloud();
+            showToast('Đã khôi phục 43 tài khoản mặc định!');
+        }
+
         function exportToCSV() {
-            const headers = ['NGÀY ĐĂNG', 'PHÂN LOẠI', 'TÀI KHOẢN', 'ID TIKTOK', 'LINK KÊNH TIKTOK', 'HẠNG MỤC', 'LINK BÀI ĐĂNG', 'TRẠNG THÁI', 'GHI CHÚ'];
-            const rows = posts.map(p => {
+            const weekPosts = getPostsForWeek(selectedWeekMonday);
+            const headers = ['TUẦN', 'NGÀY ĐĂNG', 'PHÂN LOẠI', 'NHÓM', 'TÀI KHOẢN', 'ID TIKTOK', 'HẠNG MỤC', 'LINK BÀI ĐĂNG', 'TRẠNG THÁI', 'GHI CHÚ'];
+            const rows = weekPosts.map(p => {
                 const acc = getAccountById(p.accountId);
                 return [
+                    p.sheet || getPostWeekMonday(p),
                     formatDateVN(p.date),
-                    acc && acc.role === 'GROUP' ? 'TÀI KHOẢN NHÓM' : 'THÀNH VIÊN',
+                    acc && acc.role === 'GROUP' ? 'NHÓM' : 'IDOL',
+                    acc?.groupName || '',
                     acc ? acc.name : '',
                     acc ? acc.handle : '',
-                    acc ? acc.url : '',
                     p.category,
                     p.link || '',
                     p.status,
@@ -1594,51 +2358,37 @@ service cloud.firestore {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `PASSION_MEDIA_TRACKER_${todayStr}.csv`;
+            a.download = `PASSION_MEDIA_WEEK_${selectedWeekMonday}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showToast('Đã xuất file Excel (CSV) thành công!');
+            showToast('Đã xuất file CSV thành công!');
         }
 
-        // ============================================================================
-        // GẮN HÀM VÀO WINDOW ĐỂ TƯƠNG THÍCH VỚI SỰ KIỆN ONCLICK TRONG HTML
-        // ============================================================================
-        window.openAccountModal = openAccountModal;
-        window.closeAccountModal = closeAccountModal;
-        window.openCloudHelpModal = openCloudHelpModal;
-        window.closeCloudHelpModal = closeCloudHelpModal;
-        window.exportToCSV = exportToCSV;
-        window.scrollToPostForm = scrollToPostForm;
-        window.resetDailyChecks = resetDailyChecks;
-        window.resetPostForm = resetPostForm;
-        window.handlePostSubmit = handlePostSubmit;
-        window.updateFormAccountPreview = updateFormAccountPreview;
-        window.setCategoryQuick = setCategoryQuick;
-        window.setRoleFilter = setRoleFilter;
-        window.setDirectoryFilter = setDirectoryFilter;
-        window.renderAccountsGrid = renderAccountsGrid;
-        window.renderPostsTable = renderPostsTable;
-        window.handleAccountSubmit = handleAccountSubmit;
-        window.resetAccountForm = resetAccountForm;
-        window.autoFillProfileUrl = autoFillProfileUrl;
-        window.toggleAccountChecked = toggleAccountChecked;
-        window.markAccountCheckedOnVisit = markAccountCheckedOnVisit;
-        window.quickSelectAccountForPost = quickSelectAccountForPost;
-        window.editPost = editPost;
-        window.deletePost = deletePost;
-        window.editAccountInModal = editAccountInModal;
-        window.deleteAccountInModal = deleteAccountInModal;
-        window.restoreDefaultAccounts = restoreDefaultAccounts;
+        // Gắn hàm vào window
+        Object.assign(window, {
+            openAccountModal, closeAccountModal, openCloudHelpModal, closeCloudHelpModal,
+            exportToCSV, scrollToPostForm, resetDailyChecks, resetPostForm, handlePostSubmit,
+            updateFormAccountPreview, setCategoryQuick, setRoleFilter, setDirectoryFilter,
+            renderAccountsGrid, renderPostsTable, handleAccountSubmit, resetAccountForm,
+            autoFillProfileUrl, toggleAccountChecked, markAccountCheckedOnVisit,
+            quickSelectAccountForPost, editPost, deletePost, editAccountInModal,
+            deleteAccountInModal, restoreDefaultAccounts, toggleKpiSidebar, setSidebarKpiMode,
+            handleQuickWeekSelect, shiftSelectedWeek, jumpToCurrentRealtimeWeek,
+            openLastWeekReportModal, closeLastWeekReportModal, renderLastWeekReportContent,
+            dismissMondayBanner, syncExcelDatasetToFirebase, handleExcelFileUpload
+        });
 
-        // ============================================================================
-        // KHỞI CHẠY ỨNG DỤNG KHI TẢI TRANG
-        // ============================================================================
+        // Khởi chạy khi tải trang
         window.onload = function () {
-            document.getElementById('postDate').value = todayStr;
+            document.getElementById('postDate').value = todayRealtimeStr;
+            updateRealtimeDeadlineCounter();
+            setInterval(updateRealtimeDeadlineCounter, 60000);
+            updateWeekHeaderUI();
             renderAccountsGrid();
             renderPostsTable();
+            renderKpiSidebar();
             initFirebaseAndSync();
         };
     </script>
