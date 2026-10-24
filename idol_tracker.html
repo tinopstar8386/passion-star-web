@@ -30,7 +30,38 @@
         } else {
             document.documentElement.classList.add('dark');
         }
+
+        // Khóa màn hình ngay tức thì từ trong HEAD để ngăn chặn triệt để lộ nội dung 0.5s
+        (function() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const grp = params.get('group');
+                if (grp) {
+                    const cleanId = String(grp).replace(/[^a-zA-Z0-9]/g, '_');
+                    const authed = sessionStorage.getItem('ps_group_auth_' + cleanId);
+                    if (!authed) {
+                        document.documentElement.classList.add('auth-locked');
+                    }
+                } else {
+                    const adminAuthed = sessionStorage.getItem('ps_admin_authenticated');
+                    if (adminAuthed !== 'true') {
+                        document.documentElement.classList.add('auth-locked');
+                    }
+                }
+            } catch (e) {}
+        })();
     </script>
+    <style>
+        /* Ẩn tuyệt đối toàn bộ giao diện cho đến khi xác thực thành công */
+        html.auth-locked body > main,
+        html.auth-locked body > header,
+        html.auth-locked body > aside,
+        html.auth-locked #mondayNewWeekBanner,
+        html.auth-locked #floatingSidebarBtn {
+            display: none !important;
+            visibility: hidden !important;
+        }
+    </style>
     <!-- SheetJS for direct Excel (.xlsx) import & CSV parsing -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- Font Awesome Icons -->
@@ -477,14 +508,8 @@
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col">
 
-    <!-- MÀN HÌNH KHÓA BẢO VỆ MÃ PIN CHO LINK CHÍNH (PIN: 0908) -->
-    <div id="mainPinLockOverlay" class="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 select-none">
-    <script>
-        // Nếu là link nhóm (?group=...) thì ẩn màn hình khóa ngay lập tức, không cần nhập pass
-        if (new URLSearchParams(window.location.search).get('group')) {
-            document.getElementById('mainPinLockOverlay').style.display = 'none';
-        }
-    </script>
+    <!-- MÀN HÌNH KHÓA BẢO VỆ MÃ PIN CHO LINK CHÍNH (PIN: 0908) - NỀN ĐEN TUYỆT ĐỐI (BG-SLATE-950) -->
+    <div id="mainPinLockOverlay" class="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-4 select-none">
         <div id="pinLockCard" class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden">
             <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -538,8 +563,8 @@
         </div>
     </div>
 
-    <!-- MÀN HÌNH KHÓA MÃ CODE CHO LINK NHÓM RIÊNG (VẬN HÀNH / MC) -->
-    <div id="groupPinLockOverlay" class="fixed inset-0 z-[100] hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 select-none">
+    <!-- MÀN HÌNH KHÓA MÃ CODE CHO LINK NHÓM RIÊNG (VẬN HÀNH / MC) - NỀN ĐEN TUYỆT ĐỐI (BG-SLATE-950) -->
+    <div id="groupPinLockOverlay" class="fixed inset-0 z-[100] hidden bg-slate-950 flex items-center justify-center p-4 select-none">
         <div id="groupPinLockCard" class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden">
             <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -579,6 +604,39 @@
             </form>
         </div>
     </div>
+
+    <!-- SCRIPT ĐIỀU PHỐI KHÓA NGAY ĐẦU TRANG (CHẠY TỨC THÌ 0MS, KHÔNG BỊ TRỄ) -->
+    <script>
+        (function() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const grp = params.get('group');
+                const mainLock = document.getElementById('mainPinLockOverlay');
+                const grpLock = document.getElementById('groupPinLockOverlay');
+                if (grp) {
+                    // Nếu là link nhóm: ẩn ngay khóa PIN Admin
+                    if (mainLock) mainLock.style.display = 'none';
+                    const cleanId = String(grp).replace(/[^a-zA-Z0-9]/g, '_');
+                    const authed = sessionStorage.getItem('ps_group_auth_' + cleanId);
+                    if (!authed && grpLock) {
+                        // Hiện ngay lập tức khóa nhóm với tên nhóm tương ứng
+                        grpLock.classList.remove('hidden');
+                        grpLock.style.display = 'flex';
+                        const titleEl = document.getElementById('groupLockTitle');
+                        if (titleEl) titleEl.textContent = 'XÁC THỰC NHÓM ' + grp.toUpperCase();
+                        const descEl = document.getElementById('groupLockDesc');
+                        if (descEl) descEl.textContent = 'Khu vực riêng cho Vận Hành & MC nhóm ' + grp + '. Vui lòng nhập Mã Code do Quản Trị Viên cấp để vào giao diện.';
+                    }
+                } else {
+                    // Link chính
+                    const adminAuthed = sessionStorage.getItem('ps_admin_authenticated');
+                    if (adminAuthed === 'true' && mainLock) {
+                        mainLock.style.display = 'none';
+                    }
+                }
+            } catch (e) {}
+        })();
+    </script>
 
     <!-- MODAL QUẢN LÝ MÃ CODE TẤT CẢ CÁC NHÓM (DÀNH CHO ADMIN) -->
     <div id="groupCodesModal" onclick="if(event.target===this)closeGroupCodesModal()"
@@ -681,7 +739,15 @@
                     <div class="flex items-center gap-2">
                         <input type="text" id="singleShareCodeInput"
                             placeholder="Nhập code mới..."
-                            class="flex-1 h-10 px-3 rounded-xl border border-amber-300 dark:border-amber-700/80 bg-white dark:bg-slate-900 font-mono font-black text-sm text-center uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            onclick="copySingleShareCodeOnClick()"
+                            title="Bấm vào để copy mã code"
+                            class="flex-1 h-10 px-3 rounded-xl border border-amber-300 dark:border-amber-700/80 bg-white dark:bg-slate-900 font-mono font-black text-sm text-center uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer hover:border-amber-400 select-all">
+                        <button type="button" onclick="copySingleShareCodeOnly()"
+                            class="h-10 px-3 rounded-xl bg-white hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs"
+                            title="Sao chép chỉ mã code này">
+                            <i class="fa-solid fa-copy text-amber-500"></i>
+                            <span>Copy Mã</span>
+                        </button>
                         <button type="button" onclick="randomizeSingleShareCode()"
                             class="h-10 px-3 rounded-xl bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-800 dark:text-amber-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0" title="Tạo mã ngẫu nhiên">
                             <i class="fa-solid fa-dice"></i>
@@ -692,6 +758,10 @@
                             <span>Lưu Code</span>
                         </button>
                     </div>
+                    <p class="text-[11px] text-amber-700/80 dark:text-amber-400/80 mt-2 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info text-[10px]"></i>
+                        <span>Bấm vào ô mã code hoặc nút <strong>Copy Mã</strong> để sao chép nhanh.</span>
+                    </p>
                 </div>
 
                 <!-- Nút copy cả link và code -->
@@ -3320,6 +3390,7 @@ service cloud.firestore {
         }
 
         function showGroupPinLockOverlay(grpName) {
+            document.documentElement.classList.add('auth-locked');
             const overlay = document.getElementById('groupPinLockOverlay');
             if (!overlay) return;
             overlay.classList.remove('hidden');
@@ -3352,6 +3423,7 @@ service cloud.firestore {
         }
 
         function hideGroupPinLockOverlay() {
+            document.documentElement.classList.remove('auth-locked');
             const overlay = document.getElementById('groupPinLockOverlay');
             if (overlay) {
                 overlay.classList.add('hidden');
@@ -3455,12 +3527,20 @@ service cloud.firestore {
                         <!-- Khu vực chỉnh sửa mã code -->
                         <div class="flex items-center gap-2 pt-1">
                             <div class="relative flex-1">
-                                <span class="absolute left-3 top-2.5 text-xs text-amber-500">
+                                <span class="absolute left-3 top-2.5 text-xs text-amber-500 pointer-events-none">
                                     <i class="fa-solid fa-key"></i>
                                 </span>
                                 <input type="text" id="groupCodeInput_${cleanId}" value="${currentCode}"
-                                    class="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-mono font-black text-xs uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                    onclick="copyModalGroupCodeOnClick('${cleanId}')"
+                                    title="Bấm vào để copy mã code"
+                                    class="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-mono font-black text-xs uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer hover:border-amber-400 select-all">
                             </div>
+
+                            <button type="button" onclick="copyModalGroupCodeOnly('${cleanId}')"
+                                class="h-9 px-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition cursor-pointer shrink-0 flex items-center gap-1" title="Sao chép chỉ mã code này">
+                                <i class="fa-solid fa-copy text-amber-500"></i>
+                                <span class="hidden sm:inline">Copy Mã</span>
+                            </button>
 
                             <button type="button" onclick="randomizeModalGroupCode('${grpName}', '${cleanId}')"
                                 class="h-9 px-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 text-xs font-bold transition cursor-pointer shrink-0" title="Tạo mã ngẫu nhiên">
@@ -3537,6 +3617,46 @@ service cloud.firestore {
             });
         }
 
+        // Sao chép chỉ mã code riêng trong modal 1 nhóm
+        function copySingleShareCodeOnly() {
+            const input = document.getElementById('singleShareCodeInput');
+            if (!input || !input.value) return;
+            const code = input.value.trim().toUpperCase();
+            copyTextRobustly(code).then(() => {
+                showToast(`📋 Đã copy mã code: ${code}!`, 'success');
+            }).catch(() => {
+                window.prompt('Sao chép mã code:', code);
+            });
+        }
+
+        // Bấm trực tiếp vào ô mã code để tự động copy
+        function copySingleShareCodeOnClick() {
+            const input = document.getElementById('singleShareCodeInput');
+            if (!input || !input.value) return;
+            input.select();
+            copySingleShareCodeOnly();
+        }
+
+        // Sao chép chỉ mã code trong modal quản lý tất cả nhóm
+        function copyModalGroupCodeOnly(cleanId) {
+            const input = document.getElementById(`groupCodeInput_${cleanId}`);
+            if (!input || !input.value) return;
+            const code = input.value.trim().toUpperCase();
+            copyTextRobustly(code).then(() => {
+                showToast(`📋 Đã copy mã code: ${code}!`, 'success');
+            }).catch(() => {
+                window.prompt('Sao chép mã code:', code);
+            });
+        }
+
+        // Bấm vào ô input trong modal tất cả nhóm để copy
+        function copyModalGroupCodeOnClick(cleanId) {
+            const input = document.getElementById(`groupCodeInput_${cleanId}`);
+            if (!input || !input.value) return;
+            input.select();
+            copyModalGroupCodeOnly(cleanId);
+        }
+
         function randomizeSingleShareCode() {
             if (!activeSingleShareGroup) return;
             const input = document.getElementById('singleShareCodeInput');
@@ -3599,6 +3719,7 @@ service cloud.firestore {
         }
 
         function showPinLockOverlay() {
+            document.documentElement.classList.add('auth-locked');
             const overlay = document.getElementById('mainPinLockOverlay');
             if (!overlay) return;
             overlay.classList.remove('hidden');
@@ -3614,6 +3735,7 @@ service cloud.firestore {
         }
 
         function hidePinLockOverlay() {
+            document.documentElement.classList.remove('auth-locked');
             const overlay = document.getElementById('mainPinLockOverlay');
             if (overlay) {
                 overlay.classList.add('hidden');
@@ -9243,7 +9365,7 @@ service cloud.firestore {
             toggleGroupCardExpand, toggleAllGroupCards,
             getKpiTargetsForWeek, getAccountTargetKpi, applyCustomKpiTargets, syncKpiInputsUI, isWeekOverdueOrExpired,
             openGroupCodesModal, closeGroupCodesModal, renderGroupCodesList, randomizeModalGroupCode, saveModalGroupCodeAction,
-            openGroupShareModal, closeGroupShareModal, copySingleShareUrlOnly, randomizeSingleShareCode, saveSingleShareCodeAction,
+            openGroupShareModal, closeGroupShareModal, copySingleShareUrlOnly, copySingleShareCodeOnly, copySingleShareCodeOnClick, copyModalGroupCodeOnly, copyModalGroupCodeOnClick, randomizeSingleShareCode, saveSingleShareCodeAction,
             copySingleShareAllAction, copyGroupShareLinkAndCode, verifyGroupSecurityCode, getGroupSecurityCode, saveGroupSecurityCode
         });
 
