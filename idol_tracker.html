@@ -250,8 +250,17 @@
             min-height: 0;
         }
 
+        @keyframes pinShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-9px); }
+            40%, 80% { transform: translateX(9px); }
+        }
+        .pin-shake {
+            animation: pinShake 0.4s ease-in-out;
+        }
+
         /* CHẾ ĐỘ VẬN HÀNH RÚT GỌN TỐI GIẢN (KHI MỞ LINK ?group=...) (THỨ 5 - HÌNH 5) */
-        body.operator-mode #mainSmartPasteSection,
+        /* Giữ lại #mainSmartPasteSection để link nhóm dán nhanh link TikTok tiện lợi */
         body.operator-mode #weeklyControlSection,
         body.operator-mode #quickStatsSection,
         body.operator-mode #weeklyTableSection,
@@ -309,6 +318,61 @@
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col">
 
+    <!-- MÀN HÌNH KHÓA BẢO VỆ MÃ PIN CHO LINK CHÍNH (PIN: 0908) -->
+    <div id="mainPinLockOverlay" class="fixed inset-0 z-[100] hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 select-none">
+        <div id="pinLockCard" class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div id="pinLockIconBox" class="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center text-2xl shadow-inner mb-3 transition-colors duration-300">
+                <i id="pinLockIcon" class="fa-solid fa-lock"></i>
+            </div>
+
+            <h3 class="text-base sm:text-lg font-black tracking-tight text-white">
+                XÁC THỰC QUẢN TRỊ VIÊN
+            </h3>
+            <p class="text-xs text-slate-400 mt-1 mb-4">
+                Vui lòng nhập mã PIN 4 số để truy cập Link chính Passion Media Tracker
+            </p>
+
+            <!-- 4 Chấm PIN -->
+            <div class="flex items-center justify-center gap-3.5 my-4">
+                <div id="pinDot0" class="w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-200"></div>
+                <div id="pinDot1" class="w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-200"></div>
+                <div id="pinDot2" class="w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-200"></div>
+                <div id="pinDot3" class="w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-200"></div>
+            </div>
+
+            <!-- Thông báo trạng thái PIN -->
+            <p id="pinStatusText" class="text-xs min-h-[1.25rem] font-bold text-slate-400 mb-3 transition-colors duration-200">
+                Nhập mã bảo vệ 4 chữ số
+            </p>
+
+            <!-- Input ẩn bắt phím vật lý -->
+            <input type="password" id="pinHiddenInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" class="opacity-0 absolute -z-10 w-0 h-0" autofocus>
+
+            <!-- Bàn phím số Numpad ảo -->
+            <div class="grid grid-cols-3 gap-2 max-w-[260px] mx-auto text-sm font-bold">
+                <button type="button" onclick="handlePinKeyPress('1')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">1</button>
+                <button type="button" onclick="handlePinKeyPress('2')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">2</button>
+                <button type="button" onclick="handlePinKeyPress('3')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">3</button>
+                <button type="button" onclick="handlePinKeyPress('4')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">4</button>
+                <button type="button" onclick="handlePinKeyPress('5')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">5</button>
+                <button type="button" onclick="handlePinKeyPress('6')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">6</button>
+                <button type="button" onclick="handlePinKeyPress('7')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">7</button>
+                <button type="button" onclick="handlePinKeyPress('8')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">8</button>
+                <button type="button" onclick="handlePinKeyPress('9')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">9</button>
+                <button type="button" onclick="handlePinClear()" class="h-11 rounded-xl bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 border border-rose-800/40 text-xs font-black active:scale-95 transition cursor-pointer">XÓA</button>
+                <button type="button" onclick="handlePinKeyPress('0')" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white border border-slate-700/60 active:scale-95 transition cursor-pointer">0</button>
+                <button type="button" onclick="handlePinBackspace()" class="h-11 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700/60 active:scale-95 transition cursor-pointer"><i class="fa-solid fa-delete-left"></i></button>
+            </div>
+
+            <div class="mt-4 text-[11px] text-slate-500">
+                🔒 Gõ trực tiếp phím số (0-9) hoặc bấm bàn phím ảo
+            </div>
+        </div>
+    </div>
+
     <!-- TOP NAVIGATION BAR -->
     <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg border-b border-slate-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
@@ -323,7 +387,7 @@
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <h1 class="text-base sm:text-lg font-extrabold tracking-tight">PASSION MEDIA TRACKER</h1>
-                            <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                            <span id="headerGroupAndIdolBadge" class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
                                 6 NHÓM & 37 IDOL
                             </span>
                             <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
@@ -365,6 +429,12 @@
                 <button id="headerExportBtn" onclick="openExportSheetModal()" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer" title="Xuất dữ liệu ra Google Sheets hoặc file Excel (.xlsx)">
                     <i class="fa-solid fa-file-export text-teal-200"></i>
                     <span>Xuất Sheet</span>
+                </button>
+
+                <!-- Nút Khóa PIN Bảng Điều Khiển (Admin only - PIN 0908) -->
+                <button id="headerLockPinBtn" onclick="lockAdminSessionManually()" class="admin-only-btn h-9 px-3 rounded-xl bg-slate-800 hover:bg-rose-950/60 hover:text-rose-300 text-slate-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-sm" title="Khóa bảng điều khiển (Yêu cầu PIN 0908 để mở lại)">
+                    <i class="fa-solid fa-lock text-amber-400"></i>
+                    <span class="hidden md:inline">Khóa PIN</span>
                 </button>
 
                 <!-- Dark / Light Mode Toggle Button -->
@@ -499,10 +569,12 @@
                         <i class="fa-solid fa-plus"></i>
                         <span>+ Điền Bài Mới</span>
                     </button>
-                    <a href="idol_tracker.html" class="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white border border-white/15 text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="Quay lại giao diện xem toàn bộ 6 nhóm">
-                        <i class="fa-solid fa-arrow-left text-[10px]"></i>
-                        <span>Tất cả nhóm</span>
-                    </a>
+                    <button type="button" onclick="copyCurrentOperatorGroupReport()"
+                        class="h-9 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                        title="Sao chép báo cáo tiến độ KPI nhóm này">
+                        <i class="fa-solid fa-copy text-pink-400"></i>
+                        <span>Copy Báo Cáo</span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -687,7 +759,7 @@
                     <div class="flex items-center gap-2">
                         <h2 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                             <i class="fa-brands fa-tiktok text-pink-600 mr-1"></i>
-                            <span>6 Nhóm & Danh Bạ Idol TikTok (KPI: 2 Bài / Tuần)</span>
+                            <span id="sectionGroupTitleText">6 Nhóm & Danh Bạ Idol TikTok (KPI: 2 Bài / Tuần)</span>
                         </h2>
                     </div>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -750,7 +822,7 @@
                                 <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-pen-to-square"></i></span>
                                 <div>
                                     <div class="font-bold">Cập Nhật Link / ID TikTok</div>
-                                    <div class="text-[10px] text-slate-400">Quản lý 6 Nhóm & 37 Idol</div>
+                                    <div id="manageAccountSubtext" class="text-[10px] text-slate-400">Quản lý 6 Nhóm & 37 Idol</div>
                                 </div>
                             </button>
                             <button type="button" onclick="closeAllModernDropdowns(); resetDailyChecks();" class="w-full px-3 py-2 rounded-xl hover:bg-slate-100 text-left text-xs font-semibold text-slate-700 flex items-center gap-2.5 transition">
@@ -810,9 +882,9 @@
                             <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 dropdown-chevron shrink-0"></i>
                         </button>
                         <div class="modern-dropdown-menu left-0 w-64 space-y-0.5">
-                            <button type="button" onclick="selectDirectoryGroup('ALL', '🏷️ Tất cả 6 Nhóm')" class="w-full px-3 py-2 rounded-xl hover:bg-slate-100 text-left text-xs font-bold text-slate-800 flex items-center justify-between">
-                                <span>🏷️ Tất cả 6 Nhóm</span>
-                                <span class="text-[10px] text-slate-400">43 kênh</span>
+                            <button type="button" onclick="selectDirectoryGroup('ALL', '🏷️ Tất cả Nhóm')" class="w-full px-3 py-2 rounded-xl hover:bg-slate-100 text-left text-xs font-bold text-slate-800 flex items-center justify-between">
+                                <span id="dirAllBtnText">🏷️ Tất cả 6 Nhóm</span>
+                                <span id="dirAllCountBadge" class="text-[10px] text-slate-400">43 kênh</span>
                             </button>
                             <button type="button" onclick="selectDirectoryGroup('Angelik', '✨ Nhóm Angelik')" class="w-full px-3 py-2 rounded-xl hover:bg-pink-50 text-left text-xs font-bold text-pink-800 flex items-center justify-between">
                                 <span>✨ Nhóm Angelik</span>
@@ -1464,7 +1536,7 @@
                     </p>
                     <button type="button" onclick="copyGroupKpiReport('ALL')" class="w-full mt-2 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-clipboard-list"></i>
-                        <span>Sao Chép Tin Nhắn Báo Cáo 6 Nhóm</span>
+                        <span id="exportCopyAllReportBtnText">Sao Chép Tin Nhắn Báo Cáo 6 Nhóm</span>
                     </button>
                 </div>
             </div>
@@ -2397,6 +2469,7 @@ service cloud.firestore {
         function closeGoogleSheetModal() {
             const modal = document.getElementById('googleSheetModal');
             if (modal) modal.classList.add('hidden');
+            unlockBodyScroll();
         }
 
         function copySheetTemplateHeader() {
@@ -2582,7 +2655,333 @@ service cloud.firestore {
             if (modal) modal.classList.add('hidden');
         }
 
+        
+        // ============================================================================
+        // A1. KHÓA CUỘN TRANG KHI MỞ CÁC MODAL (YÊU CẦU 4)
+        // ============================================================================
+        function lockBodyScroll() {
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+        }
+
+        function unlockBodyScroll() {
+            const modalSelectors = [
+                '#idolDetailModal:not(.hidden)',
+                '#accountModal:not(.hidden)',
+                '#confirmDeleteAccountModal:not(.hidden)',
+                '#googleSheetModal:not(.hidden)',
+                '#exportSheetModal:not(.hidden)',
+                '#keyboardShortcutsModal:not(.hidden)',
+                '#cloudHelpModal:not(.hidden)',
+                '#lastWeekReportModal:not(.hidden)',
+                '#mainPinLockOverlay:not(.hidden)'
+            ];
+            const hasOpenModal = Array.from(document.querySelectorAll(modalSelectors.join(', '))).some(el => {
+                return el && !el.classList.contains('hidden') && !el.classList.contains('modal-closing');
+            });
+            if (!hasOpenModal) {
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
+            }
+        }
+
+        // ============================================================================
+        // A2. XÁC THỰC MÃ PIN 0908 CHO LINK CHÍNH (YÊU CẦU 2)
+        // ============================================================================
+        const ADMIN_SECURITY_PIN = '0908';
+        let currentPinInput = '';
+
+        function isGroupOperatorLink() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                return !!params.get('group');
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function checkAdminAuthRequirement() {
+            // Nếu truy cập bằng link nhóm (?group=...) -> KHÔNG CẦN PASS (Yêu cầu 1 & 2)
+            if (isGroupOperatorLink()) {
+                hidePinLockOverlay();
+                return;
+            }
+
+            // Link chính -> Kiểm tra session PIN 0908
+            const isAuthed = sessionStorage.getItem('passion_admin_pin_passed') === ADMIN_SECURITY_PIN;
+            if (!isAuthed) {
+                showPinLockOverlay();
+            } else {
+                hidePinLockOverlay();
+            }
+        }
+
+        function showPinLockOverlay() {
+            const overlay = document.getElementById('mainPinLockOverlay');
+            if (!overlay) return;
+            overlay.classList.remove('hidden');
+            lockBodyScroll();
+            currentPinInput = '';
+            updatePinDotsUI();
+            const input = document.getElementById('pinHiddenInput');
+            if (input) {
+                input.value = '';
+                setTimeout(() => input.focus(), 80);
+            }
+        }
+
+        function hidePinLockOverlay() {
+            const overlay = document.getElementById('mainPinLockOverlay');
+            if (overlay) overlay.classList.add('hidden');
+            unlockBodyScroll();
+        }
+
+        function lockAdminSessionManually() {
+            sessionStorage.removeItem('passion_admin_pin_passed');
+            showPinLockOverlay();
+            showToast('🔒 Đã khóa bảng điều khiển quản trị.', 'info');
+        }
+
+        function handlePinKeyPress(digit) {
+            if (currentPinInput.length >= 4) return;
+            currentPinInput += String(digit);
+            updatePinDotsUI();
+            if (currentPinInput.length === 4) {
+                verifyPinCode();
+            }
+        }
+
+        function handlePinBackspace() {
+            if (currentPinInput.length > 0) {
+                currentPinInput = currentPinInput.slice(0, -1);
+                updatePinDotsUI();
+            }
+        }
+
+        function handlePinClear() {
+            currentPinInput = '';
+            updatePinDotsUI();
+        }
+
+        function updatePinDotsUI() {
+            for (let i = 0; i < 4; i++) {
+                const dot = document.getElementById(`pinDot${i}`);
+                if (!dot) continue;
+                if (i < currentPinInput.length) {
+                    dot.className = 'w-4 h-4 rounded-full border-2 border-pink-500 bg-pink-500 shadow-[0_0_12px_rgba(236,72,153,0.8)] scale-110 transition-all duration-150';
+                } else {
+                    dot.className = 'w-4 h-4 rounded-full border-2 border-slate-600 bg-slate-800 transition-all duration-150';
+                }
+            }
+            const statusText = document.getElementById('pinStatusText');
+            if (statusText) {
+                statusText.textContent = currentPinInput.length > 0 ? `Đã nhập ${currentPinInput.length}/4 số` : 'Nhập mã bảo vệ 4 chữ số';
+                statusText.className = 'text-xs min-h-[1.25rem] font-bold text-slate-400 mb-3 transition-colors duration-200';
+            }
+        }
+
+        function verifyPinCode() {
+            const card = document.getElementById('pinLockCard');
+            const statusText = document.getElementById('pinStatusText');
+            const icon = document.getElementById('pinLockIcon');
+            const iconBox = document.getElementById('pinLockIconBox');
+
+            if (currentPinInput === ADMIN_SECURITY_PIN) {
+                if (statusText) {
+                    statusText.textContent = '✅ Mã PIN chính xác! Đang mở hệ thống...';
+                    statusText.className = 'text-xs min-h-[1.25rem] font-black text-emerald-400 mb-3';
+                }
+                if (iconBox) {
+                    iconBox.className = 'w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-400/50 text-emerald-400 flex items-center justify-center text-2xl shadow-inner mb-3';
+                }
+                if (icon) {
+                    icon.className = 'fa-solid fa-lock-open text-emerald-400';
+                }
+                for (let i = 0; i < 4; i++) {
+                    const dot = document.getElementById(`pinDot${i}`);
+                    if (dot) dot.className = 'w-4 h-4 rounded-full border-2 border-emerald-400 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)] scale-110';
+                }
+
+                sessionStorage.setItem('passion_admin_pin_passed', ADMIN_SECURITY_PIN);
+
+                setTimeout(() => {
+                    hidePinLockOverlay();
+                    showToast('👋 Xin chào Quản trị viên Passion Media!', 'success');
+                }, 350);
+            } else {
+                if (card) {
+                    card.classList.remove('pin-shake');
+                    void card.offsetWidth;
+                    card.classList.add('pin-shake');
+                }
+                if (statusText) {
+                    statusText.textContent = '❌ Mã PIN không chính xác! Vui lòng thử lại.';
+                    statusText.className = 'text-xs min-h-[1.25rem] font-black text-rose-400 mb-3';
+                }
+                for (let i = 0; i < 4; i++) {
+                    const dot = document.getElementById(`pinDot${i}`);
+                    if (dot) dot.className = 'w-4 h-4 rounded-full border-2 border-rose-500 bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.8)]';
+                }
+                setTimeout(() => {
+                    currentPinInput = '';
+                    updatePinDotsUI();
+                    if (card) card.classList.remove('pin-shake');
+                }, 600);
+            }
+        }
+
+        // ============================================================================
+        // A3. LẤY DANH SÁCH NHÓM & TỰ ĐẾM TIÊU ĐỀ ĐỘNG (YÊU CẦU 6)
+        // ============================================================================
+        function getUniqueGroupNames() {
+            const set = new Set();
+            const defaultOrder = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
+            defaultOrder.forEach(g => {
+                if (accounts.some(a => extractCleanGroupName(a).toUpperCase() === g.toUpperCase())) {
+                    set.add(g);
+                }
+            });
+            accounts.forEach(a => {
+                const g = extractCleanGroupName(a);
+                if (g && ![...set].some(existing => existing.toUpperCase() === g.toUpperCase())) {
+                    set.add(g);
+                }
+            });
+            if (set.size === 0) {
+                defaultOrder.forEach(g => set.add(g));
+            }
+            return Array.from(set);
+        }
+
+        function updateDynamicTitlesAndCounts() {
+            const uniqueGroups = getUniqueGroupNames();
+            const groupCount = uniqueGroups.length;
+            const idolCount = accounts.filter(a => a.role !== 'GROUP').length;
+            const groupChannelCount = accounts.filter(a => a.role === 'GROUP').length;
+            const totalAccounts = accounts.length;
+
+            // 1. Header Badge
+            const headerBadge = document.getElementById('headerGroupAndIdolBadge');
+            if (headerBadge) {
+                headerBadge.textContent = `${groupCount} NHÓM & ${idolCount} IDOL`;
+            }
+
+            // 2. Section 1 Heading
+            const secTitle = document.getElementById('sectionGroupTitleText');
+            if (secTitle) {
+                secTitle.textContent = `${groupCount} Nhóm & Danh Bạ Idol TikTok (KPI: 2 Bài / Tuần)`;
+            }
+
+            // 3. Subtitle quản lý
+            const manageSub = document.getElementById('manageAccountSubtext');
+            if (manageSub) {
+                manageSub.textContent = `Quản lý ${groupCount} Nhóm & ${idolCount} Idol (${totalAccounts} kênh)`;
+            }
+
+            // 4. Tab Tất cả, Tab Kênh Nhóm & Tab Idol
+            const tabAll = document.getElementById('dirTabAll');
+            if (tabAll) {
+                tabAll.textContent = `Tất cả ${groupCount} Nhóm (${totalAccounts})`;
+            }
+            const tabGroup = document.getElementById('dirTabGroup');
+            if (tabGroup) {
+                tabGroup.textContent = `👥 ${groupChannelCount} Kênh Nhóm`;
+            }
+            const tabIdol = document.getElementById('dirTabIdol');
+            if (tabIdol) {
+                tabIdol.textContent = `🌟 ${idolCount} Idol`;
+            }
+
+            // 5. Dropdown label & button nếu đang ở ALL
+            const groupSelectEl = document.getElementById('directoryGroupSelect');
+            if (!groupSelectEl || groupSelectEl.value === 'ALL') {
+                const dropLabel = document.getElementById('dirGroupDropdownLabel');
+                if (dropLabel) dropLabel.textContent = `🏷️ Tất cả ${groupCount} Nhóm`;
+            }
+
+            const dirAllCountBadge = document.getElementById('dirAllCountBadge');
+            if (dirAllCountBadge) {
+                dirAllCountBadge.textContent = `${totalAccounts} kênh`;
+            }
+
+            const dirAllBtnText = document.getElementById('dirAllBtnText');
+            if (dirAllBtnText) {
+                dirAllBtnText.textContent = `🏷️ Tất cả ${groupCount} Nhóm`;
+            }
+
+            // 6. Modal Xuất Sheet: Nút sao chép báo cáo
+            const exportCopyBtnText = document.getElementById('exportCopyAllReportBtnText');
+            if (exportCopyBtnText) {
+                exportCopyBtnText.textContent = `Sao Chép Tin Nhắn Báo Cáo ${groupCount} Nhóm`;
+            }
+
+            // 7. Modal Quản lý tài khoản: Badge tổng
+            const modalAccBadge = document.getElementById('modalAccountsTotalBadge');
+            if (modalAccBadge) {
+                modalAccBadge.textContent = `${totalAccounts} tài khoản (${groupCount} nhóm & ${idolCount} idol)`;
+            }
+        }
+
+        // ============================================================================
+        // A4. SAO CHÉP CLIPBOARD AN TOÀN ĐA NỀN TẢNG (YÊU CẦU 5)
+        // ============================================================================
+        function copyTextRobustly(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text).catch(err => {
+                    console.warn('navigator.clipboard failed, fallback to execCommand:', err);
+                    return fallbackCopyText(text);
+                });
+            } else {
+                return fallbackCopyText(text);
+            }
+        }
+
+        function fallbackCopyText(text) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    textArea.style.top = "-9999px";
+                    textArea.style.left = "-9999px";
+                    textArea.style.opacity = "0";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    if (successful) {
+                        resolve();
+                    } else {
+                        reject(new Error('execCommand returned false'));
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+
         function handleGlobalKeydown(e) {
+            // 0. Nếu màn hình khóa PIN đang hiển thị -> Xử lý riêng phím PIN
+            const pinOverlay = document.getElementById('mainPinLockOverlay');
+            if (pinOverlay && !pinOverlay.classList.contains('hidden')) {
+                if (e.key >= '0' && e.key <= '9') {
+                    e.preventDefault();
+                    handlePinKeyPress(e.key);
+                    return;
+                }
+                if (e.key === 'Backspace') {
+                    e.preventDefault();
+                    handlePinBackspace();
+                    return;
+                }
+                if (e.key === 'Escape' || e.key === 'Enter') {
+                    e.preventDefault();
+                    return;
+                }
+                return;
+            }
+
             if (e.key === 'Escape') {
                 // 1. Ưu tiên modal xác nhận xóa tài khoản (Esc hủy nhanh)
                 const confirmDelModal = document.getElementById('confirmDeleteAccountModal');
@@ -2657,6 +3056,12 @@ service cloud.firestore {
             const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
             const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable);
             if (isEditing) return;
+
+            if (e.key === 'c' || e.key === 'C') {
+                e.preventDefault();
+                copyCurrentOperatorGroupReport();
+                return;
+            }
 
             if (e.key === 's' || e.key === 'S' || e.key === 'k' || e.key === 'K') {
                 e.preventDefault();
@@ -3648,6 +4053,7 @@ service cloud.firestore {
         }
 
         function renderAllUI() {
+            updateDynamicTitlesAndCounts();
             updateWeekHeaderBanner();
             renderWeekCustomDropdown();
             renderAccountsGrid();
@@ -3858,7 +4264,7 @@ service cloud.firestore {
             const tabDone = document.getElementById('dirTabDoneKpi');
             if (tabDone) tabDone.textContent = `✅ Đã đủ KPI (${doneKpiCount})`;
 
-            const GROUP_NAMES = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
+            const GROUP_NAMES = getUniqueGroupNames();
             const targetGroups = selectedGroupFilter === 'ALL'
                 ? GROUP_NAMES
                 : GROUP_NAMES.filter(g => g.toUpperCase() === selectedGroupFilter.toUpperCase());
@@ -4074,9 +4480,9 @@ service cloud.firestore {
                                     <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-300" style="width: ${percentDone}%"></div>
                                 </div>
 
-                                <!-- Nút Báo Cáo Nhóm (Admin only) -->
+                                <!-- Nút Báo Cáo Nhóm -->
                                 <button type="button" onclick="copyGroupKpiReport('${grpName}')"
-                                    class="admin-only-btn h-8 px-2.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:hover:bg-pink-900/60 dark:text-pink-300 border border-pink-200 dark:border-pink-800 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                    class="h-8 px-2.5 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-700 dark:bg-pink-950/50 dark:hover:bg-pink-900/60 dark:text-pink-300 border border-pink-200 dark:border-pink-800 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                                     title="Sao chép tiến độ riêng nhóm ${grpName} để gửi cho nhân viên phụ trách">
                                     <i class="fa-solid fa-copy"></i>
                                     <span>Báo Cáo</span>
@@ -4176,6 +4582,7 @@ service cloud.firestore {
         let pendingDeleteTimer = null;
 
         function openIdolDetailModal(accId, forceOpenForm = false) {
+            lockBodyScroll();
             if (idolModalCloseTimer) {
                 clearTimeout(idolModalCloseTimer);
                 idolModalCloseTimer = null;
@@ -4802,7 +5209,7 @@ service cloud.firestore {
                 formOptionsHtml += `</optgroup>`;
             }
 
-            const groupOrder = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
+            const groupOrder = getUniqueGroupNames();
             groupOrder.forEach(gName => {
                 const idolsInGroup = idolAccounts.filter(a => extractCleanGroupName(a).toUpperCase() === gName.toUpperCase());
                 if (idolsInGroup.length > 0) {
@@ -6226,6 +6633,7 @@ service cloud.firestore {
             const modal = document.getElementById('accountModal');
             if (!modal) return;
             modal.classList.remove('hidden');
+            lockBodyScroll();
 
             if (editingAccId) {
                 editAccountInModal(editingAccId);
@@ -6248,6 +6656,7 @@ service cloud.firestore {
             if (modal) modal.classList.add('hidden');
             closeConfirmDeleteAccountModal();
             resetAccountForm();
+            unlockBodyScroll();
         }
 
         function openCloudHelpModal() {
@@ -6478,13 +6887,14 @@ service cloud.firestore {
         function generateGroupKpiReportText(targetGroupName = 'ALL') {
             const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
             const weekTitle = getWeekDisplayTitle(activeWeek);
+            const allUniqueGroups = getUniqueGroupNames();
 
             const GROUP_NAMES = (targetGroupName && targetGroupName !== 'ALL')
                 ? [targetGroupName]
-                : ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
+                : allUniqueGroups;
 
             let lines = [];
-            lines.push(`📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()}`);
+            lines.push(`📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
             lines.push(`(KPI bắt buộc: 2 bài / tuần)`);
             lines.push('');
 
@@ -6527,16 +6937,13 @@ service cloud.firestore {
 
         function copyGroupKpiReport(targetGroupName = 'ALL') {
             const reportText = generateGroupKpiReportText(targetGroupName);
-            if (!navigator.clipboard) {
-                showToast('Trình duyệt không hỗ trợ sao chép tự động', 'error');
-                return;
-            }
-            navigator.clipboard.writeText(reportText).then(() => {
-                const label = targetGroupName === 'ALL' ? 'cả 6 nhóm' : `nhóm ${targetGroupName}`;
+            const uniqueGroups = getUniqueGroupNames();
+            const label = targetGroupName === 'ALL' ? `cả ${uniqueGroups.length} nhóm` : `nhóm ${targetGroupName}`;
+            copyTextRobustly(reportText).then(() => {
                 showToast(`📋 Đã copy báo cáo tiến độ ${label} vào clipboard! Hãy dán gửi cho vận hành.`, 'success');
             }).catch(err => {
                 console.error('Clipboard copy error:', err);
-                showToast('Lỗi khi sao chép báo cáo vào clipboard', 'error');
+                window.prompt('Sao chép báo cáo tiến độ bên dưới:', reportText);
             });
         }
 
@@ -6620,11 +7027,13 @@ service cloud.firestore {
         function openExportSheetModal() {
             const modal = document.getElementById('exportSheetModal');
             if (modal) modal.classList.remove('hidden');
+            lockBodyScroll();
         }
 
         function closeExportSheetModal() {
             const modal = document.getElementById('exportSheetModal');
             if (modal) modal.classList.add('hidden');
+            unlockBodyScroll();
         }
 
         function downloadFullExcelFile() {
@@ -7341,12 +7750,17 @@ service cloud.firestore {
             generateGroupKpiReportText, copyGroupKpiReport, copyCurrentOperatorGroupReport, copyGroupShareLink, initGroupFromUrlQuery,
             deleteAccountWithConfirm, closeConfirmDeleteAccountModal, executeDeleteAccountConfirmed,
             renderModalAccountsList,
+            lockBodyScroll, unlockBodyScroll,
+            checkAdminAuthRequirement, showPinLockOverlay, hidePinLockOverlay, lockAdminSessionManually,
+            handlePinKeyPress, handlePinBackspace, handlePinClear, updatePinDotsUI, verifyPinCode,
+            getUniqueGroupNames, updateDynamicTitlesAndCounts, copyTextRobustly,
             openKeyboardShortcutsModal, closeKeyboardShortcutsModal, handleGlobalKeydown,
             toggleGroupCardExpand, toggleAllGroupCards
         });
 
         // Khởi tạo ứng dụng sau khi toàn bộ tài nguyên sẵn sàng
         function initializeAppOnLoad() {
+            checkAdminAuthRequirement();
             initTheme();
             window.addEventListener('keydown', handleGlobalKeydown);
             const postDateEl = document.getElementById('postDate');
