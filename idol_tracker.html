@@ -1312,13 +1312,6 @@
                                     <div id="manageAccountSubtext" class="text-[10px] text-slate-400">Quản lý 6 Nhóm & 37 Idol</div>
                                 </div>
                             </button>
-                            <button type="button" onclick="closeAllModernDropdowns(); resetDailyChecks();" class="w-full px-3 py-2 rounded-xl hover:bg-slate-100 text-left text-xs font-semibold text-slate-700 flex items-center gap-2.5 transition">
-                                <span class="w-7 h-7 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-rotate-right"></i></span>
-                                <div>
-                                    <div class="font-bold">Reset Check Ngày</div>
-                                    <div class="text-[10px] text-slate-400">Đặt lại trạng thái duyệt hôm nay</div>
-                                </div>
-                            </button>
                             <div class="border-t border-slate-100 my-1"></div>
                             <button type="button" onclick="closeAllModernDropdowns(); exportToCSV();" class="w-full px-3 py-2 rounded-xl hover:bg-emerald-50 text-left text-xs font-semibold text-slate-700 hover:text-emerald-700 flex items-center gap-2.5 transition">
                                 <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-file-excel"></i></span>
@@ -1327,11 +1320,11 @@
                                     <div class="text-[10px] text-slate-400">Tải bảng tiến độ tuần về máy</div>
                                 </div>
                             </button>
-                            <button type="button" onclick="closeAllModernDropdowns(); syncExcelDatasetToFirebase(true);" class="w-full px-3 py-2 rounded-xl hover:bg-cyan-50 text-left text-xs font-semibold text-slate-700 hover:text-cyan-800 flex items-center gap-2.5 transition">
+                            <button type="button" onclick="closeAllModernDropdowns(); syncWebDataToFirebase(true);" class="w-full px-3 py-2 rounded-xl hover:bg-cyan-50 text-left text-xs font-semibold text-slate-700 hover:text-cyan-800 flex items-center gap-2.5 transition">
                                 <span class="w-7 h-7 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-cloud-arrow-up"></i></span>
                                 <div>
-                                    <div class="font-bold">Đồng Bộ Dữ Liệu Gốc</div>
-                                    <div class="text-[10px] text-slate-400">Làm sạch & đồng bộ lên Firebase</div>
+                                    <div class="font-bold">Đồng Bộ Lên Firebase</div>
+                                    <div class="text-[10px] text-slate-400">Lưu dữ liệu & cài đặt web lên Cloud</div>
                                 </div>
                             </button>
                         </div>
@@ -1946,7 +1939,7 @@
                         <span>Đóng</span>
                     </button>
                     <button type="submit" form="postForm" id="submitPostBtn"
-                        class="flex-2 sm:flex-initial h-11 sm:h-10 px-5 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
+                        class="hidden flex-2 sm:flex-initial h-11 sm:h-10 px-5 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-floppy-disk"></i>
                         <span>Lưu Bài Đăng Lên Firebase</span>
                     </button>
@@ -2451,12 +2444,6 @@
                         </div>
                     </div>
 
-                    <div class="flex justify-end pt-1">
-                        <button type="submit" id="saveAccountBtn" class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-check"></i>
-                            <span>Lưu Tài Khoản</span>
-                        </button>
-                    </div>
                 </form>
             </div>
 
@@ -2474,9 +2461,14 @@
                 </div>
             </div>
 
-            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
-                <button onclick="closeAccountModal()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-semibold hover:bg-slate-800 transition">
-                    Đóng
+            <div class="px-6 py-3.5 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700/80 flex items-center justify-end gap-2.5">
+                <button type="button" onclick="closeAccountModal()" class="h-10 px-4 rounded-xl bg-slate-200/90 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                    <span>Đóng</span>
+                </button>
+                <button type="submit" form="accountForm" id="saveAccountBtn" class="h-10 px-5 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs sm:text-sm font-black shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Lưu Tài Khoản</span>
                 </button>
             </div>
         </div>
@@ -4129,9 +4121,11 @@ service cloud.firestore {
                     if (e.target && e.target.id === 'postNote' && !e.ctrlKey) {
                         return;
                     }
-                    e.preventDefault();
                     const submitBtn = document.getElementById('submitPostBtn');
-                    if (submitBtn) submitBtn.click();
+                    if (submitBtn && !submitBtn.classList.contains('hidden')) {
+                        e.preventDefault();
+                        submitBtn.click();
+                    }
                     return;
                 }
                 const sheetModal = document.getElementById('googleSheetModal');
@@ -4999,6 +4993,56 @@ service cloud.firestore {
                     updateCloudBadge('error', 'Đang chạy dữ liệu Excel tích hợp');
                 }
             );
+        }
+
+        async function syncWebDataToFirebase(showNotification = true) {
+            if (!currentUser || !db) {
+                showToast('Đang khởi tạo kết nối Firebase, vui lòng đợi...', 'error');
+                return;
+            }
+            try {
+                if (showNotification) {
+                    showToast('Đang đồng bộ dữ liệu & cài đặt từ Web lên Firebase...');
+                }
+                // 1. Đồng bộ danh sách tài khoản hiện tại trên Web
+                if (Array.isArray(accounts) && accounts.length > 0) {
+                    for (const acc of accounts) {
+                        if (acc && acc.id) {
+                            const accRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', acc.id);
+                            await setDoc(accRef, { ...acc, scanStatus: '', scanMessage: '' }, { merge: true });
+                        }
+                    }
+                }
+                // 2. Đồng bộ danh sách bài đăng hiện tại trên Web
+                if (Array.isArray(posts) && posts.length > 0) {
+                    for (const p of posts) {
+                        if (p && p.id) {
+                            const postRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', p.id);
+                            await setDoc(postRef, p, { merge: true });
+                        }
+                    }
+                }
+                // 3. Đồng bộ mã bảo mật nhóm
+                if (groupSecurityCodes && Object.keys(groupSecurityCodes).length > 0) {
+                    const groupCodesRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'group_codes');
+                    await setDoc(groupCodesRef, groupSecurityCodes, { merge: true });
+                }
+                // 4. Đồng bộ KPI targets
+                try {
+                    const kpiDefault = localStorage.getItem('ps_kpi_default');
+                    if (kpiDefault) {
+                        const kpiRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'kpi');
+                        await setDoc(kpiRef, { defaultKpi: JSON.parse(kpiDefault) }, { merge: true });
+                    }
+                } catch (e) {}
+
+                if (showNotification) {
+                    showToast('✅ Đã đồng bộ toàn bộ dữ liệu & cài đặt Web lên Firebase thành công!', 'success');
+                }
+            } catch (err) {
+                console.error("Lỗi đồng bộ dữ liệu lên Firebase:", err);
+                showToast('⚠️ Lỗi khi đồng bộ lên Firebase: ' + (err.message || 'Kiểm tra kết nối mạng'), 'error');
+            }
         }
 
         async function syncExcelDatasetToFirebase(showNotification = true) {
@@ -6024,6 +6068,8 @@ service cloud.firestore {
                     toggleBtn.innerHTML = `<i class="fa-solid fa-chevron-up text-xs"></i><span>Thu Gọn Khung Điền</span>`;
                     toggleBtn.className = 'h-9 px-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-extrabold transition flex items-center gap-1.5 cursor-pointer';
                 }
+                const submitBtn = document.getElementById('submitPostBtn');
+                if (submitBtn) submitBtn.classList.remove('hidden');
             } else {
                 collapsible.classList.remove('open');
                 collapsible.classList.remove('expanded');
@@ -6031,6 +6077,8 @@ service cloud.firestore {
                     toggleBtn.innerHTML = `<i class="fa-solid fa-plus text-xs"></i><span>Thêm Bài Đăng Mới</span>`;
                     toggleBtn.className = 'h-9 px-3.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-extrabold transition flex items-center gap-1.5 shadow-xs cursor-pointer';
                 }
+                const submitBtn = document.getElementById('submitPostBtn');
+                if (submitBtn) submitBtn.classList.add('hidden');
             }
         }
 
@@ -7033,6 +7081,18 @@ service cloud.firestore {
             let note = document.getElementById('postNote').value.trim();
 
             let link = cleanTikTokUrl(rawLink);
+
+            // Bắt buộc phải có link TikTok khi tạo bài đăng mới để không tự động tạo bài rỗng chưa gắn link
+            if (!editingId && !link) {
+                showToast('⚠️ Vui lòng dán link video hoặc ảnh TikTok của bài đăng!', 'error');
+                const linkInput = document.getElementById('postLink');
+                if (linkInput) {
+                    linkInput.focus();
+                    linkInput.classList.add('ring-2', 'ring-rose-500');
+                    setTimeout(() => linkInput.classList.remove('ring-2', 'ring-rose-500'), 2500);
+                }
+                return;
+            }
 
             // Tự động suy luận hạng mục nếu còn để trống
             if (!category) {
@@ -9488,7 +9548,7 @@ service cloud.firestore {
             deleteAccountInModal, restoreDefaultAccounts, toggleKpiSidebar, setSidebarKpiMode,
             handleQuickWeekSelect, shiftSelectedWeek, jumpToCurrentRealtimeWeek,
             openLastWeekReportModal, closeLastWeekReportModal, renderLastWeekReportContent,
-            dismissMondayBanner, syncExcelDatasetToFirebase, handleExcelFileUpload,
+            dismissMondayBanner, syncExcelDatasetToFirebase, syncWebDataToFirebase, handleExcelFileUpload,
             scanSingleAccount, scanAllAccounts, stopBulkScan, openScanLogModal,
             closeScanLogModal, clearScanLogs, setScanLogFilter, handleSmartLinksExtract,
             analyzePostLinkInput, clearPostLinkField, quickAttachLinkToPost,
