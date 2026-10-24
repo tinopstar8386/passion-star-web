@@ -39,13 +39,40 @@
     </script>
     <style>
         body {
-            background-color: #f8fafc;
+            background-color: #f1f5f9;
             color: #0f172a;
             font-family: 'Inter', 'Noto Sans SC', sans-serif;
         }
-        .table-shadow {
-            box-shadow: 0 4px 24px -4px rgba(15, 23, 42, 0.06), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
+        
+        /* Crisp spreadsheet table grid lines */
+        .sheet-table {
+            border-collapse: collapse;
+            width: 100%;
         }
+        .sheet-table th, 
+        .sheet-table td {
+            border: 1px solid #cbd5e1;
+        }
+        .sheet-table thead th {
+            border: 1px solid #cbd5e1;
+            border-bottom: 2px solid #94a3b8;
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+        .sheet-table tbody tr:hover {
+            background-color: #fff1f2;
+        }
+        .sheet-table tfoot tr.footer-total-row td {
+            border-top: 2px solid #e11d48;
+            border-bottom: 2px solid #cbd5e1;
+            background-color: #fff1f2;
+        }
+
+        /* Subtle box shadow */
+        .shadow-2xs {
+            box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+        }
+
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
@@ -57,10 +84,12 @@
         ::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 9999px;
+            border: 2px solid #f1f5f9;
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
         /* Print styles */
         @media print {
             .no-print {
@@ -71,7 +100,11 @@
             }
             .print-full {
                 box-shadow: none !important;
-                border: 1px solid #e2e8f0 !important;
+                border: 1px solid #94a3b8 !important;
+            }
+            .sheet-table th, 
+            .sheet-table td {
+                border: 1px solid #94a3b8 !important;
             }
         }
         input[type="number"]::-webkit-inner-spin-button,
@@ -80,26 +113,26 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-rose-100 selection:text-rose-900">
+<body class="min-h-screen flex flex-col selection:bg-rose-100 selection:text-rose-900 bg-slate-100/70">
 
     <!-- Top Navigation Bar -->
-    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
+    <header class="sticky top-0 z-30 bg-white border-b border-slate-300 shadow-2xs">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
             <!-- Brand & Title -->
             <div class="flex items-center gap-3.5">
-                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-md shadow-rose-500/20 shrink-0">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-xs border border-rose-600/30 shrink-0">
                     <i data-lucide="sparkles" class="w-6 h-6"></i>
                 </div>
                 <div>
                     <div class="flex items-center gap-2.5">
-                        <h1 id="ui-app-title" class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                        <h1 id="ui-app-title" class="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                             ĐỀ XUẤT ĐỒ MAKE UP
                         </h1>
-                        <span id="ui-sheet-badge" class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                        <span id="ui-sheet-badge" class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-300">
                             Sheet 1
                         </span>
                     </div>
-                    <p id="ui-app-subtitle" class="text-xs sm:text-sm text-slate-500">
+                    <p id="ui-app-subtitle" class="text-xs sm:text-sm text-slate-600 font-medium">
                         Hệ thống quản lý danh mục, báo giá & link đặt hàng sản phẩm trang điểm
                     </p>
                 </div>
@@ -108,15 +141,15 @@
             <!-- Right Controls: Exchange Rate Pill & Two Language Buttons (VN / CN) -->
             <div class="flex items-center gap-3">
                 <!-- Firebase Realtime Status Badge -->
-                <div id="firebase-status-badge" class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 no-print" title="Firebase Firestore: passionstar-2014d">
+                <div id="firebase-status-badge" class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs no-print" title="Firebase Firestore: passionstar-2014d">
                     <span id="firebase-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
                     <span id="firebase-status-text">Đang kết nối Firebase...</span>
                 </div>
 
                 <!-- Currency Exchange Rate Helper -->
-                <div class="hidden lg:flex items-center gap-2 bg-slate-50 border border-slate-200/90 rounded-xl px-3 py-1.5 text-xs text-slate-600 no-print">
-                    <span id="ui-rate-label" class="font-medium text-slate-500">Tỷ giá quy đổi:</span>
-                    <span class="font-semibold text-slate-800">1 ¥ =</span>
+                <div class="hidden lg:flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-700 shadow-2xs no-print">
+                    <span id="ui-rate-label" class="font-semibold text-slate-600">Tỷ giá quy đổi:</span>
+                    <span class="font-bold text-slate-900">1 ¥ =</span>
                     <input
                         id="exchange-rate-input"
                         type="number"
@@ -124,17 +157,17 @@
                         min="1"
                         step="50"
                         onchange="updateExchangeRate(this.value)"
-                        class="w-16 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-right font-semibold text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+                        class="w-18 bg-white border border-slate-300 rounded-md px-2 py-0.5 text-right font-extrabold text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500"
                     />
-                    <span class="font-semibold text-slate-800">₫</span>
+                    <span class="font-bold text-slate-900">₫</span>
                 </div>
 
-                <!-- 2 Language Toggle Buttons (Top Right as requested) -->
-                <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner" role="group" aria-label="Language Selector">
+                <!-- 2 Language Toggle Buttons -->
+                <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-300 shadow-2xs" role="group" aria-label="Language Selector">
                     <button
                         id="btn-lang-vi"
                         onclick="setLanguage('vi')"
-                        class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 bg-white text-rose-600 shadow-sm border border-slate-200/80"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all duration-200 bg-white text-rose-600 shadow-xs border border-slate-300"
                     >
                         <span class="text-base leading-none">🇻🇳</span>
                         <span>Tiếng Việt</span>
@@ -142,7 +175,7 @@
                     <button
                         id="btn-lang-zh"
                         onclick="setLanguage('zh')"
-                        class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900"
                     >
                         <span class="text-base leading-none">🇨🇳</span>
                         <span>中文 (Tiếng Trung)</span>
@@ -158,58 +191,58 @@
         <!-- KPI Summary Cards -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Card 1: Total Products -->
-            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div class="bg-white rounded-xl p-4 border border-slate-300 shadow-2xs flex items-center justify-between hover:border-slate-400 transition-all">
                 <div>
-                    <p id="ui-stat-items-label" class="text-xs font-medium uppercase tracking-wider text-slate-400">Danh mục hàng</p>
-                    <p id="stat-total-items" class="text-2xl font-bold text-slate-900 mt-1">7</p>
-                    <p id="ui-stat-items-sub" class="text-xs text-slate-500 mt-0.5">Mã sản phẩm đề xuất</p>
+                    <p id="ui-stat-items-label" class="text-xs font-bold uppercase tracking-wider text-slate-500">Danh mục hàng</p>
+                    <p id="stat-total-items" class="text-3xl font-black text-slate-900 mt-1">7</p>
+                    <p id="ui-stat-items-sub" class="text-xs font-medium text-slate-600 mt-0.5">Mã sản phẩm đề xuất</p>
                 </div>
-                <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <div class="w-12 h-12 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
                     <i data-lucide="package" class="w-6 h-6"></i>
                 </div>
             </div>
 
             <!-- Card 2: Total Quantity -->
-            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div class="bg-white rounded-xl p-4 border border-slate-300 shadow-2xs flex items-center justify-between hover:border-slate-400 transition-all">
                 <div>
-                    <p id="ui-stat-qty-label" class="text-xs font-medium uppercase tracking-wider text-slate-400">Tổng số lượng</p>
-                    <p id="stat-total-qty" class="text-2xl font-bold text-slate-900 mt-1">7</p>
-                    <p id="ui-stat-qty-sub" class="text-xs text-slate-500 mt-0.5">Đơn vị sản phẩm</p>
+                    <p id="ui-stat-qty-label" class="text-xs font-bold uppercase tracking-wider text-slate-500">Tổng số lượng</p>
+                    <p id="stat-total-qty" class="text-3xl font-black text-slate-900 mt-1">7</p>
+                    <p id="ui-stat-qty-sub" class="text-xs font-medium text-slate-600 mt-0.5">Đơn vị sản phẩm</p>
                 </div>
-                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <div class="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
                     <i data-lucide="layers" class="w-6 h-6"></i>
                 </div>
             </div>
 
             <!-- Card 3: Link Status -->
-            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div class="bg-white rounded-xl p-4 border border-slate-300 shadow-2xs flex items-center justify-between hover:border-slate-400 transition-all">
                 <div>
-                    <p id="ui-stat-links-label" class="text-xs font-medium uppercase tracking-wider text-slate-400">Link sản phẩm</p>
-                    <p id="stat-links-count" class="text-2xl font-bold text-emerald-600 mt-1">4 / 7</p>
-                    <p id="ui-stat-links-sub" class="text-xs text-slate-500 mt-0.5">Đã gắn link đặt hàng</p>
+                    <p id="ui-stat-links-label" class="text-xs font-bold uppercase tracking-wider text-slate-500">Link sản phẩm</p>
+                    <p id="stat-links-count" class="text-3xl font-black text-emerald-600 mt-1">4 / 7</p>
+                    <p id="ui-stat-links-sub" class="text-xs font-medium text-slate-600 mt-0.5">Đã gắn link đặt hàng</p>
                 </div>
-                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
                     <i data-lucide="link-2" class="w-6 h-6"></i>
                 </div>
             </div>
 
             <!-- Card 4: Grand Total -->
-            <div class="bg-gradient-to-br from-rose-600 to-amber-600 rounded-2xl p-4 text-white shadow-md shadow-rose-500/15 flex items-center justify-between">
+            <div class="rounded-xl p-4 border-2 border-rose-500 bg-gradient-to-br from-rose-600 via-rose-600 to-amber-600 text-white shadow-sm flex items-center justify-between">
                 <div>
-                    <p id="ui-stat-total-label" class="text-xs font-semibold uppercase tracking-wider text-rose-100">Tổng tiền đề xuất</p>
+                    <p id="ui-stat-total-label" class="text-xs font-extrabold uppercase tracking-wider text-rose-100">Tổng tiền đề xuất</p>
                     <div class="flex items-baseline gap-1.5 mt-1">
-                        <p id="stat-grand-total" class="text-2xl font-bold">0 ₫</p>
+                        <p id="stat-grand-total" class="text-2xl sm:text-3xl font-black text-white">0 ₫</p>
                     </div>
-                    <p id="stat-grand-total-cny" class="text-xs text-rose-100/90 mt-0.5">≈ ¥ 0</p>
+                    <span id="stat-grand-total-cny" class="inline-flex items-center gap-1 text-xs font-bold text-white bg-white/20 border border-white/30 px-2 py-0.5 rounded mt-1">≈ ¥ 0</span>
                 </div>
-                <div class="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm text-white flex items-center justify-center">
+                <div class="w-12 h-12 rounded-xl bg-white/20 border border-white/30 text-white flex items-center justify-center shrink-0 shadow-2xs">
                     <i data-lucide="wallet" class="w-6 h-6"></i>
                 </div>
             </div>
         </section>
 
         <!-- Action & Filter Toolbar -->
-        <section class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 no-print">
+        <section class="bg-white rounded-xl p-4 border border-slate-300 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 no-print">
             <!-- Left: Search & Filter -->
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
                 <!-- Search Input -->
@@ -220,7 +253,7 @@
                         type="text"
                         oninput="handleSearchAndFilter()"
                         placeholder="Tìm tên hàng, ghi chú hoặc link sản phẩm..."
-                        class="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                        class="w-full pl-10 pr-9 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all shadow-2xs"
                     />
                     <button
                         id="clear-search-btn"
@@ -235,7 +268,7 @@
                 <select
                     id="filter-link-select"
                     onchange="handleSearchAndFilter()"
-                    class="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                    class="px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-lg text-sm text-slate-700 font-semibold focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
                 >
                     <option value="all" id="opt-filter-all">Tất cả sản phẩm</option>
                     <option value="has-link" id="opt-filter-has-link">Đã có link sản phẩm</option>
@@ -247,31 +280,31 @@
             <div class="flex flex-wrap items-center gap-2">
                 <button
                     onclick="copyProposalSummary()"
-                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-all shadow-2xs"
                 >
-                    <i data-lucide="copy" class="w-4 h-4 text-slate-500"></i>
+                    <i data-lucide="copy" class="w-4 h-4 text-slate-600"></i>
                     <span id="ui-btn-copy">Sao chép báo giá</span>
                 </button>
 
                 <button
                     onclick="exportToCSV()"
-                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-all shadow-2xs"
                 >
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-700"></i>
                     <span id="ui-btn-export">Xuất file Excel (.CSV)</span>
                 </button>
 
                 <button
                     onclick="window.print()"
-                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-all shadow-2xs"
                 >
-                    <i data-lucide="printer" class="w-4 h-4 text-slate-500"></i>
+                    <i data-lucide="printer" class="w-4 h-4 text-slate-600"></i>
                     <span id="ui-btn-print">In / PDF</span>
                 </button>
 
                 <button
                     onclick="openProductModal()"
-                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 shadow-sm shadow-rose-500/20 transition-all"
+                    class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs sm:text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 border border-rose-700 shadow-xs transition-all"
                 >
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
                     <span id="ui-btn-add-top">Thêm sản phẩm</span>
@@ -280,106 +313,109 @@
         </section>
 
         <!-- Main Spreadsheet Card (Matching Sheet 1 Columns) -->
-        <section class="bg-white rounded-2xl border border-slate-200/90 table-shadow overflow-hidden print-full">
+        <section class="bg-white rounded-2xl border-2 border-slate-300 shadow-sm overflow-hidden print-full">
             <!-- Table Header Banner -->
-            <div class="px-6 py-4 bg-gradient-to-r from-slate-50 via-rose-50/40 to-amber-50/30 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                    <h2 id="ui-table-heading" class="text-sm sm:text-base font-bold text-slate-800 uppercase tracking-wide">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="w-3.5 h-3.5 rounded-full bg-rose-500 ring-4 ring-rose-100 shrink-0"></span>
+                    <h2 id="ui-table-heading" class="text-sm sm:text-base font-extrabold text-slate-900 uppercase tracking-wide">
                         BẢNG ĐỀ XUẤT ĐỒ MAKE UP (SHEET 1)
                     </h2>
                 </div>
-                <p id="ui-table-tip" class="text-xs text-slate-500 no-print">
-                    💡 Mẹo: Bạn có thể chỉnh sửa trực tiếp Tên hàng, Giá tiền, Số lượng hoặc nhấn vào ảnh để xem rõ hơn.
-                </p>
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-slate-700 bg-white border border-slate-300 shadow-2xs no-print">
+                        <i data-lucide="info" class="w-3.5 h-3.5 text-rose-500"></i>
+                        <span id="ui-table-tip">Mẹo: Giá mặc định VNĐ (₫), tự động quy đổi Tệ (¥) & dịch sang Tiếng Trung</span>
+                    </span>
+                </div>
             </div>
 
             <!-- Responsive Table Wrapper -->
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+                <table class="sheet-table w-full text-left">
                     <thead>
-                        <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider">
-                            <th class="py-3.5 px-4 text-center w-14">#</th>
-                            <th id="th-product-name" class="py-3.5 px-4 min-w-[220px]">TÊN HÀNG</th>
-                            <th id="th-image" class="py-3.5 px-4 text-center w-36">HÌNH THỂ HIỆN</th>
-                            <th id="th-price" class="py-3.5 px-4 text-right w-36 cursor-pointer hover:text-rose-600 select-none" onclick="toggleSort('price')">
+                        <tr class="text-slate-800 text-xs font-bold uppercase tracking-wider">
+                            <th class="py-3 px-3 text-center w-12 bg-slate-100">#</th>
+                            <th id="th-product-name" class="py-3 px-4 min-w-[240px] bg-slate-100">TÊN HÀNG</th>
+                            <th id="th-image" class="py-3 px-3 text-center w-32 bg-slate-100">HÌNH THỂ HIỆN</th>
+                            <th id="th-price" class="py-3 px-4 text-right w-40 cursor-pointer hover:bg-slate-200 transition-colors bg-slate-100 select-none" onclick="toggleSort('price')">
                                 <div class="inline-flex items-center justify-end gap-1">
-                                    <span id="th-price-text">GIÁ TIỀN</span>
-                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                                    <span id="th-price-text">GIÁ TIỀN (VNĐ)</span>
+                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-500"></i>
                                 </div>
                             </th>
-                            <th id="th-link" class="py-3.5 px-4 min-w-[240px]">LINK SẢN PHẨM</th>
-                            <th id="th-quantity" class="py-3.5 px-4 text-center w-36">SỐ LƯỢNG</th>
-                            <th id="th-subtotal" class="py-3.5 px-4 text-right w-40 cursor-pointer hover:text-rose-600 select-none" onclick="toggleSort('subtotal')">
+                            <th id="th-link" class="py-3 px-4 min-w-[250px] bg-slate-100">LINK SẢN PHẨM</th>
+                            <th id="th-quantity" class="py-3 px-3 text-center w-36 bg-slate-100">SỐ LƯỢNG</th>
+                            <th id="th-subtotal" class="py-3 px-4 text-right w-44 cursor-pointer hover:bg-slate-200 transition-colors bg-slate-100 select-none" onclick="toggleSort('subtotal')">
                                 <div class="inline-flex items-center justify-end gap-1">
-                                    <span id="th-subtotal-text">THÀNH TIỀN</span>
-                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                                    <span id="th-subtotal-text">THÀNH TIỀN (VNĐ)</span>
+                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-500"></i>
                                 </div>
                             </th>
-                            <th id="th-actions" class="py-3.5 px-4 text-center w-28 no-print">THAO TÁC</th>
+                            <th id="th-actions" class="py-3 px-3 text-center w-28 bg-slate-100 no-print">THAO TÁC</th>
                         </tr>
                     </thead>
-                    <tbody id="product-table-body" class="divide-y divide-slate-200/70 text-sm">
+                    <tbody id="product-table-body" class="text-sm">
                         <!-- Populated dynamically via JS -->
                     </tbody>
 
                     <!-- Table Footer: Add Product Row & Grand Total Row -->
                     <tfoot>
                         <!-- Quick Add Product Button Row -->
-                        <tr class="bg-slate-50/70 border-t border-slate-200/80 no-print">
-                            <td colspan="8" class="px-6 py-3.5">
+                        <tr class="bg-slate-50/90 no-print">
+                            <td colspan="8" class="px-5 py-3">
                                 <div class="flex flex-wrap items-center justify-between gap-3">
                                     <div class="flex items-center gap-2.5">
                                         <button
                                             onclick="openProductModal()"
-                                            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 transition-all shadow-sm"
+                                            class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-300 transition-all shadow-2xs"
                                         >
                                             <i data-lucide="plus" class="w-4 h-4"></i>
                                             <span id="ui-btn-add-bottom">Thêm sản phẩm mới</span>
                                         </button>
                                         <button
                                             onclick="addQuickBlankRow()"
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 transition-all"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-all shadow-2xs"
                                         >
-                                            <i data-lucide="rows" class="w-4 h-4 text-slate-400"></i>
+                                            <i data-lucide="rows" class="w-4 h-4 text-slate-500"></i>
                                             <span id="ui-btn-add-quick-row">+ Thêm nhanh 1 dòng trống</span>
                                         </button>
                                     </div>
-                                    <span id="ui-footer-RowCount" class="text-xs text-slate-500 font-medium">
+                                    <span id="ui-footer-RowCount" class="text-xs text-slate-600 font-semibold bg-white border border-slate-300 px-2.5 py-1 rounded-md shadow-2xs">
                                         Hiển thị 7 sản phẩm
                                     </span>
                                 </div>
                             </td>
                         </tr>
 
-                        <!-- TỔNG TIỀN (Grand Total) Row at the bottom as requested -->
-                        <tr class="bg-gradient-to-r from-rose-50/90 via-rose-50/60 to-amber-50/70 border-t-2 border-rose-200">
-                            <td colspan="5" class="py-4 px-6 text-right">
+                        <!-- TỔNG TIỀN (Grand Total) Row at the bottom -->
+                        <tr class="footer-total-row bg-rose-50/80">
+                            <td colspan="5" class="py-4 px-5 text-right font-extrabold text-slate-900">
                                 <div class="inline-flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 justify-end">
-                                    <span id="ui-total-footer-label" class="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-wide">
+                                    <span id="ui-total-footer-label" class="text-base sm:text-lg font-black text-slate-900 uppercase tracking-wide">
                                         TỔNG TIỀN
                                     </span>
-                                    <span id="ui-total-footer-note" class="text-xs text-slate-500 font-normal">
-                                        (Tự động tính theo Giá tiền × Số lượng)
+                                    <span id="ui-total-footer-note" class="text-xs text-slate-600 font-semibold bg-white/80 border border-rose-200 px-2 py-0.5 rounded">
+                                        (Mặc định VNĐ • Tự động quy đổi sang Nhân dân tệ ¥)
                                     </span>
                                 </div>
                             </td>
-                            <td class="py-4 px-4 text-center">
-                                <span id="footer-total-qty" class="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-white border border-slate-200 text-sm font-bold text-slate-800 shadow-sm">
+                            <td class="py-4 px-3 text-center">
+                                <span id="footer-total-qty" class="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-white border-2 border-slate-300 text-sm font-black text-slate-900 shadow-2xs">
                                     0
                                 </span>
                             </td>
                             <td class="py-4 px-4 text-right">
                                 <div class="flex flex-col items-end">
-                                    <span id="footer-grand-total" class="text-xl sm:text-2xl font-extrabold text-rose-600 tracking-tight">
+                                    <span id="footer-grand-total" class="text-xl sm:text-2xl font-black text-rose-600 tracking-tight">
                                         0 ₫
                                     </span>
-                                    <span id="footer-grand-total-cny" class="text-xs font-semibold text-slate-500 mt-0.5">
+                                    <span id="footer-grand-total-cny" class="inline-flex items-center gap-1 text-xs font-bold text-rose-800 bg-white border border-rose-300 px-2 py-0.5 rounded shadow-2xs mt-1">
                                         ≈ ¥ 0
                                     </span>
                                 </div>
                             </td>
-                            <td class="py-4 px-4 no-print"></td>
+                            <td class="py-4 px-3 no-print"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -388,24 +424,24 @@
     </main>
 
     <!-- Footer -->
-    <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-slate-400 border-t border-slate-200/60 mt-auto no-print">
+    <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-slate-500 border-t border-slate-300 mt-auto no-print font-medium">
         <p id="ui-footer-copyright">
-            Bảng Quản Lý Đề Xuất Đồ Makeup • Đồng bộ đám mây thời gian thực với Firebase • Hỗ trợ tự động dịch Việt - Trung
+            Bảng Quản Lý Đề Xuất Đồ Makeup • Đồng bộ thời gian thực với Firebase • Tự động dịch Việt - Trung
         </p>
     </footer>
 
     <!-- Modal: Add / Edit Product -->
-    <div id="product-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+    <div id="product-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-slate-300 shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
             <!-- Modal Header -->
-            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-300 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                    <div class="w-8 h-8 rounded-lg bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center">
                         <i data-lucide="package-plus" class="w-4 h-4"></i>
                     </div>
                     <h3 id="modal-title" class="text-base font-bold text-slate-900">Thêm sản phẩm đề xuất</h3>
                 </div>
-                <button onclick="closeProductModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                <button onclick="closeProductModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200 transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -417,7 +453,7 @@
 
                 <!-- Product Name (Auto-translated to Chinese) -->
                 <div>
-                    <label id="lbl-modal-name-vi" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    <label id="lbl-modal-name-vi" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                         Tên hàng *
                     </label>
                     <input
@@ -426,22 +462,22 @@
                         required
                         oninput="scheduleModalAutoTranslate(this.value)"
                         placeholder="VD: BÔNG MÚT ĐÁNH NỀN"
-                        class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                        class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
                     />
                     <!-- Live Auto-Translated Chinese Preview -->
-                    <div class="mt-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-xs">
-                        <span id="lbl-auto-translate-caption" class="text-slate-500 font-medium flex items-center gap-1.5 shrink-0">
-                            <i data-lucide="languages" class="w-3.5 h-3.5 text-rose-500"></i>
+                    <div class="mt-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 flex items-center justify-between gap-2 text-xs">
+                        <span id="lbl-auto-translate-caption" class="text-slate-600 font-semibold flex items-center gap-1.5 shrink-0">
+                            <i data-lucide="languages" class="w-3.5 h-3.5 text-rose-600"></i>
                             <span>Bản dịch Tiếng Trung tự động:</span>
                         </span>
-                        <span id="modal-zh-preview" class="font-semibold text-slate-800 truncate text-right">—</span>
+                        <span id="modal-zh-preview" class="font-bold text-slate-900 truncate text-right">—</span>
                     </div>
                 </div>
 
                 <!-- Price (VND) & Quantity Grid -->
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label id="lbl-modal-price" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                        <label id="lbl-modal-price" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                             Giá tiền (VNĐ) *
                         </label>
                         <input
@@ -452,11 +488,11 @@
                             required
                             placeholder="46000"
                             oninput="updateModalSubtotalPreview()"
-                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-extrabold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
                         />
                     </div>
                     <div>
-                        <label id="lbl-modal-qty" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                        <label id="lbl-modal-qty" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                             Số lượng *
                         </label>
                         <input
@@ -467,37 +503,37 @@
                             required
                             value="1"
                             oninput="updateModalSubtotalPreview()"
-                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-extrabold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
                         />
                     </div>
                 </div>
 
                 <!-- Calculated Subtotal Preview -->
-                <div class="bg-rose-50/70 border border-rose-200/80 rounded-xl px-4 py-2.5 flex items-center justify-between">
-                    <span id="lbl-modal-subtotal" class="text-xs font-semibold text-rose-800 uppercase">Thành tiền dự kiến:</span>
-                    <span id="modal-subtotal-preview" class="text-base font-bold text-rose-600">0 ₫</span>
+                <div class="bg-rose-50 border border-rose-300 rounded-lg px-4 py-2.5 flex items-center justify-between">
+                    <span id="lbl-modal-subtotal" class="text-xs font-bold text-rose-900 uppercase">Thành tiền dự kiến:</span>
+                    <span id="modal-subtotal-preview" class="text-base font-black text-rose-600">0 ₫</span>
                 </div>
 
                 <!-- Product Link -->
                 <div>
-                    <label id="lbl-modal-link" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    <label id="lbl-modal-link" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                         Link sản phẩm (Taobao / 1688 / Shopee...)
                     </label>
                     <input
                         id="modal-link"
                         type="url"
                         placeholder="https://e.tb.cn/..."
-                        class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                        class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
                     />
                 </div>
 
                 <!-- Product Image (Upload / Paste / URL) -->
                 <div>
-                    <label id="lbl-modal-image" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                    <label id="lbl-modal-image" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                         Hình thể hiện (Tải ảnh lên, Dán Ctrl+V hoặc nhập URL)
                     </label>
                     <div class="flex items-center gap-3">
-                        <div id="modal-img-preview-box" class="w-20 h-20 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                        <div id="modal-img-preview-box" class="w-20 h-20 rounded-xl border border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
                             <img id="modal-img-preview" src="" alt="Preview" class="w-full h-full object-cover hidden" />
                             <i id="modal-img-placeholder" data-lucide="image" class="w-6 h-6 text-slate-400"></i>
                         </div>
@@ -507,34 +543,34 @@
                                 type="text"
                                 placeholder="Dán link ảnh hoặc nhấn Chọn ảnh bên dưới..."
                                 oninput="previewModalImageUrl(this.value)"
-                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-rose-500"
+                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-rose-500 shadow-2xs"
                             />
                             <div class="flex items-center gap-2">
-                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all">
-                                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition-all shadow-2xs">
+                                    <i data-lucide="upload" class="w-3.5 h-3.5 text-slate-600"></i>
                                     <span id="lbl-upload-btn">Chọn ảnh từ máy</span>
                                     <input type="file" accept="image/*" class="hidden" onchange="handleModalFileUpload(event)" />
                                 </label>
-                                <span id="lbl-paste-hint" class="text-[11px] text-slate-400">hoặc nhấn Ctrl+V để dán ảnh chụp</span>
+                                <span id="lbl-paste-hint" class="text-[11px] font-medium text-slate-500">hoặc nhấn Ctrl+V để dán ảnh chụp</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Modal Actions -->
-                <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+                <div class="pt-3 border-t border-slate-300 flex items-center justify-end gap-2.5">
                     <button
                         type="button"
                         onclick="closeProductModal()"
                         id="btn-modal-cancel"
-                        class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all"
+                        class="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-all shadow-2xs"
                     >
                         Hủy
                     </button>
                     <button
                         type="submit"
                         id="btn-modal-save"
-                        class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 shadow-sm shadow-rose-500/20 transition-all"
+                        class="px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 border border-rose-700 shadow-xs transition-all"
                     >
                         Lưu sản phẩm
                     </button>
@@ -545,14 +581,14 @@
 
     <!-- Modal: Image Lightbox Preview -->
     <div id="lightbox-modal" onclick="closeLightbox()" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/80 backdrop-blur-xs p-4">
-        <div class="relative max-w-lg w-full bg-white rounded-2xl p-4 shadow-2xl" onclick="event.stopPropagation()">
-            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                <h4 id="lightbox-title" class="text-sm font-bold text-slate-800">Hình thể hiện sản phẩm</h4>
-                <button onclick="closeLightbox()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+        <div class="relative max-w-lg w-full bg-white rounded-2xl p-4 shadow-2xl border-2 border-slate-300" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
+                <h4 id="lightbox-title" class="text-sm font-bold text-slate-900">Hình thể hiện sản phẩm</h4>
+                <button onclick="closeLightbox()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <div class="aspect-square w-full rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100">
+            <div class="aspect-square w-full rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-200 shadow-inner">
                 <img id="lightbox-img" src="" alt="Product Preview" class="w-full h-full object-contain" />
             </div>
         </div>
@@ -1095,15 +1131,15 @@
 
             const t = I18N[currentLang];
             if (status === 'connected') {
-                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 no-print';
+                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs no-print';
                 dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
                 text.textContent = t.fbConnected;
             } else if (status === 'connecting') {
-                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 no-print';
+                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs no-print';
                 dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
                 text.textContent = t.fbConnecting;
             } else {
-                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 no-print';
+                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs no-print';
                 dot.className = 'w-2 h-2 rounded-full bg-slate-400';
                 text.textContent = t.fbOffline;
             }
@@ -1287,11 +1323,11 @@
             const btnZh = document.getElementById('btn-lang-zh');
 
             if (lang === 'vi') {
-                btnVi.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 bg-white text-rose-600 shadow-sm border border-slate-200/80';
-                btnZh.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900';
+                btnVi.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all duration-200 bg-white text-rose-600 shadow-xs border border-slate-300';
+                btnZh.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900';
             } else {
-                btnZh.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 bg-white text-rose-600 shadow-sm border border-slate-200/80';
-                btnVi.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900';
+                btnZh.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all duration-200 bg-white text-rose-600 shadow-xs border border-slate-300';
+                btnVi.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900';
             }
 
             document.getElementById('ui-app-title').textContent = t.appTitle;
@@ -1397,10 +1433,10 @@
             if (filtered.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" class="py-12 px-4 text-center text-slate-400">
+                        <td colspan="8" class="py-12 px-4 text-center text-slate-500 bg-white">
                             <div class="flex flex-col items-center justify-center gap-2">
-                                <i data-lucide="package-search" class="w-8 h-8 text-slate-300"></i>
-                                <p class="text-sm font-medium">${t.emptySearch}</p>
+                                <i data-lucide="package-search" class="w-8 h-8 text-slate-400"></i>
+                                <p class="text-sm font-semibold">${t.emptySearch}</p>
                             </div>
                         </td>
                     </tr>
@@ -1413,32 +1449,37 @@
                     const hasLink = Boolean(item.link && item.link.trim());
                     const primaryName = currentLang === 'zh' ? (item.nameZh || item.nameVi) : item.nameVi;
                     const secondaryName = currentLang === 'zh' ? item.nameVi : (item.nameZh || '');
+                    const isEven = idx % 2 === 1;
 
                     return `
-                        <tr class="hover:bg-rose-50/30 transition-colors group">
+                        <tr class="${isEven ? 'bg-slate-50/70' : 'bg-white'} hover:bg-rose-50/50 transition-colors group">
                             <!-- STT -->
-                            <td class="py-3.5 px-4 text-center font-semibold text-slate-400">
+                            <td class="py-3 px-3 text-center font-bold text-slate-600 bg-slate-100/50">
                                 ${idx + 1}
                             </td>
 
-                            <!-- TÊN HÀNG (Editable inline + Auto-translated bilingual subtext) -->
-                            <td class="py-3.5 px-4">
+                            <!-- TÊN HÀNG (Editable inline + Bilingual tag) -->
+                            <td class="py-3 px-3.5">
                                 <input
                                     type="text"
                                     value="${escapeHtml(primaryName)}"
                                     onchange="updateProductName('${item.id}', this.value)"
-                                    class="w-full font-semibold text-slate-800 bg-transparent border border-transparent hover:border-slate-200 focus:border-rose-400 focus:bg-white rounded-lg px-2 py-1 -mx-2 focus:outline-none transition-all"
+                                    class="w-full font-bold text-slate-900 bg-transparent border border-transparent hover:border-slate-300 focus:border-rose-500 focus:bg-white rounded-md px-2 py-1 -mx-2 focus:outline-none transition-all text-sm"
+                                    title="Nhấp đúp hoặc gõ để sửa tên hàng trực tiếp"
                                 />
                                 ${secondaryName ? `
-                                    <div class="text-xs text-slate-400 mt-0.5 font-normal flex items-center gap-1">
-                                        <span>${escapeHtml(secondaryName)}</span>
+                                    <div class="mt-1 flex items-center gap-1.5">
+                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                            <span class="font-extrabold text-rose-600 text-[10px] uppercase">${currentLang === 'zh' ? 'VN' : 'CN'}</span>
+                                            <span class="truncate max-w-[280px]">${escapeHtml(secondaryName)}</span>
+                                        </span>
                                     </div>
                                 ` : ''}
                             </td>
 
                             <!-- HÌNH THỂ HIỆN -->
-                            <td class="py-3.5 px-4 text-center">
-                                <div class="relative inline-flex items-center justify-center w-20 h-20 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden shadow-xs group/img">
+                            <td class="py-3 px-3 text-center">
+                                <div class="relative inline-flex items-center justify-center w-20 h-20 rounded-xl border border-slate-300 bg-white p-1 overflow-hidden shadow-2xs group/img">
                                     <img
                                         src="${item.image || SHEET1_SVGS.puffFoundation}"
                                         alt="${escapeHtml(primaryName)}"
@@ -1449,7 +1490,7 @@
                                     <button
                                         type="button"
                                         onclick="openProductModal('${item.id}')"
-                                        class="no-print opacity-0 group-hover/img:opacity-100 absolute bottom-1 right-1 bg-slate-900/75 hover:bg-rose-600 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-opacity"
+                                        class="no-print opacity-0 group-hover/img:opacity-100 absolute bottom-1 right-1 bg-slate-900/85 hover:bg-rose-600 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded transition-all shadow-sm"
                                         title="${t.editBtnTitle}"
                                     >
                                         ${t.changeImgHint}
@@ -1458,27 +1499,27 @@
                             </td>
 
                             <!-- GIÁ TIỀN (Default VND ₫ -> Converted CNY ¥) -->
-                            <td class="py-3.5 px-4 text-right">
+                            <td class="py-3 px-3.5 text-right">
                                 <div class="inline-flex flex-col items-end">
-                                    <div class="inline-flex items-center justify-end gap-1 bg-slate-50 group-hover:bg-white border border-slate-200/90 focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-500/15 rounded-xl px-2.5 py-1.5">
+                                    <div class="inline-flex items-center justify-end gap-1 bg-white border border-slate-300 focus-within:border-rose-500 focus-within:ring-2 focus-within:ring-rose-500/20 rounded-lg px-2.5 py-1 shadow-2xs">
                                         <input
                                             type="number"
                                             step="any"
                                             min="0"
                                             value="${formatNumber(priceVnd)}"
                                             oninput="updateProductField('${item.id}', 'price', this.value)"
-                                            class="w-24 text-right font-bold text-slate-800 bg-transparent focus:outline-none text-sm"
+                                            class="w-24 text-right font-black text-slate-900 bg-transparent focus:outline-none text-sm"
                                         />
-                                        <span class="text-xs font-bold text-slate-400 select-none">₫</span>
+                                        <span class="text-xs font-bold text-slate-500 select-none">₫</span>
                                     </div>
-                                    <span id="row-price-cny-${item.id}" class="text-[11px] font-medium text-rose-600/80 mt-0.5">
+                                    <span id="row-price-cny-${item.id}" class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50/90 border border-rose-200 px-1.5 py-0.5 rounded mt-1 shadow-2xs">
                                         ≈ ${formatCNYFromVND(priceVnd)}
                                     </span>
                                 </div>
                             </td>
 
                             <!-- LINK SẢN PHẨM -->
-                            <td class="py-3.5 px-4">
+                            <td class="py-3 px-3.5">
                                 ${hasLink ? `
                                     <div class="flex flex-col gap-1.5 max-w-[280px]">
                                         <div class="flex items-center gap-1.5">
@@ -1486,16 +1527,16 @@
                                                 href="${escapeHtml(item.link)}"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200/70 transition-colors truncate max-w-[210px]"
+                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-300 transition-colors truncate max-w-[200px] shadow-2xs"
                                                 title="${escapeHtml(item.link)}"
                                             >
-                                                <i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i>
+                                                <i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0 text-rose-600"></i>
                                                 <span class="truncate">${escapeHtml(item.link)}</span>
                                             </a>
                                             <button
                                                 type="button"
                                                 onclick="copyProductLink('${item.id}')"
-                                                class="no-print p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                                                class="no-print p-1.5 rounded-md text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-300 transition-colors shrink-0 shadow-2xs"
                                                 title="${t.copyLink}"
                                             >
                                                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
@@ -1505,7 +1546,7 @@
                                             type="text"
                                             value="${escapeHtml(item.link)}"
                                             onchange="updateProductField('${item.id}', 'link', this.value)"
-                                            class="no-print text-[11px] text-slate-400 hover:text-slate-600 focus:text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-rose-400 focus:outline-none truncate px-0.5"
+                                            class="no-print text-[11px] text-slate-500 hover:text-slate-800 focus:text-slate-900 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-rose-400 rounded px-1.5 py-0.5 focus:outline-none truncate"
                                         />
                                     </div>
                                 ` : `
@@ -1514,19 +1555,19 @@
                                             type="text"
                                             placeholder="${t.noLinkPlaceholder}"
                                             onchange="updateProductField('${item.id}', 'link', this.value)"
-                                            class="w-full px-3 py-1.5 rounded-xl text-xs bg-slate-50 border border-dashed border-slate-300 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-rose-400 focus:bg-white transition-all"
+                                            class="w-full px-2.5 py-1.5 rounded-lg text-xs bg-slate-50 border border-dashed border-slate-300 hover:border-slate-400 focus:border-solid focus:border-rose-400 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white transition-all shadow-2xs"
                                         />
                                     </div>
                                 `}
                             </td>
 
                             <!-- SỐ LƯỢNG -->
-                            <td class="py-3.5 px-4 text-center">
-                                <div class="inline-flex items-center bg-slate-50 border border-slate-200 rounded-xl p-0.5">
+                            <td class="py-3 px-3 text-center">
+                                <div class="inline-flex items-center bg-white border border-slate-300 rounded-lg shadow-2xs overflow-hidden">
                                     <button
                                         type="button"
                                         onclick="stepQuantity('${item.id}', -1)"
-                                        class="no-print w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:bg-white hover:text-slate-900 transition-colors"
+                                        class="no-print w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors border-r border-slate-200"
                                     >
                                         <i data-lucide="minus" class="w-3.5 h-3.5"></i>
                                     </button>
@@ -1536,12 +1577,12 @@
                                         step="1"
                                         value="${qty}"
                                         oninput="updateProductField('${item.id}', 'quantity', this.value)"
-                                        class="w-12 text-center font-bold text-slate-800 bg-transparent focus:outline-none text-sm"
+                                        class="w-12 text-center font-black text-slate-900 bg-transparent focus:outline-none text-sm"
                                     />
                                     <button
                                         type="button"
                                         onclick="stepQuantity('${item.id}', 1)"
-                                        class="no-print w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:bg-white hover:text-slate-900 transition-colors"
+                                        class="no-print w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors border-l border-slate-200"
                                     >
                                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                                     </button>
@@ -1549,24 +1590,24 @@
                             </td>
 
                             <!-- THÀNH TIỀN (Default VND ₫ -> Converted CNY ¥) -->
-                            <td class="py-3.5 px-4 text-right">
+                            <td class="py-3 px-3.5 text-right">
                                 <div class="flex flex-col items-end">
-                                    <span id="row-subtotal-${item.id}" class="text-base font-extrabold text-slate-900">
+                                    <span id="row-subtotal-${item.id}" class="text-base font-black text-slate-900">
                                         ${formatVND(subtotalVnd)}
                                     </span>
-                                    <span id="row-subtotal-cny-${item.id}" class="text-[11px] font-semibold text-rose-600/85">
+                                    <span id="row-subtotal-cny-${item.id}" class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded mt-0.5 shadow-2xs">
                                         ≈ ${formatCNYFromVND(subtotalVnd)}
                                     </span>
                                 </div>
                             </td>
 
                             <!-- THAO TÁC -->
-                            <td class="py-3.5 px-4 text-center no-print">
-                                <div class="inline-flex items-center justify-center gap-1">
+                            <td class="py-3 px-3 text-center no-print">
+                                <div class="inline-flex items-center justify-center gap-1.5">
                                     <button
                                         type="button"
                                         onclick="openProductModal('${item.id}')"
-                                        class="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                        class="p-1.5 rounded-lg text-slate-600 hover:text-rose-600 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 transition-all shadow-2xs"
                                         title="${t.editBtnTitle}"
                                     >
                                         <i data-lucide="edit-3" class="w-4 h-4"></i>
@@ -1574,7 +1615,7 @@
                                     <button
                                         type="button"
                                         onclick="deleteProduct('${item.id}')"
-                                        class="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                        class="p-1.5 rounded-lg text-slate-500 hover:text-red-600 bg-white hover:bg-red-50 border border-slate-300 hover:border-red-300 transition-all shadow-2xs"
                                         title="${t.deleteBtnTitle}"
                                     >
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
