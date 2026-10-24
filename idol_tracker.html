@@ -538,6 +538,176 @@
         </div>
     </div>
 
+    <!-- MÀN HÌNH KHÓA MÃ CODE CHO LINK NHÓM RIÊNG (VẬN HÀNH / MC) -->
+    <div id="groupPinLockOverlay" class="fixed inset-0 z-[100] hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 select-none">
+        <div id="groupPinLockCard" class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div id="groupLockIconBox" class="w-14 h-14 mx-auto rounded-2xl bg-indigo-500/20 border border-indigo-400/40 text-indigo-400 flex items-center justify-center text-2xl shadow-inner mb-3">
+                <i class="fa-solid fa-users-viewfinder"></i>
+            </div>
+
+            <div class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-pink-500/20 text-pink-300 border border-pink-400/30 mb-2">
+                KHU VỰC VẬN HÀNH & MC
+            </div>
+
+            <h3 id="groupLockTitle" class="text-base sm:text-lg font-black tracking-tight text-white">
+                XÁC THỰC MÃ CODE NHÓM
+            </h3>
+            <p id="groupLockDesc" class="text-xs text-slate-400 mt-1 mb-4">
+                Vui lòng nhập Mã Code do Quản Trị Viên cấp để truy cập vào nhóm này.
+            </p>
+
+            <form onsubmit="event.preventDefault(); verifyGroupSecurityCode();" class="space-y-3">
+                <div class="relative">
+                    <input type="text" id="groupSecurityCodeInput"
+                        placeholder="Nhập mã code nhóm..."
+                        autocomplete="off"
+                        class="w-full h-11 px-4 text-center text-sm font-black tracking-widest uppercase rounded-xl border border-slate-700 bg-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition">
+                </div>
+
+                <p id="groupLockStatusText" class="text-xs min-h-[1.25rem] font-bold text-slate-400 transition-colors">
+                    Mã code gồm chữ hoặc số do Admin cấp
+                </p>
+
+                <button type="submit"
+                    class="w-full h-11 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-xs font-black shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-key"></i>
+                    <span>ĐĂNG NHẬP VÀO NHÓM</span>
+                </button>
+
+                <a href="idol_tracker.html" class="inline-block text-xs font-bold text-slate-400 hover:text-white transition pt-2">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Về link quản lý chính
+                </a>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL QUẢN LÝ MÃ CODE TẤT CẢ CÁC NHÓM (DÀNH CHO ADMIN) -->
+    <div id="groupCodesModal" onclick="if(event.target===this)closeGroupCodesModal()"
+        class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
+            <!-- Modal Header -->
+            <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-extrabold flex items-center gap-2">
+                            <span>Quản Lý Mã Code Truy Cập Các Nhóm</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-pink-500 text-white font-extrabold">BẢO MẬT</span>
+                        </h3>
+                        <p class="text-xs text-slate-300">
+                            Cấp code riêng cho từng nhóm. Khi MC/Vận hành nghỉ, chỉ cần đổi code mới để chặn mã cũ.
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeGroupCodesModal()"
+                    class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Danh sách 6 nhóm & ô nhập code -->
+            <div class="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1" id="groupCodesListContainer">
+                <!-- Populated dynamically via JS -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-5 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                <span class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-cloud-arrow-up text-emerald-500"></i>
+                    <span>Tự động đồng bộ lên Firebase đám mây</span>
+                </span>
+                <button type="button" onclick="closeGroupCodesModal()"
+                    class="h-9 px-4 rounded-xl bg-slate-900 hover:bg-pink-600 text-white text-xs font-bold transition cursor-pointer shadow-xs">
+                    Đóng Bảng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LINK & MÃ CODE RIÊNG CHO 1 NHÓM -->
+    <div id="groupSingleShareModal" onclick="if(event.target===this)closeGroupShareModal()"
+        class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl max-w-lg w-full flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
+            <!-- Header -->
+            <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div id="singleShareGroupIcon" class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/40 text-white flex items-center justify-center text-lg shrink-0">
+                        👥
+                    </div>
+                    <div>
+                        <h3 id="singleShareGroupTitle" class="text-sm sm:text-base font-extrabold">
+                            Link & Mã Code Nhóm
+                        </h3>
+                        <p class="text-xs text-slate-300">
+                            Gửi cho MC & Vận hành để tự vào cập nhật bài đăng
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeGroupShareModal()"
+                    class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="p-5 sm:p-6 space-y-4">
+                <!-- Đường link riêng -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                        🔗 Đường Link Riêng Nhóm
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="singleShareUrlInput" readonly
+                            class="flex-1 h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300 select-all">
+                        <button type="button" onclick="copySingleShareUrlOnly()"
+                            class="h-10 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Copy Link</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mã Code bảo mật hiện tại & Đổi code -->
+                <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-key"></i>
+                            <span>Mã Code Bảo Mật Hiện Tại</span>
+                        </label>
+                        <span class="text-[10px] font-bold text-slate-400">Đổi code là vô hiệu hóa nhân sự cũ</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="singleShareCodeInput"
+                            placeholder="Nhập code mới..."
+                            class="flex-1 h-10 px-3 rounded-xl border border-amber-300 dark:border-amber-700/80 bg-white dark:bg-slate-900 font-mono font-black text-sm text-center uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <button type="button" onclick="randomizeSingleShareCode()"
+                            class="h-10 px-3 rounded-xl bg-amber-100 dark:bg-amber-950/60 hover:bg-amber-200 text-amber-800 dark:text-amber-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0" title="Tạo mã ngẫu nhiên">
+                            <i class="fa-solid fa-dice"></i>
+                        </button>
+                        <button type="button" onclick="saveSingleShareCodeAction()"
+                            class="h-10 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Lưu Code</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Nút copy cả link và code -->
+                <button type="button" onclick="copySingleShareAllAction()"
+                    class="w-full h-11 rounded-xl bg-gradient-to-r from-indigo-600 via-pink-600 to-rose-600 hover:from-indigo-500 hover:to-rose-500 text-white text-xs font-black transition shadow-md active:scale-95 cursor-pointer flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paste"></i>
+                    <span>Sao Chép Cả Link & Mã Code Để Gửi Zalo</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- TOP NAVIGATION BAR -->
     <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md border-b border-slate-800 safe-top">
         <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
@@ -1013,6 +1183,12 @@
                     <button type="button" onclick="openExportSheetModal()" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer" title="Xuất dữ liệu cho vận hành (Google Sheet / Excel)">
                         <i class="fa-solid fa-file-export"></i>
                         <span>Xuất Sheet</span>
+                    </button>
+
+                    <!-- Nút Quản Lý Mã Code Nhóm Cho Admin -->
+                    <button type="button" onclick="openGroupCodesModal()" class="admin-only-btn h-9 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer" title="Quản lý và đổi Mã Code đăng nhập riêng cho từng nhóm khi MC/Vận hành nghỉ">
+                        <i class="fa-solid fa-key"></i>
+                        <span>Mã Code Nhóm</span>
                     </button>
 
                     <button type="button" onclick="copyGroupKpiReport('ALL')" class="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer" title="Sao chép báo cáo KPI tuần của tất cả 6 nhóm">
@@ -3004,14 +3180,425 @@ service cloud.firestore {
             }
         }
 
-        function checkAdminAuthRequirement() {
-            // Nếu truy cập bằng link nhóm riêng (?group=...) -> KHÔNG CẦN PASS (Vận hành vào thẳng)
-            if (isGroupOperatorLink()) {
-                hidePinLockOverlay();
+        // ============================================================================
+        // HỆ THỐNG MÃ CODE BẢO MẬT RIÊNG CHO TỪNG NHÓM (GROUP ACCESS CODES)
+        // ============================================================================
+        const DEFAULT_GROUP_CODES = {
+            'Angelik': 'ANGELIK88',
+            'Fashion': 'FASHION88',
+            'Royen:One': 'ROYEN88',
+            'Bnart': 'BNART88',
+            'BEE': 'BEE88',
+            'Orion': 'ORION88'
+        };
+
+        let groupSecurityCodes = { ...DEFAULT_GROUP_CODES };
+        let activeSingleShareGroup = null;
+
+        // Khởi tạo mã code nhóm từ localStorage và Firestore
+        function initGroupCodes() {
+            try {
+                const saved = localStorage.getItem('ps_group_codes');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    groupSecurityCodes = { ...DEFAULT_GROUP_CODES, ...parsed };
+                }
+            } catch (e) {
+                console.warn('Lỗi đọc ps_group_codes:', e);
+            }
+        }
+
+        // Lấy mã code bảo mật hiện tại của nhóm
+        function getGroupSecurityCode(groupName) {
+            if (!groupName) return 'PASSION88';
+            const matchedKey = Object.keys(groupSecurityCodes).find(
+                k => k.toLowerCase() === String(groupName).toLowerCase()
+            );
+            if (matchedKey && groupSecurityCodes[matchedKey]) {
+                return String(groupSecurityCodes[matchedKey]).trim().toUpperCase();
+            }
+            const fallback = String(groupName).replace(/[^a-zA-Z0-9]/g, '').toUpperCase() + '88';
+            groupSecurityCodes[groupName] = fallback;
+            return fallback;
+        }
+
+        // Lưu mã code mới cho nhóm (Lưu localStorage + đồng bộ Firebase)
+        async function saveGroupSecurityCode(groupName, newCode) {
+            const cleanCode = String(newCode || '').trim().toUpperCase();
+            if (!cleanCode) {
+                showToast('Mã code không được để trống!', 'error');
+                return false;
+            }
+            if (cleanCode.length < 3) {
+                showToast('Mã code cần có ít nhất 3 ký tự!', 'error');
+                return false;
+            }
+
+            const matchedKey = Object.keys(groupSecurityCodes).find(
+                k => k.toLowerCase() === String(groupName).toLowerCase()
+            ) || groupName;
+
+            groupSecurityCodes[matchedKey] = cleanCode;
+
+            try {
+                localStorage.setItem('ps_group_codes', JSON.stringify(groupSecurityCodes));
+            } catch (e) {}
+
+            if (db) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'group_codes');
+                    await setDoc(docRef, groupSecurityCodes, { merge: true });
+                } catch (err) {
+                    console.error('Lỗi lưu group_codes lên Firebase:', err);
+                }
+            }
+
+            showToast(`🔑 Đã đổi mã code nhóm ${matchedKey} thành "${cleanCode}"! Vận hành/MC cũ giữ mã cũ sẽ bị chặn ngay lập tức.`, 'success');
+            renderGroupCodesList();
+            return true;
+        }
+
+        // Tạo mã code ngẫu nhiên cho nhóm
+        function generateRandomGroupCode(groupName) {
+            const cleanPrefix = String(groupName || 'GROUP').replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4);
+            const randomNum = Math.floor(1000 + Math.random() * 9000);
+            return `${cleanPrefix}${randomNum}`;
+        }
+
+        // Lắng nghe realtime cập nhật mã code nhóm từ Firebase
+        function listenToRealtimeGroupCodes() {
+            if (!db) return;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'group_codes');
+                onSnapshot(docRef, (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        if (data && typeof data === 'object') {
+                            groupSecurityCodes = { ...DEFAULT_GROUP_CODES, ...data };
+                            localStorage.setItem('ps_group_codes', JSON.stringify(groupSecurityCodes));
+                            renderGroupCodesList();
+
+                            // Nếu đang ở link nhóm và code bị đổi -> yêu cầu nhập code mới
+                            if (isGroupOperatorLink() && currentOperatorGroup) {
+                                const cleanId = String(currentOperatorGroup).replace(/[^a-zA-Z0-9]/g, '_');
+                                const currentSaved = sessionStorage.getItem('ps_group_auth_' + cleanId);
+                                const expected = getGroupSecurityCode(currentOperatorGroup);
+                                if (currentSaved && currentSaved !== expected) {
+                                    sessionStorage.removeItem('ps_group_auth_' + cleanId);
+                                    showGroupPinLockOverlay(currentOperatorGroup);
+                                    showToast(`⚠️ Quản trị viên vừa thay đổi mã code nhóm ${currentOperatorGroup}. Vui lòng nhập mã mới!`, 'error');
+                                }
+                            }
+                        }
+                    }
+                }, (err) => {
+                    console.warn('Lỗi realtime group_codes:', err);
+                });
+            } catch (err) {
+                console.warn('listenToRealtimeGroupCodes error:', err);
+            }
+        }
+
+        // Kiểm tra xem người dùng link nhóm đã nhập đúng mã code của nhóm đó chưa
+        function checkGroupOperatorAuthRequirement() {
+            const params = new URLSearchParams(window.location.search);
+            const grpQuery = params.get('group');
+            if (!grpQuery) {
+                hideGroupPinLockOverlay();
                 return;
             }
 
-            // Link chính -> LUÔN YÊU CẦU NHẬP MÃ PIN 0908 KHI TRUY CẬP HOẶC TẢI LẠI TRANG
+            const matchedGrp = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'].find(
+                g => g.toLowerCase() === grpQuery.toLowerCase()
+            ) || grpQuery;
+
+            const cleanId = String(matchedGrp).replace(/[^a-zA-Z0-9]/g, '_');
+            const sessionAuth = sessionStorage.getItem('ps_group_auth_' + cleanId);
+            const expectedCode = getGroupSecurityCode(matchedGrp);
+
+            if (sessionAuth && sessionAuth.toUpperCase() === expectedCode.toUpperCase()) {
+                hideGroupPinLockOverlay();
+            } else {
+                showGroupPinLockOverlay(matchedGrp);
+            }
+        }
+
+        function showGroupPinLockOverlay(grpName) {
+            const overlay = document.getElementById('groupPinLockOverlay');
+            if (!overlay) return;
+            overlay.classList.remove('hidden');
+            overlay.style.display = 'flex';
+            lockBodyScroll();
+
+            const theme = getGroupTheme(grpName);
+            const iconBox = document.getElementById('groupLockIconBox');
+            if (iconBox) {
+                iconBox.innerHTML = `<span class="text-3xl">${theme.icon}</span>`;
+            }
+            const titleEl = document.getElementById('groupLockTitle');
+            if (titleEl) {
+                titleEl.textContent = `XÁC THỰC NHÓM ${grpName.toUpperCase()}`;
+            }
+            const descEl = document.getElementById('groupLockDesc');
+            if (descEl) {
+                descEl.textContent = `Khu vực riêng cho Vận Hành & MC nhóm ${grpName}. Vui lòng nhập Mã Code do Quản Trị Viên cấp để vào giao diện.`;
+            }
+            const input = document.getElementById('groupSecurityCodeInput');
+            if (input) {
+                input.value = '';
+                setTimeout(() => input.focus(), 80);
+            }
+            const statusText = document.getElementById('groupLockStatusText');
+            if (statusText) {
+                statusText.textContent = 'Nhập mã code bảo mật do Admin cấp';
+                statusText.className = 'text-xs min-h-[1.25rem] font-bold text-slate-400 transition-colors';
+            }
+        }
+
+        function hideGroupPinLockOverlay() {
+            const overlay = document.getElementById('groupPinLockOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.style.display = 'none';
+            }
+            unlockBodyScroll();
+        }
+
+        function verifyGroupSecurityCode() {
+            const params = new URLSearchParams(window.location.search);
+            const grpQuery = params.get('group');
+            const targetGrp = currentOperatorGroup || grpQuery || 'Royen:One';
+            const expectedCode = getGroupSecurityCode(targetGrp);
+
+            const input = document.getElementById('groupSecurityCodeInput');
+            const statusText = document.getElementById('groupLockStatusText');
+            const card = document.getElementById('groupPinLockCard');
+            const val = (input ? input.value : '').trim().toUpperCase();
+
+            if (val === expectedCode) {
+                const cleanId = String(targetGrp).replace(/[^a-zA-Z0-9]/g, '_');
+                sessionStorage.setItem('ps_group_auth_' + cleanId, val);
+
+                if (statusText) {
+                    statusText.textContent = '✅ Mã code chính xác! Đang mở giao diện...';
+                    statusText.className = 'text-xs min-h-[1.25rem] font-black text-emerald-400';
+                }
+
+                setTimeout(() => {
+                    hideGroupPinLockOverlay();
+                    showToast(`👋 Chào mừng bạn vào khu vực vận hành nhóm ${targetGrp}!`, 'success');
+                }, 300);
+            } else {
+                if (card) {
+                    card.classList.remove('pin-shake');
+                    void card.offsetWidth;
+                    card.classList.add('pin-shake');
+                }
+                if (statusText) {
+                    statusText.textContent = '❌ Mã code không chính xác hoặc đã bị đổi! Vui lòng liên hệ Admin.';
+                    statusText.className = 'text-xs min-h-[1.25rem] font-black text-rose-400';
+                }
+                if (input) {
+                    input.select();
+                }
+            }
+        }
+
+        // ============================================================================
+        // MODAL QUẢN LÝ TẤT CẢ MÃ CODE CHO ADMIN
+        // ============================================================================
+        function openGroupCodesModal() {
+            renderGroupCodesList();
+            const modal = document.getElementById('groupCodesModal');
+            if (modal) modal.classList.remove('hidden');
+            lockBodyScroll();
+        }
+
+        function closeGroupCodesModal() {
+            const modal = document.getElementById('groupCodesModal');
+            if (modal) modal.classList.add('hidden');
+            unlockBodyScroll();
+        }
+
+        function renderGroupCodesList() {
+            const container = document.getElementById('groupCodesListContainer');
+            if (!container) return;
+
+            const uniqueGroups = getUniqueGroupNames();
+            container.innerHTML = uniqueGroups.map(grpName => {
+                const theme = getGroupTheme(grpName);
+                const currentCode = getGroupSecurityCode(grpName);
+                const cleanId = String(grpName).replace(/[^a-zA-Z0-9]/g, '_');
+                const grpAccs = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
+
+                return `
+                    <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg shadow-xs border ${theme.badgeBg}">
+                                    ${theme.icon}
+                                </div>
+                                <div>
+                                    <h4 class="font-black text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                                        <span>NHÓM ${grpName.toUpperCase()}</span>
+                                    </h4>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                                        ${grpAccs.length} kênh • Link: ` + `?group=${grpName}` + `
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button type="button" onclick="copyGroupShareLinkAndCode('${grpName}')"
+                                class="h-8 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0"
+                                title="Sao chép cả đường link và mã code nhóm ${grpName} để gửi cho MC/Vận hành">
+                                <i class="fa-solid fa-paste text-pink-500"></i>
+                                <span>Copy Link + Code</span>
+                            </button>
+                        </div>
+
+                        <!-- Khu vực chỉnh sửa mã code -->
+                        <div class="flex items-center gap-2 pt-1">
+                            <div class="relative flex-1">
+                                <span class="absolute left-3 top-2.5 text-xs text-amber-500">
+                                    <i class="fa-solid fa-key"></i>
+                                </span>
+                                <input type="text" id="groupCodeInput_${cleanId}" value="${currentCode}"
+                                    class="w-full h-9 pl-8 pr-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 font-mono font-black text-xs uppercase tracking-wider text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            </div>
+
+                            <button type="button" onclick="randomizeModalGroupCode('${grpName}', '${cleanId}')"
+                                class="h-9 px-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 text-xs font-bold transition cursor-pointer shrink-0" title="Tạo mã ngẫu nhiên">
+                                <i class="fa-solid fa-dice"></i>
+                            </button>
+
+                            <button type="button" onclick="saveModalGroupCodeAction('${grpName}', '${cleanId}')"
+                                class="h-9 px-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-black transition cursor-pointer shadow-xs shrink-0 flex items-center gap-1">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Lưu Code</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function randomizeModalGroupCode(grpName, cleanId) {
+            const input = document.getElementById(`groupCodeInput_${cleanId}`);
+            if (input) {
+                input.value = generateRandomGroupCode(grpName);
+            }
+        }
+
+        async function saveModalGroupCodeAction(grpName, cleanId) {
+            const input = document.getElementById(`groupCodeInput_${cleanId}`);
+            if (!input) return;
+            const newCode = input.value.trim().toUpperCase();
+            await saveGroupSecurityCode(grpName, newCode);
+        }
+
+        // ============================================================================
+        // MODAL LINK & MÃ CODE RIÊNG CHO TỪNG NHÓM
+        // ============================================================================
+        function openGroupShareModal(groupName) {
+            activeSingleShareGroup = groupName;
+            const theme = getGroupTheme(groupName);
+
+            const iconBox = document.getElementById('singleShareGroupIcon');
+            if (iconBox) iconBox.innerHTML = `<span class="text-2xl">${theme.icon}</span>`;
+
+            const titleEl = document.getElementById('singleShareGroupTitle');
+            if (titleEl) titleEl.textContent = `Link & Mã Code: NHÓM ${groupName.toUpperCase()}`;
+
+            const urlInput = document.getElementById('singleShareUrlInput');
+            if (urlInput) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('group', groupName);
+                urlInput.value = url.toString();
+            }
+
+            const codeInput = document.getElementById('singleShareCodeInput');
+            if (codeInput) {
+                codeInput.value = getGroupSecurityCode(groupName);
+            }
+
+            const modal = document.getElementById('groupSingleShareModal');
+            if (modal) modal.classList.remove('hidden');
+            lockBodyScroll();
+        }
+
+        function closeGroupShareModal() {
+            const modal = document.getElementById('groupSingleShareModal');
+            if (modal) modal.classList.add('hidden');
+            activeSingleShareGroup = null;
+            unlockBodyScroll();
+        }
+
+        function copySingleShareUrlOnly() {
+            const input = document.getElementById('singleShareUrlInput');
+            if (!input) return;
+            copyTextRobustly(input.value).then(() => {
+                showToast(`🔗 Đã sao chép đường link nhóm ${activeSingleShareGroup}!`, 'success');
+            });
+        }
+
+        function randomizeSingleShareCode() {
+            if (!activeSingleShareGroup) return;
+            const input = document.getElementById('singleShareCodeInput');
+            if (input) {
+                input.value = generateRandomGroupCode(activeSingleShareGroup);
+            }
+        }
+
+        async function saveSingleShareCodeAction() {
+            if (!activeSingleShareGroup) return;
+            const input = document.getElementById('singleShareCodeInput');
+            if (!input) return;
+            const newCode = input.value.trim().toUpperCase();
+            await saveGroupSecurityCode(activeSingleShareGroup, newCode);
+        }
+
+        function copySingleShareAllAction() {
+            if (!activeSingleShareGroup) return;
+            copyGroupShareLinkAndCode(activeSingleShareGroup);
+        }
+
+        function copyGroupShareLinkAndCode(groupName) {
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('group', groupName);
+                const fullUrl = url.toString();
+                const code = getGroupSecurityCode(groupName);
+
+                const shareText = [
+                    `📌 LINK & MÃ CODE TRUY CẬP NHÓM ${groupName.toUpperCase()}`,
+                    `👉 Đường link: ${fullUrl}`,
+                    `🔑 Mã Code đăng nhập: ${code}`,
+                    `⏰ Lưu ý: Mã code bảo mật nội bộ dành riêng cho MC & Vận hành nhóm ${groupName}.`
+                ].join('\n');
+
+                copyTextRobustly(shareText).then(() => {
+                    showToast(`📋 Đã copy link và mã code nhóm ${groupName}! Dán gửi ngay cho MC/Vận hành.`, 'success');
+                }).catch(() => {
+                    window.prompt(`Sao chép link & mã code nhóm ${groupName}:`, shareText);
+                });
+            } catch (err) {
+                console.error('copyGroupShareLinkAndCode error:', err);
+            }
+        }
+
+        // ============================================================================
+        // KIỂM TRA PHÂN QUYỀN TRUY CẬP (LINK CHÍNH & LINK NHÓM)
+        // ============================================================================
+        function checkAdminAuthRequirement() {
+            // Nếu truy cập bằng link nhóm riêng (?group=...) -> Kiểm tra mã Code riêng của nhóm đó
+            if (isGroupOperatorLink()) {
+                hidePinLockOverlay();
+                checkGroupOperatorAuthRequirement();
+                return;
+            }
+
+            // Link chính -> Ẩn khóa nhóm, hiện khóa PIN 0908 của Admin
+            hideGroupPinLockOverlay();
             showPinLockOverlay();
         }
 
@@ -5023,12 +5610,12 @@ service cloud.firestore {
                                     <span>Báo Cáo</span>
                                 </button>
 
-                                <!-- Nút Copy Link Nhóm Riêng (Admin only) -->
-                                <button type="button" onclick="copyGroupShareLink('${grpName}')"
+                                <!-- Nút Link & Code Nhóm Riêng (Admin only) -->
+                                <button type="button" onclick="openGroupShareModal('${grpName}')"
                                     class="admin-only-btn h-8 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0"
-                                    title="Sao chép link riêng của nhóm ${grpName} cho nhân sự vận hành tự vào điền bài">
-                                    <i class="fa-solid fa-link"></i>
-                                    <span>Link Nhóm</span>
+                                    title="Xem link và đổi Mã Code riêng cho nhóm ${grpName}">
+                                    <i class="fa-solid fa-key text-amber-500"></i>
+                                    <span>Link & Code</span>
                                 </button>
 
                                 <!-- Nút Thêm Idol Cho Nhóm Này (Admin only) -->
@@ -7537,6 +8124,9 @@ service cloud.firestore {
 
             const targets = getKpiTargetsForWeek(activeWeek);
             const isWeekExpired = isWeekOverdueOrExpired(activeWeek);
+            const sundayDateStr = addDaysStr(activeWeek, 6);
+            const sundayFormatted = formatDateVN(sundayDateStr);
+
             let lines = [];
             if (isWeekExpired) {
                 lines.push(`🚨 BÁO CÁO TỔNG KẾT & DANH SÁCH BỊ PHẠT DO QUÁ HẠN - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
@@ -7563,29 +8153,38 @@ service cloud.firestore {
                 grpAccounts.forEach(acc => {
                     const prog = getAccountWeeklyProgress(acc.id, activeWeek);
                     const isGroup = acc.role === 'GROUP';
-                    const nameLabel = isGroup ? 'Tài khoản nhóm' : `Tài khoản ${extractCleanIdolName(acc)}`;
+                    const idolShort = extractCleanIdolName(acc);
+                    const nameLabel = isGroup ? `Tài khoản nhóm ${grpName}` : `Tài khoản ${idolShort}`;
                     const accPosts = getAccountWeeklyPosts(acc.id, activeWeek).filter(p => p.status === 'ĐÃ ĐĂNG');
+
+                    // Định dạng thông tin ID TikTok chính và TikTok phụ
+                    const rawMain = (acc.handle || '').trim();
+                    const mainHandle = rawMain ? (rawMain.startsWith('@') ? rawMain : '@' + rawMain) : '@chua_co';
+                    const rawSub = (acc.subHandle || '').trim();
+                    const subHandle = rawSub ? (rawSub.startsWith('@') ? rawSub : '@' + rawSub) : '';
+                    const tiktokInfo = subHandle ? `tiktok:${mainHandle}, tiktok phụ: ${subHandle}` : `tiktok:${mainHandle}`;
 
                     const target = prog.targetKpi;
                     if (prog.isDonePosted) {
-                        lines.push(`• ${nameLabel} : Đăng đủ (${prog.postedCount}/${target} bài)`);
+                        const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : '';
+                        lines.push(`• ${nameLabel}: ${tiktokInfo}: Đăng đủ (${prog.postedCount}/${target} bài)${datesText}`);
                     } else if (isWeekExpired) {
-                        const datesText = accPosts.length > 0 ? ` (Đã có: ${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : ' (Chưa có bài)';
-                        lines.push(`• 🚨 ${nameLabel} : [BỊ PHẠT] Quá hạn tuần, thiếu ${prog.missingPosted} bài (${prog.postedCount}/${target})${datesText}`);
+                        const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : ' (Chưa có bài nào)';
+                        lines.push(`• 🚨 ${nameLabel}: ${tiktokInfo}: [BỊ PHẠT] Quá hạn tuần, thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài${datesText}`);
                     } else if (prog.postedCount > 0) {
                         const datesText = accPosts.map(p => formatDateVN(p.date)).join(', ');
-                        lines.push(`• ${nameLabel} : Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài (${datesText})`);
+                        lines.push(`• ${nameLabel}: ${tiktokInfo}: Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài (${datesText})`);
                     } else {
-                        lines.push(`• ${nameLabel} : Thiếu ${target} bài (Chưa có bài nào)`);
+                        lines.push(`• ${nameLabel}: ${tiktokInfo}: Thiếu ${target} bài (Chưa có bài nào)`);
                     }
                 });
                 lines.push('');
             });
 
             if (isWeekExpired) {
-                lines.push(`🚨 TUẦN ĐÃ KẾT THÚC: Các tài khoản chưa hoàn thành KPI trên bị tính PHẠT theo quy định.`);
+                lines.push(`🚨 TUẦN ĐÃ KẾT THÚC (${sundayFormatted}): Các tài khoản chưa hoàn thành KPI trên bị tính PHẠT theo quy định.`);
             } else {
-                lines.push(`⏰ Hạn chót Chủ Nhật tuần này! Nhờ các bạn vận hành kiểm tra & nhắc idol lên bài đầy đủ.`);
+                lines.push(`⏰ Hạn chót Chủ Nhật tuần này! (${sundayFormatted}) Nhờ các bạn MC hoặc vận hành kiểm tra & nhắc idol lên bài đầy đủ.`);
             }
             return lines.join('\n');
             } catch (err) {
@@ -8646,11 +9245,16 @@ service cloud.firestore {
             getUniqueGroupNames, updateDynamicTitlesAndCounts, copyTextRobustly,
             openKeyboardShortcutsModal, closeKeyboardShortcutsModal, handleGlobalKeydown,
             toggleGroupCardExpand, toggleAllGroupCards,
-            getKpiTargetsForWeek, getAccountTargetKpi, applyCustomKpiTargets, syncKpiInputsUI, isWeekOverdueOrExpired
+            getKpiTargetsForWeek, getAccountTargetKpi, applyCustomKpiTargets, syncKpiInputsUI, isWeekOverdueOrExpired,
+            openGroupCodesModal, closeGroupCodesModal, renderGroupCodesList, randomizeModalGroupCode, saveModalGroupCodeAction,
+            openGroupShareModal, closeGroupShareModal, copySingleShareUrlOnly, randomizeSingleShareCode, saveSingleShareCodeAction,
+            copySingleShareAllAction, copyGroupShareLinkAndCode, verifyGroupSecurityCode, getGroupSecurityCode, saveGroupSecurityCode
         });
 
         // Khởi tạo ứng dụng sau khi toàn bộ tài nguyên sẵn sàng
         function initializeAppOnLoad() {
+            initGroupCodes();
+            listenToRealtimeGroupCodes();
             checkAdminAuthRequirement();
             syncKpiInputsUI();
             initTheme();
