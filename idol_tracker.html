@@ -2,7 +2,12 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Passion Tracker">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#090d16">
     <title>Passion Media Tracker - Quản Lý & Theo Dõi TikTok Theo Tuần</title>
     <!-- Tailwind CSS with Dark Mode -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -314,6 +319,149 @@
             border-bottom-width: 0px !important;
             pointer-events: none !important;
         }
+    
+        /* ========================================================================== */
+        /* TỐI ƯU HÓA TOÀN DIỆN MOBILE VIEW CHO IPHONE & SAFARI iOS */
+        /* ========================================================================== */
+        :root {
+            --sat: env(safe-area-inset-top, 0px);
+            --sar: env(safe-area-inset-right, 0px);
+            --sab: env(safe-area-inset-bottom, 0px);
+            --sal: env(safe-area-inset-left, 0px);
+        }
+
+        /* Khử viền tap highlight và tăng độ nhạy cảm ứng trên iOS Safari */
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        button, a, input, select, textarea, [role="button"] {
+            touch-action: manipulation;
+        }
+
+        /* Thanh cuộn ẩn nhưng hỗ trợ vuốt mượt mà trên iPhone */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none !important;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+
+        /* Ngăn chặn Safari iOS tự động zoom khi bấm vào ô input (font-size < 16px sẽ bị auto-zoom) */
+        @media screen and (max-width: 768px) {
+            input[type="text"],
+            input[type="password"],
+            input[type="date"],
+            input[type="search"],
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+        }
+
+        /* Safe area cho Header */
+        header.safe-top {
+            padding-top: max(0.65rem, env(safe-area-inset-top, 0.65rem));
+        }
+
+        /* Hiệu ứng chuyển động trượt Bottom Sheet trên iPhone */
+        @keyframes mobileBottomSheetIn {
+            0% {
+                opacity: 0;
+                transform: translateY(100%);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes mobileBottomSheetOut {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(100%);
+            }
+        }
+
+        /* Tối ưu hóa Modal thành Bottom Sheet chuẩn phong cách iOS Safari */
+        @media screen and (max-width: 640px) {
+            #idolDetailModal,
+            #smartPasteConfirmModal,
+            #accountModal,
+            #exportSheetModal,
+            #googleSheetModal,
+            #keyboardShortcutsModal,
+            #lastWeekReportModal,
+            #cloudHelpModal {
+                align-items: flex-end !important;
+                padding: 0 !important;
+            }
+
+            #idolDetailModal > div.smooth-modal-card,
+            #smartPasteConfirmModal > div.smooth-modal-card,
+            #accountModal > div,
+            #exportSheetModal > div.smooth-modal-card,
+            #googleSheetModal > div.smooth-modal-card,
+            #keyboardShortcutsModal > div.smooth-modal-card,
+            #lastWeekReportModal > div.smooth-modal-card,
+            #cloudHelpModal > div.smooth-modal-card {
+                border-bottom-left-radius: 0 !important;
+                border-bottom-right-radius: 0 !important;
+                border-top-left-radius: 28px !important;
+                border-top-right-radius: 28px !important;
+                max-height: 92dvh !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            #idolDetailModal.modal-entering .smooth-modal-card {
+                animation: mobileBottomSheetIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+            }
+            #idolDetailModal.modal-closing .smooth-modal-card {
+                animation: mobileBottomSheetOut 0.2s cubic-bezier(0.4, 0, 1, 1) forwards !important;
+            }
+
+            /* Safe area padding ở đáy modal tránh thanh Home Bar của iPhone */
+            .safe-bottom,
+            .smooth-modal-card > div:last-child {
+                padding-bottom: max(1rem, calc(0.75rem + env(safe-area-inset-bottom, 0px))) !important;
+            }
+
+            /* Toast container trên iPhone */
+            #toastContainer {
+                bottom: max(1.25rem, calc(1rem + env(safe-area-inset-bottom, 0px))) !important;
+                right: 1rem !important;
+                left: 1rem !important;
+            }
+
+            /* Dropdowns không bị tràn ra ngoài màn hình điện thoại */
+            .modern-dropdown-menu {
+                max-width: calc(100vw - 2rem) !important;
+            }
+
+            /* Numpad PIN trên iPhone */
+            #mainPinLockOverlay {
+                padding: max(1rem, env(safe-area-inset-top, 1rem)) 1rem max(1rem, env(safe-area-inset-bottom, 1rem)) 1rem !important;
+            }
+            #mainPinLockOverlay #pinLockCard {
+                max-height: 96dvh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* KPI Sidebar trên iPhone */
+            #kpiSidebar {
+                width: 100% !important;
+                max-width: 100vw !important;
+                top: 0 !important;
+                padding-top: env(safe-area-inset-top, 0px);
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+            }
+        }
     </style>
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col">
@@ -374,7 +522,7 @@
     </div>
 
     <!-- TOP NAVIGATION BAR -->
-    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg border-b border-slate-800">
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg border-b border-slate-800 safe-top">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
             <!-- Brand & Title -->
             <div class="flex items-center justify-between gap-3">
@@ -399,8 +547,8 @@
                 </div>
             </div>
 
-            <!-- Right: Real-time Weekly Deadline Counter & Action Buttons -->
-            <div class="flex flex-wrap items-center gap-2">
+            <!-- Right: Real-time Weekly Deadline Counter & Action Buttons (Vuốt ngang mượt trên Mobile) -->
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap shrink-0">
                 <!-- Real-time Deadline Counter -->
                 <div id="deadlineHeaderBadge" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-rose-500/20 border border-amber-400/40 text-amber-200 text-xs font-bold flex items-center gap-2 shadow-sm">
                     <i class="fa-solid fa-calendar-check text-amber-400 text-sm"></i>
@@ -531,10 +679,11 @@
 
     <!-- FLOATING SIDEBAR TOGGLE BUTTON ON RIGHT EDGE -->
     <button onclick="toggleKpiSidebar()" id="floatingSidebarBtn"
-        class="fixed right-0 top-1/2 -translate-y-1/2 z-30 bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-3.5 rounded-l-2xl shadow-xl border border-r-0 border-rose-400/40 flex flex-col items-center gap-1.5 transition"
+        class="fixed right-3 bottom-20 sm:bottom-auto sm:right-0 sm:top-1/2 sm:-translate-y-1/2 z-30 bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 sm:px-2.5 sm:py-3.5 rounded-full sm:rounded-r-none sm:rounded-l-2xl shadow-xl border border-rose-400/40 flex flex-row sm:flex-col items-center gap-1.5 transition cursor-pointer"
         title="Bấm để ẩn/hiện Sidebar danh sách tài khoản chưa đủ 2 bài/tuần">
         <i class="fa-solid fa-list-check text-sm"></i>
-        <span class="text-[11px] font-extrabold tracking-wider" style="writing-mode: vertical-rl;">CHƯA ĐỦ 2 BÀI</span>
+        <span class="text-[11px] font-extrabold tracking-wider hidden sm:inline" style="writing-mode: vertical-rl;">CHƯA ĐỦ 2 BÀI</span>
+        <span class="text-[11px] font-extrabold tracking-wider inline sm:hidden whitespace-nowrap">Chưa Đủ KPI</span>
         <span id="floatingMissingCount" class="w-5 h-5 rounded-full bg-white text-rose-700 text-[10px] font-extrabold flex items-center justify-center">0</span>
     </button>
 
@@ -563,14 +712,14 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 shrink-0">
+                <div class="flex items-center gap-2 shrink-0 w-full sm:w-auto">
                     <button type="button" onclick="openIdolDetailModal(null, true)"
-                        class="h-9 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-xs font-black shadow-md transition flex items-center gap-1.5 cursor-pointer">
+                        class="flex-1 sm:flex-initial h-10 sm:h-9 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-xs font-black shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-plus"></i>
                         <span>+ Điền Bài Mới</span>
                     </button>
                     <button type="button" onclick="copyCurrentOperatorGroupReport()"
-                        class="h-9 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                        class="flex-1 sm:flex-initial h-10 sm:h-9 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                         title="Sao chép báo cáo tiến độ KPI nhóm này">
                         <i class="fa-solid fa-copy text-pink-400"></i>
                         <span>Copy Báo Cáo</span>
@@ -604,19 +753,19 @@
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 lg:w-[540px] shrink-0">
                     <div class="relative flex-1">
                         <input type="text" id="mainSmartPasteInput"
-                            placeholder="Dán 1 hoặc nhiều link TikTok cách nhau dấu cách rồi nhấn Enter..."
+                            placeholder="Dán link TikTok rồi nhấn Thêm Nhanh..."
                             onkeydown="if(event.key==='Enter'){event.preventDefault();handleSmartLinksExtract('mainSmartPasteInput');}"
-                            class="w-full h-10 pl-9 pr-3 rounded-xl bg-white/95 text-slate-900 placeholder-slate-400 border border-white/20 text-xs sm:text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500">
-                        <i class="fa-brands fa-tiktok absolute left-3.5 top-3 text-pink-600 text-xs"></i>
+                            class="w-full h-11 sm:h-10 pl-9 pr-3 rounded-xl bg-white/95 text-slate-900 placeholder-slate-400 border border-white/20 text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-pink-500">
+                        <i class="fa-brands fa-tiktok absolute left-3.5 top-3.5 sm:top-3 text-pink-600 text-sm sm:text-xs"></i>
                     </div>
-                    <div class="flex items-center gap-2 shrink-0">
+                    <div class="grid grid-cols-2 sm:flex items-center gap-2 shrink-0">
                         <button type="button" id="mainSmartPasteBtn" onclick="handleSmartLinksExtract('mainSmartPasteInput')"
-                            class="h-10 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-pink-600 hover:from-indigo-400 hover:to-pink-500 text-white text-xs font-extrabold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer">
+                            class="h-11 sm:h-10 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-pink-600 hover:from-indigo-400 hover:to-pink-500 text-white text-xs font-extrabold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer">
                             <i class="fa-solid fa-wand-magic-sparkles"></i>
                             <span>Thêm Nhanh</span>
                         </button>
                         <button type="button" onclick="openIdolDetailModal(null, true)"
-                            class="h-10 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                            class="h-11 sm:h-10 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
                             title="Mở bảng điền bài đăng thủ công">
                             <i class="fa-solid fa-plus text-pink-400"></i>
                             <span>Điền Lẻ</span>
@@ -646,22 +795,22 @@
             </div>
 
             <!-- Week Navigation & Modern Custom Week Dropdown (Fixed Height, Zero Jump) -->
-            <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
                 <!-- Unified Week Stepper Pill -->
-                <div class="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80">
-                    <button onclick="shiftSelectedWeek(-7)" class="h-8 px-2.5 rounded-lg hover:bg-white hover:shadow-2xs text-slate-700 text-xs font-bold transition flex items-center gap-1 whitespace-nowrap cursor-pointer" title="Lùi về tuần trước">
+                <div class="inline-flex items-center justify-between sm:justify-start bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700 w-full sm:w-auto">
+                    <button onclick="shiftSelectedWeek(-7)" class="h-8 px-2 sm:px-2.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 hover:shadow-2xs text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer" title="Lùi về tuần trước">
                         <i class="fa-solid fa-chevron-left text-[10px]"></i>
-                        <span>Tuần trước</span>
+                        <span>Trước</span>
                     </button>
 
                     <!-- Custom Modern Week Dropdown -->
-                    <div class="modern-dropdown mx-1" id="weekCustomDropdown">
+                    <div class="modern-dropdown mx-1 flex-1 sm:flex-initial" id="weekCustomDropdown">
                         <button type="button" onclick="toggleModernDropdown('weekCustomDropdown', event)"
-                            class="h-8 px-3 rounded-lg bg-white text-slate-800 shadow-2xs border border-slate-200/80 text-xs font-bold flex items-center justify-between gap-2 min-w-[215px] sm:min-w-[235px] hover:border-indigo-300 transition cursor-pointer">
-                            <span id="weekDropdownLabel" class="truncate">📌 19/10 - 25/10/2026 (Tháng 10 - Tuần 3)</span>
+                            class="h-8 px-2 sm:px-3 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 shadow-2xs border border-slate-200/80 dark:border-slate-700 text-xs font-bold flex items-center justify-between gap-1 sm:gap-2 w-full sm:min-w-[235px] hover:border-indigo-300 transition cursor-pointer">
+                            <span id="weekDropdownLabel" class="truncate text-[11px] sm:text-xs">📌 19/10 - 25/10/2026 (Tháng 10 - Tuần 3)</span>
                             <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 dropdown-chevron shrink-0"></i>
                         </button>
-                        <div class="modern-dropdown-menu left-0 w-72" id="weekDropdownMenu">
+                        <div class="modern-dropdown-menu left-0 w-72 max-w-[calc(100vw-2rem)]" id="weekDropdownMenu">
                             <!-- Populated by JS -->
                         </div>
                     </div>
@@ -673,25 +822,27 @@
                         <option value="ALL">🌐 Xem tất cả các tuần</option>
                     </select>
 
-                    <button onclick="shiftSelectedWeek(7)" class="h-8 px-2.5 rounded-lg hover:bg-white hover:shadow-2xs text-slate-700 text-xs font-bold transition flex items-center gap-1 whitespace-nowrap cursor-pointer" title="Tiến tới tuần tiếp theo">
-                        <span>Tuần sau</span>
+                    <button onclick="shiftSelectedWeek(7)" class="h-8 px-2 sm:px-2.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 hover:shadow-2xs text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer" title="Tiến tới tuần tiếp theo">
+                        <span>Sau</span>
                         <i class="fa-solid fa-chevron-right text-[10px]"></i>
                     </button>
                 </div>
 
-                <button onclick="jumpToCurrentRealtimeWeek()" class="h-9 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-xs whitespace-nowrap cursor-pointer">
-                    Hôm Nay
-                </button>
+                <div class="grid grid-cols-2 sm:flex items-center gap-2">
+                    <button onclick="jumpToCurrentRealtimeWeek()" class="h-9 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-xs whitespace-nowrap cursor-pointer flex items-center justify-center">
+                        Hôm Nay
+                    </button>
 
-                <button onclick="openLastWeekReportModal()" class="h-9 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
-                    <i class="fa-solid fa-bullhorn text-amber-600"></i>
-                    <span>Báo Cáo Thiếu Bài</span>
-                </button>
+                    <button onclick="openLastWeekReportModal()" class="h-9 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer">
+                        <i class="fa-solid fa-bullhorn text-amber-600 dark:text-amber-400"></i>
+                        <span>Báo Cáo Thiếu</span>
+                    </button>
+                </div>
             </div>
         </section>
 
         <!-- QUICK STATS & WEEKLY KPI SUMMARY -->
-        <section id="quickStatsSection" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <section id="quickStatsSection" class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex items-center justify-between">
                 <div>
                     <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Hoàn Thành KPI (&ge;2 Bài)</p>
@@ -768,7 +919,7 @@
                 </div>
 
                 <!-- Clean 1-Row Action Toolbar -->
-                <div id="dirActionToolbar" class="flex flex-wrap items-center gap-2 shrink-0">
+                <div id="dirActionToolbar" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-2 px-2 sm:mx-0 sm:px-0 sm:flex-wrap shrink-0">
                     <button type="button" onclick="openIdolDetailModal(null, true)" class="h-9 px-3.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs whitespace-nowrap cursor-pointer">
                         <i class="fa-solid fa-plus"></i>
                         <span>Thêm Bài Mới</span>
@@ -854,7 +1005,7 @@
 
             <!-- Bộ lọc & Tìm kiếm nhanh trong 43 Kênh TikTok -->
             <div id="dirFilterRow" class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-4 pt-1">
-                <div class="inline-flex flex-wrap gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
+                <div class="inline-flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 overflow-x-auto no-scrollbar max-w-full">
                     <button onclick="setDirectoryFilter('ALL')" id="dirTabAll" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs transition cursor-pointer">
                         Tất cả 6 Nhóm (43)
                     </button>
@@ -1130,8 +1281,10 @@
     </main>
 
     <!-- MODAL CHI TIẾT IDOL & QUẢN LÝ BÀI ĐĂNG (MỞ KHI BẤM VÀO THẺ IDOL HOẶC NÚT + BÀI MỚI - THỨ 4, HÌNH 4) -->
-    <div id="idolDetailModal" onclick="if(event.target===this)closeIdolDetailModal()" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-        <div class="smooth-modal-card bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+    <div id="idolDetailModal" onclick="if(event.target===this)closeIdolDetailModal()" class="fixed inset-0 z-50 hidden bg-slate-900/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl max-w-3xl w-full max-h-[92dvh] sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
+            <!-- iOS Pull Handle -->
+            <div class="w-full pt-2.5 pb-1 flex justify-center sm:hidden bg-slate-900 shrink-0"><div class="w-12 h-1 rounded-full bg-slate-600/80"></div></div>
             <!-- Modal Header: Thông tin Idol & Kênh TikTok -->
             <div id="idolModalHeader" class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3 min-w-0">
@@ -1437,11 +1590,11 @@
             </div>
 
             <!-- Modal Footer (Luôn hiển thị cố định ở đáy, không cần cuộn) -->
-            <div class="px-5 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
-                <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs">
+            <div class="px-4 sm:px-6 py-3 sm:py-3.5 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5 text-xs shrink-0 safe-bottom">
+                <div class="hidden sm:flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px] sm:text-xs">
                     <span class="inline-flex items-center gap-1">
                         <i class="fa-solid fa-keyboard text-slate-400"></i>
-                        <span class="hidden sm:inline">Phím tắt:</span>
+                        <span>Phím tắt:</span>
                     </span>
                     <span class="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-slate-700 dark:text-slate-300">Enter</span>
                     <span>Lưu</span>
@@ -1450,17 +1603,14 @@
                     <span>Đóng</span>
                 </div>
 
-                <div class="flex items-center gap-2.5 ml-auto">
-                    <!-- Nút Đóng: Màu xám/slate dịu, phân biệt với nút Lưu -->
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
                     <button type="button" onclick="closeIdolDetailModal()"
-                        class="h-10 px-4 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm transition flex items-center gap-1.5 cursor-pointer">
+                        class="flex-1 sm:flex-initial h-11 sm:h-10 px-4 rounded-xl bg-slate-200/80 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm transition flex items-center justify-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-xmark"></i>
                         <span>Đóng</span>
                     </button>
-
-                    <!-- Nút Lưu: Nằm ngay kế bên nút Đóng, màu Gradient hồng tím rực rỡ, liên kết trực tiếp với postForm -->
                     <button type="submit" form="postForm" id="submitPostBtn"
-                        class="h-10 px-5 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer">
+                        class="flex-2 sm:flex-initial h-11 sm:h-10 px-5 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-floppy-disk"></i>
                         <span>Lưu Bài Đăng Lên Firebase</span>
                     </button>
@@ -1800,8 +1950,8 @@
 
     <!-- MODAL XÁC NHẬN THÊM NHANH BÀI ĐĂNG TIKTOK (PREVIEW & CONFIRM - VẤN ĐỀ 3) -->
     <div id="smartPasteConfirmModal" onclick="if(event.target===this)closeSmartPasteConfirmModal()"
-        class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
+        class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
             <!-- Modal Header -->
             <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3 min-w-0">
@@ -1831,17 +1981,17 @@
             </div>
 
             <!-- Modal Footer -->
-            <div class="px-5 sm:px-6 py-3.5 bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="px-4 sm:px-6 py-3 sm:py-3.5 bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 safe-bottom shrink-0">
                 <div id="smartPasteConfirmSummary" class="text-xs font-bold text-slate-500 dark:text-slate-400">
                     Sẵn sàng lưu: 0 bài
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
                     <button type="button" onclick="closeSmartPasteConfirmModal()"
-                        class="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition cursor-pointer">
+                        class="flex-1 sm:flex-initial h-11 sm:h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center justify-center cursor-pointer">
                         Hủy Bỏ
                     </button>
                     <button type="button" id="btnExecuteSmartPasteConfirm" onclick="executeSmartPasteConfirm()"
-                        class="h-10 px-5 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-md transition flex items-center gap-2 cursor-pointer">
+                        class="flex-2 sm:flex-initial h-11 sm:h-10 px-5 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-check"></i>
                         <span id="btnExecuteSmartPasteConfirmText">Xác Nhận Lưu Bài Đăng</span>
                     </button>
@@ -1892,8 +2042,8 @@
     </div>
 
     <!-- MODAL 3: QUẢN LÝ & CẬP NHẬT HYPERLINK TÀI KHOẢN NHÓM / IDOL -->
-    <div id="accountModal" onclick="if(event.target===this)closeAccountModal()" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+    <div id="accountModal" onclick="if(event.target===this)closeAccountModal()" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-2xl max-w-3xl w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
             <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
                 <div>
                     <h3 class="text-base sm:text-lg font-bold flex items-center gap-2">
@@ -2712,7 +2862,17 @@ service cloud.firestore {
         // ============================================================================
         // A1. KHÓA CUỘN TRANG KHI MỞ CÁC MODAL (YÊU CẦU 4)
         // ============================================================================
+        let scrollLockY = 0;
+        let isScrollLocked = false;
         function lockBodyScroll() {
+            if (isScrollLocked) return;
+            scrollLockY = window.pageYOffset || document.documentElement.scrollTop || 0;
+            isScrollLocked = true;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollLockY}px`;
+            document.body.style.left = '0';
+            document.body.style.right = '0';
+            document.body.style.width = '100%';
             document.body.style.overflow = 'hidden';
             document.documentElement.style.overflow = 'hidden';
         }
@@ -2735,9 +2895,16 @@ service cloud.firestore {
                 const el = document.querySelector(sel);
                 return el && !el.classList.contains('hidden') && !el.classList.contains('modal-closing');
             });
-            if (!hasActiveModal) {
+            if (!hasActiveModal && isScrollLocked) {
+                isScrollLocked = false;
+                document.body.style.position = '';
+                document.body.style.top = '';
+                document.body.style.left = '';
+                document.body.style.right = '';
+                document.body.style.width = '';
                 document.body.style.overflow = '';
                 document.documentElement.style.overflow = '';
+                window.scrollTo(0, scrollLockY);
             }
         }
 
