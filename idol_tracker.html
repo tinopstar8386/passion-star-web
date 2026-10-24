@@ -987,6 +987,12 @@
                         <i class="fa-solid fa-copy text-pink-400"></i>
                         <span>Copy Báo Cáo</span>
                     </button>
+                    <button type="button" onclick="copyNewWeekAnnouncement(true)"
+                        class="flex-1 sm:flex-initial h-10 sm:h-9 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                        title="Sao chép mẫu thông báo tuần mới gửi cho idol">
+                        <i class="fa-solid fa-bullhorn text-amber-300"></i>
+                        <span>Mẫu Báo Tuần</span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -1262,6 +1268,12 @@
                     <button type="button" onclick="copyGroupKpiReport('ALL')" class="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer" title="Sao chép báo cáo tiến độ đăng bài của tất cả 6 nhóm">
                         <i class="fa-solid fa-copy text-pink-500"></i>
                         <span>Copy Báo Cáo</span>
+                    </button>
+
+                    <!-- Nút Mẫu Thông Báo Đầu Tuần Mới (Thứ 2 đến CN tuần tiếp theo, deadline & lưu ý bài đăng) -->
+                    <button type="button" onclick="copyNewWeekAnnouncement(true)" class="h-9 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-2xs" title="Sao chép mẫu thông báo tuần mới (Thứ 2 đến CN tuần tiếp theo, deadline và quy định bài đăng hợp lệ) để gửi các nhóm">
+                        <i class="fa-solid fa-bullhorn text-amber-600"></i>
+                        <span>Mẫu Báo Tuần Mới</span>
                     </button>
 
                     <button type="button" onclick="toggleAllGroupCards()" id="toggleAllGroupsBtn" class="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
@@ -8419,6 +8431,59 @@ service cloud.firestore {
         }
 
         // ============================================================================
+        // MẪU THÔNG BÁO ĐẦU TUẦN MỚI GỬI CÁC NHÓM
+        // ============================================================================
+        function generateNewWeekAnnouncementText(isNextWeek = true) {
+            // Lấy Thứ 2 tuần kế tiếp (hoặc tuần đang xem)
+            let mondayStr;
+            if (isNextWeek) {
+                mondayStr = addDaysStr(currentRealtimeMonday, 7);
+            } else {
+                mondayStr = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            }
+            const sundayStr = addDaysStr(mondayStr, 6);
+            const mondayFormatted = formatDateVN(mondayStr);
+            const sundayFormatted = formatDateVN(sundayStr);
+            const targets = getKpiTargetsForWeek(mondayStr);
+
+            return [
+                `📢 THÔNG BÁO BẮT ĐẦU TUẦN MỚI - TIẾN ĐỘ ĐĂNG BÀI`,
+                `🗓️ Thời gian: Thứ 2 (${mondayFormatted}) ➔ Chủ Nhật (${sundayFormatted})`,
+                `⏰ Hạn chót (Deadline): 23:59 Chủ Nhật (${sundayFormatted})`,
+                ``,
+                `🎯 MỤC TIÊU BÀI ĐĂNG (TĂNG TƯƠNG TÁC):`,
+                `• Kênh Idol: Tối thiểu ${targets.idol} bài / tuần`,
+                `• Kênh Nhóm: Tối thiểu ${targets.group} bài / tuần`,
+                ``,
+                `📌 QUY ĐỊNH VỀ CÁC BÀI ĐĂNG HỢP LỆ:`,
+                `✅ BÀI ĐĂNG ĐƯỢC TÍNH:`,
+                `• Ảnh (Photo mode TikTok), clip nhảy, lipsync, ca hát, đời thường`,
+                `• Clip cảm ơn user, clip tri ân user, clip CapCut bắt trend`,
+                `• Bài đăng chúc mừng sinh nhật idol, chia sẻ khoảnh khắc, v.v...`,
+                ``,
+                `❌ BÀI ĐĂNG KHÔNG ĐƯỢC TÍNH:`,
+                `• Poster kỳ thi, poster PK / thi đấu`,
+                `• Poster công bố, giới thiệu idol mới`,
+                `• Các bài đăng hoặc ấn phẩm liên quan đến các cuộc thi / sự kiện`,
+                ``,
+                `👉 Nhờ các bạn MC và Vận hành kiểm tra, theo dõi & nhắc idol lên bài đều đặn ngay từ đầu tuần để giữ tương tác kênh tốt nhất nhé! Chúc cả nhóm tuần mới bùng nổ view & tương tác! 🔥`
+            ].join('\n');
+        }
+
+        function copyNewWeekAnnouncement(isNextWeek = true) {
+            const text = generateNewWeekAnnouncementText(isNextWeek);
+            const mondayStr = isNextWeek ? addDaysStr(currentRealtimeMonday, 7) : (selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday);
+            const sundayStr = addDaysStr(mondayStr, 6);
+            const weekLabel = `${formatDateVN(mondayStr)} - ${formatDateVN(sundayStr)}`;
+
+            copyTextRobustly(text).then(() => {
+                showToast(`📢 Đã copy Mẫu Thông Báo Tuần Mới (${weekLabel})! Dán gửi ngay cho các nhóm.`, 'success');
+            }).catch(() => {
+                window.prompt('Sao chép mẫu thông báo tuần mới:', text);
+            });
+        }
+
+        // ============================================================================
         // LINK RIÊNG TỪNG NHÓM CHO NHÂN SỰ VẬN HÀNH (THỨ 7)
         // ============================================================================
         function copyGroupShareLink(groupName) {
@@ -9440,7 +9505,7 @@ service cloud.firestore {
             initTheme, applyTheme, toggleTheme,
             openGoogleSheetModal, closeGoogleSheetModal, copySheetTemplateHeader, importGoogleSheetData,
             openExportSheetModal, closeExportSheetModal, downloadFullExcelFile, copyTableForGoogleSheets,
-            getWeekDisplayTitle, generateGroupKpiReportText, copyGroupKpiReport, copyCurrentOperatorGroupReport, copyGroupShareLink, initGroupFromUrlQuery,
+            getWeekDisplayTitle, generateGroupKpiReportText, copyGroupKpiReport, copyCurrentOperatorGroupReport, copyGroupShareLink, initGroupFromUrlQuery, generateNewWeekAnnouncementText, copyNewWeekAnnouncement,
             deleteAccountWithConfirm, closeConfirmDeleteAccountModal, executeDeleteAccountConfirmed,
             renderModalAccountsList,
             openSmartPasteConfirmModal, closeSmartPasteConfirmModal, removePendingSmartPasteItem, updatePendingSmartPasteCategory, updatePendingSmartPasteDate, executeSmartPasteConfirm,
