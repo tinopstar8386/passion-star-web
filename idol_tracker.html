@@ -615,7 +615,10 @@
                 const grpLock = document.getElementById('groupPinLockOverlay');
                 if (grp) {
                     // Nếu là link nhóm: ẩn ngay khóa PIN Admin
-                    if (mainLock) mainLock.style.display = 'none';
+                    if (mainLock) {
+                        mainLock.style.display = 'none';
+                        mainLock.classList.add('hidden');
+                    }
                     const cleanId = String(grp).replace(/[^a-zA-Z0-9]/g, '_');
                     const authed = sessionStorage.getItem('ps_group_auth_' + cleanId);
                     if (!authed && grpLock) {
@@ -3977,10 +3980,23 @@ service cloud.firestore {
             }
         }
 
+        // Kiểm tra xem một modal hoặc overlay có thực sự đang mở và hiển thị trên màn hình không
+        function isOverlayVisible(el) {
+            if (!el) return false;
+            if (el.classList.contains('hidden')) return false;
+            if (el.style.display === 'none') return false;
+            try {
+                const style = window.getComputedStyle(el);
+                return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+            } catch (err) {
+                return false;
+            }
+        }
+
         function handleGlobalKeydown(e) {
-            // 0. Nếu màn hình khóa PIN đang hiển thị -> Xử lý riêng phím PIN
+            // 0. Nếu màn hình khóa PIN Admin hoặc khóa mã code nhóm đang thực sự hiển thị trên màn hình
             const pinOverlay = document.getElementById('mainPinLockOverlay');
-            if (pinOverlay && !pinOverlay.classList.contains('hidden')) {
+            if (isOverlayVisible(pinOverlay)) {
                 if (e.key >= '0' && e.key <= '9') {
                     e.preventDefault();
                     handlePinKeyPress(e.key);
@@ -3998,38 +4014,67 @@ service cloud.firestore {
                 return;
             }
 
-            if (e.key === 'Escape') {
-                // 1. Ưu tiên modal xác nhận thêm nhanh (Esc hủy)
-                const smartConfirmModal = document.getElementById('smartPasteConfirmModal');
-                if (smartConfirmModal && !smartConfirmModal.classList.contains('hidden')) {
+            const groupLockOverlay = document.getElementById('groupPinLockOverlay');
+            if (isOverlayVisible(groupLockOverlay)) {
+                if (e.key === 'Escape') {
                     e.preventDefault();
+                    return;
+                }
+            }
+
+            // PHÍM ESCAPE (ESC): THOÁT NHANH MỌI BẢNG CHI TIẾT & HỘP THOẠI
+            if (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27) {
+                e.preventDefault();
+
+                // 1. Ưu tiên modal xác nhận thêm nhanh
+                const smartConfirmModal = document.getElementById('smartPasteConfirmModal');
+                if (isOverlayVisible(smartConfirmModal)) {
                     closeSmartPasteConfirmModal();
                     return;
                 }
 
-                // 2. Modal xác nhận xóa tài khoản (Esc hủy nhanh)
+                // 2. Modal xác nhận xóa tài khoản
                 const confirmDelModal = document.getElementById('confirmDeleteAccountModal');
-                if (confirmDelModal && !confirmDelModal.classList.contains('hidden')) {
-                    e.preventDefault();
+                if (isOverlayVisible(confirmDelModal)) {
                     closeConfirmDeleteAccountModal();
                     return;
                 }
 
-                // 2. Dropdown đang mở
+                // 3. Dropdown menu đang mở
                 const openDropdown = document.querySelector('.modern-dropdown.open');
                 if (openDropdown) {
                     closeAllModernDropdowns();
                     return;
                 }
 
-                // 3. Huỷ xác nhận xóa bài đăng inline
+                // 4. Huỷ xác nhận xóa bài đăng inline
                 if (pendingDeletePostId) {
                     cancelDeletePost(pendingDeletePostId);
                     return;
                 }
 
-                // 4. Đóng các modal hệ thống khác
-                closeIdolDetailModal();
+                // 5. Modal Link & Mã Code riêng từng nhóm
+                const singleShareModal = document.getElementById('groupSingleShareModal');
+                if (isOverlayVisible(singleShareModal)) {
+                    closeGroupShareModal();
+                    return;
+                }
+
+                // 6. Modal Quản lý Mã Code tất cả nhóm
+                const groupCodesModal = document.getElementById('groupCodesModal');
+                if (isOverlayVisible(groupCodesModal)) {
+                    closeGroupCodesModal();
+                    return;
+                }
+
+                // 7. Modal Chi tiết Idol / Thêm bài mới
+                const idolModal = document.getElementById('idolDetailModal');
+                if (isOverlayVisible(idolModal)) {
+                    closeIdolDetailModal();
+                    return;
+                }
+
+                // 8. Đóng tất cả các modal và sidebar hệ thống khác
                 closeGoogleSheetModal();
                 closeExportSheetModal();
                 closeKeyboardShortcutsModal();
@@ -4039,6 +4084,7 @@ service cloud.firestore {
                 if (isSidebarOpen) {
                     toggleKpiSidebar();
                 }
+                unlockBodyScroll();
                 return;
             }
 
