@@ -2667,7 +2667,7 @@ service cloud.firestore {
             { id: 'idol_soren', name: 'Orion - Soren', idolName: 'Soren', handle: '@sorenidol', groupName: 'Orion' },
             { id: 'idol_desnas', name: 'Orion - Desnas', idolName: 'Desnas', handle: '@desnas.here', groupName: 'Orion' },
             { id: 'idol_tarmix', name: 'Orion - TarMix', idolName: 'TarMix', handle: '@tarmix201_', groupName: 'Orion' },
-            { id: 'idol_christ', name: 'Orion - Christ', idolName: 'Christ', handle: '@pstnnkij6i3', groupName: 'Orion' }
+            { id: 'idol_christ', name: 'Orion - Christ', idolName: 'Christ', handle: '@christ._life', subAccount: '@pstnnkij6i3', groupName: 'Orion' }
         ];
 
         const DEFAULT_ACCOUNTS = [
@@ -2688,6 +2688,7 @@ service cloud.firestore {
                 idolName: item.idolName,
                 handle: item.handle,
                 subHandle: item.subHandle || '',
+                subAccount: item.subAccount || '',
                 groupName: item.groupName,
                 url: `https://www.tiktok.com/${item.handle}`,
                 role: 'IDOL',
@@ -4285,6 +4286,10 @@ service cloud.firestore {
                 const subH = String(acc.subAccount).replace(/^@/, '').toLowerCase().trim();
                 if (cleanH === subH) return true;
             }
+            if (acc.subHandle) {
+                const subH = String(acc.subHandle).replace(/^@/, '').toLowerCase().trim();
+                if (cleanH === subH) return true;
+            }
             return false;
         }
 
@@ -4920,6 +4925,12 @@ service cloud.firestore {
                                 acc.idolName = found.idolName;
                                 acc.name = found.name;
                                 acc.order = found.order;
+                                if (!acc.subAccount && found.subAccount) acc.subAccount = found.subAccount;
+                                if (!acc.subHandle && found.subHandle) acc.subHandle = found.subHandle;
+                                if (found.id === 'idol_christ' && (!acc.handle || acc.handle === '@pstnnkij6i3')) {
+                                    acc.handle = found.handle;
+                                    acc.subAccount = found.subAccount;
+                                }
                             }
                             // Tự động dọn sạch các trạng thái lỗi API cũ / Rate Limit lưu thừa trên Firebase
                             const msgStr = String(acc.scanMessage || '').toLowerCase();
@@ -6956,7 +6967,7 @@ service cloud.firestore {
             }
 
             const matchedAcc = handleStr
-                ? accounts.find(a => a.handle.toLowerCase() === handleStr.toLowerCase())
+                ? accounts.find(a => isHandleMatchAccount(handleStr, a))
                 : null;
 
             const dObj = timestampMs ? new Date(timestampMs) : new Date();
@@ -7029,22 +7040,22 @@ service cloud.firestore {
 
             let matchedAcc = handleStr ? accounts.find(a => isHandleMatchAccount(handleStr, a)) : null;
 
-            // 1. CHẶN NGUYÊN TẮC NHÓM RIÊNG (Vấn đề 3 - Hình 4)
-            if (currentOperatorGroup && matchedAcc) {
-                const accGroup = extractCleanGroupName(matchedAcc);
-                if (accGroup.toUpperCase() !== currentOperatorGroup.toUpperCase()) {
+            // 1. CHẶN NGUYÊN TẮC NHÓM RIÊNG (Trang link nhóm riêng: Chỉ cho phép Idol thuộc nhóm đó)
+            if (currentOperatorGroup) {
+                if (!matchedAcc || extractCleanGroupName(matchedAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
                     hintBox.classList.remove('hidden');
                     hintBox.className = 'mt-2 p-3 rounded-xl text-xs border bg-rose-50 border-rose-300 text-rose-900 space-y-1.5';
+                    const groupNotice = matchedAcc ? `Bài đăng này thuộc Kênh <strong>${extractCleanGroupName(matchedAcc)} - ${extractCleanIdolName(matchedAcc)} (${matchedAcc.handle})</strong>.` : `Không tìm thấy Idol nào có ID <strong>${handleStr || 'này'}</strong> thuộc Nhóm ${currentOperatorGroup}.`;
                     hintBox.innerHTML = `
                         <div class="font-extrabold flex items-center gap-1.5 text-rose-700">
                             <i class="fa-solid fa-circle-xmark text-rose-600 text-sm"></i>
-                            <span>⛔ TỪ CHỐI: LINK THUỘC NHÓM ${accGroup.toUpperCase()}!</span>
+                            <span>⛔ TỪ CHỐI: LINK KHÔNG THUỘC NHÓM ${currentOperatorGroup.toUpperCase()}!</span>
                         </div>
                         <div class="text-[11px] text-rose-800">
-                            Bài đăng này thuộc Kênh <strong>${accGroup} - ${extractCleanIdolName(matchedAcc)} (${matchedAcc.handle})</strong>.
+                            ${groupNotice}
                         </div>
                         <div class="text-[11px] text-slate-700 font-semibold">
-                            ⚠️ Bạn đang ở trang vận hành của <strong>Nhóm ${currentOperatorGroup}</strong>. Tuyệt đối không được thêm hoặc sửa bài đăng của nhóm khác!
+                            ⚠️ Bạn đang ở trang vận hành của <strong>Nhóm ${currentOperatorGroup}</strong>. Tất cả bài đăng phải trực thuộc nhóm này!
                         </div>
                     `;
                     const submitBtn = document.getElementById('submitPostBtn');
@@ -7247,8 +7258,8 @@ service cloud.firestore {
                     const linkHandle = extractTikTokHandleFromUrl(link);
                     if (linkHandle) {
                         const linkAcc = accounts.find(a => isHandleMatchAccount(linkHandle, a));
-                        if (linkAcc && extractCleanGroupName(linkAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
-                            showToast(`⛔ Link này thuộc nhóm ${extractCleanGroupName(linkAcc)}. Bạn đang ở nhóm ${currentOperatorGroup}, không được phép thêm hoặc sửa bài của nhóm khác!`, 'error');
+                        if (!linkAcc || extractCleanGroupName(linkAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
+                            showToast(`⛔ Link này ${linkAcc ? ('thuộc nhóm ' + extractCleanGroupName(linkAcc)) : ('với ID ' + linkHandle + ' không thuộc nhóm ' + currentOperatorGroup)}. Bạn đang ở nhóm ${currentOperatorGroup}, tất cả bài đăng phải trực thuộc nhóm này!`, 'error');
                             return;
                         }
                     }
@@ -7285,6 +7296,10 @@ service cloud.firestore {
                 const resolved = await parseAndResolveTikTokLink(link);
                 if (resolved && resolved.videoId) {
                     link = resolved.cleanUrl;
+                    if (currentOperatorGroup && resolved.matchedAcc && extractCleanGroupName(resolved.matchedAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
+                        showToast(`⛔ Link này thuộc nhóm ${extractCleanGroupName(resolved.matchedAcc)}, không thuộc nhóm ${currentOperatorGroup}!`, 'error');
+                        return;
+                    }
                     if (!editingId && status === 'ĐÃ ĐĂNG') {
                         if (resolved.matchedAcc) accountId = resolved.matchedAcc.id;
                         if (resolved.dateStr) date = resolved.dateStr;
@@ -7392,9 +7407,18 @@ service cloud.firestore {
             }
 
             // Chặn nhóm khác nếu đang ở nhóm riêng (Vấn đề 3)
-            if (currentOperatorGroup && acc && extractCleanGroupName(acc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
-                showToast(`⛔ Bạn đang ở trang nhóm ${currentOperatorGroup}, không được sửa bài của nhóm khác!`, 'error');
-                return;
+            if (currentOperatorGroup) {
+                if (acc && extractCleanGroupName(acc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
+                    showToast(`⛔ Bạn đang ở trang nhóm ${currentOperatorGroup}, không được sửa bài của nhóm khác!`, 'error');
+                    return;
+                }
+                if (linkHandle) {
+                    const linkAcc = accounts.find(a => isHandleMatchAccount(linkHandle, a));
+                    if (!linkAcc || extractCleanGroupName(linkAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
+                        showToast(`⛔ Link này ${linkAcc ? ('thuộc nhóm ' + extractCleanGroupName(linkAcc)) : ('với ID ' + linkHandle + ' không thuộc nhóm ' + currentOperatorGroup)}. Bạn đang ở nhóm ${currentOperatorGroup}, tất cả bài đăng phải trực thuộc nhóm này!`, 'error');
+                        return;
+                    }
+                }
             }
 
             const videoId = extractTikTokVideoId(cleanUrl);
@@ -7446,8 +7470,8 @@ service cloud.firestore {
 
             // Chặn sửa bài của nhóm khác nếu đang ở link nhóm riêng (Vấn đề 3)
             const postAcc = getAccountById(post.accountId);
-            if (currentOperatorGroup && postAcc && extractCleanGroupName(postAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
-                showToast(`⛔ Bạn đang ở trang vận hành của nhóm ${currentOperatorGroup}. Không được phép chỉnh sửa bài đăng của nhóm ${extractCleanGroupName(postAcc)}!`, 'error');
+            if (currentOperatorGroup && (!postAcc || extractCleanGroupName(postAcc).toUpperCase() !== currentOperatorGroup.toUpperCase())) {
+                showToast(`⛔ Bạn đang ở trang vận hành của nhóm ${currentOperatorGroup}. Không được phép chỉnh sửa bài đăng của nhóm khác!`, 'error');
                 return;
             }
 
@@ -9325,12 +9349,12 @@ service cloud.firestore {
             if (!container) return;
             container.innerHTML = '';
 
-            const validItems = pendingSmartPasteItems.filter(it => it.isValid && !it.isCrossGroup);
+            const validItems = pendingSmartPasteItems.filter(it => it.isValid && !it.isCrossGroup && it.matchedAcc);
             const crossGroupItems = pendingSmartPasteItems.filter(it => it.isCrossGroup);
 
             if (summaryEl) {
                 if (currentOperatorGroup && crossGroupItems.length > 0) {
-                    summaryEl.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-bold">${validItems.length} bài hợp lệ</span> • <span class="text-rose-600 dark:text-rose-400 font-bold">${crossGroupItems.length} bài bị loại (sai nhóm ${currentOperatorGroup})</span>`;
+                    summaryEl.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-bold">${validItems.length} bài hợp lệ</span> • <span class="text-rose-600 dark:text-rose-400 font-bold">${crossGroupItems.length} bài bị từ chối (không thuộc Nhóm ${currentOperatorGroup})</span>`;
                 } else {
                     summaryEl.innerHTML = `Sẵn sàng lưu: <strong class="text-indigo-600 dark:text-indigo-400 font-extrabold">${validItems.length} bài đăng</strong>`;
                 }
@@ -9338,7 +9362,7 @@ service cloud.firestore {
 
             if (btnConfirm && btnText) {
                 btnConfirm.disabled = validItems.length === 0;
-                btnText.textContent = validItems.length > 0 ? `Xác Nhận Lưu (${validItems.length} Bài)` : 'Không có bài hợp lệ';
+                btnText.textContent = validItems.length > 0 ? `Xác Nhận Lưu (${validItems.length} Bài)` : 'Không có bài hợp lệ để lưu';
             }
 
             if (pendingSmartPasteItems.length === 0) {
@@ -9363,10 +9387,14 @@ service cloud.firestore {
 
                 let errorBadge = '';
                 if (item.isCrossGroup) {
+                    const groupNotice = item.matchedAcc ? `Idol này thuộc <u>Nhóm ${item.groupName}</u>` : `Handle <u>${item.handleStr || 'này'}</u> không thuộc Nhóm ${currentOperatorGroup}`;
                     errorBadge = `
-                        <div class="p-2.5 rounded-xl bg-rose-100/90 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2 mb-3">
-                            <i class="fa-solid fa-circle-xmark text-sm shrink-0"></i>
-                            <span>⛔ BỊ TỪ CHỐI: Idol này thuộc <u>Nhóm ${item.groupName}</u>. Bạn đang ở link nhóm riêng của <u>Nhóm ${currentOperatorGroup}</u> nên bài này sẽ bị loại bỏ!</span>
+                        <div class="p-3 rounded-xl bg-rose-100/90 dark:bg-rose-950/70 border-2 border-rose-400 dark:border-rose-700 text-rose-700 dark:text-rose-200 text-xs font-bold flex items-center gap-2 mb-3">
+                            <i class="fa-solid fa-circle-xmark text-base shrink-0 text-rose-600"></i>
+                            <div>
+                                <div>⛔ BỊ TỪ CHỐI: ${groupNotice}!</div>
+                                <div class="text-[11px] font-normal text-rose-800 dark:text-rose-300 mt-0.5">Bạn đang ở trang nhóm riêng của <strong>Nhóm ${currentOperatorGroup}</strong>. Tất cả bài đăng phải trực thuộc nhóm này! Bài này không được phép thêm hoặc sửa.</div>
+                            </div>
                         </div>
                     `;
                 } else if (!item.matchedAcc) {
@@ -9466,7 +9494,7 @@ service cloud.firestore {
         }
 
         async function executeSmartPasteConfirm() {
-            const validItems = pendingSmartPasteItems.filter(it => it.isValid && !it.isCrossGroup);
+            const validItems = pendingSmartPasteItems.filter(it => it.isValid && !it.isCrossGroup && it.matchedAcc);
             if (validItems.length === 0) {
                 showToast('Không có bài đăng hợp lệ nào để lưu!', 'error');
                 return;
@@ -9483,6 +9511,11 @@ service cloud.firestore {
             for (const item of validItems) {
                 const targetAcc = item.matchedAcc;
                 if (!targetAcc) continue;
+
+                // An toàn tuyệt đối: nếu đang ở trang nhóm riêng, không bao giờ cho lọt nhóm khác
+                if (currentOperatorGroup && extractCleanGroupName(targetAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
+                    continue;
+                }
 
                 const { cleanUrl, videoId, dateStr, timeStr, weekMon, title, category } = item;
 
@@ -9573,7 +9606,6 @@ service cloud.firestore {
 
             const urlRegex = /https?:\/\/[^\s,;"'<>]+/gi;
             const urls = rawText.match(urlRegex) || [rawText];
-            let fallbackAccId = document.getElementById('postAccount') ? document.getElementById('postAccount').value : '';
 
             showToast(`🔍 Đang phân tích chi tiết ${urls.length} link TikTok...`);
 
@@ -9583,20 +9615,37 @@ service cloud.firestore {
                 const resolved = await parseAndResolveTikTokLink(rawUrl);
                 if (!resolved) continue;
 
-                const targetAcc = resolved.matchedAcc || getAccountById(fallbackAccId);
+                // QUY TẮC SỐNG CÒN: Chỉ lấy Idol khớp chính xác với handle của bài đăng TikTok
+                // Tuyệt đối không fallback sang postAccount ở form ngầm!
+                const targetAcc = resolved.matchedAcc;
                 const gName = targetAcc ? extractCleanGroupName(targetAcc) : 'Khác';
                 const iName = targetAcc ? extractCleanIdolName(targetAcc) : (resolved.handleStr || 'Chưa rõ');
 
-                // Kiểm tra xem có bị sai nhóm trong link nhóm riêng không (Vấn đề 2)
-                const isCrossGroup = Boolean(
-                    currentOperatorGroup && targetAcc &&
-                    extractCleanGroupName(targetAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()
-                );
+                // Kiểm tra xem có bị sai nhóm trong link nhóm riêng không
+                // Nếu đang ở trang nhóm riêng (currentOperatorGroup):
+                // BẤT KỲ LINK NÀO không có targetAcc HOẶC targetAcc không thuộc currentOperatorGroup
+                // ĐỀU BỊ COI LÀ SAI NHÓM (isCrossGroup = true) VÀ BỊ TỪ CHỐI (isValid = false)
+                let isCrossGroup = false;
+                let isValid = false;
+
+                if (currentOperatorGroup) {
+                    if (!targetAcc || extractCleanGroupName(targetAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
+                        isCrossGroup = true;
+                        isValid = false;
+                    } else {
+                        isCrossGroup = false;
+                        isValid = true;
+                    }
+                } else {
+                    // Ở trang quản trị chính: chấp nhận mọi nhóm, miễn là nhận diện được tài khoản
+                    isCrossGroup = false;
+                    isValid = Boolean(targetAcc);
+                }
 
                 const defaultCategory = resolved.isPhoto ? 'Ảnh' : 'Clip nhảy';
 
-                // Kiểm tra trùng lặp trên hệ thống (Vấn đề 1)
-                const existingDup = findExistingPostByLinkOrVideoId(targetAcc ? targetAcc.id : '', resolved.videoId, resolved.cleanUrl, '');
+                // Kiểm tra trùng lặp trên hệ thống
+                const existingDup = targetAcc ? findExistingPostByLinkOrVideoId(targetAcc.id, resolved.videoId, resolved.cleanUrl, '') : null;
                 const isDuplicate = Boolean(existingDup);
 
                 resolvedItems.push({
@@ -9614,7 +9663,7 @@ service cloud.firestore {
                     weekMon: resolved.weekMon,
                     title: resolved.title,
                     category: defaultCategory,
-                    isValid: Boolean(targetAcc),
+                    isValid,
                     isCrossGroup,
                     isDuplicate,
                     existingDup
@@ -9626,8 +9675,16 @@ service cloud.firestore {
                 return;
             }
 
-            // Phát cảnh báo nếu phát hiện bài trùng lặp (Vấn đề 1)
-            const dupCount = resolvedItems.filter(it => it.isDuplicate).length;
+            // Phát cảnh báo nếu đang ở trang nhóm riêng mà có link không thuộc nhóm
+            if (currentOperatorGroup) {
+                const crossCount = resolvedItems.filter(it => it.isCrossGroup).length;
+                if (crossCount > 0) {
+                    showToast(`⛔ Phát hiện ${crossCount} link không thuộc Nhóm ${currentOperatorGroup}! Những bài này sẽ bị từ chối và loại bỏ.`, 'error');
+                }
+            }
+
+            // Phát cảnh báo nếu phát hiện bài trùng lặp (chỉ đối với bài hợp lệ cùng nhóm)
+            const dupCount = resolvedItems.filter(it => it.isDuplicate && !it.isCrossGroup).length;
             if (dupCount > 0) {
                 showToast(`⚠️ Phát hiện ${dupCount} bài đăng đã có sẵn trong hệ thống! Vui lòng kiểm tra thông tin.`, 'warning');
             }
