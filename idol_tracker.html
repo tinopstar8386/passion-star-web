@@ -8319,28 +8319,28 @@ service cloud.firestore {
                         const nameLabel = isGroup ? `Tài khoản nhóm ${grpName}` : `Tài khoản ${idolShort}`;
                         const accPosts = getAccountWeeklyPosts(acc.id, activeWeek).filter(p => p.status === 'ĐÃ ĐĂNG');
 
-                        // Định dạng thông tin ID TikTok chính và TikTok phụ
+                        // Định dạng thông tin ID TikTok chính và phụ (gọn gàng trực tiếp @handle, bỏ chữ tiktok:)
                         const rawMain = (acc.handle || '').trim();
                         const mainHandle = rawMain ? (rawMain.startsWith('@') ? rawMain : '@' + rawMain) : '@chua_co';
                         const rawSub = (acc.subHandle || '').trim();
                         const subHandle = rawSub ? (rawSub.startsWith('@') ? rawSub : '@' + rawSub) : '';
-                        const tiktokInfo = subHandle ? `tiktok:${mainHandle}, tiktok phụ: ${subHandle}` : `tiktok:${mainHandle}`;
+                        const handleInfo = subHandle ? `${mainHandle}, phụ: ${subHandle}` : mainHandle;
 
                         const target = prog.targetKpi;
                         if (prog.isDonePosted) {
                             const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : '';
-                            doneAccounts.push(`• ${nameLabel}: ${tiktokInfo}: Đăng đủ (${prog.postedCount}/${target} bài)${datesText}`);
+                            doneAccounts.push(`• ${nameLabel}: ${handleInfo}: Đăng đủ (${prog.postedCount}/${target} bài)${datesText}`);
                             totalCompletedOverall++;
                         } else if (isWeekExpired) {
                             const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : ' (Chưa có bài nào)';
-                            missingAccounts.push(`• 🚨 ${nameLabel}: ${tiktokInfo}: [BỊ PHẠT] Quá hạn tuần, thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài${datesText}`);
+                            missingAccounts.push(`• 🚨 ${nameLabel}: ${handleInfo}: [BỊ PHẠT] Quá hạn tuần, thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài${datesText}`);
                             totalMissingOverall++;
                         } else if (prog.postedCount > 0) {
                             const datesText = accPosts.map(p => formatDateVN(p.date)).join(', ');
-                            missingAccounts.push(`• ${nameLabel}: ${tiktokInfo}: Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài (${datesText})`);
+                            missingAccounts.push(`• ${nameLabel}: ${handleInfo}: Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài (${datesText})`);
                             totalMissingOverall++;
                         } else {
-                            missingAccounts.push(`• ${nameLabel}: ${tiktokInfo}: Thiếu ${target} bài (Chưa có bài nào)`);
+                            missingAccounts.push(`• ${nameLabel}: ${handleInfo}: Thiếu ${target} bài (Chưa có bài nào)`);
                             totalMissingOverall++;
                         }
                     });
