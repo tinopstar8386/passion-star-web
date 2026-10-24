@@ -1924,6 +1924,38 @@
         });
 
 
+        function openModalSmooth(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    modal.classList.add('is-visible');
+                });
+            });
+        }
+        window.openModalSmooth = openModalSmooth;
+
+        function closeModalSmooth(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            modal.classList.remove('is-visible');
+            setTimeout(() => {
+                if (!modal.classList.contains('is-visible')) {
+                    modal.classList.add('hidden');
+                }
+            }, 260);
+        }
+        window.closeModalSmooth = closeModalSmooth;
+
+        function triggerViewSmoothAnimation(containerEl) {
+            if (!containerEl) return;
+            containerEl.classList.remove('view-transition-enter');
+            void containerEl.offsetWidth;
+            containerEl.classList.add('view-transition-enter');
+        }
+        window.triggerViewSmoothAnimation = triggerViewSmoothAnimation;
+
         window.setLanguage = function(lang, showNotification = true) {
             if (lang !== 'vi' && lang !== 'zh') return;
             currentLang = lang;
@@ -4200,13 +4232,23 @@
             }, 100);
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
+        function startMediaApp() {
             loadCachedData();
             syncStaffFromTasks(allTasks);
-            setLanguage(currentLang, false);
-            renderAllViews();
+            if (typeof window.setLanguage === 'function') {
+                window.setLanguage(currentLang, false);
+            }
+            if (typeof window.renderAllViews === 'function') {
+                window.renderAllViews();
+            }
             initFirebaseApp();
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', startMediaApp);
+        } else {
+            startMediaApp();
+        }
     </script>
 
     <!-- MOBILE FLOATING ACTION BUTTON (IPHONE / SMARTPHONE QUICK ADD) -->
