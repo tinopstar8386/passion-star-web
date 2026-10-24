@@ -2926,39 +2926,54 @@ service cloud.firestore {
         // A4. SAO CHÉP CLIPBOARD AN TOÀN ĐA NỀN TẢNG (YÊU CẦU 5)
         // ============================================================================
         function copyTextRobustly(text) {
-            if (navigator.clipboard && window.isSecureContext) {
-                return navigator.clipboard.writeText(text).catch(err => {
-                    console.warn('navigator.clipboard failed, fallback to execCommand:', err);
-                    return fallbackCopyText(text);
-                });
-            } else {
-                return fallbackCopyText(text);
-            }
+            return new Promise((resolve, reject) => {
+                // 1. Thử dùng navigator.clipboard nếu có
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    navigator.clipboard.writeText(text)
+                        .then(() => resolve(true))
+                        .catch(err => {
+                            console.warn('navigator.clipboard.writeText error, fallback to execCommand:', err);
+                            const ok = execCommandCopyFallback(text);
+                            if (ok) resolve(true);
+                            else reject(err);
+                        });
+                    return;
+                }
+
+                // 2. Fallback sang execCommand (hoạt động tốt trên file://, http, webview)
+                const ok = execCommandCopyFallback(text);
+                if (ok) resolve(true);
+                else reject(new Error('execCommand copy failed'));
+            });
         }
 
-        function fallbackCopyText(text) {
-            return new Promise((resolve, reject) => {
-                try {
-                    const textArea = document.createElement("textarea");
-                    textArea.value = text;
-                    textArea.style.position = "fixed";
-                    textArea.style.top = "-9999px";
-                    textArea.style.left = "-9999px";
-                    textArea.style.opacity = "0";
-                    document.body.appendChild(textArea);
-                    textArea.focus();
-                    textArea.select();
-                    const successful = document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    if (successful) {
-                        resolve();
-                    } else {
-                        reject(new Error('execCommand returned false'));
-                    }
-                } catch (err) {
-                    reject(err);
-                }
-            });
+        function execCommandCopyFallback(text) {
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.top = '0';
+                textArea.style.left = '0';
+                textArea.style.width = '2em';
+                textArea.style.height = '2em';
+                textArea.style.padding = '0';
+                textArea.style.border = 'none';
+                textArea.style.outline = 'none';
+                textArea.style.boxShadow = 'none';
+                textArea.style.background = 'transparent';
+                textArea.style.opacity = '0.01';
+                textArea.setAttribute('readonly', '');
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                textArea.setSelectionRange(0, 999999);
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return successful;
+            } catch (err) {
+                console.error('execCommandCopyFallback error:', err);
+                return false;
+            }
         }
 
         function handleGlobalKeydown(e) {
@@ -6881,10 +6896,21 @@ service cloud.firestore {
                 container.appendChild(row);
             });
         }
+        function getWeekDisplayTitle(mondayStr) {
+            if (!mondayStr || mondayStr === 'ALL') return 'Tất cả các tuần';
+            try {
+                const sunStr = addDaysStr(mondayStr, 6);
+                return `Tuần ${formatShortDateVN(mondayStr)} - ${formatShortDateVN(sunStr)}`;
+            } catch (e) {
+                return `Tuần ${mondayStr}`;
+            }
+        }
+
         // ============================================================================
         // COPY BÁO CÁO TIẾN ĐỘ KPI GỬI VẬN HÀNH (THỨ 3)
         // ============================================================================
         function generateGroupKpiReportText(targetGroupName = 'ALL') {
+            try {
             const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
             const weekTitle = getWeekDisplayTitle(activeWeek);
             const allUniqueGroups = getUniqueGroupNames();
@@ -6933,6 +6959,10 @@ service cloud.firestore {
 
             lines.push(`⏰ Hạn chót Chủ Nhật tuần này! Nhờ các bạn vận hành kiểm tra & nhắc idol lên bài đầy đủ.`);
             return lines.join('\n');
+            } catch (err) {
+                console.error('generateGroupKpiReportText error:', err);
+                return `📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI\n(Lỗi tổng hợp dữ liệu: ${err.message})`;
+            }
         }
 
         function copyGroupKpiReport(targetGroupName = 'ALL') {
@@ -7747,7 +7777,7 @@ service cloud.firestore {
             initTheme, applyTheme, toggleTheme,
             openGoogleSheetModal, closeGoogleSheetModal, copySheetTemplateHeader, importGoogleSheetData,
             openExportSheetModal, closeExportSheetModal, downloadFullExcelFile, copyTableForGoogleSheets,
-            generateGroupKpiReportText, copyGroupKpiReport, copyCurrentOperatorGroupReport, copyGroupShareLink, initGroupFromUrlQuery,
+            getWeekDisplayTitle, generateGroupKpiReportText, copyGroupKpiReport, copyCurrentOperatorGroupReport, copyGroupShareLink, initGroupFromUrlQuery,
             deleteAccountWithConfirm, closeConfirmDeleteAccountModal, executeDeleteAccountConfirmed,
             renderModalAccountsList,
             lockBodyScroll, unlockBodyScroll,
