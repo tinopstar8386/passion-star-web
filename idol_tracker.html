@@ -478,7 +478,13 @@
 <body class="text-slate-800 min-h-screen flex flex-col">
 
     <!-- MÀN HÌNH KHÓA BẢO VỆ MÃ PIN CHO LINK CHÍNH (PIN: 0908) -->
-    <div id="mainPinLockOverlay" class="fixed inset-0 z-[100] hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 select-none">
+    <div id="mainPinLockOverlay" class="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 select-none">
+    <script>
+        // Nếu là link nhóm (?group=...) thì ẩn màn hình khóa ngay lập tức, không cần nhập pass
+        if (new URLSearchParams(window.location.search).get('group')) {
+            document.getElementById('mainPinLockOverlay').style.display = 'none';
+        }
+    </script>
         <div id="pinLockCard" class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden">
             <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -2999,25 +3005,21 @@ service cloud.firestore {
         }
 
         function checkAdminAuthRequirement() {
-            // Nếu truy cập bằng link nhóm (?group=...) -> KHÔNG CẦN PASS (Yêu cầu 1 & 2)
+            // Nếu truy cập bằng link nhóm riêng (?group=...) -> KHÔNG CẦN PASS (Vận hành vào thẳng)
             if (isGroupOperatorLink()) {
                 hidePinLockOverlay();
                 return;
             }
 
-            // Link chính -> Kiểm tra session PIN 0908
-            const isAuthed = sessionStorage.getItem('passion_admin_pin_passed') === ADMIN_SECURITY_PIN;
-            if (!isAuthed) {
-                showPinLockOverlay();
-            } else {
-                hidePinLockOverlay();
-            }
+            // Link chính -> LUÔN YÊU CẦU NHẬP MÃ PIN 0908 KHI TRUY CẬP HOẶC TẢI LẠI TRANG
+            showPinLockOverlay();
         }
 
         function showPinLockOverlay() {
             const overlay = document.getElementById('mainPinLockOverlay');
             if (!overlay) return;
             overlay.classList.remove('hidden');
+            overlay.style.display = 'flex';
             lockBodyScroll();
             currentPinInput = '';
             updatePinDotsUI();
@@ -3030,12 +3032,14 @@ service cloud.firestore {
 
         function hidePinLockOverlay() {
             const overlay = document.getElementById('mainPinLockOverlay');
-            if (overlay) overlay.classList.add('hidden');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.style.display = 'none';
+            }
             unlockBodyScroll();
         }
 
         function lockAdminSessionManually() {
-            sessionStorage.removeItem('passion_admin_pin_passed');
             showPinLockOverlay();
             showToast('🔒 Đã khóa bảng điều khiển quản trị.', 'info');
         }
@@ -3099,8 +3103,6 @@ service cloud.firestore {
                     const dot = document.getElementById(`pinDot${i}`);
                     if (dot) dot.className = 'w-4 h-4 rounded-full border-2 border-emerald-400 bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)] scale-110';
                 }
-
-                sessionStorage.setItem('passion_admin_pin_passed', ADMIN_SECURITY_PIN);
 
                 setTimeout(() => {
                     hidePinLockOverlay();
