@@ -1045,9 +1045,9 @@
         </section>
 
         <!-- WEEKLY CONTROL BAR: CỐ ĐỊNH CHIỀU CAO, KHÔNG GIỰT, KHÔNG XUỐNG DÒNG (THỨ 6 & THỨ 7) -->
-        <section id="weeklyControlSection" class="bg-white dark:bg-slate-900 rounded-2xl px-3.5 sm:px-5 py-3 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+        <section id="weeklyControlSection" class="bg-white dark:bg-slate-900 rounded-2xl px-3.5 sm:px-5 py-3 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <!-- Left: Icon & Week Info (Không bị đè chữ, rõ ràng ngày tháng) -->
-            <div class="flex items-center gap-3 min-w-0">
+            <div class="flex items-center gap-3 min-w-0 shrink-0">
                 <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg font-bold shrink-0 border border-indigo-100 dark:border-indigo-900/60">
                     <i class="fa-solid fa-calendar-week"></i>
                 </div>
@@ -1064,8 +1064,8 @@
                 </div>
             </div>
 
-            <!-- Right: Stepper Bar, Hôm Nay, KPI Target & Báo Cáo Thiếu (Sắp xếp thẳng hàng, ngăn nắp) -->
-            <div class="flex flex-wrap items-center gap-2">
+            <!-- Right: Stepper Bar, Hôm Nay, KPI Target (Thu gọn & đẩy sát góc phải) -->
+            <div class="flex flex-wrap items-center gap-2 lg:justify-end lg:ml-auto shrink-0">
                 <!-- Stepper Chọn Tuần -->
                 <div class="inline-flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700">
                     <button onclick="shiftSelectedWeek(-7)" class="h-8 w-8 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition flex items-center justify-center shrink-0 active:scale-95 cursor-pointer" title="Tuần trước">
@@ -1092,11 +1092,11 @@
                     Hôm Nay
                 </button>
 
-                <!-- KHU VỰC TỰ ĐIỀN KPI MỤC TIÊU TUẦN NÀY (Nhỏ gọn, tinh tế) -->
+                <!-- KHU VỰC TỰ ĐIỀN KPI MỤC TIÊU TUẦN NÀY (Nhỏ gọn, tinh tế, đẩy sát bên phải) -->
                 <div class="inline-flex items-center gap-1.5 p-1 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-xs shrink-0 shadow-2xs">
                     <span class="text-[11px] font-black uppercase tracking-wider text-pink-600 dark:text-pink-400 flex items-center gap-1">
                         <i class="fa-solid fa-bullseye text-[10px]"></i>
-                        <span class="hidden md:inline">Mục Tiêu:</span>
+                        <span>Mục Tiêu:</span>
                     </span>
 
                     <div class="flex items-center gap-1">
@@ -1122,12 +1122,6 @@
                         <span>Lưu</span>
                     </button>
                 </div>
-
-                <!-- Báo Cáo Thiếu -->
-                <button onclick="openLastWeekReportModal()" class="h-8 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0">
-                    <i class="fa-solid fa-bullhorn text-amber-600 text-xs"></i>
-                    <span>Báo Cáo Thiếu</span>
-                </button>
             </div>
         </section>
 
@@ -1259,6 +1253,13 @@
             <div id="dirActionToolbar" class="flex flex-wrap items-center justify-between gap-2.5 pt-3">
                 <!-- Cụm 1: Báo Cáo & Xuất Dữ Liệu (Grouped Segmented Pill) -->
                 <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+                    <button type="button" onclick="openLastWeekReportModal()"
+                        class="h-7 px-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-xs font-extrabold transition flex items-center gap-1.5 cursor-pointer"
+                        title="Xem danh sách kênh chưa đủ bài trong tuần">
+                        <i class="fa-solid fa-bullhorn text-amber-600"></i>
+                        <span>Báo Cáo Thiếu</span>
+                    </button>
+                    <span class="text-slate-300 dark:text-slate-600 font-light">•</span>
                     <button type="button" onclick="openExportSheetModal()"
                         class="h-7 px-2.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
                         title="Xuất dữ liệu cho vận hành (Google Sheet / Excel)">
@@ -4813,6 +4814,7 @@ service cloud.firestore {
             }
             renderLastWeekReportContent(targetMonday);
             modal.classList.remove('hidden');
+            lockBodyScroll();
         }
 
         function closeLastWeekReportModal() {
