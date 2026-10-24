@@ -3705,6 +3705,12 @@ service cloud.firestore {
             const targetWeek = weekMondayStr === 'ALL' ? currentRealtimeMonday : weekMondayStr;
             const weekPosts = getPostsForWeek(targetWeek);
             const accWeekPosts = weekPosts.filter(p => p.accountId === accId);
+            // Sắp xếp bài đăng theo thứ tự thời gian cũ tới mới nhất (cũ là #1, mới là #2 - Hình 1)
+            accWeekPosts.sort((a, b) => {
+                const dateCmp = (a.date || '').localeCompare(b.date || '');
+                if (dateCmp !== 0) return dateCmp;
+                return (a.createdAt || 0) - (b.createdAt || 0);
+            });
 
             // Chống đếm trùng tuyệt đối cho từng tài khoản trong tuần
             const uniquePosted = [];
@@ -3743,7 +3749,14 @@ service cloud.firestore {
         function getAccountWeeklyPosts(accId, weekMondayStr) {
             const targetWeek = weekMondayStr === 'ALL' ? currentRealtimeMonday : weekMondayStr;
             const weekPosts = getPostsForWeek(targetWeek);
-            return weekPosts.filter(p => p.accountId === accId);
+            const userPosts = weekPosts.filter(p => p.accountId === accId);
+            // Sắp xếp bài đăng theo thứ tự thời gian cũ tới mới nhất (cũ là #1, mới là #2 - Hình 1)
+            userPosts.sort((a, b) => {
+                const dateCmp = (a.date || '').localeCompare(b.date || '');
+                if (dateCmp !== 0) return dateCmp;
+                return (a.createdAt || 0) - (b.createdAt || 0);
+            });
+            return userPosts;
         }
 
         function getMissingAccountsForWeek(weekMondayStr, mode = 'POSTED') {
@@ -4762,8 +4775,14 @@ service cloud.firestore {
                     if (accPosts.length === 0) {
                         postsListHtml = `<div class="text-[11px] text-slate-400 italic py-1">Chưa có bài đăng nào trong tuần này</div>`;
                     } else {
+                        // Sắp xếp bài đăng theo thứ tự thời gian cũ tới mới nhất (cũ là ở số 1, mới ở số 2 - Hình 1)
+                        const sortedPosts = [...accPosts].sort((a, b) => {
+                            const dateCmp = (a.date || '').localeCompare(b.date || '');
+                            if (dateCmp !== 0) return dateCmp;
+                            return (a.createdAt || 0) - (b.createdAt || 0);
+                        });
                         postsListHtml = `<div class="space-y-1.5 pt-1">
-                            ${accPosts.slice(0, 2).map((p, idx) => `
+                            ${sortedPosts.slice(0, 2).map((p, idx) => `
                                 <div class="flex items-center justify-between text-[11px] bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
                                     <span class="font-bold truncate max-w-[140px] text-slate-700 dark:text-slate-300">
                                         #${idx + 1}: ${formatDateVN(p.date)} • ${p.category}
@@ -4773,7 +4792,7 @@ service cloud.firestore {
                                     </span>
                                 </div>
                             `).join('')}
-                            ${accPosts.length > 2 ? `<div class="text-[10px] text-slate-400 font-bold">+ ${accPosts.length - 2} bài khác...</div>` : ''}
+                            ${sortedPosts.length > 2 ? `<div class="text-[10px] text-slate-400 font-bold">+ ${sortedPosts.length - 2} bài khác...</div>` : ''}
                         </div>`;
                     }
 
@@ -4875,35 +4894,82 @@ service cloud.firestore {
                     `;
                 }).join('');
 
+                // Kiểm tra xem nhóm đã hoàn thành 100% KPI toàn bộ thành viên chưa (Hình 2)
+                const isGroupFullyDone = totalMembers > 0 && doneMembers === totalMembers;
+                const missingMembers = Math.max(0, totalMembers - doneMembers);
+
+                // Tùy biến kiểu dáng nổi bật nếu nhóm đã hoàn thành 100% KPI (Hình 2)
+                const groupCardClass = isGroupFullyDone
+                    ? 'rounded-2xl border-2 border-emerald-400 dark:border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20 overflow-hidden shadow-md ring-2 ring-emerald-400/20'
+                    : 'rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs';
+
+                const groupHeaderClass = isGroupFullyDone
+                    ? 'p-4 bg-gradient-to-r from-emerald-100/90 via-teal-50/90 to-emerald-50/85 dark:from-emerald-950/80 dark:via-teal-950/50 dark:to-emerald-950/80 hover:from-emerald-100 hover:to-emerald-100/95 dark:hover:from-emerald-900/60 dark:hover:to-emerald-900/50 transition flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-emerald-200/80 dark:border-emerald-800/80 cursor-pointer'
+                    : 'p-4 bg-slate-50/80 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 cursor-pointer';
+
+                const groupIconHtml = isGroupFullyDone
+                    ? `<div class="relative shrink-0">
+                           <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold shadow-xs border border-emerald-300 dark:border-emerald-700 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">
+                               ${theme.icon}
+                           </div>
+                           <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white text-[9px] flex items-center justify-center font-black shadow-xs ring-2 ring-white dark:ring-slate-900" title="Nhóm hoàn thành 100%">✓</span>
+                       </div>`
+                    : `<div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 shadow-xs border ${theme.badgeBg}">
+                           ${theme.icon}
+                       </div>`;
+
+                const groupStatusBadgeHtml = isGroupFullyDone
+                    ? `<span class="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500 text-white shadow-xs flex items-center gap-1 shrink-0 animate-pulse">
+                           <i class="fa-solid fa-crown text-[9px] text-amber-200"></i>
+                           <span>🏆 ĐÃ XONG 100% KPI</span>
+                       </span>`
+                    : `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1 shrink-0">
+                           <i class="fa-solid fa-hourglass-half text-[9px]"></i>
+                           <span>Còn thiếu ${missingMembers} kênh</span>
+                       </span>`;
+
+                const groupProgressTextHtml = isGroupFullyDone
+                    ? `Tiến độ tuần: <strong class="text-emerald-700 dark:text-emerald-300 font-black">🎉 ĐÃ HOÀN THÀNH 100% (${doneMembers}/${totalMembers} kênh đủ KPI)</strong> • Đã đăng: <strong class="text-emerald-800 dark:text-emerald-200 font-extrabold">${totalPostsInGrp} bài</strong>`
+                    : `Tiến độ tuần: <strong class="text-slate-800 dark:text-slate-200 font-bold">${doneMembers}/${totalMembers} kênh (${percentDone}%)</strong> • <span class="text-rose-500 font-bold">Chưa đạt: ${missingMembers} kênh</span> • Đã đăng: <strong>${totalPostsInGrp} bài</strong>`;
+
+                const groupProgressBarHtml = isGroupFullyDone
+                    ? `<div class="w-28 bg-emerald-200 dark:bg-emerald-950/80 h-2.5 rounded-full overflow-hidden hidden xl:block mr-1">
+                           <div class="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 h-full rounded-full transition-all duration-300 shadow-xs" style="width: 100%"></div>
+                       </div>`
+                    : `<div class="w-28 bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden hidden xl:block mr-1">
+                           <div class="bg-gradient-to-r from-amber-500 to-emerald-500 h-full rounded-full transition-all duration-300" style="width: ${percentDone}%"></div>
+                       </div>`;
+
+                const groupToggleBtnClass = isGroupFullyDone
+                    ? 'h-8 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 shadow-2xs transition cursor-pointer'
+                    : 'h-8 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shadow-2xs hover:border-pink-300 transition cursor-pointer';
+
                 return `
-                    <div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                    <div class="${groupCardClass}">
                         <!-- Group Hub Header -->
-                        <div class="p-4 bg-slate-50/80 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 cursor-pointer"
+                        <div class="${groupHeaderClass}"
                              onclick="toggleGroupCardExpand('${grpName}')">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg font-bold shrink-0 shadow-xs border ${theme.badgeBg}">
-                                    ${theme.icon}
-                                </div>
+                                ${groupIconHtml}
                                 <div>
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
+                                        <h3 class="text-sm sm:text-base font-extrabold ${isGroupFullyDone ? 'text-emerald-950 dark:text-emerald-100' : 'text-slate-900 dark:text-white'}">
                                             NHÓM ${grpName.toUpperCase()}
                                         </h3>
                                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${theme.badgeBg} border">
                                             ${grpAccounts.length} Kênh (1 Nhóm + ${grpAccounts.length - 1} Idol)
                                         </span>
+                                        ${groupStatusBadgeHtml}
                                     </div>
-                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        Tiến độ tuần: <strong class="text-emerald-600 dark:text-emerald-400">${doneMembers}/${totalMembers} kênh đủ KPI (${percentDone}%)</strong> • Đã đăng: <strong>${totalPostsInGrp} bài</strong>
+                                    <p class="text-xs mt-0.5">
+                                        ${groupProgressTextHtml}
                                     </p>
                                 </div>
                             </div>
 
                             <!-- Cụm nút Thao tác trên Header Nhóm (Ẩn các nút admin khi operator-mode - THỨ 5) -->
                             <div class="flex flex-wrap items-center gap-2 self-start lg:self-auto" onclick="event.stopPropagation()">
-                                <div class="w-28 bg-slate-200 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden hidden xl:block mr-1">
-                                    <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-300" style="width: ${percentDone}%"></div>
-                                </div>
+                                ${groupProgressBarHtml}
 
                                 <!-- Nút Báo Cáo Nhóm -->
                                 <button type="button" onclick="copyGroupKpiReport('${grpName}')"
@@ -4931,7 +4997,7 @@ service cloud.firestore {
 
                                 <!-- Nút Toggle Accordion -->
                                 <button type="button" onclick="toggleGroupCardExpand('${grpName}')"
-                                    class="h-8 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 shadow-2xs hover:border-pink-300 transition cursor-pointer">
+                                    class="${groupToggleBtnClass}">
                                     <span id="group-btn-text-${cleanGrpId}">${isExpanded ? 'Thu gọn' : `Xem ${filteredMembers.length} thành viên`}</span>
                                     <i id="group-chevron-${cleanGrpId}" class="fa-solid fa-chevron-down transition-transform duration-300 ${isExpanded ? 'rotate-180 text-pink-500' : ''}"></i>
                                 </button>
@@ -6945,17 +7011,31 @@ service cloud.firestore {
                         ? `<tr><td colspan="5" class="py-6 text-center text-xs text-slate-400">Không có kênh nào của nhóm ${gName} khớp bộ lọc.</td></tr>`
                         : grpAccounts.map(a => buildAccountUnifiedRowHtml(a, weekPosts)).join('');
 
+                    const totalGrpAccs = grpAccounts.length;
+                    const doneGrpAccs = grpAccounts.filter(a => getAccountWeeklyProgress(a.id, selectedWeekMonday).isDonePosted).length;
+                    const isGrpDone = totalGrpAccs > 0 && doneGrpAccs === totalGrpAccs;
+                    const missingGrpAccs = Math.max(0, totalGrpAccs - doneGrpAccs);
+
                     return `
-                        <div class="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                        <div class="rounded-2xl border ${isGrpDone ? 'border-2 border-emerald-400 dark:border-emerald-500 bg-emerald-50/15' : 'border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900'} overflow-hidden shadow-xs">
                             <button type="button" onclick="toggleTableGroupAccordion('${gName}')"
-                                class="w-full px-4 py-3 bg-slate-50/80 dark:bg-slate-800/60 hover:bg-slate-100/80 dark:hover:bg-slate-800 transition flex items-center justify-between gap-3 border-b ${isExpanded ? 'border-slate-200/80 dark:border-slate-800' : 'border-transparent'}">
-                                <div class="flex items-center gap-2.5">
+                                class="w-full px-4 py-3 ${isGrpDone ? 'bg-emerald-50/80 hover:bg-emerald-100/80 dark:bg-emerald-950/60 dark:hover:bg-emerald-950/80' : 'bg-slate-50/80 dark:bg-slate-800/60 hover:bg-slate-100/80 dark:hover:bg-slate-800'} transition flex items-center justify-between gap-3 border-b ${isExpanded ? (isGrpDone ? 'border-emerald-200/80 dark:border-emerald-800' : 'border-slate-200/80 dark:border-slate-800') : 'border-transparent'}">
+                                <div class="flex items-center gap-2.5 flex-wrap">
                                     <span class="text-xs font-extrabold px-2.5 py-1 rounded-lg border ${theme.badgeBg}">
                                         ${theme.icon} NHÓM ${gName.toUpperCase()}
                                     </span>
                                     <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                        Tổng: <strong>${grpAccounts.length} kênh</strong> • <strong>${grpPosts.length} bài</strong> (<span class="text-emerald-600 dark:text-emerald-400">${postedInGrp} đã đăng</span>)
+                                        Tổng: <strong>${grpAccounts.length} kênh</strong> • <strong>${grpPosts.length} bài</strong> (<span class="text-emerald-600 dark:text-emerald-400 font-extrabold">${postedInGrp} đã đăng</span>)
                                     </span>
+                                    ${isGrpDone ? `
+                                        <span class="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-500 text-white shadow-xs">
+                                            🏆 XONG 100% KPI
+                                        </span>
+                                    ` : `
+                                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                            ⏳ Thiếu ${missingGrpAccs} kênh
+                                        </span>
+                                    `}
                                 </div>
                                 <div class="flex items-center gap-2 text-xs font-bold text-slate-500">
                                     <span>${isExpanded ? 'Thu gọn' : 'Mở xem'}</span>
