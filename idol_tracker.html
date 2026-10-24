@@ -8274,79 +8274,124 @@ service cloud.firestore {
         // ============================================================================
         function generateGroupKpiReportText(targetGroupName = 'ALL') {
             try {
-            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
-            const weekTitle = getWeekDisplayTitle(activeWeek);
-            const allUniqueGroups = getUniqueGroupNames();
+                const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+                const weekTitle = getWeekDisplayTitle(activeWeek);
+                const allUniqueGroups = getUniqueGroupNames();
 
-            const GROUP_NAMES = (targetGroupName && targetGroupName !== 'ALL')
-                ? [targetGroupName]
-                : allUniqueGroups;
+                const GROUP_NAMES = (targetGroupName && targetGroupName !== 'ALL')
+                    ? [targetGroupName]
+                    : allUniqueGroups;
 
-            const targets = getKpiTargetsForWeek(activeWeek);
-            const isWeekExpired = isWeekOverdueOrExpired(activeWeek);
-            const sundayDateStr = addDaysStr(activeWeek, 6);
-            const sundayFormatted = formatDateVN(sundayDateStr);
+                const targets = getKpiTargetsForWeek(activeWeek);
+                const isWeekExpired = isWeekOverdueOrExpired(activeWeek);
+                const sundayDateStr = addDaysStr(activeWeek, 6);
+                const sundayFormatted = formatDateVN(sundayDateStr);
 
-            let lines = [];
-            if (isWeekExpired) {
-                lines.push(`🚨 BÁO CÁO TỔNG KẾT & DANH SÁCH BỊ PHẠT DO QUÁ HẠN - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
-            } else {
-                lines.push(`📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
-            }
-            lines.push(`(KPI tuần: Idol ${targets.idol} bài • Kênh nhóm ${targets.group} bài)`);
-            lines.push('');
-
-            GROUP_NAMES.forEach(grpName => {
-                let grpAccounts = accounts.filter(acc => extractCleanGroupName(acc).toUpperCase() === grpName.toUpperCase());
-                grpAccounts.sort((a, b) => {
-                    if (a.role === 'GROUP' && b.role !== 'GROUP') return -1;
-                    if (a.role !== 'GROUP' && b.role === 'GROUP') return 1;
-                    return (a.order || 99) - (b.order || 99);
-                });
-
-                if (grpAccounts.length === 0) return;
-
-                lines.push(`════════════════════════════════════`);
-                lines.push(`📌 [NHÓM ${grpName.toUpperCase()}]`);
-                lines.push(`────────────────────────────────────`);
-
-                grpAccounts.forEach(acc => {
-                    const prog = getAccountWeeklyProgress(acc.id, activeWeek);
-                    const isGroup = acc.role === 'GROUP';
-                    const idolShort = extractCleanIdolName(acc);
-                    const nameLabel = isGroup ? `Tài khoản nhóm ${grpName}` : `Tài khoản ${idolShort}`;
-                    const accPosts = getAccountWeeklyPosts(acc.id, activeWeek).filter(p => p.status === 'ĐÃ ĐĂNG');
-
-                    // Định dạng thông tin ID TikTok chính và TikTok phụ
-                    const rawMain = (acc.handle || '').trim();
-                    const mainHandle = rawMain ? (rawMain.startsWith('@') ? rawMain : '@' + rawMain) : '@chua_co';
-                    const rawSub = (acc.subHandle || '').trim();
-                    const subHandle = rawSub ? (rawSub.startsWith('@') ? rawSub : '@' + rawSub) : '';
-                    const tiktokInfo = subHandle ? `tiktok:${mainHandle}, tiktok phụ: ${subHandle}` : `tiktok:${mainHandle}`;
-
-                    const target = prog.targetKpi;
-                    if (prog.isDonePosted) {
-                        const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : '';
-                        lines.push(`• ${nameLabel}: ${tiktokInfo}: Đăng đủ (${prog.postedCount}/${target} bài)${datesText}`);
-                    } else if (isWeekExpired) {
-                        const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : ' (Chưa có bài nào)';
-                        lines.push(`• 🚨 ${nameLabel}: ${tiktokInfo}: [BỊ PHẠT] Quá hạn tuần, thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài${datesText}`);
-                    } else if (prog.postedCount > 0) {
-                        const datesText = accPosts.map(p => formatDateVN(p.date)).join(', ');
-                        lines.push(`• ${nameLabel}: ${tiktokInfo}: Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài (${datesText})`);
-                    } else {
-                        lines.push(`• ${nameLabel}: ${tiktokInfo}: Thiếu ${target} bài (Chưa có bài nào)`);
-                    }
-                });
+                let lines = [];
+                if (isWeekExpired) {
+                    lines.push(`🚨 BÁO CÁO TỔNG KẾT & DANH SÁCH BỊ PHẠT DO QUÁ HẠN - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+                } else {
+                    lines.push(`📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+                }
+                lines.push(`(KPI tuần: Idol ${targets.idol} bài • Kênh nhóm ${targets.group} bài)`);
                 lines.push('');
-            });
 
-            if (isWeekExpired) {
-                lines.push(`🚨 TUẦN ĐÃ KẾT THÚC (${sundayFormatted}): Các tài khoản chưa hoàn thành KPI trên bị tính PHẠT theo quy định.`);
-            } else {
-                lines.push(`⏰ Hạn chót Chủ Nhật tuần này! (${sundayFormatted}) Nhờ các bạn MC hoặc vận hành kiểm tra & nhắc idol lên bài đầy đủ.`);
-            }
-            return lines.join('\n');
+                let totalMissingOverall = 0;
+                let totalCompletedOverall = 0;
+
+                GROUP_NAMES.forEach(grpName => {
+                    let grpAccounts = accounts.filter(acc => extractCleanGroupName(acc).toUpperCase() === grpName.toUpperCase());
+                    grpAccounts.sort((a, b) => {
+                        if (a.role === 'GROUP' && b.role !== 'GROUP') return -1;
+                        if (a.role !== 'GROUP' && b.role === 'GROUP') return 1;
+                        return (a.order || 99) - (b.order || 99);
+                    });
+
+                    if (grpAccounts.length === 0) return;
+
+                    const missingAccounts = [];
+                    const doneAccounts = [];
+
+                    grpAccounts.forEach(acc => {
+                        const prog = getAccountWeeklyProgress(acc.id, activeWeek);
+                        const isGroup = acc.role === 'GROUP';
+                        const idolShort = extractCleanIdolName(acc);
+                        const nameLabel = isGroup ? `Tài khoản nhóm ${grpName}` : `Tài khoản ${idolShort}`;
+                        const accPosts = getAccountWeeklyPosts(acc.id, activeWeek).filter(p => p.status === 'ĐÃ ĐĂNG');
+
+                        // Định dạng thông tin ID TikTok chính và TikTok phụ
+                        const rawMain = (acc.handle || '').trim();
+                        const mainHandle = rawMain ? (rawMain.startsWith('@') ? rawMain : '@' + rawMain) : '@chua_co';
+                        const rawSub = (acc.subHandle || '').trim();
+                        const subHandle = rawSub ? (rawSub.startsWith('@') ? rawSub : '@' + rawSub) : '';
+                        const tiktokInfo = subHandle ? `tiktok:${mainHandle}, tiktok phụ: ${subHandle}` : `tiktok:${mainHandle}`;
+
+                        const target = prog.targetKpi;
+                        if (prog.isDonePosted) {
+                            const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : '';
+                            doneAccounts.push(`• ${nameLabel}: ${tiktokInfo}: Đăng đủ (${prog.postedCount}/${target} bài)${datesText}`);
+                            totalCompletedOverall++;
+                        } else if (isWeekExpired) {
+                            const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : ' (Chưa có bài nào)';
+                            missingAccounts.push(`• 🚨 ${nameLabel}: ${tiktokInfo}: [BỊ PHẠT] Quá hạn tuần, thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài${datesText}`);
+                            totalMissingOverall++;
+                        } else if (prog.postedCount > 0) {
+                            const datesText = accPosts.map(p => formatDateVN(p.date)).join(', ');
+                            missingAccounts.push(`• ${nameLabel}: ${tiktokInfo}: Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài (${datesText})`);
+                            totalMissingOverall++;
+                        } else {
+                            missingAccounts.push(`• ${nameLabel}: ${tiktokInfo}: Thiếu ${target} bài (Chưa có bài nào)`);
+                            totalMissingOverall++;
+                        }
+                    });
+
+                    lines.push(`════════════════════════════════════`);
+                    if (missingAccounts.length === 0) {
+                        lines.push(`📌 [NHÓM ${grpName.toUpperCase()}] - 🎉 HOÀN THÀNH 100% KPI (${doneAccounts.length}/${grpAccounts.length} kênh)`);
+                    } else {
+                        lines.push(`📌 [NHÓM ${grpName.toUpperCase()}] - Tiến độ: ${doneAccounts.length}/${grpAccounts.length} kênh đạt KPI`);
+                    }
+                    lines.push(`────────────────────────────────────`);
+
+                    // 1. PHẦN CHƯA ĐỦ BÀI: ĐƯA LÊN ĐẦU TIÊN ĐỂ VẬN HÀNH/MC NẮM BẮT VÀ NHẮC NHỞ NGAY
+                    if (missingAccounts.length > 0) {
+                        const missingTitle = isWeekExpired
+                            ? `🚨 DANH SÁCH BỊ PHẠT DO QUÁ HẠN (${missingAccounts.length} kênh):`
+                            : `🔴 CHƯA ĐỦ BÀI (CẦN NHẮC NHỞ - ${missingAccounts.length} kênh):`;
+                        lines.push(missingTitle);
+                        missingAccounts.forEach(line => lines.push(line));
+                        lines.push('');
+                    }
+
+                    // 2. PHẦN ĐÃ ĐĂNG ĐỦ BÀI
+                    if (doneAccounts.length > 0) {
+                        lines.push(`🟢 ĐÃ ĐĂNG ĐỦ KPI (${doneAccounts.length} kênh):`);
+                        doneAccounts.forEach(line => lines.push(line));
+                    }
+
+                    // 3. Nếu là copy riêng cho 1 nhóm và nhóm này đã xong 100%
+                    if (GROUP_NAMES.length === 1 && missingAccounts.length === 0) {
+                        lines.push('');
+                        lines.push(`🎉 Nhóm đã hoàn thành xuất sắc 100% KPI tuần này! Cảm ơn các bạn MC và Idol đã lên bài đầy đủ.`);
+                    }
+
+                    lines.push('');
+                });
+
+                // PHẦN KẾT BÁO CÁO:
+                // Nếu TẤT CẢ các tài khoản trong phạm vi báo cáo đều đã đăng đủ bài (không còn ai thiếu):
+                // -> KHÔNG NHẮC HẠN CHÓT VÀ KHÔNG NHẮC NHỞ LÊN BÀI NỮA
+                if (totalMissingOverall === 0) {
+                    if (GROUP_NAMES.length > 1) {
+                        lines.push(`🎉 TẤT CẢ ${GROUP_NAMES.length} NHÓM ĐÃ HOÀN THÀNH 100% KPI TUẦN NÀY! Cảm ơn toàn thể MC, Vận hành và Idol.`);
+                    }
+                } else if (isWeekExpired) {
+                    lines.push(`🚨 TUẦN ĐÃ KẾT THÚC (${sundayFormatted}): Các tài khoản chưa hoàn thành KPI trên bị tính PHẠT theo quy định.`);
+                } else {
+                    lines.push(`⏰ Hạn chót Chủ Nhật tuần này! (${sundayFormatted}) Nhờ các bạn MC hoặc vận hành kiểm tra & nhắc idol lên bài đầy đủ.`);
+                }
+
+                return lines.join('\n');
             } catch (err) {
                 console.error('generateGroupKpiReportText error:', err);
                 return `📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI\n(Lỗi tổng hợp dữ liệu: ${err.message})`;
