@@ -3701,6 +3701,19 @@ service cloud.firestore {
             }
         }
 
+        // Kiểm tra xem một tuần đã kết thúc/quá hạn deadline Chủ Nhật chưa (Tính phạt báo đỏ)
+        function isWeekOverdueOrExpired(weekMondayStr) {
+            if (!weekMondayStr || weekMondayStr === 'ALL') return false;
+            if (weekMondayStr < currentRealtimeMonday) return true;
+            if (weekMondayStr === currentRealtimeMonday) {
+                const now = new Date();
+                const sundayStr = addDaysStr(currentRealtimeMonday, 6);
+                const sundayEnd = new Date(sundayStr + 'T23:59:59');
+                return now > sundayEnd;
+            }
+            return false;
+        }
+
         function getAccountWeeklyProgress(accId, weekMondayStr) {
             const targetWeek = weekMondayStr === 'ALL' ? currentRealtimeMonday : weekMondayStr;
             const weekPosts = getPostsForWeek(targetWeek);
@@ -3732,6 +3745,8 @@ service cloud.firestore {
             const totalCount = postedCount + scheduledCount;
 
             const targetKpi = getAccountTargetKpi(accId, targetWeek);
+            const isWeekExpired = isWeekOverdueOrExpired(targetWeek);
+            const isPenalized = isWeekExpired && (postedCount < targetKpi);
 
             return {
                 targetKpi,
@@ -3742,6 +3757,8 @@ service cloud.firestore {
                 isDoneTotal: totalCount >= targetKpi,
                 missingPosted: Math.max(0, targetKpi - postedCount),
                 missingTotal: Math.max(0, targetKpi - totalCount),
+                isWeekExpired,
+                isPenalized,
                 posts: accWeekPosts
             };
         }
@@ -3905,11 +3922,16 @@ service cloud.firestore {
             const floatBadge = document.getElementById('floatingMissingCount');
             const sidebarCountText = document.getElementById('sidebarMissingCountText');
 
+            const isWeekExpired = isWeekOverdueOrExpired(activeWeek);
             if (headerBadge) headerBadge.textContent = missingPostedCount;
             const mobileHdrBadge = document.getElementById('mobileHeaderMissingBadge');
             if (mobileHdrBadge) mobileHdrBadge.textContent = missingPostedCount;
             if (floatBadge) floatBadge.textContent = missingPostedCount;
-            if (sidebarCountText) sidebarCountText.textContent = `${missingList.length}/${accounts.length} tài khoản thiếu bài`;
+            if (sidebarCountText) {
+                sidebarCountText.innerHTML = isWeekExpired
+                    ? `<span class="text-rose-600 font-black">🚨 ${missingList.length}/${accounts.length} kênh BỊ PHẠT</span> (quá hạn)`
+                    : `${missingList.length}/${accounts.length} tài khoản thiếu bài`;
+            }
 
             const container = document.getElementById('sidebarAccountsList');
             if (!container) return;
@@ -3936,7 +3958,9 @@ service cloud.firestore {
                 const idolShort = extractCleanIdolName(acc);
                 const theme = getGroupTheme(grpName);
 
-                const statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200">${countUsed}/${target} bài • Thiếu ${missingNum}</span>`;
+                const statusBadge = isWeekExpired
+                    ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-xs animate-pulse">🚨 BỊ PHẠT (${countUsed}/${target})</span>`
+                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200">${countUsed}/${target} bài • Thiếu ${missingNum}</span>`;
 
                 const schedNote = prog.scheduledCount > 0
                     ? `<div class="text-[11px] text-sky-600 font-medium mt-1"><i class="fa-solid fa-clock mr-1"></i>Có ${prog.scheduledCount} bài đang lên lịch/chờ duyệt</div>`
@@ -4697,7 +4721,7 @@ service cloud.firestore {
             const tabAll = document.getElementById('dirTabAll');
             if (tabAll) tabAll.textContent = `Tất cả 6 Nhóm (${accounts.length})`;
             const tabMissing = document.getElementById('dirTabMissingKpi');
-            if (tabMissing) tabMissing.textContent = `⚠️ Chưa đủ 2 bài (${missingKpiCount})`;
+            if (tabMissing) tabMissing.textContent = isWeekOverdueOrExpired(activeWeek) ? `🚨 Bị Phạt (${missingKpiCount})` : `⚠️ Chưa đủ bài (${missingKpiCount})`;
             const tabDone = document.getElementById('dirTabDoneKpi');
             if (tabDone) tabDone.textContent = `✅ Đã đủ KPI (${doneKpiCount})`;
 
@@ -4761,6 +4785,12 @@ service cloud.firestore {
                         kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-white shadow-xs whitespace-nowrap">
                             ✅ ĐỦ KPI (${prog.postedCount}/${target})
                         </span>`;
+                    } else if (prog.isPenalized) {
+                        // BÁO ĐỎ CẢNH BÁO PHẠT KHI QUA TUẦN MÀ CHƯA ĐĂNG KỊP
+                        kpiBadge = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white shadow-xs whitespace-nowrap animate-pulse flex items-center gap-1" title="Quá hạn tuần - Bị phạt do không đăng kịp bài">
+                            <i class="fa-solid fa-triangle-exclamation text-[9px]"></i>
+                            <span>🚨 BỊ PHẠT (${prog.postedCount}/${target})</span>
+                        </span>`;
                     } else if (prog.postedCount > 0) {
                         kpiBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-400/40 whitespace-nowrap">
                             ⚠️ Thiếu ${prog.missingPosted} bài (${prog.postedCount}/${target})
@@ -4796,12 +4826,15 @@ service cloud.firestore {
                         </div>`;
                     }
 
-                    // Tách biệt nổi bật thẻ hoàn thành đủ KPI 2 bài (Thứ 4)
+                    // Tách biệt nổi bật thẻ hoàn thành đủ KPI hoặc Báo đỏ khi BỊ PHẠT
                     let cardHighlightClass = '';
                     if (isDone) {
                         cardHighlightClass = isGroupChannel
                             ? 'kpi-card-done text-white border-2 border-emerald-400 shadow-lg'
                             : 'kpi-card-done text-slate-800 dark:text-slate-100 shadow-md';
+                    } else if (prog.isPenalized) {
+                        // BÁO ĐỎ TOÀN DIỆN THẺ (VIỀN ĐỎ & NỀN HỒNG ĐỎ PHÁT SÁNG) KHI BỊ PHẠT
+                        cardHighlightClass = 'bg-rose-50/80 dark:bg-rose-950/40 text-slate-900 dark:text-rose-100 border-2 border-rose-500 dark:border-rose-500 shadow-md ring-2 ring-rose-500/20';
                     } else if (isGroupChannel) {
                         cardHighlightClass = 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-indigo-400/60 shadow-md';
                     } else if (prog.postedCount === 1) {
@@ -4857,6 +4890,15 @@ service cloud.firestore {
                                 <!-- Hàng 3: Danh sách bài đăng tuần này -->
                                 <div class="mt-2.5 border-t border-slate-100 dark:border-slate-800/80 pt-1.5">
                                     ${postsListHtml}
+                                    ${prog.isPenalized ? `
+                                        <div class="mt-2 px-2.5 py-1 rounded-lg bg-rose-600/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[10px] font-black flex items-center justify-between">
+                                            <span class="flex items-center gap-1">
+                                                <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+                                                <span>QUÁ HẠN: PHẠT THIẾU ${prog.missingPosted} BÀI</span>
+                                            </span>
+                                            <span class="px-1.5 py-0.2 rounded bg-rose-600 text-white font-extrabold text-[9px]">PHẠT</span>
+                                        </div>
+                                    ` : ''}
                                 </div>
                             </div>
 
@@ -5401,6 +5443,9 @@ service cloud.firestore {
                 if (prog.isDonePosted) {
                     kpiBadgeEl.textContent = `✅ Đạt KPI (${prog.postedCount}/${modalTargetKpi} bài đã đăng)`;
                     kpiBadgeEl.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                } else if (prog.isPenalized) {
+                    kpiBadgeEl.textContent = `🚨 BỊ PHẠT: Quá hạn tuần (${prog.postedCount}/${modalTargetKpi} bài đã đăng)`;
+                    kpiBadgeEl.className = 'text-[11px] font-black px-2.5 py-0.5 rounded-full bg-rose-600 text-white border border-rose-500 shadow-xs animate-pulse';
                 } else {
                     kpiBadgeEl.textContent = `⚠️ Chưa đủ KPI (${prog.postedCount}/${modalTargetKpi} bài đã đăng)`;
                     kpiBadgeEl.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
@@ -5792,14 +5837,20 @@ service cloud.firestore {
                 const mobileCompletedEl = document.getElementById('mobileStatCompleted');
                 if (mobileCompletedEl) mobileCompletedEl.textContent = `${donePosted}/${totalAcc}`;
 
+                const isWeekExpired = isWeekOverdueOrExpired(activeWeek);
                 const mobileMissingEl = document.getElementById('mobileStatMissing');
-                if (mobileMissingEl) mobileMissingEl.textContent = `${missingPosted} thiếu`;
+                if (mobileMissingEl) mobileMissingEl.textContent = isWeekExpired ? `${missingPosted} bị phạt` : `${missingPosted} thiếu`;
 
                 const mobileHeaderBadge = document.getElementById('mobileHeaderMissingBadge');
                 if (mobileHeaderBadge) mobileHeaderBadge.textContent = missingPosted;
 
                 const elWeeklyMissingBadge = document.getElementById('statWeeklyMissingBadge');
-                if (elWeeklyMissingBadge) elWeeklyMissingBadge.textContent = `${missingPosted} kênh thiếu bài`;
+                if (elWeeklyMissingBadge) {
+                    elWeeklyMissingBadge.textContent = isWeekExpired ? `🚨 ${missingPosted} kênh BỊ PHẠT` : `${missingPosted} kênh thiếu bài`;
+                    elWeeklyMissingBadge.className = isWeekExpired && missingPosted > 0
+                        ? 'text-[11px] font-black px-2.5 py-0.5 rounded-full bg-rose-600 text-white shadow-xs animate-pulse'
+                        : 'text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200';
+                }
 
                 const elWeeklyCompletedSub = document.getElementById('statWeeklyCompletedSub');
                 if (elWeeklyCompletedSub) elWeeklyCompletedSub.textContent = `Gồm cả Lên lịch: ${doneTotal}/${totalAcc} kênh đủ`;
@@ -6844,6 +6895,9 @@ service cloud.firestore {
 
             const targetKpi = (typeof getAccountTargetKpi === 'function') ? getAccountTargetKpi(acc, selectedWeekMonday) : (isGroupChannel ? 1 : 2);
             const postedCount = accPosts.filter(p => p.status === 'ĐÃ ĐĂNG').length;
+            const isWeekExpired = isWeekOverdueOrExpired(selectedWeekMonday);
+            const isPenalized = isWeekExpired && (postedCount < targetKpi);
+
             let kpiProgressHtml = '';
             if (postedCount >= targetKpi) {
                 kpiProgressHtml = `
@@ -6852,6 +6906,18 @@ service cloud.firestore {
                             ✅ ${postedCount}/${targetKpi} Đủ KPI
                         </span>
                         <span class="text-[10px] text-emerald-600 font-semibold">Hoàn thành</span>
+                    </div>
+                `;
+            } else if (isPenalized) {
+                // BÁO ĐỎ PHẠT TRÊN BẢNG THEO DÕI TUẦN
+                const missing = Math.max(0, targetKpi - postedCount);
+                kpiProgressHtml = `
+                    <div class="flex flex-col items-center gap-0.5">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-black bg-rose-600 text-white border border-rose-500 shadow-xs whitespace-nowrap animate-pulse flex items-center gap-1">
+                            <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+                            <span>🚨 BỊ PHẠT (${postedCount}/${targetKpi})</span>
+                        </span>
+                        <span class="text-[10px] text-rose-600 dark:text-rose-400 font-extrabold">Quá hạn • Thiếu ${missing} bài</span>
                     </div>
                 `;
             } else if (postedCount > 0) {
@@ -6875,9 +6941,14 @@ service cloud.firestore {
                 `;
             }
 
-            const rowClass = isGroupChannel
-                ? 'bg-indigo-50/50 dark:bg-indigo-950/20 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 font-semibold'
-                : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60';
+            let rowClass = '';
+            if (isPenalized) {
+                rowClass = 'bg-rose-50/60 dark:bg-rose-950/30 hover:bg-rose-100/60 dark:hover:bg-rose-950/50 border-l-4 border-l-rose-500 font-medium';
+            } else if (isGroupChannel) {
+                rowClass = 'bg-indigo-50/50 dark:bg-indigo-950/20 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 font-semibold';
+            } else {
+                rowClass = 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60';
+            }
 
             return `
                 <tr class="transition border-b border-slate-100 dark:border-slate-800 ${rowClass}">
@@ -7463,8 +7534,13 @@ service cloud.firestore {
                 : allUniqueGroups;
 
             const targets = getKpiTargetsForWeek(activeWeek);
+            const isWeekExpired = isWeekOverdueOrExpired(activeWeek);
             let lines = [];
-            lines.push(`📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+            if (isWeekExpired) {
+                lines.push(`🚨 BÁO CÁO TỔNG KẾT & DANH SÁCH BỊ PHẠT DO QUÁ HẠN - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+            } else {
+                lines.push(`📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+            }
             lines.push(`(KPI tuần: Idol ${targets.idol} bài • Kênh nhóm ${targets.group} bài)`);
             lines.push('');
 
@@ -7491,6 +7567,9 @@ service cloud.firestore {
                     const target = prog.targetKpi;
                     if (prog.isDonePosted) {
                         lines.push(`• ${nameLabel} : Đăng đủ (${prog.postedCount}/${target} bài)`);
+                    } else if (isWeekExpired) {
+                        const datesText = accPosts.length > 0 ? ` (Đã có: ${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : ' (Chưa có bài)';
+                        lines.push(`• 🚨 ${nameLabel} : [BỊ PHẠT] Quá hạn tuần, thiếu ${prog.missingPosted} bài (${prog.postedCount}/${target})${datesText}`);
                     } else if (prog.postedCount > 0) {
                         const datesText = accPosts.map(p => formatDateVN(p.date)).join(', ');
                         lines.push(`• ${nameLabel} : Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài (${datesText})`);
@@ -7501,7 +7580,11 @@ service cloud.firestore {
                 lines.push('');
             });
 
-            lines.push(`⏰ Hạn chót Chủ Nhật tuần này! Nhờ các bạn vận hành kiểm tra & nhắc idol lên bài đầy đủ.`);
+            if (isWeekExpired) {
+                lines.push(`🚨 TUẦN ĐÃ KẾT THÚC: Các tài khoản chưa hoàn thành KPI trên bị tính PHẠT theo quy định.`);
+            } else {
+                lines.push(`⏰ Hạn chót Chủ Nhật tuần này! Nhờ các bạn vận hành kiểm tra & nhắc idol lên bài đầy đủ.`);
+            }
             return lines.join('\n');
             } catch (err) {
                 console.error('generateGroupKpiReportText error:', err);
@@ -8561,7 +8644,7 @@ service cloud.firestore {
             getUniqueGroupNames, updateDynamicTitlesAndCounts, copyTextRobustly,
             openKeyboardShortcutsModal, closeKeyboardShortcutsModal, handleGlobalKeydown,
             toggleGroupCardExpand, toggleAllGroupCards,
-            getKpiTargetsForWeek, getAccountTargetKpi, applyCustomKpiTargets, syncKpiInputsUI
+            getKpiTargetsForWeek, getAccountTargetKpi, applyCustomKpiTargets, syncKpiInputsUI, isWeekOverdueOrExpired
         });
 
         // Khởi tạo ứng dụng sau khi toàn bộ tài nguyên sẵn sàng
