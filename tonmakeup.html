@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Đề Xuất Đồ Makeup | 美妆采购提案管理</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Noto Sans SC for Vietnamese + Chinese -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fdf6f5',
+                            100: '#fbeae7',
+                            200: '#f6d6d0',
+                            300: '#eeb7ad',
+                            400: '#e28d7e',
+                            500: '#d36654',
+                            600: '#be4d3b',
+                            700: '#9f3e2f',
+                            800: '#84362a',
+                            900: '#6e3128',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+        }
+        .table-shadow {
+            box-shadow: 0 4px 24px -4px rgba(15, 23, 42, 0.06), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Print styles */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: #ffffff !important;
+            }
+            .print-full {
+                box-shadow: none !important;
+                border: 1px solid #e2e8f0 !important;
+            }
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-rose-100 selection:text-rose-900">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+            <!-- Brand & Title -->
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-md shadow-rose-500/20 shrink-0">
+                    <i data-lucide="sparkles" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2.5">
+                        <h1 id="ui-app-title" class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                            ĐỀ XUẤT ĐỒ MAKE UP
+                        </h1>
+                        <span id="ui-sheet-badge" class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                            Sheet 1
+                        </span>
+                    </div>
+                    <p id="ui-app-subtitle" class="text-xs sm:text-sm text-slate-500">
+                        Hệ thống quản lý danh mục, báo giá & link đặt hàng sản phẩm trang điểm
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Controls: Exchange Rate Pill & Two Language Buttons (VN / CN) -->
+            <div class="flex items-center gap-3">
+                <!-- Firebase Realtime Status Badge -->
+                <div id="firebase-status-badge" class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 no-print" title="Firebase Firestore: passionstar-2014d">
+                    <span id="firebase-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span id="firebase-status-text">Đang kết nối Firebase...</span>
+                </div>
+
+                <!-- Currency Exchange Rate Helper -->
+                <div class="hidden lg:flex items-center gap-2 bg-slate-50 border border-slate-200/90 rounded-xl px-3 py-1.5 text-xs text-slate-600 no-print">
+                    <span id="ui-rate-label" class="font-medium text-slate-500">Tỷ giá quy đổi:</span>
+                    <span class="font-semibold text-slate-800">1 ¥ =</span>
+                    <input
+                        id="exchange-rate-input"
+                        type="number"
+                        value="3650"
+                        min="1"
+                        step="50"
+                        onchange="updateExchangeRate(this.value)"
+                        class="w-16 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 text-right font-semibold text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+                    />
+                    <span class="font-semibold text-slate-800">₫</span>
+                </div>
+
+                <!-- 2 Language Toggle Buttons (Top Right as requested) -->
+                <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner" role="group" aria-label="Language Selector">
+                    <button
+                        id="btn-lang-vi"
+                        onclick="setLanguage('vi')"
+                        class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 bg-white text-rose-600 shadow-sm border border-slate-200/80"
+                    >
+                        <span class="text-base leading-none">🇻🇳</span>
+                        <span>Tiếng Việt</span>
+                    </button>
+                    <button
+                        id="btn-lang-zh"
+                        onclick="setLanguage('zh')"
+                        class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900"
+                    >
+                        <span class="text-base leading-none">🇨🇳</span>
+                        <span>中文 (Tiếng Trung)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- KPI Summary Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1: Total Products -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p id="ui-stat-items-label" class="text-xs font-medium uppercase tracking-wider text-slate-400">Danh mục hàng</p>
+                    <p id="stat-total-items" class="text-2xl font-bold text-slate-900 mt-1">7</p>
+                    <p id="ui-stat-items-sub" class="text-xs text-slate-500 mt-0.5">Mã sản phẩm đề xuất</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                    <i data-lucide="package" class="w-6 h-6"></i>
+                </div>
+            </div>
+
+            <!-- Card 2: Total Quantity -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p id="ui-stat-qty-label" class="text-xs font-medium uppercase tracking-wider text-slate-400">Tổng số lượng</p>
+                    <p id="stat-total-qty" class="text-2xl font-bold text-slate-900 mt-1">7</p>
+                    <p id="ui-stat-qty-sub" class="text-xs text-slate-500 mt-0.5">Đơn vị sản phẩm</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <i data-lucide="layers" class="w-6 h-6"></i>
+                </div>
+            </div>
+
+            <!-- Card 3: Link Status -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p id="ui-stat-links-label" class="text-xs font-medium uppercase tracking-wider text-slate-400">Link sản phẩm</p>
+                    <p id="stat-links-count" class="text-2xl font-bold text-emerald-600 mt-1">4 / 7</p>
+                    <p id="ui-stat-links-sub" class="text-xs text-slate-500 mt-0.5">Đã gắn link đặt hàng</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <i data-lucide="link-2" class="w-6 h-6"></i>
+                </div>
+            </div>
+
+            <!-- Card 4: Grand Total -->
+            <div class="bg-gradient-to-br from-rose-600 to-amber-600 rounded-2xl p-4 text-white shadow-md shadow-rose-500/15 flex items-center justify-between">
+                <div>
+                    <p id="ui-stat-total-label" class="text-xs font-semibold uppercase tracking-wider text-rose-100">Tổng tiền đề xuất</p>
+                    <div class="flex items-baseline gap-1.5 mt-1">
+                        <p id="stat-grand-total" class="text-2xl font-bold">0 ₫</p>
+                    </div>
+                    <p id="stat-grand-total-cny" class="text-xs text-rose-100/90 mt-0.5">≈ ¥ 0</p>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm text-white flex items-center justify-center">
+                    <i data-lucide="wallet" class="w-6 h-6"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- Action & Filter Toolbar -->
+        <section class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 no-print">
+            <!-- Left: Search & Filter -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                <!-- Search Input -->
+                <div class="relative flex-1 max-w-md">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <input
+                        id="search-input"
+                        type="text"
+                        oninput="handleSearchAndFilter()"
+                        placeholder="Tìm tên hàng, ghi chú hoặc link sản phẩm..."
+                        class="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                    />
+                    <button
+                        id="clear-search-btn"
+                        onclick="clearSearch()"
+                        class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                    >
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Filter by Link status -->
+                <select
+                    id="filter-link-select"
+                    onchange="handleSearchAndFilter()"
+                    class="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                >
+                    <option value="all" id="opt-filter-all">Tất cả sản phẩm</option>
+                    <option value="has-link" id="opt-filter-has-link">Đã có link sản phẩm</option>
+                    <option value="missing-link" id="opt-filter-missing-link">Chưa có link sản phẩm</option>
+                </select>
+            </div>
+
+            <!-- Right: Action Buttons -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button
+                    onclick="copyProposalSummary()"
+                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all"
+                >
+                    <i data-lucide="copy" class="w-4 h-4 text-slate-500"></i>
+                    <span id="ui-btn-copy">Sao chép báo giá</span>
+                </button>
+
+                <button
+                    onclick="exportToCSV()"
+                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all"
+                >
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+                    <span id="ui-btn-export">Xuất file Excel (.CSV)</span>
+                </button>
+
+                <button
+                    onclick="window.print()"
+                    class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all"
+                >
+                    <i data-lucide="printer" class="w-4 h-4 text-slate-500"></i>
+                    <span id="ui-btn-print">In / PDF</span>
+                </button>
+
+                <button
+                    onclick="openProductModal()"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 shadow-sm shadow-rose-500/20 transition-all"
+                >
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span id="ui-btn-add-top">Thêm sản phẩm</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Main Spreadsheet Card (Matching Sheet 1 Columns) -->
+        <section class="bg-white rounded-2xl border border-slate-200/90 table-shadow overflow-hidden print-full">
+            <!-- Table Header Banner -->
+            <div class="px-6 py-4 bg-gradient-to-r from-slate-50 via-rose-50/40 to-amber-50/30 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                    <h2 id="ui-table-heading" class="text-sm sm:text-base font-bold text-slate-800 uppercase tracking-wide">
+                        BẢNG ĐỀ XUẤT ĐỒ MAKE UP (SHEET 1)
+                    </h2>
+                </div>
+                <p id="ui-table-tip" class="text-xs text-slate-500 no-print">
+                    💡 Mẹo: Bạn có thể chỉnh sửa trực tiếp Tên hàng, Giá tiền, Số lượng hoặc nhấn vào ảnh để xem rõ hơn.
+                </p>
+            </div>
+
+            <!-- Responsive Table Wrapper -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider">
+                            <th class="py-3.5 px-4 text-center w-14">#</th>
+                            <th id="th-product-name" class="py-3.5 px-4 min-w-[220px]">TÊN HÀNG</th>
+                            <th id="th-image" class="py-3.5 px-4 text-center w-36">HÌNH THỂ HIỆN</th>
+                            <th id="th-price" class="py-3.5 px-4 text-right w-36 cursor-pointer hover:text-rose-600 select-none" onclick="toggleSort('price')">
+                                <div class="inline-flex items-center justify-end gap-1">
+                                    <span id="th-price-text">GIÁ TIỀN</span>
+                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                                </div>
+                            </th>
+                            <th id="th-link" class="py-3.5 px-4 min-w-[240px]">LINK SẢN PHẨM</th>
+                            <th id="th-quantity" class="py-3.5 px-4 text-center w-36">SỐ LƯỢNG</th>
+                            <th id="th-subtotal" class="py-3.5 px-4 text-right w-40 cursor-pointer hover:text-rose-600 select-none" onclick="toggleSort('subtotal')">
+                                <div class="inline-flex items-center justify-end gap-1">
+                                    <span id="th-subtotal-text">THÀNH TIỀN</span>
+                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                                </div>
+                            </th>
+                            <th id="th-actions" class="py-3.5 px-4 text-center w-28 no-print">THAO TÁC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="product-table-body" class="divide-y divide-slate-200/70 text-sm">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+
+                    <!-- Table Footer: Add Product Row & Grand Total Row -->
+                    <tfoot>
+                        <!-- Quick Add Product Button Row -->
+                        <tr class="bg-slate-50/70 border-t border-slate-200/80 no-print">
+                            <td colspan="8" class="px-6 py-3.5">
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <div class="flex items-center gap-2.5">
+                                        <button
+                                            onclick="openProductModal()"
+                                            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 transition-all shadow-sm"
+                                        >
+                                            <i data-lucide="plus" class="w-4 h-4"></i>
+                                            <span id="ui-btn-add-bottom">Thêm sản phẩm mới</span>
+                                        </button>
+                                        <button
+                                            onclick="addQuickBlankRow()"
+                                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 transition-all"
+                                        >
+                                            <i data-lucide="rows" class="w-4 h-4 text-slate-400"></i>
+                                            <span id="ui-btn-add-quick-row">+ Thêm nhanh 1 dòng trống</span>
+                                        </button>
+                                    </div>
+                                    <span id="ui-footer-RowCount" class="text-xs text-slate-500 font-medium">
+                                        Hiển thị 7 sản phẩm
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- TỔNG TIỀN (Grand Total) Row at the bottom as requested -->
+                        <tr class="bg-gradient-to-r from-rose-50/90 via-rose-50/60 to-amber-50/70 border-t-2 border-rose-200">
+                            <td colspan="5" class="py-4 px-6 text-right">
+                                <div class="inline-flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 justify-end">
+                                    <span id="ui-total-footer-label" class="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-wide">
+                                        TỔNG TIỀN
+                                    </span>
+                                    <span id="ui-total-footer-note" class="text-xs text-slate-500 font-normal">
+                                        (Tự động tính theo Giá tiền × Số lượng)
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="py-4 px-4 text-center">
+                                <span id="footer-total-qty" class="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-white border border-slate-200 text-sm font-bold text-slate-800 shadow-sm">
+                                    0
+                                </span>
+                            </td>
+                            <td class="py-4 px-4 text-right">
+                                <div class="flex flex-col items-end">
+                                    <span id="footer-grand-total" class="text-xl sm:text-2xl font-extrabold text-rose-600 tracking-tight">
+                                        0 ₫
+                                    </span>
+                                    <span id="footer-grand-total-cny" class="text-xs font-semibold text-slate-500 mt-0.5">
+                                        ≈ ¥ 0
+                                    </span>
+                                </div>
+                            </td>
+                            <td class="py-4 px-4 no-print"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-xs text-slate-400 border-t border-slate-200/60 mt-auto no-print">
+        <p id="ui-footer-copyright">
+            Bảng Quản Lý Đề Xuất Đồ Makeup • Đồng bộ đám mây thời gian thực với Firebase • Hỗ trợ tự động dịch Việt - Trung
+        </p>
+    </footer>
+
+    <!-- Modal: Add / Edit Product -->
+    <div id="product-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                        <i data-lucide="package-plus" class="w-4 h-4"></i>
+                    </div>
+                    <h3 id="modal-title" class="text-base font-bold text-slate-900">Thêm sản phẩm đề xuất</h3>
+                </div>
+                <button onclick="closeProductModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="product-form" onsubmit="saveProductFromModal(event)" class="p-6 space-y-4">
+                <input type="hidden" id="modal-product-id" value="" />
+                <input type="hidden" id="modal-auto-zh" value="" />
+
+                <!-- Product Name (Auto-translated to Chinese) -->
+                <div>
+                    <label id="lbl-modal-name-vi" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Tên hàng *
+                    </label>
+                    <input
+                        id="modal-name-vi"
+                        type="text"
+                        required
+                        oninput="scheduleModalAutoTranslate(this.value)"
+                        placeholder="VD: BÔNG MÚT ĐÁNH NỀN"
+                        class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                    />
+                    <!-- Live Auto-Translated Chinese Preview -->
+                    <div class="mt-2 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-xs">
+                        <span id="lbl-auto-translate-caption" class="text-slate-500 font-medium flex items-center gap-1.5 shrink-0">
+                            <i data-lucide="languages" class="w-3.5 h-3.5 text-rose-500"></i>
+                            <span>Bản dịch Tiếng Trung tự động:</span>
+                        </span>
+                        <span id="modal-zh-preview" class="font-semibold text-slate-800 truncate text-right">—</span>
+                    </div>
+                </div>
+
+                <!-- Price (VND) & Quantity Grid -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label id="lbl-modal-price" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                            Giá tiền (VNĐ) *
+                        </label>
+                        <input
+                            id="modal-price"
+                            type="number"
+                            step="any"
+                            min="0"
+                            required
+                            placeholder="46000"
+                            oninput="updateModalSubtotalPreview()"
+                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                        />
+                    </div>
+                    <div>
+                        <label id="lbl-modal-qty" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                            Số lượng *
+                        </label>
+                        <input
+                            id="modal-qty"
+                            type="number"
+                            step="1"
+                            min="1"
+                            required
+                            value="1"
+                            oninput="updateModalSubtotalPreview()"
+                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                        />
+                    </div>
+                </div>
+
+                <!-- Calculated Subtotal Preview -->
+                <div class="bg-rose-50/70 border border-rose-200/80 rounded-xl px-4 py-2.5 flex items-center justify-between">
+                    <span id="lbl-modal-subtotal" class="text-xs font-semibold text-rose-800 uppercase">Thành tiền dự kiến:</span>
+                    <span id="modal-subtotal-preview" class="text-base font-bold text-rose-600">0 ₫</span>
+                </div>
+
+                <!-- Product Link -->
+                <div>
+                    <label id="lbl-modal-link" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Link sản phẩm (Taobao / 1688 / Shopee...)
+                    </label>
+                    <input
+                        id="modal-link"
+                        type="url"
+                        placeholder="https://e.tb.cn/..."
+                        class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                    />
+                </div>
+
+                <!-- Product Image (Upload / Paste / URL) -->
+                <div>
+                    <label id="lbl-modal-image" class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                        Hình thể hiện (Tải ảnh lên, Dán Ctrl+V hoặc nhập URL)
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <div id="modal-img-preview-box" class="w-20 h-20 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                            <img id="modal-img-preview" src="" alt="Preview" class="w-full h-full object-cover hidden" />
+                            <i id="modal-img-placeholder" data-lucide="image" class="w-6 h-6 text-slate-400"></i>
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <input
+                                id="modal-image-url"
+                                type="text"
+                                placeholder="Dán link ảnh hoặc nhấn Chọn ảnh bên dưới..."
+                                oninput="previewModalImageUrl(this.value)"
+                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-rose-500"
+                            />
+                            <div class="flex items-center gap-2">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all">
+                                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                    <span id="lbl-upload-btn">Chọn ảnh từ máy</span>
+                                    <input type="file" accept="image/*" class="hidden" onchange="handleModalFileUpload(event)" />
+                                </label>
+                                <span id="lbl-paste-hint" class="text-[11px] text-slate-400">hoặc nhấn Ctrl+V để dán ảnh chụp</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+                    <button
+                        type="button"
+                        onclick="closeProductModal()"
+                        id="btn-modal-cancel"
+                        class="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all"
+                    >
+                        Hủy
+                    </button>
+                    <button
+                        type="submit"
+                        id="btn-modal-save"
+                        class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 shadow-sm shadow-rose-500/20 transition-all"
+                    >
+                        Lưu sản phẩm
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Image Lightbox Preview -->
+    <div id="lightbox-modal" onclick="closeLightbox()" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/80 backdrop-blur-xs p-4">
+        <div class="relative max-w-lg w-full bg-white rounded-2xl p-4 shadow-2xl" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                <h4 id="lightbox-title" class="text-sm font-bold text-slate-800">Hình thể hiện sản phẩm</h4>
+                <button onclick="closeLightbox()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="aspect-square w-full rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100">
+                <img id="lightbox-img" src="" alt="Product Preview" class="w-full h-full object-contain" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Firebase SDK & Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import {
+            getFirestore,
+            collection,
+            doc,
+            setDoc,
+            deleteDoc,
+            onSnapshot
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import {
+            getAuth,
+            signInAnonymously,
+            signInWithCustomToken
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // ============================================================================
+        // 1. FIREBASE CONFIGURATION (passionstar-2014d)
+        // ============================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
+            authDomain: "passionstar-2014d.firebaseapp.com",
+            projectId: "passionstar-2014d",
+            storageBucket: "passionstar-2014d.firebasestorage.app",
+            messagingSenderId: "1079694484883",
+            appId: "1:1079694484883:web:576bc20d64bcc4c4fef466"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'passionstar-makeup-sheet1';
+
+        // ============================================================================
+        // 2. CUSTOM SVG ILLUSTRATIONS FOR MAKEUP ITEMS
+        // ============================================================================
+        function createSvgDataUri(svgContent) {
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgContent.trim());
+        }
+
+        const SHEET1_SVGS = {
+            puffFoundation: createSvgDataUri(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+                    <rect width="200" height="200" rx="24" fill="#fdf6f0"/>
+                    <rect x="22" y="25" width="95" height="125" rx="10" fill="#ffffff" stroke="#e5d5c5" stroke-width="3"/>
+                    <text x="70" y="48" font-family="sans-serif" font-size="11" font-weight="bold" fill="#8c6d53" text-anchor="middle">2XL 气垫粉扑</text>
+                    <circle cx="70" cy="95" r="34" fill="#f3dfc9" stroke="#d9bda0" stroke-width="2"/>
+                    <rect x="44" y="88" width="52" height="12" rx="4" fill="#ffffff" stroke="#d9bda0" stroke-width="1"/>
+                    <circle cx="136" cy="128" r="44" fill="#f1d6b8" stroke="#d5b38f" stroke-width="2.5"/>
+                    <path d="M93 120 H179 V136 H93 Z" fill="#ffffff" stroke="#d5b38f" stroke-width="1.5"/>
+                    <text x="136" y="131" font-family="sans-serif" font-size="9" font-weight="bold" fill="#8c6d53" text-anchor="middle">SOFT PUFF</text>
+                </svg>
+            `),
+            puffBlush: createSvgDataUri(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+                    <rect width="200" height="200" rx="24" fill="#fff5f5"/>
+                    <g transform="translate(30, 35)">
+                        <path d="M35 15 C55 40 65 75 65 95 A30 30 0 1 1 5 95 C5 75 15 40 35 15 Z" fill="#f8d8c8" stroke="#e2b49e" stroke-width="2.5"/>
+                        <rect x="7" y="75" width="56" height="14" rx="5" fill="#ffffff" stroke="#e2b49e" stroke-width="1.5"/>
+                    </g>
+                    <g transform="translate(88, 22)">
+                        <path d="M35 15 C55 40 65 75 65 95 A30 30 0 1 1 5 95 C5 75 15 40 35 15 Z" fill="#e8eef5" stroke="#b9c8d8" stroke-width="2.5"/>
+                        <rect x="7" y="75" width="56" height="14" rx="5" fill="#ffffff" stroke="#b9c8d8" stroke-width="1.5"/>
+                    </g>
+                    <g transform="translate(65, 65)">
+                        <path d="M35 15 C55 40 65 75 65 95 A30 30 0 1 1 5 95 C5 75 15 40 35 15 Z" fill="#fbd2d7" stroke="#e4a6ae" stroke-width="2.5"/>
+                        <rect x="7" y="75" width="56" height="14" rx="5" fill="#ffffff" stroke="#e4a6ae" stroke-width="1.5"/>
+                    </g>
+                </svg>
+            `),
+            brushSet: createSvgDataUri(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+                    <rect width="200" height="200" rx="24" fill="#f5ebe1"/>
+                    <rect x="20" y="35" width="52" height="135" rx="14" fill="#e8d8c8" stroke="#cbb59f" stroke-width="2"/>
+                    <g transform="translate(85, 32)">
+                        <ellipse cx="18" cy="24" rx="18" ry="22" fill="#f7efe6" stroke="#c8b29b" stroke-width="2"/>
+                        <rect x="11" y="42" width="14" height="22" fill="#d8c3a5"/>
+                        <rect x="12" y="64" width="12" height="75" rx="4" fill="#f2e6d8" stroke="#cbb59f" stroke-width="1.5"/>
+                    </g>
+                    <g transform="translate(122, 42)">
+                        <ellipse cx="14" cy="18" rx="13" ry="16" fill="#f7efe6" stroke="#c8b29b" stroke-width="2"/>
+                        <rect x="9" y="32" width="10" height="18" fill="#d8c3a5"/>
+                        <rect x="10" y="50" width="8" height="78" rx="3" fill="#f2e6d8" stroke="#cbb59f" stroke-width="1.5"/>
+                    </g>
+                    <g transform="translate(152, 52)">
+                        <ellipse cx="10" cy="12" rx="8" ry="11" fill="#f7efe6" stroke="#c8b29b" stroke-width="2"/>
+                        <rect x="6" y="22" width="8" height="15" fill="#d8c3a5"/>
+                        <rect x="7" y="37" width="6" height="80" rx="3" fill="#f2e6d8" stroke="#cbb59f" stroke-width="1.5"/>
+                    </g>
+                    <circle cx="162" cy="36" r="18" fill="#8c6d53"/>
+                    <text x="162" y="40" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">13支</text>
+                </svg>
+            `),
+            eyeshadowPalette: createSvgDataUri(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+                    <rect width="200" height="200" rx="24" fill="#fbf5f0"/>
+                    <rect x="32" y="28" width="136" height="144" rx="16" fill="#f3e1d3" stroke="#d8beaa" stroke-width="3"/>
+                    <circle cx="62" cy="60" r="16" fill="#f9ede2" stroke="#d8beaa" stroke-width="1.5"/>
+                    <circle cx="100" cy="60" r="16" fill="#ebccb4" stroke="#d8beaa" stroke-width="1.5"/>
+                    <circle cx="138" cy="60" r="16" fill="#d9a987" stroke="#d8beaa" stroke-width="1.5"/>
+                    <circle cx="62" cy="100" r="16" fill="#e2b59c" stroke="#d8beaa" stroke-width="1.5"/>
+                    <circle cx="100" cy="100" r="16" fill="#c98e70" stroke="#d8beaa" stroke-width="1.5"/>
+                    <circle cx="138" cy="100" r="16" fill="#b47859" stroke="#d8beaa" stroke-width="1.5"/>
+                    <circle cx="62" cy="140" r="16" fill="#d19c85" stroke="#d8beaa" stroke-width="1.5"/>
+                    <circle cx="100" cy="140" r="16" fill="#9c624c" stroke="#d8beaa" stroke-width="1.5"/>
+                    <circle cx="138" cy="140" r="16" fill="#6f4131" stroke="#d8beaa" stroke-width="1.5"/>
+                </svg>
+            `),
+            eyelashCurler: createSvgDataUri(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+                    <rect width="200" height="200" rx="24" fill="#f8fafc"/>
+                    <path d="M55 55 Q100 32 145 55" fill="none" stroke="#64748b" stroke-width="8" stroke-linecap="round"/>
+                    <path d="M58 63 Q100 42 142 63" fill="none" stroke="#f43f5e" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="65" y1="55" x2="88" y2="125" stroke="#94a3b8" stroke-width="5"/>
+                    <line x1="135" y1="55" x2="112" y2="125" stroke="#94a3b8" stroke-width="5"/>
+                    <circle cx="75" cy="152" r="20" fill="none" stroke="#64748b" stroke-width="6"/>
+                    <circle cx="125" cy="152" r="20" fill="none" stroke="#64748b" stroke-width="6"/>
+                </svg>
+            `),
+            brushCleaner: createSvgDataUri(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+                    <rect width="200" height="200" rx="24" fill="#fdf2f8"/>
+                    <circle cx="100" cy="105" r="62" fill="#fbcfe8" stroke="#f472b6" stroke-width="3"/>
+                    <circle cx="100" cy="105" r="50" fill="#334155"/>
+                    <ellipse cx="100" cy="118" rx="18" ry="14" fill="#f9a8d4"/>
+                    <circle cx="78" cy="92" r="8" fill="#f9a8d4"/>
+                    <circle cx="93" cy="84" r="8" fill="#f9a8d4"/>
+                    <circle cx="109" cy="84" r="8" fill="#f9a8d4"/>
+                    <circle cx="122" cy="92" r="8" fill="#f9a8d4"/>
+                </svg>
+            `),
+            eyebrowPencil: createSvgDataUri(`
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+                    <rect width="200" height="200" rx="24" fill="#f5f5f4"/>
+                    <g transform="rotate(-25 100 100)">
+                        <rect x="55" y="25" width="12" height="150" rx="4" fill="#292524"/>
+                        <rect x="55" y="85" width="12" height="22" fill="#d6d3d1"/>
+                        <polygon points="55,25 67,25 61,10" fill="#57534e"/>
+                        <rect x="82" y="25" width="12" height="150" rx="4" fill="#44403c"/>
+                        <rect x="82" y="85" width="12" height="22" fill="#d6d3d1"/>
+                        <polygon points="82,25 94,25 88,10" fill="#78716c"/>
+                        <rect x="109" y="25" width="12" height="150" rx="4" fill="#57534e"/>
+                        <rect x="109" y="85" width="12" height="22" fill="#d6d3d1"/>
+                        <polygon points="109,25 121,25 115,10" fill="#a8a29e"/>
+                        <rect x="136" y="25" width="12" height="150" rx="4" fill="#292524"/>
+                        <rect x="136" y="85" width="12" height="22" fill="#d6d3d1"/>
+                        <polygon points="136,25 148,25 142,10" fill="#44403c"/>
+                    </g>
+                </svg>
+            `)
+        };
+
+        // Initial seed data (only seeded once if Firebase collection is completely empty)
+        // Prices are in VND (converted from Sheet 1 at ~3,650 VND/CNY)
+        const INITIAL_SEED_PRODUCTS = [
+            {
+                id: 'mk-1',
+                nameVi: 'BÔNG MÚT ĐÁNH NỀN',
+                nameZh: '气垫粉扑 / 底妆海绵',
+                image: SHEET1_SVGS.puffFoundation,
+                price: 46000,
+                link: 'https://e.tb.cn/h.i1r2fdU4Hml3sHe?tk=7acU5b7E2fP',
+                quantity: 1,
+                createdAt: 1001
+            },
+            {
+                id: 'mk-2',
+                nameVi: 'BÔNG MÚT ĐÁNH MÁ HỒNG',
+                nameZh: '腮红粉扑 / 拇指粉扑',
+                image: SHEET1_SVGS.puffBlush,
+                price: 33600,
+                link: 'https://e.tb.cn/h.i1rduU55DSsDcaI?tk=pD8m5b7wKLs',
+                quantity: 1,
+                createdAt: 1002
+            },
+            {
+                id: 'mk-3',
+                nameVi: 'bộ cọ trang điểm',
+                nameZh: '化妆刷套装 (13支装)',
+                image: SHEET1_SVGS.brushSet,
+                price: 131400,
+                link: 'https://e.tb.cn/h.i1r48m8fJ2cV80R?tk=b83D5b7D9Gs',
+                quantity: 1,
+                createdAt: 1003
+            },
+            {
+                id: 'mk-4',
+                nameVi: 'BẢNG MẮT',
+                nameZh: '九色眼影盘 (大地色系)',
+                image: SHEET1_SVGS.eyeshadowPalette,
+                price: 91250,
+                link: 'https://e.tb.cn/h.i1rff3b3rDRs6B1?tk=YStI5b7xY3d',
+                quantity: 1,
+                createdAt: 1004
+            },
+            {
+                id: 'mk-5',
+                nameVi: 'kẹp mi',
+                nameZh: '太阳花睫毛夹 (带梳子)',
+                image: SHEET1_SVGS.eyelashCurler,
+                price: 57670,
+                link: '',
+                quantity: 1,
+                createdAt: 1005
+            },
+            {
+                id: 'mk-6',
+                nameVi: 'mút rửa cọ',
+                nameZh: '猫爪洗刷盒 / 干洗海绵',
+                image: SHEET1_SVGS.brushCleaner,
+                price: 72635,
+                link: '',
+                quantity: 1,
+                createdAt: 1006
+            },
+            {
+                id: 'mk-7',
+                nameVi: 'chì kẻ mày',
+                nameZh: '双头眉笔 (防水防汗)',
+                image: SHEET1_SVGS.eyebrowPencil,
+                price: 72270,
+                link: '',
+                quantity: 1,
+                createdAt: 1007
+            }
+        ];
+
+        // ============================================================================
+        // 3. AUTOMATIC VIETNAMESE <-> CHINESE TRANSLATION ENGINE
+        // ============================================================================
+        const MAKEUP_DICT_VI_TO_ZH = {
+            'bông mút đánh nền': '气垫粉扑 / 底妆海绵',
+            'bông mút đánh má hồng': '腮红粉扑 / 拇指粉扑',
+            'bộ cọ trang điểm': '化妆刷套装',
+            'bảng mắt': '眼影盘',
+            'bảng phấn mắt': '眼影盘',
+            'kẹp mi': '睫毛夹',
+            'mút rửa cọ': '洗刷盒 / 干洗海绵',
+            'chì kẻ mày': '眉笔',
+            'kem nền': '粉底液',
+            'phấn nước': '气垫BB霜',
+            'che khuyết điểm': '遮瑕膏',
+            'phấn phủ': '散粉 / 定妆粉饼',
+            'má hồng': '腮红',
+            'phấn má hồng': '腮红',
+            'son môi': '口红 / 唇釉',
+            'son kem': '唇釉 / 唇泥',
+            'son dưỡng': '润唇膏',
+            'kẻ mắt': '眼线笔',
+            'bút kẻ mắt': '眼线液笔',
+            'chuốt mi': '睫毛膏',
+            'mascara': '睫毛膏',
+            'lông mi giả': '假睫毛',
+            'mi giả': '假睫毛',
+            'keo dán mi': '假睫毛胶水',
+            'tạo khối': '修容盘',
+            'bắt sáng': '高光粉',
+            'xịt khóa nền': '定妆喷雾',
+            'xịt khoáng': '保湿喷雾',
+            'tẩy trang': '卸妆水',
+            'nước tẩy trang': '卸妆水',
+            'dầu tẩy trang': '卸妆油',
+            'bông tẩy trang': '卸妆棉',
+            'kem lót': '妆前乳 / 隔离霜',
+            'cọ trang điểm': '化妆刷',
+            'cọ đánh nền': '粉底刷',
+            'cọ má hồng': '腮红刷',
+            'cọ mắt': '眼影刷',
+            'cọ môi': '唇刷',
+            'gương trang điểm': '化妆镜',
+            'túi đựng mỹ phẩm': '化妆包',
+            ' cốp trang điểm': '化妆箱'
+        };
+
+        const translationCache = new Map();
+        let modalTranslateTimer = null;
+
+        async function autoTranslateToChinese(textVi) {
+            const clean = (textVi || '').trim();
+            if (!clean) return '';
+
+            // If input already contains Chinese characters, return as-is
+            if (/[\u4e00-\u9fa5]/.test(clean)) {
+                return clean;
+            }
+
+            const lower = clean.toLowerCase();
+            if (MAKEUP_DICT_VI_TO_ZH[lower]) {
+                return MAKEUP_DICT_VI_TO_ZH[lower];
+            }
+            if (translationCache.has(lower)) {
+                return translationCache.get(lower);
+            }
+
+            // 1. Try fast Google Translate GTX API
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q=${encodeURIComponent(clean)}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && Array.isArray(data[0])) {
+                        const translated = data[0].map(part => part[0]).join('').trim();
+                        if (translated) {
+                            translationCache.set(lower, translated);
+                            return translated;
+                        }
+                    }
+                }
+            } catch (err) {
+                // Fallback to Gemini or keyword dictionary
+            }
+
+            // 2. Fallback to Gemini API if available in environment
+            try {
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `Translate this Vietnamese makeup/cosmetic product name into concise Simplified Chinese (return ONLY the Chinese translation, no quotes or explanation): "${clean}"`
+                            }]
+                        }]
+                    })
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    const zhText = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                    if (zhText) {
+                        translationCache.set(lower, zhText);
+                        return zhText;
+                    }
+                }
+            } catch (e) {
+                // Ignore and use partial dictionary match
+            }
+
+            // 3. Partial keyword dictionary fallback
+            for (const [k, v] of Object.entries(MAKEUP_DICT_VI_TO_ZH)) {
+                if (lower.includes(k)) {
+                    translationCache.set(lower, v);
+                    return v;
+                }
+            }
+
+            return clean;
+        }
+
+        function scheduleModalAutoTranslate(value) {
+            const previewEl = document.getElementById('modal-zh-preview');
+            const hiddenZh = document.getElementById('modal-auto-zh');
+            const clean = (value || '').trim();
+
+            if (!clean) {
+                previewEl.textContent = '—';
+                hiddenZh.value = '';
+                return;
+            }
+
+            previewEl.textContent = currentLang === 'zh' ? '正在自动翻译...' : 'Đang tự động dịch...';
+            if (modalTranslateTimer) clearTimeout(modalTranslateTimer);
+
+            modalTranslateTimer = setTimeout(async () => {
+                const zh = await autoTranslateToChinese(clean);
+                hiddenZh.value = zh;
+                previewEl.textContent = zh || '—';
+            }, 280);
+        }
+
+        // ============================================================================
+        // 4. BILINGUAL DICTIONARY (VIETNAMESE & CHINESE)
+        // ============================================================================
+        const I18N = {
+            vi: {
+                appTitle: 'ĐỀ XUẤT ĐỒ MAKE UP',
+                sheetBadge: 'Sheet 1',
+                appSubtitle: 'Hệ thống quản lý danh mục, báo giá VNĐ (quy đổi Tệ ¥) & link đặt hàng trang điểm',
+                rateLabel: 'Tỷ giá quy đổi:',
+                statItemsLabel: 'Danh mục hàng',
+                statItemsSub: 'Mã sản phẩm đề xuất',
+                statQtyLabel: 'Tổng số lượng',
+                statQtySub: 'Đơn vị sản phẩm',
+                statLinksLabel: 'Link sản phẩm',
+                statLinksSub: 'Đã gắn link đặt hàng',
+                statTotalLabel: 'Tổng tiền đề xuất (VNĐ)',
+                searchPlaceholder: 'Tìm tên hàng, tên tiếng Trung hoặc link sản phẩm...',
+                filterAll: 'Tất cả sản phẩm',
+                filterHasLink: 'Đã có link sản phẩm',
+                filterMissingLink: 'Chưa có link sản phẩm',
+                btnCopy: 'Sao chép báo giá',
+                btnExport: 'Xuất file Excel (.CSV)',
+                btnPrint: 'In / PDF',
+                btnAddTop: 'Thêm sản phẩm',
+                tableHeading: 'BẢNG ĐỀ XUẤT ĐỒ MAKE UP (SHEET 1)',
+                tableTip: '💡 Mẹo: Giá tiền mặc định là VNĐ (₫), tự động quy đổi sang Nhân dân tệ (¥) và tự động dịch tên sang Tiếng Trung.',
+                thProductName: 'TÊN HÀNG',
+                thImage: 'HÌNH THỂ HIỆN',
+                thPrice: 'GIÁ TIỀN (VNĐ)',
+                thLink: 'LINK SẢN PHẨM',
+                thQuantity: 'SỐ LƯỢNG',
+                thSubtotal: 'THÀNH TIỀN (VNĐ)',
+                thActions: 'THAO TÁC',
+                btnAddBottom: 'Thêm sản phẩm mới',
+                btnAddQuickRow: '+ Thêm nhanh 1 dòng trống',
+                totalFooterLabel: 'TỔNG TIỀN',
+                totalFooterNote: '(Mặc định VNĐ • Tự động quy đổi sang Nhân dân tệ ¥)',
+                footerCopyright: 'Bảng Quản Lý Đề Xuất Đồ Makeup • Đồng bộ thời gian thực với Firebase • Tự động dịch Việt - Trung',
+                openLink: 'Mở link đặt hàng',
+                copyLink: 'Sao chép link',
+                noLinkPlaceholder: 'Dán link sản phẩm (https://...)',
+                editBtnTitle: 'Chỉnh sửa chi tiết / Đổi hình',
+                deleteBtnTitle: 'Xóa sản phẩm',
+                changeImgHint: 'Đổi ảnh',
+                modalAddTitle: 'Thêm sản phẩm đề xuất',
+                modalEditTitle: 'Chỉnh sửa sản phẩm',
+                lblModalNameVi: 'Tên hàng (Tự động dịch sang Tiếng Trung) *',
+                lblAutoTranslateCaption: 'Bản dịch Tiếng Trung tự động:',
+                lblModalPrice: 'Giá tiền (VNĐ) *',
+                lblModalQty: 'Số lượng *',
+                lblModalSubtotal: 'Thành tiền dự kiến:',
+                lblModalLink: 'Link sản phẩm (Taobao / 1688 / Shopee...)',
+                lblModalImage: 'Hình thể hiện (Tải ảnh lên, Dán Ctrl+V hoặc nhập URL)',
+                lblUploadBtn: 'Chọn ảnh từ máy',
+                lblPasteHint: 'hoặc nhấn Ctrl+V để dán ảnh chụp',
+                btnModalCancel: 'Hủy',
+                btnModalSave: 'Lưu sản phẩm',
+                emptySearch: 'Không tìm thấy sản phẩm nào phù hợp với bộ lọc.',
+                showingCount: (shown, total) => `Hiển thị ${shown} / ${total} sản phẩm`,
+                toastSaved: 'Đã lưu và đồng bộ sản phẩm lên Firebase!',
+                toastDeleted: 'Đã xóa sản phẩm khỏi Firebase.',
+                toastCopiedLink: 'Đã sao chép link sản phẩm!',
+                toastCopiedSummary: 'Đã sao chép bảng tổng hợp báo giá vào bộ nhớ tạm!',
+                toastAddedRow: 'Đã thêm 1 dòng sản phẩm mới.',
+                fbConnected: 'Đã kết nối Firebase',
+                fbConnecting: 'Đang kết nối Firebase...',
+                fbOffline: 'Chế độ ngoại tuyến'
+            },
+            zh: {
+                appTitle: '美妆采购提案管理表',
+                sheetBadge: '第一页 (Sheet 1)',
+                appSubtitle: '美妆产品采购清单、越南盾(VNĐ)核算自动换算人民币(¥)与商品链接系统',
+                rateLabel: '汇率换算:',
+                statItemsLabel: '商品种类',
+                statItemsSub: '提案商品总数',
+                statQtyLabel: '总数量',
+                statQtySub: '商品件数合计',
+                statLinksLabel: '商品链接',
+                statLinksSub: '已添加采购链接',
+                statTotalLabel: '提案总金额 (VNĐ)',
+                searchPlaceholder: '搜索商品名称（越/中）或商品链接...',
+                filterAll: '全部商品',
+                filterHasLink: '已有商品链接',
+                filterMissingLink: '暂无商品链接',
+                btnCopy: '复制报价单',
+                btnExport: '导出 Excel (.CSV)',
+                btnPrint: '打印 / PDF',
+                btnAddTop: '添加商品',
+                tableHeading: '美妆采购提案明细表 (SHEET 1)',
+                tableTip: '💡 提示：默认单价为越南盾 (VNĐ)，系统自动换算为人民币 (¥) 并自动将越南语商品名翻译为中文。',
+                thProductName: '商品名称 (TÊN HÀNG)',
+                thImage: '商品图片 (HÌNH)',
+                thPrice: '单价 (VNĐ)',
+                thLink: '商品链接 (LINK)',
+                thQuantity: '数量 (SỐ LƯỢNG)',
+                thSubtotal: '小计 (VNĐ)',
+                thActions: '操作',
+                btnAddBottom: '添加新商品',
+                btnAddQuickRow: '+ 快速新增空白行',
+                totalFooterLabel: '合计总金额 (TỔNG TIỀN)',
+                totalFooterNote: '(默认越南盾 VNĐ • 自动换算人民币 ¥)',
+                footerCopyright: '美妆采购提案管理系统 • Firebase 实时云同步 • 支持越中自动翻译',
+                openLink: '打开淘宝/商品链接',
+                copyLink: '复制链接',
+                noLinkPlaceholder: '粘贴商品链接 (https://...)',
+                editBtnTitle: '编辑详情 / 更换图片',
+                deleteBtnTitle: '删除该商品',
+                changeImgHint: '换图',
+                modalAddTitle: '添加提案商品',
+                modalEditTitle: '编辑商品信息',
+                lblModalNameVi: '商品名称 (输入越南语自动翻译为中文) *',
+                lblAutoTranslateCaption: '中文自动翻译预览:',
+                lblModalPrice: '单价 (越南盾 VNĐ) *',
+                lblModalQty: '数量 *',
+                lblModalSubtotal: '预计小计金额:',
+                lblModalLink: '商品链接 (淘宝 / 1688 / Shopee...)',
+                lblModalImage: '商品图片 (上传图片、按 Ctrl+V 粘贴截图或输入链接)',
+                lblUploadBtn: '从电脑选择图片',
+                lblPasteHint: '或直接按 Ctrl+V 粘贴截图',
+                btnModalCancel: '取消',
+                btnModalSave: '保存商品',
+                emptySearch: '没有找到符合筛选条件的商品。',
+                showingCount: (shown, total) => `正在显示 ${shown} / ${total} 项商品`,
+                toastSaved: '商品信息已同步保存至 Firebase！',
+                toastDeleted: '已从 Firebase 删除该商品。',
+                toastCopiedLink: '商品链接已复制！',
+                toastCopiedSummary: '采购报价汇总已复制到剪贴板！',
+                toastAddedRow: '已在表格末尾新增一行商品。',
+                fbConnected: 'Firebase 已实时连接',
+                fbConnecting: '正在连接 Firebase...',
+                fbOffline: '离线模式'
+            }
+        };
+
+        // ============================================================================
+        // 5. APPLICATION STATE & FIREBASE REALTIME SYNC
+        // ============================================================================
+        let currentLang = 'vi';
+        let exchangeRate = 3650; // 1 CNY (¥) = 3,650 VND (₫)
+        let sortField = null;
+        let sortDirection = 'asc';
+        let products = [];
+        let firebaseConnected = false;
+        let hasCheckedInitialSeed = false;
+
+        function getProductsCollectionRef() {
+            return collection(db, 'artifacts', appId, 'public', 'data', 'makeup_products');
+        }
+
+        function getSettingsDocRef() {
+            return doc(db, 'artifacts', appId, 'public', 'data', 'makeup_settings', 'config');
+        }
+
+        function updateFirebaseStatusUI(status) {
+            firebaseConnected = status === 'connected';
+            const badge = document.getElementById('firebase-status-badge');
+            const dot = document.getElementById('firebase-status-dot');
+            const text = document.getElementById('firebase-status-text');
+            if (!badge || !dot || !text) return;
+
+            const t = I18N[currentLang];
+            if (status === 'connected') {
+                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 no-print';
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                text.textContent = t.fbConnected;
+            } else if (status === 'connecting') {
+                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 no-print';
+                dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
+                text.textContent = t.fbConnecting;
+            } else {
+                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 no-print';
+                dot.className = 'w-2 h-2 rounded-full bg-slate-400';
+                text.textContent = t.fbOffline;
+            }
+        }
+
+        async function saveProductToFirebase(product) {
+            try {
+                const productRef = doc(db, 'artifacts', appId, 'public', 'data', 'makeup_products', product.id);
+                await setDoc(productRef, product, { merge: true });
+            } catch (err) {
+                console.error('Error saving product to Firebase:', err);
+            }
+        }
+
+        async function deleteProductFromFirebase(productId) {
+            try {
+                const productRef = doc(db, 'artifacts', appId, 'public', 'data', 'makeup_products', productId);
+                await deleteDoc(productRef);
+            } catch (err) {
+                console.error('Error deleting product from Firebase:', err);
+            }
+        }
+
+        async function initFirebaseSync() {
+            updateFirebaseStatusUI('connecting');
+
+            // Attempt authentication gracefully (supports both Canvas token & user's own Firebase project)
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (authErr) {
+                // Proceed even if Anonymous Auth is not enabled on the user's custom Firebase console
+                console.debug('Auth notice:', authErr?.message || authErr);
+            }
+
+            // Listen to settings (Exchange Rate)
+            onSnapshot(
+                getSettingsDocRef(),
+                (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        if (data.exchangeRate && Number(data.exchangeRate) > 0) {
+                            exchangeRate = Number(data.exchangeRate);
+                            const inputEl = document.getElementById('exchange-rate-input');
+                            if (inputEl && document.activeElement !== inputEl) {
+                                inputEl.value = exchangeRate;
+                            }
+                            renderTable();
+                        }
+                    }
+                },
+                (err) => {
+                    console.debug('Settings listener warning:', err);
+                }
+            );
+
+            // Listen to products collection in real time
+            onSnapshot(
+                getProductsCollectionRef(),
+                async (snapshot) => {
+                    updateFirebaseStatusUI('connected');
+
+                    // Seed initial 7 products ONLY once if collection is brand new & empty
+                    if (snapshot.empty && !hasCheckedInitialSeed) {
+                        hasCheckedInitialSeed = true;
+                        products = JSON.parse(JSON.stringify(INITIAL_SEED_PRODUCTS));
+                        renderTable();
+                        for (const item of INITIAL_SEED_PRODUCTS) {
+                            await saveProductToFirebase(item);
+                        }
+                        await setDoc(getSettingsDocRef(), { initialized: true, exchangeRate }, { merge: true });
+                        return;
+                    }
+
+                    hasCheckedInitialSeed = true;
+                    const loaded = [];
+                    snapshot.forEach((docSnap) => {
+                        loaded.push(docSnap.data());
+                    });
+
+                    // Sort by creation order by default
+                    loaded.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+                    products = loaded;
+
+                    // Backfill missing Chinese translation automatically if any item lacks nameZh
+                    products.forEach(async (item) => {
+                        if (item.nameVi && (!item.nameZh || item.nameZh === item.nameVi)) {
+                            const zh = await autoTranslateToChinese(item.nameVi);
+                            if (zh && zh !== item.nameZh) {
+                                item.nameZh = zh;
+                                saveProductToFirebase(item);
+                            }
+                        }
+                    });
+
+                    renderTable();
+                },
+                (error) => {
+                    console.error('Firestore realtime sync error:', error);
+                    updateFirebaseStatusUI('offline');
+                    if (products.length === 0) {
+                        products = JSON.parse(JSON.stringify(INITIAL_SEED_PRODUCTS));
+                        renderTable();
+                    }
+                }
+            );
+        }
+
+        // ============================================================================
+        // 6. FORMATTING HELPERS (DEFAULT: VND ₫ -> CONVERTED: CNY ¥)
+        // ============================================================================
+        function formatNumber(num) {
+            const n = Number(num) || 0;
+            return Number.isInteger(n) ? n.toString() : parseFloat(n.toFixed(2)).toString();
+        }
+
+        function formatVND(vndAmount) {
+            const vnd = Math.round(Number(vndAmount) || 0);
+            return vnd.toLocaleString('vi-VN') + ' ₫';
+        }
+
+        function formatCNYFromVND(vndAmount) {
+            const cny = (Number(vndAmount) || 0) / (exchangeRate || 3650);
+            return '¥ ' + cny.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Compress uploaded/pasted images so they fit comfortably in Firestore (< 40KB)
+        function compressImageDataUrl(dataUrl, maxDim = 360, quality = 0.78) {
+            return new Promise((resolve) => {
+                if (!dataUrl || !dataUrl.startsWith('data:image/') || dataUrl.startsWith('data:image/svg')) {
+                    resolve(dataUrl);
+                    return;
+                }
+                const img = new Image();
+                img.onload = () => {
+                    let { width, height } = img;
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = () => resolve(dataUrl);
+                img.src = dataUrl;
+            });
+        }
+
+        // ============================================================================
+        // 7. LANGUAGE SWITCHER (VIETNAMESE <-> CHINESE)
+        // ============================================================================
+        function setLanguage(lang) {
+            currentLang = lang;
+            const t = I18N[lang];
+
+            const btnVi = document.getElementById('btn-lang-vi');
+            const btnZh = document.getElementById('btn-lang-zh');
+
+            if (lang === 'vi') {
+                btnVi.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 bg-white text-rose-600 shadow-sm border border-slate-200/80';
+                btnZh.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900';
+            } else {
+                btnZh.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 bg-white text-rose-600 shadow-sm border border-slate-200/80';
+                btnVi.className = 'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 text-slate-600 hover:text-slate-900';
+            }
+
+            document.getElementById('ui-app-title').textContent = t.appTitle;
+            document.getElementById('ui-sheet-badge').textContent = t.sheetBadge;
+            document.getElementById('ui-app-subtitle').textContent = t.appSubtitle;
+            document.getElementById('ui-rate-label').textContent = t.rateLabel;
+
+            document.getElementById('ui-stat-items-label').textContent = t.statItemsLabel;
+            document.getElementById('ui-stat-items-sub').textContent = t.statItemsSub;
+            document.getElementById('ui-stat-qty-label').textContent = t.statQtyLabel;
+            document.getElementById('ui-stat-qty-sub').textContent = t.statQtySub;
+            document.getElementById('ui-stat-links-label').textContent = t.statLinksLabel;
+            document.getElementById('ui-stat-links-sub').textContent = t.statLinksSub;
+            document.getElementById('ui-stat-total-label').textContent = t.statTotalLabel;
+
+            document.getElementById('search-input').placeholder = t.searchPlaceholder;
+            document.getElementById('opt-filter-all').textContent = t.filterAll;
+            document.getElementById('opt-filter-has-link').textContent = t.filterHasLink;
+            document.getElementById('opt-filter-missing-link').textContent = t.filterMissingLink;
+
+            document.getElementById('ui-btn-copy').textContent = t.btnCopy;
+            document.getElementById('ui-btn-export').textContent = t.btnExport;
+            document.getElementById('ui-btn-print').textContent = t.btnPrint;
+            document.getElementById('ui-btn-add-top').textContent = t.btnAddTop;
+
+            document.getElementById('ui-table-heading').textContent = t.tableHeading;
+            document.getElementById('ui-table-tip').textContent = t.tableTip;
+            document.getElementById('th-product-name').textContent = t.thProductName;
+            document.getElementById('th-image').textContent = t.thImage;
+            document.getElementById('th-price-text').textContent = t.thPrice;
+            document.getElementById('th-link').textContent = t.thLink;
+            document.getElementById('th-quantity').textContent = t.thQuantity;
+            document.getElementById('th-subtotal-text').textContent = t.thSubtotal;
+            document.getElementById('th-actions').textContent = t.thActions;
+
+            document.getElementById('ui-btn-add-bottom').textContent = t.btnAddBottom;
+            document.getElementById('ui-btn-add-quick-row').textContent = t.btnAddQuickRow;
+            document.getElementById('ui-total-footer-label').textContent = t.totalFooterLabel;
+            document.getElementById('ui-total-footer-note').textContent = t.totalFooterNote;
+            document.getElementById('ui-footer-copyright').textContent = t.footerCopyright;
+
+            // Modal labels
+            document.getElementById('lbl-modal-name-vi').textContent = t.lblModalNameVi;
+            document.getElementById('lbl-auto-translate-caption').innerHTML = `<i data-lucide="languages" class="w-3.5 h-3.5 text-rose-500"></i><span>${t.lblAutoTranslateCaption}</span>`;
+            document.getElementById('lbl-modal-price').textContent = t.lblModalPrice;
+            document.getElementById('lbl-modal-qty').textContent = t.lblModalQty;
+            document.getElementById('lbl-modal-subtotal').textContent = t.lblModalSubtotal;
+            document.getElementById('lbl-modal-link').textContent = t.lblModalLink;
+            document.getElementById('lbl-modal-image').textContent = t.lblModalImage;
+            document.getElementById('lbl-upload-btn').textContent = t.lblUploadBtn;
+            document.getElementById('lbl-paste-hint').textContent = t.lblPasteHint;
+            document.getElementById('btn-modal-cancel').textContent = t.btnModalCancel;
+            document.getElementById('btn-modal-save').textContent = t.btnModalSave;
+
+            updateFirebaseStatusUI(firebaseConnected ? 'connected' : 'connecting');
+            renderTable();
+        }
+
+        // ============================================================================
+        // 8. RENDER TABLE & CALCULATE TOTALS (VND DEFAULT -> CNY CONVERTED)
+        // ============================================================================
+        function getFilteredAndSortedProducts() {
+            const query = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
+            const linkFilter = document.getElementById('filter-link-select')?.value || 'all';
+
+            const clearBtn = document.getElementById('clear-search-btn');
+            if (clearBtn) {
+                clearBtn.classList.toggle('hidden', query.length === 0);
+            }
+
+            let list = products.filter(item => {
+                const matchQuery =
+                    !query ||
+                    (item.nameVi && item.nameVi.toLowerCase().includes(query)) ||
+                    (item.nameZh && item.nameZh.toLowerCase().includes(query)) ||
+                    (item.link && item.link.toLowerCase().includes(query));
+
+                const hasLink = Boolean(item.link && item.link.trim().length > 0);
+                const matchLink =
+                    linkFilter === 'all' ||
+                    (linkFilter === 'has-link' && hasLink) ||
+                    (linkFilter === 'missing-link' && !hasLink);
+
+                return matchQuery && matchLink;
+            });
+
+            if (sortField) {
+                list.sort((a, b) => {
+                    const valA = sortField === 'price' ? (Number(a.price) || 0) : ((Number(a.price) || 0) * (Number(a.quantity) || 0));
+                    const valB = sortField === 'price' ? (Number(b.price) || 0) : ((Number(b.price) || 0) * (Number(b.quantity) || 0));
+                    return sortDirection === 'asc' ? valA - valB : valB - valA;
+                });
+            }
+
+            return list;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('product-table-body');
+            const t = I18N[currentLang];
+            const filtered = getFilteredAndSortedProducts();
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-12 px-4 text-center text-slate-400">
+                            <div class="flex flex-col items-center justify-center gap-2">
+                                <i data-lucide="package-search" class="w-8 h-8 text-slate-300"></i>
+                                <p class="text-sm font-medium">${t.emptySearch}</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = filtered.map((item, idx) => {
+                    const priceVnd = Number(item.price) || 0;
+                    const qty = Number(item.quantity) || 0;
+                    const subtotalVnd = priceVnd * qty;
+                    const hasLink = Boolean(item.link && item.link.trim());
+                    const primaryName = currentLang === 'zh' ? (item.nameZh || item.nameVi) : item.nameVi;
+                    const secondaryName = currentLang === 'zh' ? item.nameVi : (item.nameZh || '');
+
+                    return `
+                        <tr class="hover:bg-rose-50/30 transition-colors group">
+                            <!-- STT -->
+                            <td class="py-3.5 px-4 text-center font-semibold text-slate-400">
+                                ${idx + 1}
+                            </td>
+
+                            <!-- TÊN HÀNG (Editable inline + Auto-translated bilingual subtext) -->
+                            <td class="py-3.5 px-4">
+                                <input
+                                    type="text"
+                                    value="${escapeHtml(primaryName)}"
+                                    onchange="updateProductName('${item.id}', this.value)"
+                                    class="w-full font-semibold text-slate-800 bg-transparent border border-transparent hover:border-slate-200 focus:border-rose-400 focus:bg-white rounded-lg px-2 py-1 -mx-2 focus:outline-none transition-all"
+                                />
+                                ${secondaryName ? `
+                                    <div class="text-xs text-slate-400 mt-0.5 font-normal flex items-center gap-1">
+                                        <span>${escapeHtml(secondaryName)}</span>
+                                    </div>
+                                ` : ''}
+                            </td>
+
+                            <!-- HÌNH THỂ HIỆN -->
+                            <td class="py-3.5 px-4 text-center">
+                                <div class="relative inline-flex items-center justify-center w-20 h-20 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden shadow-xs group/img">
+                                    <img
+                                        src="${item.image || SHEET1_SVGS.puffFoundation}"
+                                        alt="${escapeHtml(primaryName)}"
+                                        onclick="openLightbox('${item.id}')"
+                                        onerror="this.src='https://placehold.co/160x160/fdf2f8/e11d48?text=Make+Up'"
+                                        class="w-full h-full object-contain cursor-zoom-in transition-transform duration-200 group-hover/img:scale-105"
+                                    />
+                                    <button
+                                        type="button"
+                                        onclick="openProductModal('${item.id}')"
+                                        class="no-print opacity-0 group-hover/img:opacity-100 absolute bottom-1 right-1 bg-slate-900/75 hover:bg-rose-600 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-opacity"
+                                        title="${t.editBtnTitle}"
+                                    >
+                                        ${t.changeImgHint}
+                                    </button>
+                                </div>
+                            </td>
+
+                            <!-- GIÁ TIỀN (Default VND ₫ -> Converted CNY ¥) -->
+                            <td class="py-3.5 px-4 text-right">
+                                <div class="inline-flex flex-col items-end">
+                                    <div class="inline-flex items-center justify-end gap-1 bg-slate-50 group-hover:bg-white border border-slate-200/90 focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-500/15 rounded-xl px-2.5 py-1.5">
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            min="0"
+                                            value="${formatNumber(priceVnd)}"
+                                            oninput="updateProductField('${item.id}', 'price', this.value)"
+                                            class="w-24 text-right font-bold text-slate-800 bg-transparent focus:outline-none text-sm"
+                                        />
+                                        <span class="text-xs font-bold text-slate-400 select-none">₫</span>
+                                    </div>
+                                    <span id="row-price-cny-${item.id}" class="text-[11px] font-medium text-rose-600/80 mt-0.5">
+                                        ≈ ${formatCNYFromVND(priceVnd)}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- LINK SẢN PHẨM -->
+                            <td class="py-3.5 px-4">
+                                ${hasLink ? `
+                                    <div class="flex flex-col gap-1.5 max-w-[280px]">
+                                        <div class="flex items-center gap-1.5">
+                                            <a
+                                                href="${escapeHtml(item.link)}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200/70 transition-colors truncate max-w-[210px]"
+                                                title="${escapeHtml(item.link)}"
+                                            >
+                                                <i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i>
+                                                <span class="truncate">${escapeHtml(item.link)}</span>
+                                            </a>
+                                            <button
+                                                type="button"
+                                                onclick="copyProductLink('${item.id}')"
+                                                class="no-print p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+                                                title="${t.copyLink}"
+                                            >
+                                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value="${escapeHtml(item.link)}"
+                                            onchange="updateProductField('${item.id}', 'link', this.value)"
+                                            class="no-print text-[11px] text-slate-400 hover:text-slate-600 focus:text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-rose-400 focus:outline-none truncate px-0.5"
+                                        />
+                                    </div>
+                                ` : `
+                                    <div class="flex items-center gap-1.5 max-w-[260px]">
+                                        <input
+                                            type="text"
+                                            placeholder="${t.noLinkPlaceholder}"
+                                            onchange="updateProductField('${item.id}', 'link', this.value)"
+                                            class="w-full px-3 py-1.5 rounded-xl text-xs bg-slate-50 border border-dashed border-slate-300 text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-rose-400 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                `}
+                            </td>
+
+                            <!-- SỐ LƯỢNG -->
+                            <td class="py-3.5 px-4 text-center">
+                                <div class="inline-flex items-center bg-slate-50 border border-slate-200 rounded-xl p-0.5">
+                                    <button
+                                        type="button"
+                                        onclick="stepQuantity('${item.id}', -1)"
+                                        class="no-print w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:bg-white hover:text-slate-900 transition-colors"
+                                    >
+                                        <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value="${qty}"
+                                        oninput="updateProductField('${item.id}', 'quantity', this.value)"
+                                        class="w-12 text-center font-bold text-slate-800 bg-transparent focus:outline-none text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onclick="stepQuantity('${item.id}', 1)"
+                                        class="no-print w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:bg-white hover:text-slate-900 transition-colors"
+                                    >
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                            </td>
+
+                            <!-- THÀNH TIỀN (Default VND ₫ -> Converted CNY ¥) -->
+                            <td class="py-3.5 px-4 text-right">
+                                <div class="flex flex-col items-end">
+                                    <span id="row-subtotal-${item.id}" class="text-base font-extrabold text-slate-900">
+                                        ${formatVND(subtotalVnd)}
+                                    </span>
+                                    <span id="row-subtotal-cny-${item.id}" class="text-[11px] font-semibold text-rose-600/85">
+                                        ≈ ${formatCNYFromVND(subtotalVnd)}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- THAO TÁC -->
+                            <td class="py-3.5 px-4 text-center no-print">
+                                <div class="inline-flex items-center justify-center gap-1">
+                                    <button
+                                        type="button"
+                                        onclick="openProductModal('${item.id}')"
+                                        class="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                        title="${t.editBtnTitle}"
+                                    >
+                                        <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onclick="deleteProduct('${item.id}')"
+                                        class="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                        title="${t.deleteBtnTitle}"
+                                    >
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('ui-footer-RowCount').textContent = t.showingCount(filtered.length, products.length);
+            updateSummaryTotals();
+            lucide.createIcons();
+        }
+
+        function updateSummaryTotals() {
+            let totalQty = 0;
+            let grandTotalVnd = 0;
+            let linksCount = 0;
+
+            products.forEach(item => {
+                const priceVnd = Number(item.price) || 0;
+                const qty = Number(item.quantity) || 0;
+                totalQty += qty;
+                grandTotalVnd += priceVnd * qty;
+                if (item.link && item.link.trim().length > 0) {
+                    linksCount++;
+                }
+            });
+
+            // Top KPI Cards (Primary: VND, Secondary: CNY ¥)
+            document.getElementById('stat-total-items').textContent = products.length;
+            document.getElementById('stat-total-qty').textContent = totalQty;
+            document.getElementById('stat-links-count').textContent = `${linksCount} / ${products.length}`;
+            document.getElementById('stat-grand-total').textContent = formatVND(grandTotalVnd);
+            document.getElementById('stat-grand-total-cny').textContent = `≈ ${formatCNYFromVND(grandTotalVnd)}`;
+
+            // Table Footer Totals (Primary: VND, Secondary: CNY ¥)
+            document.getElementById('footer-total-qty').textContent = totalQty;
+            document.getElementById('footer-grand-total').textContent = formatVND(grandTotalVnd);
+            document.getElementById('footer-grand-total-cny').textContent = `≈ ${formatCNYFromVND(grandTotalVnd)}`;
+        }
+
+        // ============================================================================
+        // 9. INTERACTIVE CRUD & INLINE EDITING (WITH AUTO-TRANSLATION & FIREBASE)
+        // ============================================================================
+        async function updateProductName(id, newValue) {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+            const clean = (newValue || '').trim();
+            if (!clean) return;
+
+            prod.nameVi = clean;
+            prod.nameZh = await autoTranslateToChinese(clean);
+            renderTable();
+            await saveProductToFirebase(prod);
+        }
+
+        let fieldSaveTimers = {};
+        function updateProductField(id, field, rawValue) {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+
+            if (field === 'price') {
+                prod.price = Math.max(0, parseFloat(rawValue) || 0);
+            } else if (field === 'quantity') {
+                prod.quantity = Math.max(1, parseInt(rawValue, 10) || 1);
+            } else if (field === 'link') {
+                prod.link = rawValue.trim();
+                renderTable();
+                saveProductToFirebase(prod);
+                return;
+            }
+
+            // Update row VND & CNY amounts in place without losing focus
+            const priceVnd = Number(prod.price) || 0;
+            const subtotalVnd = priceVnd * (Number(prod.quantity) || 0);
+
+            const rowPriceCnyEl = document.getElementById(`row-price-cny-${id}`);
+            const rowSubEl = document.getElementById(`row-subtotal-${id}`);
+            const rowSubCnyEl = document.getElementById(`row-subtotal-cny-${id}`);
+
+            if (rowPriceCnyEl) rowPriceCnyEl.textContent = `≈ ${formatCNYFromVND(priceVnd)}`;
+            if (rowSubEl) rowSubEl.textContent = formatVND(subtotalVnd);
+            if (rowSubCnyEl) rowSubCnyEl.textContent = `≈ ${formatCNYFromVND(subtotalVnd)}`;
+
+            updateSummaryTotals();
+
+            if (fieldSaveTimers[id]) clearTimeout(fieldSaveTimers[id]);
+            fieldSaveTimers[id] = setTimeout(() => {
+                saveProductToFirebase(prod);
+            }, 350);
+        }
+
+        function stepQuantity(id, delta) {
+            const prod = products.find(p => p.id === id);
+            if (!prod) return;
+            prod.quantity = Math.max(1, (Number(prod.quantity) || 1) + delta);
+            renderTable();
+            saveProductToFirebase(prod);
+        }
+
+        async function addQuickBlankRow() {
+            const newId = 'mk-' + Date.now();
+            const defaultVi = 'Sản phẩm trang điểm mới';
+            const autoZh = await autoTranslateToChinese(defaultVi);
+            const newItem = {
+                id: newId,
+                nameVi: defaultVi,
+                nameZh: autoZh || '新美妆商品',
+                image: SHEET1_SVGS.puffFoundation,
+                price: 0,
+                link: '',
+                quantity: 1,
+                createdAt: Date.now()
+            };
+            products.push(newItem);
+            renderTable();
+            await saveProductToFirebase(newItem);
+            showToast(I18N[currentLang].toastAddedRow);
+        }
+
+        async function deleteProduct(id) {
+            products = products.filter(p => p.id !== id);
+            renderTable();
+            await deleteProductFromFirebase(id);
+            showToast(I18N[currentLang].toastDeleted);
+        }
+
+        async function updateExchangeRate(val) {
+            exchangeRate = Math.max(1, Number(val) || 3650);
+            renderTable();
+            try {
+                await setDoc(getSettingsDocRef(), { exchangeRate }, { merge: true });
+            } catch (e) {
+                console.debug('Could not save exchange rate:', e);
+            }
+        }
+
+        function handleSearchAndFilter() {
+            renderTable();
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            renderTable();
+        }
+
+        function toggleSort(field) {
+            if (sortField === field) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortField = field;
+                sortDirection = 'asc';
+            }
+            renderTable();
+        }
+
+        // ============================================================================
+        // 10. ADD / EDIT MODAL (AUTO CHINESE TRANSLATION + IMAGE COMPRESSION)
+        // ============================================================================
+        function openProductModal(productId = null) {
+            const modal = document.getElementById('product-modal');
+            const t = I18N[currentLang];
+
+            if (productId) {
+                const prod = products.find(p => p.id === productId);
+                if (!prod) return;
+                document.getElementById('modal-title').textContent = t.modalEditTitle;
+                document.getElementById('modal-product-id').value = prod.id;
+                document.getElementById('modal-name-vi').value = prod.nameVi || '';
+                document.getElementById('modal-auto-zh').value = prod.nameZh || '';
+                document.getElementById('modal-zh-preview').textContent = prod.nameZh || '—';
+                document.getElementById('modal-price').value = prod.price;
+                document.getElementById('modal-qty').value = prod.quantity;
+                document.getElementById('modal-link').value = prod.link || '';
+                document.getElementById('modal-image-url').value = prod.image && !prod.image.startsWith('data:') ? prod.image : '';
+                setModalImagePreview(prod.image || SHEET1_SVGS.puffFoundation);
+            } else {
+                document.getElementById('modal-title').textContent = t.modalAddTitle;
+                document.getElementById('modal-product-id').value = '';
+                document.getElementById('modal-name-vi').value = '';
+                document.getElementById('modal-auto-zh').value = '';
+                document.getElementById('modal-zh-preview').textContent = '—';
+                document.getElementById('modal-price').value = '';
+                document.getElementById('modal-qty').value = 1;
+                document.getElementById('modal-link').value = '';
+                document.getElementById('modal-image-url').value = '';
+                setModalImagePreview(SHEET1_SVGS.puffFoundation);
+            }
+
+            updateModalSubtotalPreview();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeProductModal() {
+            const modal = document.getElementById('product-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function updateModalSubtotalPreview() {
+            const priceVnd = parseFloat(document.getElementById('modal-price').value) || 0;
+            const qty = parseInt(document.getElementById('modal-qty').value, 10) || 1;
+            const subtotalVnd = priceVnd * qty;
+            document.getElementById('modal-subtotal-preview').textContent =
+                `${formatVND(subtotalVnd)} (≈ ${formatCNYFromVND(subtotalVnd)})`;
+        }
+
+        function setModalImagePreview(src) {
+            const img = document.getElementById('modal-img-preview');
+            const placeholder = document.getElementById('modal-img-placeholder');
+            if (src) {
+                img.src = src;
+                img.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                img.src = '';
+                img.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+        }
+
+        function previewModalImageUrl(url) {
+            if (url && url.trim().length > 0) {
+                setModalImagePreview(url.trim());
+            }
+        }
+
+        function handleModalFileUpload(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const compressed = await compressImageDataUrl(e.target.result);
+                setModalImagePreview(compressed);
+                document.getElementById('modal-image-url').value = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Support pasting screenshot images directly with Ctrl+V while modal is open
+        window.addEventListener('paste', function(e) {
+            const modal = document.getElementById('product-modal');
+            if (modal.classList.contains('hidden')) return;
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = async function(evt) {
+                        const compressed = await compressImageDataUrl(evt.target.result);
+                        setModalImagePreview(compressed);
+                    };
+                    reader.readAsDataURL(blob);
+                    break;
+                }
+            }
+        });
+
+        async function saveProductFromModal(event) {
+            event.preventDefault();
+            const saveBtn = document.getElementById('btn-modal-save');
+            saveBtn.disabled = true;
+
+            try {
+                const id = document.getElementById('modal-product-id').value;
+                const nameVi = document.getElementById('modal-name-vi').value.trim();
+                const price = Math.max(0, parseFloat(document.getElementById('modal-price').value) || 0);
+                const quantity = Math.max(1, parseInt(document.getElementById('modal-qty').value, 10) || 1);
+                const link = document.getElementById('modal-link').value.trim();
+                const previewSrc = document.getElementById('modal-img-preview').src;
+
+                // Automatically translate Vietnamese name to Chinese
+                const autoNameZh = await autoTranslateToChinese(nameVi);
+
+                let targetProduct;
+                if (id) {
+                    const idx = products.findIndex(p => p.id === id);
+                    if (idx !== -1) {
+                        targetProduct = {
+                            ...products[idx],
+                            nameVi,
+                            nameZh: autoNameZh || nameVi,
+                            price,
+                            quantity,
+                            link,
+                            image: previewSrc || products[idx].image
+                        };
+                        products[idx] = targetProduct;
+                    }
+                } else {
+                    targetProduct = {
+                        id: 'mk-' + Date.now(),
+                        nameVi,
+                        nameZh: autoNameZh || nameVi,
+                        price,
+                        quantity,
+                        link,
+                        image: previewSrc || SHEET1_SVGS.puffFoundation,
+                        createdAt: Date.now()
+                    };
+                    products.push(targetProduct);
+                }
+
+                closeProductModal();
+                renderTable();
+                if (targetProduct) {
+                    await saveProductToFirebase(targetProduct);
+                }
+                showToast(I18N[currentLang].toastSaved);
+            } finally {
+                saveBtn.disabled = false;
+            }
+        }
+
+        // ============================================================================
+        // 11. LIGHTBOX PREVIEW, CLIPBOARD & CSV EXPORT
+        // ============================================================================
+        function openLightbox(productId) {
+            const prod = products.find(p => p.id === productId);
+            if (!prod) return;
+            const modal = document.getElementById('lightbox-modal');
+            const title = currentLang === 'zh' ? (prod.nameZh || prod.nameVi) : prod.nameVi;
+            document.getElementById('lightbox-title').textContent = title;
+            document.getElementById('lightbox-img').src = prod.image || SHEET1_SVGS.puffFoundation;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeLightbox() {
+            const modal = document.getElementById('lightbox-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function copyTextToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function copyProductLink(productId) {
+            const prod = products.find(p => p.id === productId);
+            if (!prod || !prod.link) return;
+            copyTextToClipboard(prod.link);
+            showToast(I18N[currentLang].toastCopiedLink);
+        }
+
+        function copyProposalSummary() {
+            let grandTotalVnd = 0;
+            const lines = [];
+
+            if (currentLang === 'zh') {
+                lines.push('📋 美妆采购提案清单 (SHEET 1)');
+                lines.push('--------------------------------');
+                products.forEach((p, i) => {
+                    const subVnd = (Number(p.price) || 0) * (Number(p.quantity) || 0);
+                    grandTotalVnd += subVnd;
+                    lines.push(`${i + 1}. ${p.nameZh || p.nameVi} | 单价: ${formatVND(p.price)} × ${p.quantity} = ${formatVND(subVnd)} (≈ ${formatCNYFromVND(subVnd)})${p.link ? ' | 链接: ' + p.link : ''}`);
+                });
+                lines.push('--------------------------------');
+                lines.push(`💰 合计总金额: ${formatVND(grandTotalVnd)} (≈ ${formatCNYFromVND(grandTotalVnd)})`);
+            } else {
+                lines.push('📋 ĐỀ XUẤT ĐỒ MAKE UP (SHEET 1)');
+                lines.push('--------------------------------');
+                products.forEach((p, i) => {
+                    const subVnd = (Number(p.price) || 0) * (Number(p.quantity) || 0);
+                    grandTotalVnd += subVnd;
+                    lines.push(`${i + 1}. ${p.nameVi} | Giá: ${formatVND(p.price)} × SL: ${p.quantity} = ${formatVND(subVnd)} (≈ ${formatCNYFromVND(subVnd)})${p.link ? ' | Link: ' + p.link : ''}`);
+                });
+                lines.push('--------------------------------');
+                lines.push(`💰 TỔNG TIỀN: ${formatVND(grandTotalVnd)} (≈ ${formatCNYFromVND(grandTotalVnd)})`);
+            }
+
+            copyTextToClipboard(lines.join('\n'));
+            showToast(I18N[currentLang].toastCopiedSummary);
+        }
+
+        function exportToCSV() {
+            const headers = currentLang === 'zh'
+                ? ['序号', '商品名称 (越)', '商品名称 (中)', '单价 (VNĐ)', '单价 (¥)', '商品链接', '数量', '小计 (VNĐ)', '小计 (¥)']
+                : ['STT', 'TÊN HÀNG', 'TÊN TIẾNG TRUNG (TỰ ĐỘNG)', 'GIÁ TIỀN (VNĐ)', 'QUY ĐỔI (¥)', 'LINK SẢN PHẨM', 'SỐ LƯỢNG', 'THÀNH TIỀN (VNĐ)', 'THÀNH TIỀN (¥)'];
+
+            let grandTotalVnd = 0;
+            const rows = products.map((p, idx) => {
+                const priceVnd = Number(p.price) || 0;
+                const subVnd = priceVnd * (Number(p.quantity) || 0);
+                grandTotalVnd += subVnd;
+                const priceCny = (priceVnd / exchangeRate).toFixed(2);
+                const subCny = (subVnd / exchangeRate).toFixed(2);
+                return [
+                    idx + 1,
+                    `"${(p.nameVi || '').replace(/"/g, '""')}"`,
+                    `"${(p.nameZh || '').replace(/"/g, '""')}"`,
+                    Math.round(priceVnd),
+                    priceCny,
+                    `"${(p.link || '').replace(/"/g, '""')}"`,
+                    p.quantity,
+                    Math.round(subVnd),
+                    subCny
+                ].join(',');
+            });
+
+            const totalLabel = currentLang === 'zh' ? '合计总金额' : 'TỔNG TIỀN';
+            rows.push(['', `"${totalLabel}"`, '', '', '', '', '', Math.round(grandTotalVnd), (grandTotalVnd / exchangeRate).toFixed(2)].join(','));
+
+            const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'DE_XUAT_DO_MAKE_UP_SHEET1.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs sm:text-sm font-medium flex items-center gap-2 border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200';
+            toast.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => {
+                toast.remove();
+            }, 2800);
+        }
+
+        // Expose functions to global window for inline HTML handlers
+        Object.assign(window, {
+            setLanguage,
+            updateExchangeRate,
+            handleSearchAndFilter,
+            clearSearch,
+            toggleSort,
+            openProductModal,
+            closeProductModal,
+            scheduleModalAutoTranslate,
+            updateModalSubtotalPreview,
+            previewModalImageUrl,
+            handleModalFileUpload,
+            saveProductFromModal,
+            updateProductName,
+            updateProductField,
+            stepQuantity,
+            addQuickBlankRow,
+            deleteProduct,
+            openLightbox,
+            closeLightbox,
+            copyProductLink,
+            copyProposalSummary,
+            exportToCSV
+        });
+
+        // Initialize app & Firebase realtime sync
+        window.addEventListener('DOMContentLoaded', () => {
+            setLanguage('vi');
+            initFirebaseSync();
+        });
+    </script>
+</body>
+</html>
