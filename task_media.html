@@ -399,14 +399,15 @@
                     </button>
                 </div>
 
-                <div id="roleSwitcherGroup" class="inline-flex p-1 rounded-xl bg-slate-900/90 border border-white/10">
-                    <button id="roleManagerBtn" onclick="switchRole('manager')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md">
+                <!-- QUẢN LÝ BADGE + NÚT KHOÁ (CHỈ HIỂN THỊ KHI QUẢN LÝ ĐĂNG NHẬP, ẨN HOÀN TOÀN VỚI NHÂN SỰ) -->
+                <div id="roleSwitcherGroup" class="hidden inline-flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-white/10">
+                    <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md">
                         <i data-lucide="shield-check" class="w-4 h-4"></i>
-                        <span id="roleManagerText">Quản lý (Anh Tino)</span>
-                    </button>
-                    <button id="roleMediaBtn" onclick="switchRole('media')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white transition-all">
-                        <i data-lucide="user-plus" class="w-4 h-4"></i>
-                        <span id="roleMediaText">Media Điền Task</span>
+                        <span>Quản lý (Anh Tino)</span>
+                    </div>
+                    <button type="button" onclick="lockManagerPortal()" title="Khoá quyền quản lý" class="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold transition flex items-center gap-1 active:scale-95">
+                        <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                        <span>Khoá</span>
                     </button>
                 </div>
 
@@ -829,12 +830,7 @@
                 <button type="button" onclick="deletePinDigit()" class="h-12 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-white/5 active:scale-95 text-sm font-bold text-slate-400 hover:text-white transition flex items-center justify-center">⌫</button>
             </div>
 
-            <!-- Nút cho nhân sự lỡ vào link quản lý: Chuyển về trang nhân sự an toàn -->
-            <div class="mt-5 pt-3.5 border-t border-white/10 w-full flex flex-col gap-2">
-                <button type="button" onclick="cancelManagerPinToMedia()" class="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-xs font-bold text-amber-300 transition flex items-center justify-center gap-1.5 active:scale-95">
-                    <span>← Chuyển về trang Nhân Sự (Media)</span>
-                </button>
-            </div>
+
         </div>
     </div>
 
@@ -1049,19 +1045,21 @@
                     <input type="text" id="taskNoteInput" placeholder="VD: Chụp tại Studio A, chuẩn bị phông trắng..." class="w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
                 </div>
 
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-3.5 border-t border-white/10 gap-2.5">
-                    <button type="button" id="deleteTaskBtn" onclick="handleDeleteCurrentTask()" class="hidden h-11 px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shrink-0">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        <span id="btnDeleteTaskText">Xoá Task</span>
+                <!-- CÁC NÚT FOOTER: CHIỀU CAO H-11 ĐỒNG BỘ & ĐỘ RỘNG BẰNG NHAU (FLEX-1) -->
+                <div id="modalFooterActions" class="flex items-center gap-2.5 pt-3.5 border-t border-white/10 w-full">
+                    <button type="button" id="deleteTaskBtn" onclick="handleDeleteCurrentTask()" 
+                            class="hidden flex-1 min-w-0 h-11 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 truncate">
+                        <i data-lucide="trash-2" class="w-4 h-4 shrink-0"></i>
+                        <span id="btnDeleteTaskText" class="truncate">Xoá Task</span>
                     </button>
-                    <div class="flex items-center gap-2.5 ml-auto w-full sm:w-auto">
-                        <button type="button" onclick="closeTaskModal()" id="btnCancelTaskText" class="flex-1 sm:flex-initial h-11 px-5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-white/10 text-xs font-bold text-slate-300 hover:text-white flex items-center justify-center transition active:scale-95">
-                            Huỷ
-                        </button>
-                        <button type="submit" id="btnSaveTaskText" class="flex-1 sm:flex-initial h-11 px-6 rounded-xl bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition active:scale-95">
-                            💾 Lưu Lịch Lên Firebase
-                        </button>
-                    </div>
+                    <button type="button" onclick="closeTaskModal()" id="btnCancelTaskText" 
+                            class="flex-1 min-w-0 h-11 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-white/10 text-xs font-bold text-slate-300 hover:text-white flex items-center justify-center transition active:scale-95 truncate">
+                        Huỷ
+                    </button>
+                    <button type="submit" id="btnSaveTaskText" 
+                            class="flex-1 min-w-0 h-11 px-3 rounded-xl bg-gradient-to-r from-cyan-400 via-teal-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-1.5 transition active:scale-95 truncate">
+                        💾 Lưu Lịch
+                    </button>
                 </div>
             </form>
         </div>
@@ -1304,8 +1302,8 @@
                 lblTaskCreator: "Phân loại nguồn task",
                 lblTaskNote: "Ghi chú chi tiết (Địa điểm, thiết bị, yêu cầu...)",
                 phTaskNote: "VD: Chụp tại Studio A, chuẩn bị phông trắng...",
-                btnDeleteTaskManager: "🗑️ Xoá Vĩnh Viễn Task Này",
-                btnRequestDeleteMedia: "⏳ Gửi Yêu Cầu Xoá (Chờ Anh Tino Duyệt)",
+                btnDeleteTaskManager: "🗑️ Xoá Task",
+                btnRequestDeleteMedia: "⏳ Yêu Cầu Xoá",
                 btnPendingDeleteMedia: "⏳ Đang Chờ Anh Tino Duyệt Xoá...",
                 btnCancel: "Huỷ",
                 btnSaveTask: "💾 Lưu Lịch Lên Firebase",
@@ -1473,7 +1471,7 @@
                 lblTaskNote: "详细备注说明 (地点、器材、要求...)",
                 phTaskNote: "例如：A摄影棚拍摄，准备白色背景布...",
                 btnDeleteTaskManager: "🗑️ 永久删除此任务",
-                btnRequestDeleteMedia: "⏳ 申请删除 (需主管 Tino 审批)",
+                btnRequestDeleteMedia: "⏳ 申请删除",
                 btnPendingDeleteMedia: "⏳ 正在等待 Tino 审批删除...",
                 btnCancel: "取消",
                 btnSaveTask: "💾 保存排班至 Firebase",
@@ -2295,6 +2293,11 @@
         const MANAGER_PIN = '0908';
         let currentPinInput = '';
 
+        window.lockManagerPortal = function() {
+            sessionStorage.removeItem('media_manager_pin_verified');
+            window.openManagerPinModal();
+        };
+
         window.isManagerAuthenticated = function() {
             return sessionStorage.getItem('media_manager_pin_verified') === MANAGER_PIN;
         };
@@ -2413,7 +2416,9 @@
             } else if (e.key === 'Backspace') {
                 deletePinDigit();
             } else if (e.key === 'Escape') {
-                cancelManagerPinToMedia();
+                if (lockedStaffName || roleParam === 'media') {
+                    closeManagerPinModal();
+                }
             }
         });
 
@@ -3052,8 +3057,13 @@
             const mediaBanner = document.getElementById('mediaModeBanner');
             if (mediaBanner) mediaBanner.classList.toggle('hidden', isManager);
             
+            // NHÂN SỰ CHỈ CÓ WORKSPACE CỦA NHÂN SỰ ĐÓ: ẨN HOÀN TOÀN NÚT CHUYỂN QUẢN LÝ
             const roleGroup = document.getElementById('roleSwitcherGroup');
-            if (roleGroup) roleGroup.classList.toggle('hidden', isLockedMediaLink);
+            if (roleGroup) {
+                const hideRoleSwitcher = (!isManager || Boolean(lockedStaffName) || (roleParam === 'media'));
+                roleGroup.classList.toggle('hidden', hideRoleSwitcher);
+                roleGroup.style.display = hideRoleSwitcher ? 'none' : 'inline-flex';
+            }
 
             const greetingBadge = document.getElementById('greetingBadge');
             if (greetingBadge) {
@@ -4245,16 +4255,19 @@
 
             if (isManager) {
                 if (delBtn) delBtn.disabled = false;
-                if (delBtn) delBtn.className = 'h-11 px-4 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shrink-0';
+                if (delBtn) delBtn.className = 'flex-1 min-w-0 h-11 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 truncate';
                 if (delBtnText) delBtnText.textContent = dict.btnDeleteTaskManager;
+                delBtn.title = 'Xoá vĩnh viễn task này khỏi hệ thống';
             } else if (task.deleteRequested) {
                 if (delBtn) delBtn.disabled = true;
-                if (delBtn) delBtn.className = 'h-11 px-4 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-2 opacity-80 cursor-not-allowed shrink-0';
+                if (delBtn) delBtn.className = 'flex-1 min-w-0 h-11 px-3 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 opacity-80 cursor-not-allowed truncate';
                 if (delBtnText) delBtnText.textContent = dict.btnPendingDeleteMedia;
+                delBtn.title = 'Đã gửi yêu cầu xoá, đang chờ Anh Tino duyệt';
             } else {
                 if (delBtn) delBtn.disabled = false;
-                if (delBtn) delBtn.className = 'h-11 px-4 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 shrink-0';
+                if (delBtn) delBtn.className = 'flex-1 min-w-0 h-11 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 truncate';
                 if (delBtnText) delBtnText.textContent = dict.btnRequestDeleteMedia;
+                delBtn.title = 'Gửi yêu cầu xoá task này để Anh Tino duyệt';
             }
 
             updateCalculatedTimePreview();
@@ -4376,10 +4389,19 @@
 
             const filterSelect = document.getElementById('filterStaff');
             if (filterSelect) {
-                const currentFilter = filterSelect.value || 'ALL';
-                filterSelect.innerHTML = `<option value="ALL" class="bg-slate-900">${dict.filterAllStaff(staffList.length)}</option>` +
-                    staffList.map(name => `<option value="${escapeHtml(name)}" class="bg-slate-900">${escapeHtml(name)}</option>`).join('');
-                filterSelect.value = staffList.includes(currentFilter) ? currentFilter : 'ALL';
+                if (currentRole !== 'manager' && lockedStaffName) {
+                    filterSelect.innerHTML = `<option value="${escapeHtml(lockedStaffName)}" class="bg-slate-900">${escapeHtml(lockedStaffName)} (Cá nhân)</option>`;
+                    filterSelect.value = lockedStaffName;
+                    filterSelect.disabled = true;
+                    filterSelect.classList.add('opacity-80', 'cursor-not-allowed');
+                } else {
+                    filterSelect.disabled = false;
+                    filterSelect.classList.remove('opacity-80', 'cursor-not-allowed');
+                    const currentFilter = filterSelect.value || 'ALL';
+                    filterSelect.innerHTML = `<option value="ALL" class="bg-slate-900">${dict.filterAllStaff(staffList.length)}</option>` +
+                        staffList.map(name => `<option value="${escapeHtml(name)}" class="bg-slate-900">${escapeHtml(name)}</option>`).join('');
+                    filterSelect.value = staffList.includes(currentFilter) ? currentFilter : 'ALL';
+                }
             }
 
             const modalAssigneeInp = document.getElementById('taskAssigneeInput');
@@ -4698,19 +4720,15 @@
         function startMediaApp() {
             loadCachedData();
             syncStaffFromTasks(allTasks);
+            populateStaffSelectors();
 
-            // BẢO MẬT: Nếu người dùng vào link quản lý hoặc chưa xác thực mã PIN 0908, chuyển về trang nhân sự an toàn và yêu cầu nhập mã PIN
-            if (currentRole === 'manager' && !window.isManagerAuthenticated()) {
-                currentRole = 'media';
-                if (typeof window.setLanguage === 'function') {
-                    window.setLanguage(currentLang, false);
-                }
-                if (typeof window.renderAllViews === 'function') {
-                    window.renderAllViews();
-                }
-                setTimeout(() => {
-                    window.openManagerPinModal();
-                }, 200);
+            // BẢO MẬT: Đây là link chính (Quản lý). Nhân sự đã có link riêng.
+            // Không có mã PIN 0908 là khoá hoàn toàn, không cho vào!
+            const isPersonalStaffLink = Boolean(lockedStaffName) || (roleParam === 'media');
+
+            if (!isPersonalStaffLink && !window.isManagerAuthenticated()) {
+                currentRole = 'manager';
+                window.openManagerPinModal();
             } else {
                 if (typeof window.setLanguage === 'function') {
                     window.setLanguage(currentLang, false);
