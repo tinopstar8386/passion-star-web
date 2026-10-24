@@ -1798,6 +1798,58 @@
     </div>
 
 
+    <!-- MODAL XÁC NHẬN THÊM NHANH BÀI ĐĂNG TIKTOK (PREVIEW & CONFIRM - VẤN ĐỀ 3) -->
+    <div id="smartPasteConfirmModal" onclick="if(event.target===this)closeSmartPasteConfirmModal()"
+        class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
+            <!-- Modal Header -->
+            <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-2xl bg-pink-500/20 border border-pink-400/40 text-pink-400 flex items-center justify-center text-lg shrink-0 shadow-inner">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-base sm:text-lg font-black tracking-tight truncate">
+                            Xác Nhận Thêm Nhanh Bài Đăng TikTok
+                        </h3>
+                        <p class="text-xs text-slate-300 mt-0.5 truncate">
+                            Kiểm tra Idol, Ngày đăng & Hạng mục trước khi lưu vào hệ thống
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeSmartPasteConfirmModal()"
+                    class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: Danh sách bài đăng cần xác nhận -->
+            <div class="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1 bg-slate-50/50 dark:bg-slate-950/40">
+                <div id="smartPasteConfirmList" class="space-y-3">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-5 sm:px-6 py-3.5 bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+                <div id="smartPasteConfirmSummary" class="text-xs font-bold text-slate-500 dark:text-slate-400">
+                    Sẵn sàng lưu: 0 bài
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeSmartPasteConfirmModal()"
+                        class="h-10 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition cursor-pointer">
+                        Hủy Bỏ
+                    </button>
+                    <button type="button" id="btnExecuteSmartPasteConfirm" onclick="executeSmartPasteConfirm()"
+                        class="h-10 px-5 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-md transition flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-check"></i>
+                        <span id="btnExecuteSmartPasteConfirmText">Xác Nhận Lưu Bài Đăng</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL XÁC NHẬN XÓA TÀI KHOẢN (CUSTOM UI ĐỒNG BỘ WEB - THỨ 1, HÌNH 1) -->
     <div id="confirmDeleteAccountModal" onclick="if(event.target===this)closeConfirmDeleteAccountModal()" class="fixed inset-0 z-[70] hidden bg-slate-900/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
         <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100">
@@ -2653,6 +2705,7 @@ service cloud.firestore {
         function closeKeyboardShortcutsModal() {
             const modal = document.getElementById('keyboardShortcutsModal');
             if (modal) modal.classList.add('hidden');
+            unlockBodyScroll();
         }
 
         
@@ -2666,20 +2719,23 @@ service cloud.firestore {
 
         function unlockBodyScroll() {
             const modalSelectors = [
-                '#idolDetailModal:not(.hidden)',
-                '#accountModal:not(.hidden)',
-                '#confirmDeleteAccountModal:not(.hidden)',
-                '#googleSheetModal:not(.hidden)',
-                '#exportSheetModal:not(.hidden)',
-                '#keyboardShortcutsModal:not(.hidden)',
-                '#cloudHelpModal:not(.hidden)',
-                '#lastWeekReportModal:not(.hidden)',
-                '#mainPinLockOverlay:not(.hidden)'
+                '#idolDetailModal',
+                '#accountModal',
+                '#confirmDeleteAccountModal',
+                '#googleSheetModal',
+                '#exportSheetModal',
+                '#keyboardShortcutsModal',
+                '#cloudHelpModal',
+                '#lastWeekReportModal',
+                '#mainPinLockOverlay',
+                '#smartPasteConfirmModal'
             ];
-            const hasOpenModal = Array.from(document.querySelectorAll(modalSelectors.join(', '))).some(el => {
+            // Chỉ giữ khóa cuộn nếu có ít nhất 1 modal THỰC SỰ ĐANG MỞ (không ẩn và không đang closing)
+            const hasActiveModal = modalSelectors.some(sel => {
+                const el = document.querySelector(sel);
                 return el && !el.classList.contains('hidden') && !el.classList.contains('modal-closing');
             });
-            if (!hasOpenModal) {
+            if (!hasActiveModal) {
                 document.body.style.overflow = '';
                 document.documentElement.style.overflow = '';
             }
@@ -2998,7 +3054,15 @@ service cloud.firestore {
             }
 
             if (e.key === 'Escape') {
-                // 1. Ưu tiên modal xác nhận xóa tài khoản (Esc hủy nhanh)
+                // 1. Ưu tiên modal xác nhận thêm nhanh (Esc hủy)
+                const smartConfirmModal = document.getElementById('smartPasteConfirmModal');
+                if (smartConfirmModal && !smartConfirmModal.classList.contains('hidden')) {
+                    e.preventDefault();
+                    closeSmartPasteConfirmModal();
+                    return;
+                }
+
+                // 2. Modal xác nhận xóa tài khoản (Esc hủy nhanh)
                 const confirmDelModal = document.getElementById('confirmDeleteAccountModal');
                 if (confirmDelModal && !confirmDelModal.classList.contains('hidden')) {
                     e.preventDefault();
@@ -3034,7 +3098,15 @@ service cloud.firestore {
             }
 
             if (e.key === 'Enter') {
-                // 1. Ưu tiên Enter xác nhận xóa tài khoản khi modal xác nhận đang mở
+                // 0. Ưu tiên Enter xác nhận lưu bài đăng thêm nhanh
+                const smartConfirmModal = document.getElementById('smartPasteConfirmModal');
+                if (smartConfirmModal && !smartConfirmModal.classList.contains('hidden')) {
+                    e.preventDefault();
+                    executeSmartPasteConfirm();
+                    return;
+                }
+
+                // 1. Enter xác nhận xóa tài khoản khi modal xác nhận đang mở
                 const confirmDelModal = document.getElementById('confirmDeleteAccountModal');
                 if (confirmDelModal && !confirmDelModal.classList.contains('hidden')) {
                     e.preventDefault();
@@ -3582,6 +3654,7 @@ service cloud.firestore {
 
         function closeLastWeekReportModal() {
             document.getElementById('lastWeekReportModal').classList.add('hidden');
+            unlockBodyScroll();
         }
 
         function renderLastWeekReportContent(weekMondayStr) {
@@ -4683,20 +4756,25 @@ service cloud.firestore {
         function closeIdolDetailModal() {
             const modal = document.getElementById('idolDetailModal');
             if (!modal || modal.classList.contains('hidden')) return;
+
+            // Đánh dấu closing và giải phóng thanh lăn chuột ngay lập tức
+            modal.classList.add('modal-closing');
+            modal.classList.remove('modal-entering', 'active');
+            unlockBodyScroll();
             closeAllModernDropdowns();
+
             if (pendingDeleteTimer) {
                 clearTimeout(pendingDeleteTimer);
                 pendingDeleteTimer = null;
             }
             pendingDeletePostId = null;
 
-            modal.classList.remove('modal-entering', 'active');
-            modal.classList.add('modal-closing');
             if (idolModalCloseTimer) clearTimeout(idolModalCloseTimer);
             idolModalCloseTimer = setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.classList.remove('modal-closing');
                 idolModalCloseTimer = null;
+                unlockBodyScroll(); // Gọi thêm lần nữa để đảm bảo 100% không bị kẹt cuộn
             }, 185);
         }
 
@@ -4778,7 +4856,14 @@ service cloud.firestore {
                 if (resolved && resolved.videoId) {
                     link = resolved.cleanUrl;
                     if (resolved.dateStr) date = resolved.dateStr;
-                    if (resolved.matchedAcc) targetAccId = resolved.matchedAcc.id;
+                    if (resolved.matchedAcc) {
+                        // Chặn nếu thuộc nhóm khác khi đang ở link nhóm riêng (Vấn đề 2)
+                        if (currentOperatorGroup && extractCleanGroupName(resolved.matchedAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
+                            showToast(`⚠️ Link bài đăng này thuộc nhóm ${extractCleanGroupName(resolved.matchedAcc)}. Bạn đang ở khu vực nhóm ${currentOperatorGroup}, không được phép thêm bài cho nhóm khác!`, 'error');
+                            return;
+                        }
+                        targetAccId = resolved.matchedAcc.id;
+                    }
                 }
             } else {
                 const videoId = extractTikTokVideoId(link);
@@ -5211,8 +5296,21 @@ service cloud.firestore {
             const currentPostAcc = postAccountSelect.value;
             const currentFilterAcc = filterAccountSelect.value || 'ALL';
 
-            const groupAccounts = accounts.filter(a => a.role === 'GROUP');
-            const idolAccounts = accounts.filter(a => a.role === 'IDOL');
+            // Nếu đang ở Link Nhóm Riêng (?group=...), CHỈ cho phép chọn Idol & Kênh của nhóm đó (Vấn đề 2)
+            const groupAccounts = accounts.filter(a => {
+                if (a.role !== 'GROUP') return false;
+                if (currentOperatorGroup) {
+                    return extractCleanGroupName(a).toUpperCase() === currentOperatorGroup.toUpperCase();
+                }
+                return true;
+            });
+            const idolAccounts = accounts.filter(a => {
+                if (a.role !== 'IDOL') return false;
+                if (currentOperatorGroup) {
+                    return extractCleanGroupName(a).toUpperCase() === currentOperatorGroup.toUpperCase();
+                }
+                return true;
+            });
 
             let formOptionsHtml = '';
             if (groupAccounts.length > 0) {
@@ -5726,6 +5824,15 @@ service cloud.firestore {
             if (!date) {
                 date = todayStr;
                 selectPostDateValue(todayStr);
+            }
+
+            // Chặn tuyệt đối nếu đang ở Link Nhóm Riêng mà chọn kênh thuộc nhóm khác (Vấn đề 2)
+            if (currentOperatorGroup && accountId) {
+                const targetAcc = getAccountById(accountId);
+                if (targetAcc && extractCleanGroupName(targetAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()) {
+                    showToast(`⚠️ Kênh ${targetAcc.handle} thuộc nhóm ${extractCleanGroupName(targetAcc)}. Bạn đang ở link vận hành của nhóm ${currentOperatorGroup}, không được phép duyệt bài cho nhóm khác!`, 'error');
+                    return;
+                }
             }
 
             // Kiểm tra kênh đăng
@@ -6682,6 +6789,7 @@ service cloud.firestore {
         function closeCloudHelpModal() {
             const modal = document.getElementById('cloudHelpModal');
             if (modal) modal.classList.add('hidden');
+            unlockBodyScroll();
         }
 
         function autoFillProfileUrl() {
@@ -7543,38 +7651,212 @@ service cloud.firestore {
         }
 
         // Bóc tách thông minh 1 hoặc nhiều link TikTok (hỗ trợ cả link đầy đủ & link rút gọn vt.tiktok.com, chống trùng tuyệt đối)
-        async function handleSmartLinksExtract(inputId = 'smartPasteLinksInput') {
-            const input = document.getElementById(inputId) || document.getElementById('smartPasteLinksInput');
-            if (!input) return;
-            const rawText = (input.value || '').trim();
-            if (!rawText) {
-                showToast('Vui lòng dán ít nhất 1 đường link bài đăng TikTok!', 'error');
+        
+        // ============================================================================
+        // MODAL XÁC NHẬN THÊM NHANH BÀI ĐĂNG TIKTOK (VẤN ĐỀ 2 & 3)
+        // ============================================================================
+        let pendingSmartPasteItems = [];
+        let pendingSmartPasteInputSourceId = '';
+
+        function openSmartPasteConfirmModal(items, sourceInputId = '') {
+            pendingSmartPasteItems = items || [];
+            pendingSmartPasteInputSourceId = sourceInputId;
+            renderSmartPasteConfirmList();
+            const modal = document.getElementById('smartPasteConfirmModal');
+            if (modal) modal.classList.remove('hidden');
+            lockBodyScroll();
+        }
+
+        function closeSmartPasteConfirmModal() {
+            const modal = document.getElementById('smartPasteConfirmModal');
+            if (modal) modal.classList.add('hidden');
+            pendingSmartPasteItems = [];
+            pendingSmartPasteInputSourceId = '';
+            unlockBodyScroll();
+        }
+
+        function removePendingSmartPasteItem(idx) {
+            if (idx >= 0 && idx < pendingSmartPasteItems.length) {
+                pendingSmartPasteItems.splice(idx, 1);
+                renderSmartPasteConfirmList();
+                if (pendingSmartPasteItems.length === 0) {
+                    closeSmartPasteConfirmModal();
+                    showToast('Đã xóa hết các bài đăng trong danh sách xác nhận', 'info');
+                }
+            }
+        }
+
+        function updatePendingSmartPasteCategory(idx, newCategory) {
+            if (pendingSmartPasteItems[idx]) {
+                pendingSmartPasteItems[idx].category = newCategory;
+            }
+        }
+
+        function updatePendingSmartPasteDate(idx, newDate) {
+            if (pendingSmartPasteItems[idx] && newDate) {
+                pendingSmartPasteItems[idx].dateStr = newDate;
+                pendingSmartPasteItems[idx].weekMon = getMondayOfWeekStr(newDate);
+            }
+        }
+
+        function renderSmartPasteConfirmList() {
+            const container = document.getElementById('smartPasteConfirmList');
+            const summaryEl = document.getElementById('smartPasteConfirmSummary');
+            const btnConfirm = document.getElementById('btnExecuteSmartPasteConfirm');
+            const btnText = document.getElementById('btnExecuteSmartPasteConfirmText');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const validItems = pendingSmartPasteItems.filter(it => it.isValid && !it.isCrossGroup);
+            const crossGroupItems = pendingSmartPasteItems.filter(it => it.isCrossGroup);
+
+            if (summaryEl) {
+                if (currentOperatorGroup && crossGroupItems.length > 0) {
+                    summaryEl.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-bold">${validItems.length} bài hợp lệ</span> • <span class="text-rose-600 dark:text-rose-400 font-bold">${crossGroupItems.length} bài bị loại (sai nhóm ${currentOperatorGroup})</span>`;
+                } else {
+                    summaryEl.innerHTML = `Sẵn sàng lưu: <strong class="text-indigo-600 dark:text-indigo-400 font-extrabold">${validItems.length} bài đăng</strong>`;
+                }
+            }
+
+            if (btnConfirm && btnText) {
+                btnConfirm.disabled = validItems.length === 0;
+                btnText.textContent = validItems.length > 0 ? `Xác Nhận Lưu (${validItems.length} Bài)` : 'Không có bài hợp lệ';
+            }
+
+            if (pendingSmartPasteItems.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-slate-400">
+                        <i class="fa-solid fa-triangle-exclamation text-3xl mb-2 opacity-40"></i>
+                        <p class="text-xs">Không có bài đăng nào cần xác nhận.</p>
+                    </div>
+                `;
                 return;
             }
 
-            const urlRegex = /https?:\/\/[^\s,;"'<>]+/gi;
-            const urls = rawText.match(urlRegex) || [rawText];
+            const standardCategories = ['Clip nhảy', 'Ảnh', 'Hát / Cover', 'Vlog / Daily', 'Biến hình', 'Diễn xuất', 'Game', 'Khác'];
+
+            pendingSmartPasteItems.forEach((item, idx) => {
+                const isGroup = item.matchedAcc && item.matchedAcc.role === 'GROUP';
+                const theme = getGroupTheme(item.groupName);
+                const isInvalid = !item.isValid || item.isCrossGroup;
+
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-2xl border transition shadow-xs ${isInvalid ? 'bg-rose-50/70 dark:bg-rose-950/30 border-rose-300 dark:border-rose-800' : 'bg-white dark:bg-slate-800/90 border-slate-200/90 dark:border-slate-700/80'}`;
+
+                let errorBadge = '';
+                if (item.isCrossGroup) {
+                    errorBadge = `
+                        <div class="p-2.5 rounded-xl bg-rose-100/90 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2 mb-3">
+                            <i class="fa-solid fa-circle-xmark text-sm shrink-0"></i>
+                            <span>⛔ BỊ TỪ CHỐI: Idol này thuộc <u>Nhóm ${item.groupName}</u>. Bạn đang ở link nhóm riêng của <u>Nhóm ${currentOperatorGroup}</u> nên bài này sẽ bị loại bỏ!</span>
+                        </div>
+                    `;
+                } else if (!item.matchedAcc) {
+                    errorBadge = `
+                        <div class="p-2.5 rounded-xl bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center gap-2 mb-3">
+                            <i class="fa-solid fa-triangle-exclamation text-sm shrink-0"></i>
+                            <span>⚠️ Chưa nhận diện được Idol từ handle ${item.handleStr || 'này'}. Vui lòng kiểm tra lại link!</span>
+                        </div>
+                    `;
+                }
+
+                const catOptionsHtml = standardCategories.map(cat => {
+                    const sel = cat === item.category ? 'selected' : '';
+                    return `<option value="${cat}" ${sel}>${cat}</option>`;
+                }).join('');
+
+                card.innerHTML = `
+                    ${errorBadge}
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-xl ${isGroup ? 'bg-slate-900 text-white' : 'bg-pink-100 text-pink-600'} flex items-center justify-center font-bold text-xs shrink-0 shadow-xs mt-0.5">
+                                ${isGroup ? '<i class="fa-solid fa-users"></i>' : '<i class="fa-solid fa-user-astronaut"></i>'}
+                            </div>
+                            <div class="min-w-0 space-y-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="text-[10px] font-extrabold px-2 py-0.5 rounded border ${isGroup ? 'bg-slate-900 text-white border-slate-900' : theme.badgeBg}">
+                                        ${isGroup ? ('👥 NHÓM ' + item.groupName.toUpperCase()) : (theme.icon + ' ' + item.groupName)}
+                                    </span>
+                                    <span class="font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                                        ${isGroup ? (item.groupName + ' (Kênh Nhóm)') : item.idolName}
+                                    </span>
+                                    <span class="text-xs font-semibold text-pink-600 dark:text-pink-400">
+                                        ${item.handleStr}
+                                    </span>
+                                    ${item.isPhoto ? '<span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">📸 Ảnh</span>' : '<span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 border border-indigo-200">🎬 Clip</span>'}
+                                </div>
+                                <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-md" title="${item.title || item.cleanUrl}">
+                                    ${item.title ? ('📝 ' + item.title) : ('🔗 ' + item.cleanUrl)}
+                                </div>
+                                <a href="${item.cleanUrl}" target="_blank" rel="noopener noreferrer"
+                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                                    <span>Mở xem video TikTok</span>
+                                    <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="removePendingSmartPasteItem(${idx})"
+                            class="h-8 w-8 rounded-lg bg-slate-100 hover:bg-rose-100 dark:bg-slate-700 dark:hover:bg-rose-950/60 text-slate-400 hover:text-rose-600 transition flex items-center justify-center shrink-0 self-end sm:self-auto cursor-pointer"
+                            title="Xóa bài đăng này khỏi danh sách">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+
+                    <!-- Khu vực chỉnh sửa chi tiết: Hạng mục & Ngày đăng -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60 ${isInvalid ? 'opacity-50 pointer-events-none' : ''}">
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">
+                                🏷️ Hạng Mục Bài Đăng:
+                            </label>
+                            <select onchange="updatePendingSmartPasteCategory(${idx}, this.value)"
+                                class="w-full h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-pink-500/30">
+                                ${catOptionsHtml}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">
+                                📅 Ngày Đăng (Tuần T2 → CN):
+                            </label>
+                            <input type="date" value="${item.dateStr}"
+                                onchange="updatePendingSmartPasteDate(${idx}, this.value)"
+                                class="w-full h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-pink-500/30">
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        async function executeSmartPasteConfirm() {
+            const validItems = pendingSmartPasteItems.filter(it => it.isValid && !it.isCrossGroup);
+            if (validItems.length === 0) {
+                showToast('Không có bài đăng hợp lệ nào để lưu!', 'error');
+                return;
+            }
+
+            const btnConfirm = document.getElementById('btnExecuteSmartPasteConfirm');
+            if (btnConfirm) btnConfirm.disabled = true;
+
+            showToast(`Đang lưu ${validItems.length} bài đăng lên hệ thống & Firebase...`);
+
             let addedCount = 0;
             let updatedCount = 0;
-            let fallbackAccId = document.getElementById('postAccount') ? document.getElementById('postAccount').value : '';
 
-            showToast(`Đang phân tích và xử lý ${urls.length} link TikTok...`);
-
-            for (const rawUrl of urls) {
-                const resolved = await parseAndResolveTikTokLink(rawUrl);
-                if (!resolved) continue;
-
-                // Nếu khớp @handle trong 43 kênh thì lấy kênh đó; nếu là kênh phụ thì gắn vào kênh đang chọn ở Form
-                const targetAcc = resolved.matchedAcc || getAccountById(fallbackAccId);
+            for (const item of validItems) {
+                const targetAcc = item.matchedAcc;
                 if (!targetAcc) continue;
 
-                const { cleanUrl, videoId, isPhoto, dateStr, timeStr, weekMon, title } = resolved;
-                const categoryLabel = isPhoto ? 'Ảnh (Photo Mode)' : 'Clip nhảy';
+                const { cleanUrl, videoId, dateStr, timeStr, weekMon, title, category } = item;
 
-                // 1. Kiểm tra xem bài đăng này đã có trong hệ thống chưa
+                // 1. Kiểm tra chống trùng
                 const existingDup = findExistingPostByLinkOrVideoId(targetAcc.id, videoId, cleanUrl, '');
                 if (existingDup) {
                     existingDup.link = cleanUrl;
+                    existingDup.category = category || existingDup.category;
+                    existingDup.date = dateStr || existingDup.date;
+                    existingDup.weekMonday = weekMon || existingDup.weekMonday;
                     existingDup.status = 'ĐÃ ĐĂNG';
                     existingDup.updatedAt = Date.now() + updatedCount;
                     updatedCount++;
@@ -7585,10 +7867,11 @@ service cloud.firestore {
                     continue;
                 }
 
-                // 2. Kiểm tra xem tài khoản có bài chưa gắn link trong cùng tuần không để gộp link vào
+                // 2. Kiểm tra gộp vào bài chưa gắn link
                 const unlinkedMatch = findUnlinkedPostToMerge(targetAcc.id, weekMon, dateStr, '');
                 if (unlinkedMatch) {
                     unlinkedMatch.link = cleanUrl;
+                    unlinkedMatch.category = category || unlinkedMatch.category;
                     unlinkedMatch.date = dateStr;
                     unlinkedMatch.weekMonday = weekMon;
                     unlinkedMatch.status = 'ĐÃ ĐĂNG';
@@ -7601,18 +7884,17 @@ service cloud.firestore {
                     continue;
                 }
 
-                // 3. Tạo bài đăng mới
+                // 3. Thêm bài đăng mới
                 const postId = videoId ? `scan_${targetAcc.id}_${videoId}` : ('post_' + Date.now() + '_' + addedCount);
-                const isSecondaryChannel = !resolved.matchedAcc && resolved.handleStr;
                 const postObj = {
                     id: postId,
                     weekMonday: weekMon,
                     date: dateStr,
                     accountId: targetAcc.id,
-                    category: categoryLabel,
+                    category: category || (item.isPhoto ? 'Ảnh' : 'Clip nhảy'),
                     link: cleanUrl,
                     status: 'ĐÃ ĐĂNG',
-                    note: `${isSecondaryChannel ? `Kênh phụ ${resolved.handleStr} • ` : ''}Tự giải mã từ link (${timeStr})${title ? ' • ' + title : ''}`,
+                    note: `Thêm nhanh đã xác nhận (${timeStr})${title ? ' • ' + title : ''}`,
                     updatedAt: Date.now() + addedCount
                 };
 
@@ -7623,31 +7905,87 @@ service cloud.firestore {
                     const postRef = doc(db, 'artifacts', appId, 'public', 'data', 'posts', postId);
                     await setDoc(postRef, postObj, { merge: true });
                 }
-
-                addScanLogEntry(
-                    targetAcc,
-                    'NEW_POSTS',
-                    `Đã tự động giải mã link bài đăng ngày ${formatDateVN(dateStr)} lúc ${timeStr} và lưu vào tuần ${formatShortDateVN(weekMon)}.`,
-                    [{ videoId: videoId || '', date: dateStr, time: timeStr, url: postObj.link, category: postObj.category }]
-                );
             }
 
             const { uniquePosts } = deduplicatePostsArray(posts);
             posts = uniquePosts;
 
-            if (addedCount > 0 || updatedCount > 0) {
-                input.value = '';
-                renderAllUI();
-                if (addedCount > 0 && updatedCount > 0) {
-                    showToast(`✅ Đã thêm mới ${addedCount} bài & cập nhật/gộp ${updatedCount} bài đã có (Không tính trùng)!`);
-                } else if (addedCount > 0) {
-                    showToast(`✅ Đã tự động bóc tách và lưu mới ${addedCount} bài đăng lên Firebase!`);
-                } else {
-                    showToast(`ℹ️ ${updatedCount} bài đăng đã tồn tại trong danh sách, hệ thống đã cập nhật và chống đếm trùng!`);
-                }
-            } else {
-                showToast('Không nhận diện được link TikTok hợp lệ. Hãy kiểm tra lại đường dẫn!', 'error');
+            // Xóa nội dung ô input nguồn
+            if (pendingSmartPasteInputSourceId) {
+                const srcInput = document.getElementById(pendingSmartPasteInputSourceId);
+                if (srcInput) srcInput.value = '';
             }
+            const mainInput = document.getElementById('mainSmartPasteInput');
+            if (mainInput) mainInput.value = '';
+            const modalInput = document.getElementById('modalSmartLinkInput');
+            if (modalInput) modalInput.value = '';
+
+            closeSmartPasteConfirmModal();
+            renderAllUI();
+
+            showToast(`🎉 Đã lưu thành công ${addedCount} bài mới & cập nhật ${updatedCount} bài lên hệ thống!`, 'success');
+        }
+
+        async function handleSmartLinksExtract(inputId = 'smartPasteLinksInput') {
+            const input = document.getElementById(inputId) || document.getElementById('smartPasteLinksInput');
+            if (!input) return;
+            const rawText = (input.value || '').trim();
+            if (!rawText) {
+                showToast('Vui lòng dán ít nhất 1 đường link bài đăng TikTok!', 'error');
+                return;
+            }
+
+            const urlRegex = /https?:\/\/[^\s,;"'<>]+/gi;
+            const urls = rawText.match(urlRegex) || [rawText];
+            let fallbackAccId = document.getElementById('postAccount') ? document.getElementById('postAccount').value : '';
+
+            showToast(`🔍 Đang phân tích chi tiết ${urls.length} link TikTok...`);
+
+            const resolvedItems = [];
+            for (let i = 0; i < urls.length; i++) {
+                const rawUrl = urls[i];
+                const resolved = await parseAndResolveTikTokLink(rawUrl);
+                if (!resolved) continue;
+
+                const targetAcc = resolved.matchedAcc || getAccountById(fallbackAccId);
+                const gName = targetAcc ? extractCleanGroupName(targetAcc) : 'Khác';
+                const iName = targetAcc ? extractCleanIdolName(targetAcc) : (resolved.handleStr || 'Chưa rõ');
+
+                // Kiểm tra xem có bị sai nhóm trong link nhóm riêng không (Vấn đề 2)
+                const isCrossGroup = Boolean(
+                    currentOperatorGroup && targetAcc &&
+                    extractCleanGroupName(targetAcc).toUpperCase() !== currentOperatorGroup.toUpperCase()
+                );
+
+                const defaultCategory = resolved.isPhoto ? 'Ảnh' : 'Clip nhảy';
+
+                resolvedItems.push({
+                    index: i,
+                    rawUrl,
+                    cleanUrl: resolved.cleanUrl,
+                    videoId: resolved.videoId,
+                    isPhoto: resolved.isPhoto,
+                    handleStr: resolved.handleStr || (targetAcc ? targetAcc.handle : ''),
+                    matchedAcc: targetAcc,
+                    groupName: gName,
+                    idolName: iName,
+                    dateStr: resolved.dateStr,
+                    timeStr: resolved.timeStr,
+                    weekMon: resolved.weekMon,
+                    title: resolved.title,
+                    category: defaultCategory,
+                    isValid: Boolean(targetAcc),
+                    isCrossGroup
+                });
+            }
+
+            if (resolvedItems.length === 0) {
+                showToast('Không nhận diện được link TikTok hợp lệ. Vui lòng kiểm tra lại đường dẫn!', 'error');
+                return;
+            }
+
+            // Mở Modal Xem Trước & Xác Nhận Chi Tiết (Vấn đề 3)
+            openSmartPasteConfirmModal(resolvedItems, inputId);
         }
 
         function openScanLogModal() {
@@ -7780,6 +8118,7 @@ service cloud.firestore {
             getWeekDisplayTitle, generateGroupKpiReportText, copyGroupKpiReport, copyCurrentOperatorGroupReport, copyGroupShareLink, initGroupFromUrlQuery,
             deleteAccountWithConfirm, closeConfirmDeleteAccountModal, executeDeleteAccountConfirmed,
             renderModalAccountsList,
+            openSmartPasteConfirmModal, closeSmartPasteConfirmModal, removePendingSmartPasteItem, updatePendingSmartPasteCategory, updatePendingSmartPasteDate, executeSmartPasteConfirm,
             lockBodyScroll, unlockBodyScroll,
             checkAdminAuthRequirement, showPinLockOverlay, hidePinLockOverlay, lockAdminSessionManually,
             handlePinKeyPress, handlePinBackspace, handlePinClear, updatePinDotsUI, verifyPinCode,
