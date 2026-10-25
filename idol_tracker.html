@@ -2026,10 +2026,10 @@
                 <div class="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 space-y-2">
                     <div class="font-extrabold text-sm text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
                         <i class="fa-solid fa-file-excel text-indigo-600"></i>
-                        <span>Tải File Excel (.xlsx) Đầy Đủ</span>
+                        <span>Tải File Excel (.xlsx) Song Ngữ & Merge Dòng</span>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-300">
-                        File Excel gồm 2 Sheet: Sheet 1 là <strong>TIẾN ĐỘ ĐĂNG BÀI (Đủ / Thiếu)</strong> và Sheet 2 là <strong>CHI TIẾT BÀI ĐĂNG</strong> đầy đủ link và ngày đăng.
+                        File Excel đồng bộ chuẩn 100% với Google Sheets: Sheet 1 là <strong>TIẾN ĐỘ BÀI ĐĂNG (Song Ngữ, Merge 2 dòng/Idol)</strong> và Sheet 2 là <strong>CHI TIẾT BÀI ĐĂNG</strong>.
                     </p>
                     <button type="button" onclick="downloadFullExcelFile()" class="w-full mt-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
                         <i class="fa-solid fa-download"></i>
@@ -2038,15 +2038,31 @@
                 </div>
 
                 <!-- Card 3: Copy Báo Cáo Dạng Tin Nhắn Telegram / Zalo -->
-                <div class="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2">
-                    <div class="font-extrabold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <i class="fa-solid fa-comments text-pink-500"></i>
-                        <span>Báo Cáo Tin Nhắn Gửi Cho Vận Hành (Thứ 3)</span>
+                <div class="p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <div class="font-extrabold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-comments text-pink-500"></i>
+                            <span>Báo Cáo Tin Nhắn Gửi Cho Vận Hành (Thứ 3)</span>
+                        </div>
+                        <span class="text-[10px] bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 px-2 py-0.5 rounded-full font-bold">Zalo / Telegram</span>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-300">
-                        Sao chép định dạng text chuẩn: <em>"Tài khoản nhóm: Thiếu 1 bài, đã đăng 1 bài vào 19/10... Nya: Thiếu 2 bài... Koni: Đăng đủ"</em> để gửi qua Zalo / Messenger.
+                        Sao chép định dạng tin nhắn gửi quản lý & vận hành: Tổng hợp ai thiếu, ai đủ bài kèm link @handle chi tiết.
                     </p>
-                    <button type="button" onclick="copyGroupKpiReport('ALL')" class="w-full mt-2 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs transition flex items-center justify-center gap-2 cursor-pointer">
+
+                    <!-- 2 ô chức năng lựa chọn ngôn ngữ: Song ngữ (mặc định) hoặc Tiếng Trung -->
+                    <div class="flex items-center gap-4 pt-0.5 text-xs font-bold text-slate-700 dark:text-slate-200">
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="exportMsgLang" value="bilingual" checked class="w-4 h-4 text-pink-600 focus:ring-pink-500 cursor-pointer">
+                            <span>Song Ngữ (Trung - Việt)</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="radio" name="exportMsgLang" value="chinese" class="w-4 h-4 text-pink-600 focus:ring-pink-500 cursor-pointer">
+                            <span>Tiếng Trung</span>
+                        </label>
+                    </div>
+
+                    <button type="button" onclick="copyModalKpiMessageReport()" class="w-full mt-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-md">
                         <i class="fa-solid fa-clipboard-list"></i>
                         <span id="exportCopyAllReportBtnText">Sao Chép Tin Nhắn Báo Cáo 6 Nhóm</span>
                     </button>
@@ -8635,7 +8651,7 @@ service cloud.firestore {
         // ============================================================================
         // COPY BÁO CÁO TIẾN ĐỘ KPI GỬI VẬN HÀNH (THỨ 3)
         // ============================================================================
-        function generateGroupKpiReportText(targetGroupName = 'ALL') {
+        function generateGroupKpiReportText(targetGroupName = 'ALL', lang = 'vi') {
             try {
                 const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
                 const weekTitle = getWeekDisplayTitle(activeWeek);
@@ -8650,13 +8666,34 @@ service cloud.firestore {
                 const sundayDateStr = addDaysStr(activeWeek, 6);
                 const sundayFormatted = formatDateVN(sundayDateStr);
 
+                // Nếu là báo cáo riêng 1 nhóm (không phải ALL), giữ 100% định dạng tiếng Việt nguyên bản theo QTSC
+                const isSingleTeam = (targetGroupName && targetGroupName !== 'ALL');
+                const effectiveLang = isSingleTeam ? 'vi' : lang;
+
                 let lines = [];
-                if (isWeekExpired) {
-                    lines.push(`🚨 BÁO CÁO TỔNG KẾT & DANH SÁCH BỊ PHẠT DO QUÁ HẠN - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+
+                if (effectiveLang === 'chinese') {
+                    if (isWeekExpired) {
+                        lines.push(`🚨 视频发布总结与违规处罚报告 - ${weekTitle.toUpperCase()} (共${GROUP_NAMES.length}个组)`);
+                    } else {
+                        lines.push(`📋 视频发布进度汇总报告 - ${weekTitle.toUpperCase()} (共${GROUP_NAMES.length}个组)`);
+                    }
+                    lines.push(`(每周考核目标: 主播 ${targets.idol}条 • 官方频道 ${targets.group}条)`);
+                } else if (effectiveLang === 'bilingual') {
+                    if (isWeekExpired) {
+                        lines.push(`🚨 视频发布总结与违规处罚报告 | BÁO CÁO TỔNG KẾT & PHẠT QUÁ HẠN - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+                    } else {
+                        lines.push(`📋 视频发布进度报告 | BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+                    }
+                    lines.push(`(每周目标: 主播 ${targets.idol}条 • 官方 ${targets.group}条 | Mục tiêu tuần: Idol ${targets.idol} bài • Kênh nhóm ${targets.group} bài)`);
                 } else {
-                    lines.push(`📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+                    if (isWeekExpired) {
+                        lines.push(`🚨 BÁO CÁO TỔNG KẾT & DANH SÁCH BỊ PHẠT DO QUÁ HẠN - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+                    } else {
+                        lines.push(`📋 BÁO CÁO TIẾN ĐỘ ĐĂNG BÀI - ${weekTitle.toUpperCase()} (${GROUP_NAMES.length} NHÓM)`);
+                    }
+                    lines.push(`(Mục tiêu tuần: Idol ${targets.idol} bài • Kênh nhóm ${targets.group} bài)`);
                 }
-                lines.push(`(Mục tiêu tuần: Idol ${targets.idol} bài • Kênh nhóm ${targets.group} bài)`);
                 lines.push('');
 
                 let totalMissingOverall = 0;
@@ -8679,10 +8716,9 @@ service cloud.firestore {
                         const prog = getAccountWeeklyProgress(acc.id, activeWeek);
                         const isGroup = acc.role === 'GROUP';
                         const idolShort = extractCleanIdolName(acc);
-                        const nameLabel = isGroup ? `Tài khoản nhóm ${grpName}` : `Tài khoản ${idolShort}`;
                         const accPosts = getAccountWeeklyPosts(acc.id, activeWeek).filter(p => p.status === 'ĐÃ ĐĂNG');
 
-                        // Định dạng thông tin ID TikTok chính và phụ (gọn gàng trực tiếp @handle, bỏ chữ tiktok:)
+                        // Định dạng thông tin ID TikTok chính và phụ
                         const rawMain = (acc.handle || '').trim();
                         const mainHandle = rawMain ? (rawMain.startsWith('@') ? rawMain : '@' + rawMain) : '@chua_co';
                         const rawSub = (acc.subHandle || '').trim();
@@ -8690,41 +8726,100 @@ service cloud.firestore {
                         const handleInfo = subHandle ? `${mainHandle}, phụ: ${subHandle}` : mainHandle;
 
                         const target = prog.targetKpi;
-                        if (prog.isBypassed) {
-                            const reasonStr = prog.bypassReason ? ` (${prog.bypassReason})` : '';
-                            doneAccounts.push(`• ⏸️ ${nameLabel}: ${handleInfo}: [MIỄN KPI]${reasonStr}`);
-                            totalCompletedOverall++;
-                        } else if (prog.isDonePosted) {
+
+                        if (effectiveLang === 'chinese') {
+                            const cnName = isGroup ? `官方频道 ${grpName}` : `主播 ${idolShort}`;
+                            const datesTextCn = accPosts.length > 0 ? ` (${accPosts.map(p => {
+                                const parts = (p.date || '').split('-');
+                                return parts.length === 3 ? `${parseInt(parts[1], 10)}月${parseInt(parts[2], 10)}日` : p.date;
+                            }).join(', ')})` : '';
+
+                            if (prog.isBypassed) {
+                                const reasonStr = prog.bypassReason ? ` (${prog.bypassReason})` : '';
+                                doneAccounts.push(`• ⏸️ ${cnName}: ${handleInfo}: [免除考核]${reasonStr}`);
+                                totalCompletedOverall++;
+                            } else if (prog.isDonePosted) {
+                                doneAccounts.push(`• ${cnName}: ${handleInfo}: 已完成 (${prog.postedCount}/${target}条)${datesTextCn}`);
+                                totalCompletedOverall++;
+                            } else if (isWeekExpired) {
+                                missingAccounts.push(`• 🚨 ${cnName}: ${handleInfo}: [已逾期处罚] 缺${prog.missingPosted}条, 已发${prog.postedCount}/${target}条${datesTextCn || ' (未发布)'}`);
+                                totalMissingOverall++;
+                            } else if (prog.postedCount > 0) {
+                                missingAccounts.push(`• ${cnName}: ${handleInfo}: 缺${prog.missingPosted}条, 已发${prog.postedCount}/${target}条${datesTextCn}`);
+                                totalMissingOverall++;
+                            } else {
+                                missingAccounts.push(`• ${cnName}: ${handleInfo}: 缺${target}条 (本周未发布视频)`);
+                                totalMissingOverall++;
+                            }
+                        } else if (effectiveLang === 'bilingual') {
+                            const nameLabel = isGroup ? `Tài khoản nhóm ${grpName}` : `Tài khoản ${idolShort}`;
+                            const cnName = isGroup ? `官方频道 ${grpName}` : `主播 ${idolShort}`;
                             const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : '';
-                            doneAccounts.push(`• ${nameLabel}: ${handleInfo}: Đăng đủ (${prog.postedCount}/${target} bài)${datesText}`);
-                            totalCompletedOverall++;
-                        } else if (isWeekExpired) {
-                            const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : ' (Chưa có bài nào)';
-                            missingAccounts.push(`• 🚨 ${nameLabel}: ${handleInfo}: [BỊ PHẠT] Quá hạn tuần, thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài${datesText}`);
-                            totalMissingOverall++;
-                        } else if (prog.postedCount > 0) {
-                            const datesText = accPosts.map(p => formatDateVN(p.date)).join(', ');
-                            missingAccounts.push(`• ${nameLabel}: ${handleInfo}: Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài (${datesText})`);
-                            totalMissingOverall++;
+
+                            if (prog.isBypassed) {
+                                const reasonStr = prog.bypassReason ? ` (${prog.bypassReason})` : '';
+                                doneAccounts.push(`• ⏸️ ${cnName} (${nameLabel}): ${handleInfo}: [免除考核 - MIỄN KPI]${reasonStr}`);
+                                totalCompletedOverall++;
+                            } else if (prog.isDonePosted) {
+                                doneAccounts.push(`• ${cnName} (${nameLabel}): ${handleInfo}: 已完成 (${prog.postedCount}/${target}条) | Đăng đủ (${prog.postedCount}/${target} bài)${datesText}`);
+                                totalCompletedOverall++;
+                            } else if (isWeekExpired) {
+                                missingAccounts.push(`• 🚨 ${cnName} (${nameLabel}): ${handleInfo}: [逾期处罚 - PHẠT] 缺${prog.missingPosted}条, đã đăng ${prog.postedCount}/${target} bài${datesText || ' (Chưa có bài)'}`);
+                                totalMissingOverall++;
+                            } else if (prog.postedCount > 0) {
+                                missingAccounts.push(`• ${cnName} (${nameLabel}): ${handleInfo}: 缺${prog.missingPosted}条, 已发${prog.postedCount}/${target}条 | Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài${datesText}`);
+                                totalMissingOverall++;
+                            } else {
+                                missingAccounts.push(`• ${cnName} (${nameLabel}): ${handleInfo}: 缺${target}条 (未发视频) | Thiếu ${target} bài (Chưa có bài nào)`);
+                                totalMissingOverall++;
+                            }
                         } else {
-                            missingAccounts.push(`• ${nameLabel}: ${handleInfo}: Thiếu ${target} bài (Chưa có bài nào)`);
-                            totalMissingOverall++;
+                            // Tiếng Việt nguyên bản 100% (cho chức năng báo cáo từng team)
+                            const nameLabel = isGroup ? `Tài khoản nhóm ${grpName}` : `Tài khoản ${idolShort}`;
+                            const datesText = accPosts.length > 0 ? ` (${accPosts.map(p => formatDateVN(p.date)).join(', ')})` : '';
+
+                            if (prog.isBypassed) {
+                                const reasonStr = prog.bypassReason ? ` (${prog.bypassReason})` : '';
+                                doneAccounts.push(`• ⏸️ ${nameLabel}: ${handleInfo}: [MIỄN KPI]${reasonStr}`);
+                                totalCompletedOverall++;
+                            } else if (prog.isDonePosted) {
+                                doneAccounts.push(`• ${nameLabel}: ${handleInfo}: Đăng đủ (${prog.postedCount}/${target} bài)${datesText}`);
+                                totalCompletedOverall++;
+                            } else if (isWeekExpired) {
+                                const expDatesText = accPosts.length > 0 ? datesText : ' (Chưa có bài nào)';
+                                missingAccounts.push(`• 🚨 ${nameLabel}: ${handleInfo}: [BỊ PHẠT] Quá hạn tuần, thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài${expDatesText}`);
+                                totalMissingOverall++;
+                            } else if (prog.postedCount > 0) {
+                                missingAccounts.push(`• ${nameLabel}: ${handleInfo}: Thiếu ${prog.missingPosted} bài, đã đăng ${prog.postedCount}/${target} bài (${datesText.replace(/^\s*\(/, '').replace(/\)\s*$/, '')})`);
+                                totalMissingOverall++;
+                            } else {
+                                missingAccounts.push(`• ${nameLabel}: ${handleInfo}: Thiếu ${target} bài (Chưa có bài nào)`);
+                                totalMissingOverall++;
+                            }
                         }
                     });
 
                     lines.push(`════════════════════════════════════`);
-                    if (missingAccounts.length === 0) {
-                        lines.push(`📌 [NHÓM ${grpName.toUpperCase()}] - 🎉 ĐÃ ĐĂNG ĐỦ BÀI (${doneAccounts.length}/${grpAccounts.length} kênh)`);
+                    if (effectiveLang === 'chinese') {
+                        lines.push(`📌 [${grpName.toUpperCase()} 组] - 发布进度: ${doneAccounts.length}/${grpAccounts.length} 账号达标`);
+                    } else if (effectiveLang === 'bilingual') {
+                        lines.push(`📌 [NHÓM ${grpName.toUpperCase()}] - 进度: ${doneAccounts.length}/${grpAccounts.length} 达标 | Tiến độ: ${doneAccounts.length}/${grpAccounts.length} kênh đủ`);
                     } else {
-                        lines.push(`📌 [NHÓM ${grpName.toUpperCase()}] - Tiến độ: ${doneAccounts.length}/${grpAccounts.length} kênh đã đủ bài`);
+                        if (missingAccounts.length === 0) {
+                            lines.push(`📌 [NHÓM ${grpName.toUpperCase()}] - 🎉 ĐÃ ĐĂNG ĐỦ BÀI (${doneAccounts.length}/${grpAccounts.length} kênh)`);
+                        } else {
+                            lines.push(`📌 [NHÓM ${grpName.toUpperCase()}] - Tiến độ: ${doneAccounts.length}/${grpAccounts.length} kênh đã đủ bài`);
+                        }
                     }
                     lines.push(`────────────────────────────────────`);
 
                     // 1. PHẦN CHƯA ĐỦ BÀI: ĐƯA LÊN ĐẦU TIÊN ĐỂ VẬN HÀNH/MC NẮM BẮT VÀ NHẮC NHỞ NGAY
                     if (missingAccounts.length > 0) {
-                        const missingTitle = isWeekExpired
-                            ? `🚨 DANH SÁCH BỊ PHẠT DO QUÁ HẠN (${missingAccounts.length} kênh):`
-                            : `🔴 CHƯA ĐỦ BÀI (CẦN NHẮC NHỞ - ${missingAccounts.length} kênh):`;
+                        const missingTitle = effectiveLang === 'chinese'
+                            ? (isWeekExpired ? `🚨 违规处罚名单 (逾期未达标 - 共${missingAccounts.length}人):` : `🔴 未达标账号 (需催促发视频 - 共${missingAccounts.length}人):`)
+                            : (effectiveLang === 'bilingual'
+                                ? (isWeekExpired ? `🚨 逾期处罚名单 | DANH SÁCH BỊ PHẠT (${missingAccounts.length} kênh):` : `🔴 未达标账号 (需催播) | CHƯA ĐỦ BÀI (${missingAccounts.length} kênh):`)
+                                : (isWeekExpired ? `🚨 DANH SÁCH BỊ PHẠT DO QUÁ HẠN (${missingAccounts.length} kênh):` : `🔴 CHƯA ĐỦ BÀI (CẦN NHẮC NHỞ - ${missingAccounts.length} kênh):`));
                         lines.push(missingTitle);
                         missingAccounts.forEach(line => lines.push(line));
                         lines.push('');
@@ -8732,30 +8827,47 @@ service cloud.firestore {
 
                     // 2. PHẦN ĐÃ ĐĂNG ĐỦ BÀI
                     if (doneAccounts.length > 0) {
-                        lines.push(`🟢 ĐÃ ĐĂNG ĐỦ BÀI (${doneAccounts.length} kênh):`);
+                        const doneTitle = effectiveLang === 'chinese'
+                            ? `🟢 已达标账号 (共${doneAccounts.length}人):`
+                            : (effectiveLang === 'bilingual'
+                                ? `🟢 已达标账号 | ĐÃ ĐĂNG ĐỦ BÀI (${doneAccounts.length} kênh):`
+                                : `🟢 ĐÃ ĐĂNG ĐỦ BÀI (${doneAccounts.length} kênh):`);
+                        lines.push(doneTitle);
                         doneAccounts.forEach(line => lines.push(line));
                     }
 
                     // 3. Nếu là copy riêng cho 1 nhóm và nhóm này đã xong 100%
                     if (GROUP_NAMES.length === 1 && missingAccounts.length === 0) {
                         lines.push('');
-                        lines.push(`🎉 Nhóm đã hoàn thành xuất sắc mục tiêu bài đăng tuần này! Cảm ơn các bạn MC và Idol đã lên bài đầy đủ.`);
+                        lines.push(effectiveLang === 'chinese'
+                            ? `🎉 本组已圆满完成本周发布目标！感谢各位主播及运营的配合。`
+                            : `🎉 Nhóm đã hoàn thành xuất sắc mục tiêu bài đăng tuần này! Cảm ơn các bạn MC và Idol đã lên bài đầy đủ.`);
                     }
 
                     lines.push('');
                 });
 
                 // PHẦN KẾT BÁO CÁO:
-                // Nếu TẤT CẢ các tài khoản trong phạm vi báo cáo đều đã đăng đủ bài (không còn ai thiếu):
-                // -> KHÔNG NHẮC HẠN CHÓT VÀ KHÔNG NHẮC NHỞ LÊN BÀI NỮA
                 if (totalMissingOverall === 0) {
                     if (GROUP_NAMES.length > 1) {
-                        lines.push(`🎉 TẤT CẢ ${GROUP_NAMES.length} NHÓM ĐÃ ĐĂNG ĐỦ BÀI TUẦN NÀY! Cảm ơn toàn thể MC, Vận hành và Idol.`);
+                        lines.push(effectiveLang === 'chinese'
+                            ? `🎉 全部 ${GROUP_NAMES.length} 个组均已完成本周发布目标！感谢全体运营与主播。`
+                            : (effectiveLang === 'bilingual'
+                                ? `🎉 全部 ${GROUP_NAMES.length} 个组均已达标 | TẤT CẢ ${GROUP_NAMES.length} NHÓM ĐÃ ĐỦ BÀI TUẦN NÀY!`
+                                : `🎉 TẤT CẢ ${GROUP_NAMES.length} NHÓM ĐÃ ĐĂNG ĐỦ BÀI TUẦN NÀY! Cảm ơn toàn thể MC, Vận hành và Idol.`));
                     }
                 } else if (isWeekExpired) {
-                    lines.push(`🚨 TUẦN ĐÃ KẾT THÚC (${sundayFormatted}): Các tài khoản chưa đăng đủ bài trên bị tính nhắc nhở/phạt theo quy định.`);
+                    lines.push(effectiveLang === 'chinese'
+                        ? `🚨 本周已结束 (${sundayFormatted}): 以上未达标账号按规定进行通报和处罚。`
+                        : (effectiveLang === 'bilingual'
+                            ? `🚨 本周已结束 | TUẦN ĐÃ KẾT THÚC (${sundayFormatted}): 未达标账号按规定处罚 / Tài khoản chưa đủ bài bị phạt.`
+                            : `🚨 TUẦN ĐÃ KẾT THÚC (${sundayFormatted}): Các tài khoản chưa đăng đủ bài trên bị tính nhắc nhở/phạt theo quy định.`));
                 } else {
-                    lines.push(`⏰ Hạn chót Chủ Nhật tuần này! (${sundayFormatted}) Nhờ các bạn MC hoặc vận hành kiểm tra & nhắc idol lên bài đầy đủ.`);
+                    lines.push(effectiveLang === 'chinese'
+                        ? `⏰ 截止时间: 本周日! (${sundayFormatted}) 请运营负责人催促未达标主播尽快发布视频。`
+                        : (effectiveLang === 'bilingual'
+                            ? `⏰ 截止时间: 本周日! (${sundayFormatted}) 请运营催播 / Hạn chót Chủ Nhật tuần này! Nhờ vận hành nhắc idol lên bài đầy đủ.`
+                            : `⏰ Hạn chót Chủ Nhật tuần này! (${sundayFormatted}) Nhờ các bạn MC hoặc vận hành kiểm tra & nhắc idol lên bài đầy đủ.`));
                 }
 
                 return lines.join('\n');
@@ -8765,8 +8877,8 @@ service cloud.firestore {
             }
         }
 
-        function copyGroupKpiReport(targetGroupName = 'ALL') {
-            const reportText = generateGroupKpiReportText(targetGroupName);
+        function copyGroupKpiReport(targetGroupName = 'ALL', lang = 'vi') {
+            const reportText = generateGroupKpiReportText(targetGroupName, lang);
             const uniqueGroups = getUniqueGroupNames();
             const label = targetGroupName === 'ALL' ? `cả ${uniqueGroups.length} nhóm` : `nhóm ${targetGroupName}`;
             copyTextRobustly(reportText).then(() => {
@@ -8775,6 +8887,12 @@ service cloud.firestore {
                 console.error('Clipboard copy error:', err);
                 window.prompt('Sao chép báo cáo tiến độ bên dưới:', reportText);
             });
+        }
+
+        function copyModalKpiMessageReport() {
+            const langRadio = document.querySelector('input[name="exportMsgLang"]:checked');
+            const lang = langRadio ? langRadio.value : 'bilingual';
+            copyGroupKpiReport('ALL', lang);
         }
 
         function copyCurrentOperatorGroupReport() {
@@ -8928,77 +9046,8 @@ service cloud.firestore {
             unlockBodyScroll();
         }
 
-        function downloadFullExcelFile() {
-            if (typeof XLSX === 'undefined') {
-                showToast('Thư viện Excel đang tải, vui lòng thử lại sau vài giây!', 'error');
-                return;
-            }
+        function buildGoogleSheetsExportHtml(isSeparate = false) {
             const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
-            const weekLabel = getWeekDisplayTitle(activeWeek);
-
-            // Sheet 1: Tiến độ KPI tuần
-            const kpiRows = [];
-            accounts.forEach(acc => {
-                const prog = getAccountWeeklyProgress(acc.id, activeWeek);
-                const gName = extractCleanGroupName(acc);
-                const iName = extractCleanIdolName(acc);
-                const isGroup = acc.role === 'GROUP';
-                const postsList = getAccountWeeklyPosts(acc.id, activeWeek).filter(p => p.status === 'ĐÃ ĐĂNG');
-                
-                let statusKpi = 'Thiếu 2 bài';
-                if (prog.isBypassed) statusKpi = `Miễn KPI (${prog.bypassReason || 'Bypass'})`;
-                else if (prog.isDonePosted) statusKpi = 'Đã đủ KPI (2/2 bài)';
-                else if (prog.postedCount === 1) statusKpi = 'Thiếu 1 bài (1/2 bài)';
-
-                kpiRows.push({
-                    'NHÓM': gName,
-                    'PHÂN LOẠI': isGroup ? 'KÊNH NHÓM' : 'IDOL',
-                    'TÊN IDOL / KÊNH': isGroup ? `${gName} (Official)` : iName,
-                    'ID TIKTOK CHÍNH': acc.handle,
-                    'KÊNH PHỤ': acc.subHandle || '',
-                    'SỐ BÀI ĐÃ ĐĂNG': prog.postedCount,
-                    'ĐÁNH GIÁ KPI': statusKpi,
-                    'BÀI 1 (NGÀY & HẠNG MỤC)': postsList[0] ? `${formatDateVN(postsList[0].date)} (${postsList[0].category || 'Clip'})` : '',
-                    'LINK BÀI 1': postsList[0] ? (postsList[0].link || '') : '',
-                    'BÀI 2 (NGÀY & HẠNG MỤC)': postsList[1] ? `${formatDateVN(postsList[1].date)} (${postsList[1].category || 'Clip'})` : '',
-                    'LINK BÀI 2': postsList[1] ? (postsList[1].link || '') : ''
-                });
-            });
-
-            // Sheet 2: Chi tiết toàn bộ bài đăng tuần
-            const detailRows = getPostsForWeek(activeWeek).map(p => {
-                const acc = getAccountById(p.accountId);
-                const gName = extractCleanGroupName(acc);
-                const iName = extractCleanIdolName(acc);
-                return {
-                    'TUẦN': p.sheet || weekLabel,
-                    'NGÀY ĐĂNG': formatDateVN(p.date),
-                    'NHÓM': gName,
-                    'TÊN IDOL / KÊNH': acc && acc.role === 'GROUP' ? `${gName} (Kênh Nhóm)` : iName,
-                    'ID TIKTOK': acc ? acc.handle : '',
-                    'HẠNG MỤC': p.category,
-                    'LINK BÀI ĐĂNG': p.link || '',
-                    'TRẠNG THÁI': p.status,
-                    'GHI CHÚ': p.note || ''
-                };
-            });
-
-            const wb = XLSX.utils.book_new();
-            const wsKpi = XLSX.utils.json_to_sheet(kpiRows);
-            const wsDetail = XLSX.utils.json_to_sheet(detailRows);
-
-            XLSX.utils.book_append_sheet(wb, wsKpi, "TIEN_DO_DANG_BAI");
-            XLSX.utils.book_append_sheet(wb, wsDetail, "CHI_TIET_BAI_DANG");
-
-            const cleanDate = activeWeek.replace(/-/g, '');
-            XLSX.writeFile(wb, `PASSION_MEDIA_TIEN_DO_TUAN_${cleanDate}.xlsx`);
-            showToast('✅ Đã tải file Excel báo cáo tiến độ tuần thành công!', 'success');
-        }
-
-        async function copyTableForGoogleSheets() {
-            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
-            const separateColEl = document.getElementById('sheetSeparateGroupCol');
-            const isSeparate = separateColEl ? separateColEl.checked : false;
 
             // Tiêu đề Song Ngữ (Bilingual: Tiếng Trung + Tiếng Việt):
             // 组别 / 主播 (NHÓM / IDOL) | 已发视频数 (SỐ BÀI ĐÃ ĐĂNG) | 发布进度 (TIẾN ĐỘ BÀI ĐĂNG) | 视频日期 (BÀI ĐĂNG - NGÀY) | 视频链接 (LINK BÀI ĐĂNG)
@@ -9048,7 +9097,6 @@ service cloud.firestore {
             const plainRows = [];
             let htmlRows = '';
 
-            // Sắp xếp danh sách tài khoản theo nhóm và vai trò gọn gàng, logic
             const sortedAccounts = [...accounts].sort((a, b) => {
                 const grpA = (a.groupName || '').toUpperCase();
                 const grpB = (b.groupName || '').toUpperCase();
@@ -9066,7 +9114,6 @@ service cloud.firestore {
                 const isBypassed = isAccountBypassedForWeek(acc, activeWeek);
                 const targetKpi = acc.weeklyKpiTarget || (isGroup ? 1 : 2);
                 
-                // Lấy danh sách bài đăng tuần này (sắp xếp cũ đến mới)
                 const postsList = getAccountWeeklyPosts(acc.id, activeWeek)
                     .filter(p => p.status === 'ĐÃ ĐĂNG')
                     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
@@ -9074,7 +9121,6 @@ service cloud.firestore {
                 const p1 = postsList[0] || null;
                 const p2 = postsList[1] || null;
 
-                // Trạng thái Song Ngữ và màu sắc phân biệt chuyên nghiệp
                 let statusText = '';
                 let statusBg = '';
                 let statusColor = '';
@@ -9097,7 +9143,6 @@ service cloud.firestore {
                     statusColor = '#b91c1c';
                 }
 
-                // Định dạng ngày Song Ngữ (VD: 10月22日 • 22/10)
                 const formatDualDate = (dStr) => {
                     if (!dStr) return '';
                     const parts = dStr.split('-');
@@ -9114,14 +9159,12 @@ service cloud.firestore {
                 const date2 = p2 ? formatDualDate(p2.date) : '';
                 const link2 = p2 ? (p2.link || '') : '';
 
-                // Tên hiển thị Song Ngữ
                 const groupColVal = isSeparate
                     ? gName
                     : (isGroup ? `${gName} (官方频道 / Kênh Nhóm)` : `${gName} - ${iName}`);
 
                 const idolColVal = isGroup ? '官方频道 (Kênh Nhóm)' : iName;
 
-                // Nhãn Bài 1 & Bài 2 Song Ngữ
                 const post1LabelHtml = date1 ? `<strong>第1条 (Bài 1):</strong> ${date1}` : '第1条 (Bài 1): -';
                 const post2LabelHtml = date2 ? `<strong>第2条 (Bài 2):</strong> ${date2}` : (isGroup ? '第2条: 不考核 (Kênh nhóm 1 bài)' : '第2条 (Bài 2): -');
 
@@ -9130,7 +9173,6 @@ service cloud.firestore {
 
                 const plainStatus = statusText.replace(/<br>/gi, ' ').replace(/<[^>]+>/g, '');
 
-                // Dữ liệu Plain Text TSV
                 if (isSeparate) {
                     plainRows.push([
                         gName,
@@ -9166,7 +9208,6 @@ service cloud.firestore {
                     ]);
                 }
 
-                // Định dạng HTML Merge Dòng (rowspan="2") chuẩn Google Sheets
                 const isEven = idx % 2 === 1;
                 const baseBg = isGroup ? '#f1f5f9' : (isEven ? '#f8fafc' : '#ffffff');
                 const countColor = prog.postedCount >= targetKpi ? '#15803d' : (prog.postedCount > 0 ? '#b45309' : '#dc2626');
@@ -9181,7 +9222,6 @@ service cloud.firestore {
 
                 if (isSeparate) {
                     htmlRows += `
-                        <!-- Dòng 1: Thông tin Idol (Merge 2 dòng) + Bài đăng 1 -->
                         <tr style="background-color: ${baseBg}; height: 32px;">
                             <td rowspan="2" style="border: 1px solid #cbd5e1; border-bottom: 2px solid #64748b; padding: 6px 12px; text-align: center; vertical-align: middle; font-weight: bold; color: #0f172a; background-color: ${baseBg};">
                                 ${gName}
@@ -9200,7 +9240,6 @@ service cloud.firestore {
                             </td>
                             ${linkCell1}
                         </tr>
-                        <!-- Dòng 2: Bài đăng 2 (Các cột bên trái tự động nối liền qua rowspan) -->
                         <tr style="background-color: ${baseBg}; height: 32px;">
                             <td style="border: 1px solid #cbd5e1; border-top: 1px dashed #cbd5e1; border-bottom: 2px solid #64748b; padding: 6px 12px; text-align: center; vertical-align: middle; color: #334155; font-size: 9.5pt; background-color: ${baseBg};">
                                 ${post2LabelHtml}
@@ -9210,7 +9249,6 @@ service cloud.firestore {
                     `;
                 } else {
                     htmlRows += `
-                        <!-- Dòng 1: Thông tin Idol (Merge 2 dòng) + Bài đăng 1 -->
                         <tr style="background-color: ${baseBg}; height: 32px;">
                             <td rowspan="2" style="border: 1px solid #cbd5e1; border-bottom: 2px solid #64748b; padding: 6px 12px; text-align: left; vertical-align: middle; font-weight: bold; color: ${isGroup ? '#db2777' : '#0f172a'}; background-color: ${baseBg};">
                                 ${groupColVal}
@@ -9226,7 +9264,6 @@ service cloud.firestore {
                             </td>
                             ${linkCell1}
                         </tr>
-                        <!-- Dòng 2: Bài đăng 2 (Các cột bên trái tự động nối liền qua rowspan) -->
                         <tr style="background-color: ${baseBg}; height: 32px;">
                             <td style="border: 1px solid #cbd5e1; border-top: 1px dashed #cbd5e1; border-bottom: 2px solid #64748b; padding: 6px 12px; text-align: center; vertical-align: middle; color: #334155; font-size: 9.5pt; background-color: ${baseBg};">
                                 ${post2LabelHtml}
@@ -9237,7 +9274,6 @@ service cloud.firestore {
                 }
             });
 
-            // Tạo khung HTML hoàn chỉnh cho Google Sheets
             const htmlTable = `
                 <meta charset="utf-8">
                 <table style="border-collapse: collapse; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; font-size: 10pt; width: 100%; border: 2px solid #0f172a;">
@@ -9253,6 +9289,66 @@ service cloud.firestore {
             `;
 
             const tsvContent = [plainHeaders.join('\t'), ...plainRows.map(r => r.join('\t'))].join('\n');
+
+            return { htmlTable, tsvContent, plainHeaders, plainRows };
+        }
+
+        function downloadFullExcelFile() {
+            if (typeof XLSX === 'undefined') {
+                showToast('Thư viện Excel đang tải, vui lòng thử lại sau vài giây!', 'error');
+                return;
+            }
+            const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
+            const weekLabel = getWeekDisplayTitle(activeWeek);
+
+            const separateColEl = document.getElementById('sheetSeparateGroupCol');
+            const isSeparate = separateColEl ? separateColEl.checked : false;
+
+            // Sheet 1: Đồng bộ 100% từ bảng Google Sheets (Song Ngữ + Merge Dòng Chuẩn)
+            const { htmlTable } = buildGoogleSheetsExportHtml(isSeparate);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlTable;
+            const tableEl = tempDiv.querySelector('table');
+            const wsKpi = XLSX.utils.table_to_sheet(tableEl);
+
+            // Căn chỉnh độ rộng cột Excel thoáng đẹp, không bị tràn hay cắt chữ
+            wsKpi['!cols'] = isSeparate
+                ? [{ wch: 18 }, { wch: 30 }, { wch: 16 }, { wch: 28 }, { wch: 32 }, { wch: 42 }]
+                : [{ wch: 34 }, { wch: 16 }, { wch: 28 }, { wch: 32 }, { wch: 42 }];
+
+            // Sheet 2: Chi tiết toàn bộ bài đăng tuần
+            const detailRows = getPostsForWeek(activeWeek).map(p => {
+                const acc = getAccountById(p.accountId);
+                const gName = extractCleanGroupName(acc);
+                const iName = extractCleanIdolName(acc);
+                return {
+                    'TUẦN': p.sheet || weekLabel,
+                    'NGÀY ĐĂNG': formatDateVN(p.date),
+                    'NHÓM': gName,
+                    'TÊN IDOL / KÊNH': acc && acc.role === 'GROUP' ? `${gName} (Kênh Nhóm)` : iName,
+                    'ID TIKTOK': acc ? acc.handle : '',
+                    'HẠNG MỤC': p.category,
+                    'LINK BÀI ĐĂNG': p.link || '',
+                    'TRẠNG THÁI': p.status,
+                    'GHI CHÚ': p.note || ''
+                };
+            });
+
+            const wb = XLSX.utils.book_new();
+            const wsDetail = XLSX.utils.json_to_sheet(detailRows);
+
+            XLSX.utils.book_append_sheet(wb, wsKpi, "TIEN_DO_DANG_BAI");
+            XLSX.utils.book_append_sheet(wb, wsDetail, "CHI_TIET_BAI_DANG");
+
+            const cleanDate = activeWeek.replace(/-/g, '');
+            XLSX.writeFile(wb, `PASSION_MEDIA_TIEN_DO_TUAN_${cleanDate}.xlsx`);
+            showToast('✅ Đã tải file Excel báo cáo tiến độ tuần thành công!', 'success');
+        }
+
+        async function copyTableForGoogleSheets() {
+            const separateColEl = document.getElementById('sheetSeparateGroupCol');
+            const isSeparate = separateColEl ? separateColEl.checked : false;
+            const { htmlTable, tsvContent } = buildGoogleSheetsExportHtml(isSeparate);
 
             let copied = false;
             try {
@@ -10315,7 +10411,7 @@ service cloud.firestore {
             // Theme, Google Sheets & Phím tắt bàn phím
             initTheme, applyTheme, toggleTheme,
             openGoogleSheetModal, closeGoogleSheetModal, copySheetTemplateHeader, importGoogleSheetData,
-            openExportSheetModal, closeExportSheetModal, downloadFullExcelFile, copyTableForGoogleSheets,
+            openExportSheetModal, closeExportSheetModal, downloadFullExcelFile, copyTableForGoogleSheets, buildGoogleSheetsExportHtml, copyModalKpiMessageReport,
             getWeekDisplayTitle, generateGroupKpiReportText, copyGroupKpiReport, copyCurrentOperatorGroupReport, copyGroupShareLink, initGroupFromUrlQuery, generateNewWeekAnnouncementText, copyNewWeekAnnouncement,
             deleteAccountWithConfirm, closeConfirmDeleteAccountModal, executeDeleteAccountConfirmed,
             openBypassModal, closeBypassModal, handleBypassSwitchToggle, setQuickBypassReason,
