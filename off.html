@@ -826,7 +826,7 @@
 <!-- THÊM FIREBASE SDK VÀO TRƯỚC THẺ </HEAD> -->
   <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-      import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+      import { getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
       
       const firebaseConfig = {
           apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
@@ -838,7 +838,7 @@
       };
       const app = initializeApp(firebaseConfig);
       window.db = getFirestore(app);
-      window.fs = { collection, getDocs, doc, setDoc, deleteDoc, writeBatch };
+      window.fs = { collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch };
   </script>
   <!-- Chỉ nạp thư viện drag-drop-touch trên màn hình lớn (PC) để không làm kẹt thao tác vuốt trên iPhone -->
   <script>
@@ -901,6 +901,7 @@
       <button style="background: #8b5cf6 !important; color: white !important; margin-left: 0;" onclick="copyPersonLink()">📋 Link Đăng Ký</button>
       <button style="background: #a855f7 !important; color: white !important;" onclick="openBadgeLibraryModal()">🎨 Thư Viện Badge</button>
       <button style="background: #2563eb !important; color: white !important;" onclick="openAddEmployeeModal()">➕ Thêm NS</button>
+      <button style="background: #0284c7 !important; color: white !important;" onclick="openCopyMonthModal()" title="Sao chép danh sách nhân sự từ tháng khác">📋 Sao Chép NS</button>
       <button style="background: #3b82f6 !important; color: white !important;" onclick="approveAll()">✅ Duyệt Tất Cả</button>
       <button style="background: #10b981 !important; color: white !important;" onclick="exportImage()">📸 Xuất Ảnh</button>
       <button onclick="refreshData()">🔄 Mới</button>
@@ -998,12 +999,12 @@
 
   <div class="modal-overlay" id="addEmployeeModal">
     <div class="modal-box">
-      <h3 style="margin-top:0; color: #3b82f6;">➕ Thêm Nhân Sự Mới</h3>
-      <div style="margin-bottom: 15px;">
+      <h3 style="margin-top:0; color: #3b82f6;">➕ Thêm Nhân Sự Mới (<span id="addEmpMonthName" style="color: #2563eb;"></span>)</h3>
+      <div style="margin-bottom: 12px;">
         <label style="font-weight: 600; font-size: 0.85rem;">Tên nhân sự (Nhập tên):</label>
         <input type="text" id="newEmpName" placeholder="Ví dụ: Nguyễn Văn A..." style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;">
       </div>
-      <div style="margin-bottom: 15px;">
+      <div style="margin-bottom: 12px;">
         <label style="font-weight: 600; font-size: 0.85rem;">Bộ phận (Department):</label>
         <select id="newEmpRole" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;" onchange="updateGroupDropdown()">
           <option value="LIVESTEAM">LIVESTREAM</option>
@@ -1012,14 +1013,74 @@
           <option value="ACCOUNTANT">ACCOUNTANT</option>
         </select>
       </div>
-      <div style="margin-bottom: 20px;">
+      <div style="margin-bottom: 15px;">
         <label style="font-weight: 600; font-size: 0.85rem;">Chức vụ / Nhóm (Role/Group):</label>
         <select id="newEmpGroup" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;" onchange="checkCustomGroup()"></select>
         <input type="text" id="newEmpGroupCustom" placeholder="Nhập tên nhóm mới..." style="width:100%; padding:10px; margin-top:8px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box; display:none;">
       </div>
+      <div style="margin-bottom: 20px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <label style="font-weight: 700; font-size: 0.85rem; color: #334155; display: block; margin-bottom: 6px;">🗓️ Phạm vi áp dụng:</label>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="addEmpScope" value="CURRENT" checked>
+            <span><b>Chỉ áp dụng tháng này</b> (<span class="addEmpCurrentMonthText"></span>) - <span style="color:#059669; font-size: 0.8rem;">Không ảnh hưởng tháng khác</span></span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="addEmpScope" value="FUTURE">
+            <span><b>Từ tháng này trở đi</b> (<span class="addEmpCurrentMonthText"></span> và tương lai) - <span style="color:#059669; font-size: 0.8rem;">Không ảnh hưởng tháng trước</span></span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="addEmpScope" value="ALL">
+            <span><b>Tất cả các tháng</b></span>
+          </label>
+        </div>
+      </div>
       <div class="modal-actions" style="justify-content: flex-end;">
         <button class="btn-cancel" onclick="closeAddEmployeeModal()">Hủy</button>
         <button class="btn-ok" onclick="submitNewEmployee()" style="background:#10b981;">✅ Thêm Mới</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="deleteEmployeeModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0; color: #ef4444;">❌ Xóa Nhân Sự</h3>
+      <p id="deleteEmpMsg" style="font-size: 0.95rem; color: #1e293b; margin-bottom: 12px;">Bạn có chắc muốn xóa nhân sự này không?</p>
+      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px; margin-bottom: 15px; font-size: 0.8rem; color: #991b1b;">
+        💡 Mỗi tháng đã được phân tách riêng biệt. Việc xóa nhân sự ở tháng này sẽ không ảnh hưởng hoặc làm mất dữ liệu của các tháng khác.
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; font-size: 0.85rem;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="radio" name="deleteEmpScope" value="CURRENT" checked>
+          <span><b>Chỉ xóa khỏi Tháng <span class="delEmpCurrentMonth"></span></b> (Tháng khác giữ nguyên)</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="radio" name="deleteEmpScope" value="FUTURE">
+          <span><b>Xóa từ Tháng <span class="delEmpCurrentMonth"></span> trở đi</b> (Giữ nguyên tháng trước)</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="radio" name="deleteEmpScope" value="ALL">
+          <span><b>Xóa hoàn toàn khỏi tất cả các tháng</b></span>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeDeleteEmployeeModal()">Hủy</button>
+        <button class="btn-danger" onclick="confirmDeleteEmployee()">Xác nhận xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="copyMonthModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0; color: #0284c7;">📋 Sao Chép Nhân Sự Sang <span id="copyTargetMonthLabel" style="color: #2563eb;"></span></h3>
+      <p style="font-size: 0.85rem; color: #475569; margin-bottom: 15px;">Chọn tháng nguồn bạn muốn lấy danh sách nhân sự để sao chép vào tháng này:</p>
+      <div style="margin-bottom: 20px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Tháng nguồn (Source Month):</label>
+        <select id="copySourceMonthSelect" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeCopyMonthModal()">Hủy</button>
+        <button class="btn-ok" style="background: #0284c7;" onclick="submitCopyMonthEmployees()">📋 Sao Chép Ngay</button>
       </div>
     </div>
   </div>
@@ -1076,6 +1137,7 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec"; 
 
+    let baseEmployeesData = [], monthEmployeesData = {};
     let employeesData = [], leavesData = [], badgesData = {};
     let isSyncing = false; 
     let today = new Date();
@@ -1198,9 +1260,14 @@
 
         try {
             if (action === 'getInitialData') {
-                let employees = [], leaves = [], badges = {}, quotas = {};
+                let employees = [], leaves = [], badges = {}, quotas = {}, monthEmployees = {};
                 const empSnap = await fs.getDocs(fs.collection(db, "off_employees"));
                 empSnap.forEach(d => employees.push(d.data()));
+
+                try {
+                    const monthEmpSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
+                    monthEmpSnap.forEach(d => { monthEmployees[d.id] = d.data().employees || []; });
+                } catch(e) { console.warn("off_month_employees:", e); }
                 
                 const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
                 leaveSnap.forEach(d => leaves.push(d.data()));
@@ -1209,14 +1276,18 @@
                 configSnap.forEach(d => {
                     if(d.id === 'general') { badges = d.data().badges || {}; quotas = d.data().quotas || {}; }
                 });
-                return { employees, leaves, badges, quotas };
+                return { employees, leaves, badges, quotas, monthEmployees };
             }
 
             if (action === 'processBatchChanges') {
                 const queue = JSON.parse(payload.payloadStr);
+                const { monthStr, currentListSnapshot } = payload;
                 const batch = fs.writeBatch(db);
+                let badgeChanges = {};
+
                 for(let d of queue) {
                     if(d.type === 'BADGE') {
+                        badgeChanges[d.name] = d.badgeName;
                         batch.set(fs.doc(db, "off_employees", safeID(d.name)), { customBadge: d.badgeName }, { merge: true });
                     } else if(d.action === 'XÓA') {
                         batch.delete(fs.doc(db, "off_leaves", safeID(d.name) + "_" + d.date));
@@ -1224,6 +1295,19 @@
                         batch.set(fs.doc(db, "off_leaves", safeID(d.name) + "_" + d.date), { name: d.name, role: d.role, date: d.date, status: "Approved" });
                     }
                 }
+
+                if (Object.keys(badgeChanges).length > 0 && monthStr) {
+                    let list = Array.isArray(currentListSnapshot) ? JSON.parse(JSON.stringify(currentListSnapshot)) : [];
+                    if (list.length > 0) {
+                        for (let emp of list) {
+                            if (badgeChanges[emp.name] !== undefined) {
+                                emp.customBadge = badgeChanges[emp.name];
+                            }
+                        }
+                        batch.set(fs.doc(db, "off_month_employees", monthStr), { employees: list, updatedAt: new Date().toISOString() }, { merge: true });
+                    }
+                }
+
                 await batch.commit(); return "SUCCESS";
             }
 
@@ -1256,14 +1340,107 @@
             }
 
             if (action === 'addEmployee') {
-                const { name, group, role } = payload;
-                await fs.setDoc(fs.doc(db, "off_employees", safeID(name)), { name, group, role });
+                const { name, group, role, monthStr, scope = 'CURRENT', currentListSnapshot = [] } = payload;
+                const safeName = safeID(name);
+                const newEmp = { name, group, role, customBadge: '' };
+
+                let targetList = currentListSnapshot.map(e => ({ ...e }));
+                const existIdx = targetList.findIndex(e => String(e.name).trim().toUpperCase() === String(name).trim().toUpperCase());
+                if (existIdx > -1) {
+                    targetList[existIdx] = { ...targetList[existIdx], group, role };
+                } else {
+                    targetList.push(newEmp);
+                }
+
+                if (scope === 'CURRENT') {
+                    await fs.setDoc(fs.doc(db, "off_month_employees", monthStr), { 
+                        employees: targetList, 
+                        updatedAt: new Date().toISOString() 
+                    });
+                } else if (scope === 'FUTURE') {
+                    const batch = fs.writeBatch(db);
+                    batch.set(fs.doc(db, "off_month_employees", monthStr), { 
+                        employees: targetList, 
+                        updatedAt: new Date().toISOString() 
+                    });
+                    const monthSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
+                    monthSnap.forEach(d => {
+                        if (d.id > monthStr) {
+                            let list = (d.data().employees || []).map(e => ({ ...e }));
+                            const idx = list.findIndex(e => String(e.name).trim().toUpperCase() === String(name).trim().toUpperCase());
+                            if (idx > -1) list[idx] = { ...list[idx], group, role };
+                            else list.push(newEmp);
+                            batch.set(d.ref, { employees: list, updatedAt: new Date().toISOString() }, { merge: true });
+                        }
+                    });
+                    await batch.commit();
+                } else if (scope === 'ALL') {
+                    const batch = fs.writeBatch(db);
+                    batch.set(fs.doc(db, "off_employees", safeName), { name, group, role });
+                    batch.set(fs.doc(db, "off_month_employees", monthStr), { 
+                        employees: targetList, 
+                        updatedAt: new Date().toISOString() 
+                    });
+                    const monthSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
+                    monthSnap.forEach(d => {
+                        let list = (d.data().employees || []).map(e => ({ ...e }));
+                        const idx = list.findIndex(e => String(e.name).trim().toUpperCase() === String(name).trim().toUpperCase());
+                        if (idx > -1) list[idx] = { ...list[idx], group, role };
+                        else list.push(newEmp);
+                        batch.set(d.ref, { employees: list, updatedAt: new Date().toISOString() }, { merge: true });
+                    });
+                    await batch.commit();
+                }
+
                 return "SUCCESS";
             }
 
             if (action === 'deleteEmployee') {
-                const { name } = payload;
-                await fs.deleteDoc(fs.doc(db, "off_employees", safeID(name)));
+                const { name, monthStr, scope = 'CURRENT', currentListSnapshot = [] } = payload;
+                const safeName = safeID(name);
+                const filterOut = (list) => list.filter(e => String(e.name).trim().toUpperCase() !== String(name).trim().toUpperCase());
+
+                if (scope === 'CURRENT') {
+                    const targetList = filterOut(currentListSnapshot);
+                    await fs.setDoc(fs.doc(db, "off_month_employees", monthStr), { 
+                        employees: targetList, 
+                        updatedAt: new Date().toISOString() 
+                    });
+                } else if (scope === 'FUTURE') {
+                    const batch = fs.writeBatch(db);
+                    const targetList = filterOut(currentListSnapshot);
+                    batch.set(fs.doc(db, "off_month_employees", monthStr), { 
+                        employees: targetList, 
+                        updatedAt: new Date().toISOString() 
+                    });
+                    const monthSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
+                    monthSnap.forEach(d => {
+                        if (d.id > monthStr) {
+                            let list = filterOut(d.data().employees || []);
+                            batch.set(d.ref, { employees: list, updatedAt: new Date().toISOString() });
+                        }
+                    });
+                    await batch.commit();
+                } else if (scope === 'ALL') {
+                    const batch = fs.writeBatch(db);
+                    batch.delete(fs.doc(db, "off_employees", safeName));
+                    const monthSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
+                    monthSnap.forEach(d => {
+                        let list = filterOut(d.data().employees || []);
+                        batch.set(d.ref, { employees: list, updatedAt: new Date().toISOString() });
+                    });
+                    await batch.commit();
+                }
+
+                return "SUCCESS";
+            }
+
+            if (action === 'saveMonthEmployees') {
+                const { monthStr, employees } = payload;
+                await fs.setDoc(fs.doc(db, "off_month_employees", monthStr), {
+                    employees: employees,
+                    updatedAt: new Date().toISOString()
+                });
                 return "SUCCESS";
             }
 
@@ -1344,35 +1521,65 @@
         }
     }
 
+    let pendingDeleteEmpName = null;
+
     window.requestDeleteEmployee = function(name) {
-        closeAllMobileSheets();
-        closeMobileEmpCalendar();
-        if(isSyncing) return showToast("Hệ thống đang bận...", false, true);
-        
-        document.getElementById('modalTitle').innerHTML = "❌ Xóa Nhân Sự";
-        document.getElementById('modalMsg').innerHTML = `Bạn có chắc chắn muốn xóa nhân sự <b>${name}</b> khỏi hệ thống không? Dữ liệu không thể khôi phục!`;
-        document.getElementById('modalRejectBtn').style.display = 'none';
-        
-        const btn = document.getElementById('modalOkBtn'); 
-        btn.className = "btn-danger"; 
-        btn.innerText = "Xóa vĩnh viễn";
-        btn.onclick = () => { 
-            closeModal(); 
-            executeDeleteEmployee(name); 
-        };
-        document.getElementById('customModal').classList.add('active');
+      closeAllMobileSheets();
+      closeMobileEmpCalendar();
+      if(isSyncing) return showToast("Hệ thống đang bận...", false, true);
+      
+      pendingDeleteEmpName = name;
+      const monthLabel = `${(displayMonth + 1).toString().padStart(2, '0')}/${displayYear}`;
+      
+      const msg = document.getElementById('deleteEmpMsg');
+      if (msg) msg.innerHTML = `Bạn có chắc muốn xóa nhân sự <b>${name}</b> không?`;
+      
+      document.querySelectorAll('.delEmpCurrentMonth').forEach(el => {
+        el.innerText = monthLabel;
+      });
+
+      document.getElementById('deleteEmployeeModal').classList.add('active');
     };
 
-    window.executeDeleteEmployee = function(name) {
-        isSyncing = true; showToast(`⏳ Đang xóa ${name}...`, true);
-        callAPI('deleteEmployee', { name: name })
-            .then(res => { 
-                isSyncing = false; 
-                if (res === "SUCCESS") { showToast(`✅ Đã xóa ${name} thành công!`); refreshData(); } 
-                else { showToast(res, false, true); refreshData(); } 
-            })
-            .catch(err => { isSyncing = false; showToast("Lỗi kết nối", false, true); refreshData(); });
-    };
+    function closeDeleteEmployeeModal() {
+      document.getElementById('deleteEmployeeModal').classList.remove('active');
+      pendingDeleteEmpName = null;
+    }
+
+    function confirmDeleteEmployee() {
+      if (!pendingDeleteEmpName) return closeDeleteEmployeeModal();
+      const name = pendingDeleteEmpName;
+      let scope = 'CURRENT';
+      const scopeRadio = document.querySelector('input[name="deleteEmpScope"]:checked');
+      if (scopeRadio) scope = scopeRadio.value;
+
+      closeDeleteEmployeeModal();
+      isSyncing = true; 
+      showToast(`⏳ Đang xóa ${name}...`, true);
+
+      const monthPrefix = getMonthPrefix(displayYear, displayMonth);
+      callAPI('deleteEmployee', { 
+        name: name, 
+        monthStr: monthPrefix, 
+        scope: scope, 
+        currentListSnapshot: employeesData 
+      })
+        .then(res => { 
+          isSyncing = false; 
+          if (res === "SUCCESS") { 
+            showToast(`✅ Đã xóa ${name} thành công!`); 
+            refreshData(); 
+          } else { 
+            showToast(res, false, true); 
+            refreshData(); 
+          } 
+        })
+        .catch(err => { 
+          isSyncing = false; 
+          showToast("Lỗi kết nối", false, true); 
+          refreshData(); 
+        });
+    }
 
     document.addEventListener("click", () => { 
       if (!isMobileView()) {
@@ -1411,12 +1618,75 @@
       return "";
     }
 
-    function changeMonth(offset) { cancelMobileMoveMode(); displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } updateMonthLabel(); renderTable(); triggerSmartListAnimation(); }
+    function getMonthPrefix(year, month) {
+      return `${year}-${(month + 1).toString().padStart(2, '0')}`;
+    }
+
+    function getEmployeesForMonth(monthPrefix) {
+      if (monthEmployeesData && monthEmployeesData[monthPrefix] && Array.isArray(monthEmployeesData[monthPrefix]) && monthEmployeesData[monthPrefix].length > 0) {
+        return JSON.parse(JSON.stringify(monthEmployeesData[monthPrefix]));
+      }
+      const allMonths = Object.keys(monthEmployeesData || {}).sort();
+      const prevMonths = allMonths.filter(m => m < monthPrefix);
+      if (prevMonths.length > 0) {
+        const latestPrev = prevMonths[prevMonths.length - 1];
+        if (monthEmployeesData[latestPrev] && monthEmployeesData[latestPrev].length > 0) {
+          return JSON.parse(JSON.stringify(monthEmployeesData[latestPrev]));
+        }
+      }
+      return JSON.parse(JSON.stringify(baseEmployeesData || []));
+    }
+
+    function syncCurrentMonthEmployees() {
+      const currentPrefix = getMonthPrefix(displayYear, displayMonth);
+      const rawList = getEmployeesForMonth(currentPrefix);
+
+      employeesData = rawList.map(e => {
+        let nUp = String(e.name || '').toUpperCase().trim();
+        let finalRole = e.role || 'LIVESTEAM';
+        let finalGroup = normalizeGroupName(e.group).toUpperCase();
+
+        if (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER")) {
+          finalRole = "TEACHER DANCE";
+          finalGroup = "TEACHER";
+        }
+
+        return {
+          name: e.name,
+          role: finalRole,
+          group: finalGroup,
+          customBadge: e.customBadge || ''
+        };
+      });
+    }
+
+    function changeMonth(offset) { 
+      cancelMobileMoveMode(); 
+      displayMonth += offset; 
+      if (displayMonth > 11) { displayMonth = 0; displayYear++; } 
+      else if (displayMonth < 0) { displayMonth = 11; displayYear--; } 
+      updateMonthLabel(); 
+      syncCurrentMonthEmployees();
+      renderTable(); 
+      populatePersonSelect();
+      triggerSmartListAnimation(); 
+    }
     function updateMonthLabel() { document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} /${displayYear}`; }
     function toggleMonthPicker(event) { if(event) event.stopPropagation(); document.getElementById('monthDropdown').classList.toggle('active'); tempPickerYear = displayYear; renderPickerGrid(); }
     function changeTempYear(offset, event) { if(event) event.stopPropagation(); tempPickerYear += offset; renderPickerGrid(); }
     function renderPickerGrid() { document.getElementById('pickerYearLabel').innerText = tempPickerYear; const grid = document.getElementById('monthGrid'); grid.innerHTML = ''; const months = ["Thg 1", "Thg 2", "Thg 3", "Thg 4", "Thg 5", "Thg 6", "Thg 7", "Thg 8", "Thg 9", "Thg 10", "Thg 11", "Thg 12"]; months.forEach((m, idx) => { let isCurrent = (idx === displayMonth && tempPickerYear === displayYear); grid.innerHTML += `<button type="button" class="month-btn ${isCurrent ? 'active' : ''}" onclick="selectSpecificMonth(${idx}, event)">${m}</button>`; }); }
-    function selectSpecificMonth(mIdx, event) { if(event) event.stopPropagation(); cancelMobileMoveMode(); displayMonth = mIdx; displayYear = tempPickerYear; updateMonthLabel(); renderTable(); triggerSmartListAnimation(); document.getElementById('monthDropdown').classList.remove('active'); }
+    function selectSpecificMonth(mIdx, event) { 
+      if(event) event.stopPropagation(); 
+      cancelMobileMoveMode(); 
+      displayMonth = mIdx; 
+      displayYear = tempPickerYear; 
+      updateMonthLabel(); 
+      syncCurrentMonthEmployees();
+      renderTable(); 
+      populatePersonSelect();
+      triggerSmartListAnimation(); 
+      document.getElementById('monthDropdown').classList.remove('active'); 
+    }
 
     function scrollToTodayCol(forceToast = false) {
       if (!isMobileView()) return;
@@ -1441,29 +1711,17 @@
       
       callAPI('getInitialData')
         .then(data => { 
-       if(data && data.employees) { 
-                 // Tự động in hoa, gộp nhóm và TÁCH RIÊNG các Teacher ra bộ phận TEACHER DANCE
-                 employeesData = data.employees.map(e => {
-                    let nUp = String(e.name).toUpperCase().trim();
-                    let finalRole = e.role;
-                    let finalGroup = normalizeGroupName(e.group).toUpperCase();
-                    
-                    // Nếu là Giáo Viên thì tự động bế ra khu vực riêng, không chung nhóm với ai nữa
-                    if (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER")) {
-                        finalRole = "TEACHER DANCE";
-                        finalGroup = "TEACHER";
-                    }
-                    
-                    return { ...e, role: finalRole, group: finalGroup };
-                 });
-             leavesData = data.leaves || []; 
-             badgesData = data.badges || {}; 
-             quotasData = data.quotas || {};
-             renderTable(); 
-             populatePersonSelect(); 
-             triggerSmartListAnimation();
-          }
-          isSyncing = false; showToast("✅ Đã cập nhật xong!"); 
+          baseEmployeesData = data.employees || [];
+          monthEmployeesData = data.monthEmployees || {};
+          leavesData = data.leaves || []; 
+          badgesData = data.badges || {}; 
+          quotasData = data.quotas || {};
+          syncCurrentMonthEmployees();
+          renderTable(); 
+          populatePersonSelect(); 
+          triggerSmartListAnimation();
+          isSyncing = false; 
+          showToast("✅ Đã cập nhật xong!"); 
         })
         .catch(err => { showToast("Lỗi Data: " + err.message, false, true); isSyncing = false; });
     }
@@ -2206,7 +2464,12 @@ function initMobileCalSwipeGesture() {
       if (draftQueue.length === 0) return;
       isSyncing = true; showToast("⏳ Đang đẩy dữ liệu lên hệ thống...", true);
       
-      callAPI('processBatchChanges', { payloadStr: JSON.stringify(draftQueue) })
+      const monthPrefix = getMonthPrefix(displayYear, displayMonth);
+      callAPI('processBatchChanges', { 
+        payloadStr: JSON.stringify(draftQueue),
+        monthStr: monthPrefix,
+        currentListSnapshot: employeesData
+      })
         .then(res => {
           isSyncing = false;
           if (res === "SUCCESS") { showToast("✅ Đã lưu thành công!"); draftQueue = []; updateSaveButtonUI(); refreshData(); } 
@@ -2310,7 +2573,20 @@ function initMobileCalSwipeGesture() {
       document.body.removeChild(textArea);
     }
     
-    function openAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('active'); document.getElementById('newEmpName').value = ''; document.getElementById('newEmpRole').value = 'LIVESTEAM'; updateGroupDropdown(); }
+    function openAddEmployeeModal() { 
+      document.getElementById('addEmployeeModal').classList.add('active'); 
+      document.getElementById('newEmpName').value = ''; 
+      document.getElementById('newEmpRole').value = 'LIVESTEAM'; 
+      updateGroupDropdown(); 
+      
+      const monthLabel = `Tháng ${displayMonth + 1}/${displayYear}`;
+      const titleSpan = document.getElementById('addEmpMonthName');
+      if (titleSpan) titleSpan.innerText = monthLabel;
+      
+      document.querySelectorAll('.addEmpCurrentMonthText').forEach(el => {
+        el.innerText = monthLabel;
+      });
+    }
     function closeAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.remove('active'); }
   function updateGroupDropdown() {
   const role = document.getElementById('newEmpRole').value;
@@ -2351,11 +2627,94 @@ function initMobileCalSwipeGesture() {
       let name = document.getElementById('newEmpName').value.trim(), role = document.getElementById('newEmpRole').value, group = document.getElementById('newEmpGroup').value;
       if (group === 'CUSTOM') group = document.getElementById('newEmpGroupCustom').value.trim();
       if (!name || !group) return showToast("Vui lòng điền đủ Tên và Nhóm!", false, true);
+
+      let scope = 'CURRENT';
+      const scopeRadio = document.querySelector('input[name="addEmpScope"]:checked');
+      if (scopeRadio) scope = scopeRadio.value;
+
+      let monthPrefix = getMonthPrefix(displayYear, displayMonth);
       closeAddEmployeeModal(); showToast("⏳ Đang lưu nhân sự...", true);
       
-      callAPI('addEmployee', { role: role, group: group, name: name })
-        .then(res => { if (res === "SUCCESS") { showToast("✅ Đã thêm nhân sự thành công!"); refreshData(); } else { showToast(res, false, true); } })
+      callAPI('addEmployee', { 
+        role: role, 
+        group: group, 
+        name: name, 
+        monthStr: monthPrefix, 
+        scope: scope, 
+        currentListSnapshot: employeesData 
+      })
+        .then(res => { 
+          if (res === "SUCCESS") { 
+            showToast(`✅ Đã thêm nhân sự vào Tháng ${displayMonth + 1}/${displayYear}!`); 
+            refreshData(); 
+          } else { 
+            showToast(res, false, true); 
+          } 
+        })
         .catch(err => { showToast("Lỗi kết nối", false, true); });
+    }
+
+    function openCopyMonthModal() {
+      const targetPrefix = getMonthPrefix(displayYear, displayMonth);
+      document.getElementById('copyTargetMonthLabel').innerText = `Tháng ${displayMonth + 1}/${displayYear}`;
+      const select = document.getElementById('copySourceMonthSelect');
+      select.innerHTML = '';
+
+      select.innerHTML += `<option value="BASE">📋 Danh sách nhân sự mặc định (Gốc)</option>`;
+
+      const allMonths = [...new Set([...Object.keys(monthEmployeesData || {}), '2026-09', '2026-10', '2026-11'])].sort().reverse();
+      allMonths.forEach(m => {
+        if (m !== targetPrefix) {
+          const parts = m.split('-');
+          select.innerHTML += `<option value="${m}">🗓️ Danh sách Tháng ${parseInt(parts[1])}/${parts[0]}</option>`;
+        }
+      });
+
+      document.getElementById('copyMonthModal').classList.add('active');
+    }
+
+    function closeCopyMonthModal() {
+      document.getElementById('copyMonthModal').classList.remove('active');
+    }
+
+    function submitCopyMonthEmployees() {
+      const source = document.getElementById('copySourceMonthSelect').value;
+      const targetPrefix = getMonthPrefix(displayYear, displayMonth);
+
+      let sourceList = [];
+      if (source === 'BASE') {
+        sourceList = baseEmployeesData || [];
+      } else if (monthEmployeesData[source] && monthEmployeesData[source].length) {
+        sourceList = monthEmployeesData[source];
+      } else {
+        sourceList = getEmployeesForMonth(source);
+      }
+
+      if (!sourceList || sourceList.length === 0) {
+        return showToast("Tháng nguồn không có dữ liệu nhân sự!", false, true);
+      }
+
+      closeCopyMonthModal();
+      isSyncing = true;
+      showToast("⏳ Đang sao chép danh sách nhân sự...", true);
+
+      callAPI('saveMonthEmployees', {
+        monthStr: targetPrefix,
+        employees: sourceList
+      })
+        .then(res => {
+          isSyncing = false;
+          if (res === "SUCCESS") {
+            showToast(`✅ Đã sao chép ${sourceList.length} nhân sự sang Tháng ${displayMonth + 1}/${displayYear}!`);
+            refreshData();
+          } else {
+            showToast(res, false, true);
+          }
+        })
+        .catch(err => {
+          isSyncing = false;
+          showToast("Lỗi sao chép: " + err.message, false, true);
+        });
     }
 
     function toggleExportMode() {
