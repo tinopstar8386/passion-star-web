@@ -506,109 +506,131 @@
         }
 
         document.getElementById("scheduleTable").classList.remove("mc-calendar-view");
-        document.querySelector(".table-container").style.border = "1px solid var(--border-color)";
         const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
         const thead = document.getElementById("tableHead");
         const tbody = document.getElementById("tableBody");
         thead.innerHTML = ""; tbody.innerHTML = "";
 
-        let headerRow = '<tr><th class="group-cell">NHÓM</th><th class="name-cell">TÊN</th>';
+        // NẾU KHÔNG CÓ NHÓM ĐƯỢC CHỈ ĐỊNH: HIỂN THỊ THÔNG BÁO BẢO MẬT
+        if (!TARGET_GROUP) {
+            tbody.innerHTML = `<tr><td colspan="${daysInMonth + 2}" style="padding: 60px 20px; text-align: center; color: #64748b; font-size: 1rem; font-weight: 600;">
+              <div style="font-size: 2.8rem; margin-bottom: 12px;">🔒</div>
+              <div style="color: #0f172a; font-size: 1.2rem; font-weight: 800; margin-bottom: 6px;">Vui lòng truy cập qua link của nhóm được chỉ định</div>
+              <div>Liên hệ Quản trị viên để nhận link đăng ký lịch cho nhóm của bạn.</div>
+            </td></tr>`;
+            const titleEl = document.getElementById("groupTitleDisplay");
+            if (titleEl) titleEl.innerText = "Chưa chọn nhóm";
+            return;
+        }
+
+        // CẬP NHẬT TIÊU ĐỀ NHÓM Ở HEADER
+        let displayTitle = TARGET_GROUP.replace("GROUP:", "").trim();
+        if (displayTitle.includes("ANGELIK")) displayTitle = "Team Thầy Ken - Nhóm Angelik";
+        else if (displayTitle.includes("ORION")) displayTitle = "Team Thầy Ken - Nhóm Orion (Lưu lượng)";
+        else if (displayTitle.includes("FASHION")) displayTitle = "Team Cô U - Nhóm Fashion";
+        else if (displayTitle.includes("ROYEN")) displayTitle = "Team Cô U - Nhóm Royen:One (Lưu lượng)";
+        else if (displayTitle.includes("DINO") || displayTitle.includes("BEE") || displayTitle.includes("BNART")) displayTitle = "Team Thầy Dino - Nhóm Bee & Bnart";
+        else if (displayTitle.includes("GIMBAL") || displayTitle.includes("MEDIA")) displayTitle = "Gimbal / Media";
+
+        const titleEl = document.getElementById("groupTitleDisplay");
+        if (titleEl) titleEl.innerText = displayTitle;
+
+        // TIÊU ĐỀ BẢNG CỐ ĐỊNH (STICKY) CỘT TÊN 185PX CÂN ĐỐI
+        let headerRow = '<tr><th class="name-cell-header" style="width: 185px; min-width: 170px; max-width: 195px;">TÊN NHÂN SỰ</th>';
         for (let i = 1; i <= daysInMonth; i++) {
           let d = new Date(displayYear, displayMonth, i), dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-          headerRow += `<th style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">${(i<10?'0'+i:i)}/${(displayMonth+1<10?'0'+(displayMonth+1):displayMonth+1)}<br><span style="font-weight:400; font-size:0.65rem">${dayNames[d.getDay()]}</span></th>`;
+          headerRow += `<th data-col="${i}" style="width: calc((100% - 185px) / ${daysInMonth});"><div class="th-date-box"><span class="th-day-num">${(i<10?'0'+i:i)}</span><span class="th-day-txt">${dayNames[d.getDay()]}</span></div></th>`;
         }
         thead.innerHTML = headerRow + "</tr>";
 
         let depts = {};
         employeesData.forEach(emp => {
-          let roleUpper = String(emp.role).trim().toUpperCase(); let empName = String(emp.name).trim(); let empGroup = String(emp.group).trim();
-          let keep = false;
-          if (!TARGET_GROUP) keep = true;
-          else if (TARGET_GROUP.startsWith("GROUP:")) { let targetGrp = TARGET_GROUP.replace("GROUP:", "").trim().toUpperCase(); if (empGroup.toUpperCase() === targetGrp || roleUpper === targetGrp) keep = true; } 
-          else { let target = TARGET_GROUP.toUpperCase().replace(/\s+/g, ''); if (empName.toUpperCase().replace(/\s+/g, '').includes(target) || empGroup.toUpperCase().replace(/\s+/g, '').includes(target)) keep = true; }
+          if (!matchesTargetGroup(emp, TARGET_GROUP)) return;
           
-          if (!keep) return;
-          let roleStr = emp.role ? String(emp.role).trim() : "KHÁC"; let groupStr = emp.group ? String(emp.group).trim() : "KHÁC";
-          if (!depts[roleStr]) depts[roleStr] = {}; if (!depts[roleStr][groupStr]) depts[roleStr][groupStr] = [];
-
-          let nUp = String(emp.name).toUpperCase(); let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
-          if (isTeacher) depts[roleStr][groupStr].unshift(emp); else depts[roleStr][groupStr].push(emp);
+          let roleStr = emp.role ? String(emp.role).trim() : "KHÁC"; 
+          let groupStr = emp.group ? String(emp.group).trim() : "KHÁC";
+          if (!depts[roleStr]) depts[roleStr] = {}; 
+          if (!depts[roleStr][groupStr]) depts[roleStr][groupStr] = [];
+          depts[roleStr][groupStr].push(emp);
         });
 
-        let tbodyHTML = "";
-        for (let deptKey in depts) {
-          let displayRole = String(deptKey).toUpperCase();
-          if (displayRole === "TEACHER DANCE" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
-          else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
-          tbodyHTML += `<tr><td colspan="${daysInMonth + 2}" class="dept-divider" style="border-bottom: 1px solid var(--border-color);">${displayRole}</td></tr>`;
+        let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+        let swappingDates = leavesData.filter(l => l.swapFrom).map(l => l.name + "_" + l.swapFrom);
+        let deptKeys = Object.keys(depts);
 
+        if (deptKeys.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${daysInMonth + 1}" style="padding: 40px; text-align: center; color: #64748b; font-weight: 600;">
+              Không có nhân sự nào thuộc ${displayTitle} trong tháng ${displayMonth + 1}/${displayYear}.
+            </td></tr>`;
+            return;
+        }
+
+        for (let deptKey of deptKeys) {
           for (let group in depts[deptKey]) {
-             depts[deptKey][group].forEach((emp, idx) => {
-                let name = emp.name; let userBadge = generateBadgeHTML(emp);
+             let isTraffic = (group.toUpperCase().includes("ORION") || group.toUpperCase().includes("ROYEN"));
+             
+             // SẮP XẾP NHÂN SỰ: Operation (1), MC (2), Idol (3)
+             depts[deptKey][group].sort((a, b) => {
+                let nUpA = String(a.name).toUpperCase();
+                let nUpB = String(b.name).toUpperCase();
+                let isTeacherA = (nUpA === "KEN" || nUpA === "U" || nUpA === "DINO" || nUpA.includes("TEACHER"));
+                let isTeacherB = (nUpB === "KEN" || nUpB === "U" || nUpB === "DINO" || nUpB.includes("TEACHER"));
+                if (isTeacherA && !isTeacherB) return -1;
+                if (!isTeacherA && isTeacherB) return 1;
+
+                if (isTraffic) {
+                  let rankA = getMemberRoleRank(a);
+                  let rankB = getMemberRoleRank(b);
+                  if (rankA !== rankB) return rankA - rankB;
+                }
+                return String(a.name).localeCompare(String(b.name));
+             });
+
+             depts[deptKey][group].forEach((emp) => {
+                let name = emp.name; let role = emp.role; let nUp = String(emp.name).toUpperCase();
+                let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
+                let userBadge = generateBadgeHTML(emp);
+
                 let tr = `<tr>`;
-                if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" class="group-cell" style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">${group}</td>`;
-                tr += `<td class="name-cell" style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">
-                         <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 100%; padding: 4px 0;">
-                           <span style="font-size: 0.75rem; line-height: 1.2;">${name}</span>
-                           <div style="display: flex; align-items: center;">${userBadge}</div>
+                tr += `<td class="name-cell ${isTeacher ? 'teacher-highlight' : ''}">
+                         <div style="display: flex; flex-direction: column; gap: 2px;">
+                           <span style="font-size: 0.78rem; font-weight: 700; color: #0f172a;">${name}</span>
+                           <div style="display: flex; align-items: center; gap: 4px;">${userBadge}</div>
                          </div>
                        </td>`;
 
                 for (let i = 1; i <= daysInMonth; i++) {
-                  let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
-                  let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`;
-                  let isMoved = leavesData.some(l => String(l.name).trim() === String(name).trim() && l.swapFrom === checkDate);
-                  let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isMoved);
-                  let baseStyle = "border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 0; margin: 0; position: relative;";
-                  
+                  let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`; 
+                  let isMovingSource = (mobileMoveState && mobileMoveState.name === name && mobileMoveState.oldDate === checkDate);
+                  let tdClass = `day-cell ${isMovingSource ? 'moving-source-cell' : ''}`;
+                  let isSwappingOut = swappingDates.includes(name + "_" + checkDate);
+                  let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isSwappingOut);
                   let isSelected = selectedCells.some(c => c.name === name && c.date === checkDate);
                   let isCancelSelected = selectedCancelCells.some(c => c.name === name && c.date === checkDate);
 
-                  let isDraggable = false;
-                  let tdAttrs = "";
-                  let sClass = "";
                   let dropEvents = `ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"`;
 
-                  if (leave) {
-                    if (leave.status === "Pending") {
-                       sClass = isCancelSelected ? 'cell-pending cell-cancel-selected' : 'cell-pending';
-                       isDraggable = true;
-                       tdAttrs = `style="${baseStyle}" class="day-cell ${sClass}" onclick="toggleCancelSelection(this, '${name}', '${checkDate}'); event.stopPropagation();" ${dropEvents}`;
-                    } else {
-                       sClass = 'cell-off';
-                       isDraggable = true;
-                       tdAttrs = `style="${baseStyle}" class="day-cell ${sClass}" onclick="showToast('💡 ĐỂ DỜI NGÀY: NHẤN GIỮ rồi KÉO thả sang ô trống!');" ${dropEvents}`;
-                    }
+                  if (isSwappingOut) {
+                      tr += `<td data-col="${i}" class="${tdClass} cell-swap"><div class="badge badge-swap" title="Ngày này đang chờ duyệt đổi">ĐỔI</div></td>`;
+                  } else if (leave) {
+                      if (leave.status === "Pending") {
+                          let cClass = isCancelSelected ? 'cell-pending cell-cancel-selected' : 'cell-pending';
+                          tr += `<td data-col="${i}" class="${tdClass} ${cClass}" onclick="toggleCancelSelection(this, '${name}', '${checkDate}')" ${dropEvents} draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')"><div class="badge badge-pending">PEND</div></td>`;
+                      } else {
+                          tr += `<td data-col="${i}" class="${tdClass} cell-off" ${dropEvents} draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" onclick="showToast('💡 ĐỂ DỜI NGÀY: Nhấn giữ và Kéo thả (OFF) sang ngày trống!', true)"><div class="badge badge-off">OFF</div></td>`;
+                      }
                   } else {
-                    sClass = isSelected ? 'cell-selected' : '';
-                    tdAttrs = `style="${baseStyle}" class="day-cell ${sClass}" onclick="toggleCellSelection(this, '${deptKey}', '${name}', '${checkDate}')" ${dropEvents}`;
+                      let sClass = isSelected ? 'cell-selected' : '';
+                      tr += `<td data-col="${i}" class="${tdClass} ${sClass}" onclick="toggleCellSelection(this, '${role}', '${name}', '${checkDate}')" ${dropEvents}></td>`;
                   }
-
-                  let innerContent = "";
-                  if (leave) {
-                    if (leave.status === "Pending") {
-                        innerContent = `<div class="badge badge-pending" title="Đang chờ duyệt">⏳</div>`;
-                    } else {
-                        innerContent = `<div class="badge badge-off" title="Kéo thả để dời ngày">OFF</div>`;
-                    }
-                  }
-
-                  if (isDraggable) {
-                      innerContent = `<div draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" style="width: 100%; height: 100%; min-height: 42px; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; -webkit-user-drag: element;">${innerContent}</div>`;
-                  }
-
-                  tr += `<td ${tdAttrs}>${innerContent}</td>`;
                 }
-                tbodyHTML += tr + `</tr>`;
+                tbody.innerHTML += tr + `</tr>`;
              });
           }
         }
-        
-        if (tbodyHTML === "") {
-          let displayTitle = TARGET_GROUP.replace("PERSON:", "").replace("GROUP:", "");
-          tbody.innerHTML = `<tr><td colspan="${daysInMonth + 2}" style="text-align: center; color: #ef4444; padding: 40px; font-weight: 600;">⚠️ Không tìm thấy thông tin đăng nhập của bạn trong hệ thống.</td></tr>`;
-        } else { tbody.innerHTML = tbodyHTML; }
-      } catch (err) { showToast("Lỗi vẽ bảng: " + err, false, true); }
+      } catch (err) {
+        console.error("renderTable error:", err);
+      }
     }
 
     function renderInteractiveCalendar(empName) {
