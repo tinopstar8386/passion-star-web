@@ -1637,6 +1637,90 @@
       return JSON.parse(JSON.stringify(baseEmployeesData || []));
     }
 
+    function getMemberRoleRank(emp) {
+      const nameUpper = String(emp.name || '').toUpperCase();
+      const roleUpper = String(emp.role || '').toUpperCase();
+      const badgeUpper = String(emp.customBadge || '').toUpperCase();
+      if (nameUpper.includes("OPERATION") || roleUpper.includes("OPERATION") || badgeUpper.includes("OPERATION")) return 1;
+      if (nameUpper.includes("MC") || roleUpper.includes("MC") || badgeUpper.includes("MC")) return 2;
+      return 3;
+    }
+
+    function getLivestreamGroupMeta(emp) {
+      const g = normalizeGroupName(emp.group).toUpperCase();
+      const n = String(emp.name || '').toUpperCase();
+      const b = String(emp.customBadge || '').toUpperCase();
+
+      if (g.includes("ORION") || b.includes("ORION") || n.includes("ORION")) {
+        return {
+          teamCode: "TEAM_KEN",
+          sortOrder: 102,
+          groupKey: "TEAM KEN - ORION",
+          groupLabel: "Team Ken - Orion",
+          displayHTML: "TEAM KEN<br><span style='font-size:0.75rem; color:#7c3aed; font-weight:700;'>Nhóm Orion<br><small style='font-size:0.68rem; color:#9333ea; font-weight:600;'>(Lưu lượng)</small></span>",
+          isTraffic: true
+        };
+      }
+      if (g.includes("KEN") || b.includes("ANGELIK") || n.includes("ANGELIK")) {
+        return {
+          teamCode: "TEAM_KEN",
+          sortOrder: 101,
+          groupKey: "TEAM KEN - ANGELIK",
+          groupLabel: "Team Ken - Angelik",
+          displayHTML: "TEAM KEN<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Angelik</span>",
+          isTraffic: false
+        };
+      }
+      if (g.includes("ROYEN") || b.includes("ROYEN") || n.includes("ROYEN")) {
+        return {
+          teamCode: "TEAM_U",
+          sortOrder: 202,
+          groupKey: "TEAM U - ROYEN:ONE",
+          groupLabel: "Team U - Royen:One",
+          displayHTML: "TEAM U<br><span style='font-size:0.75rem; color:#2563eb; font-weight:700;'>Nhóm Royen:One<br><small style='font-size:0.68rem; color:#3b82f6; font-weight:600;'>(Lưu lượng)</small></span>",
+          isTraffic: true
+        };
+      }
+      if (g.includes("TEAM U") || b.includes("FASHION") || n.includes("FASHION")) {
+        return {
+          teamCode: "TEAM_U",
+          sortOrder: 201,
+          groupKey: "TEAM U - FASHION",
+          groupLabel: "Team U - Fashion",
+          displayHTML: "TEAM U<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Fashion</span>",
+          isTraffic: false
+        };
+      }
+      if (g.includes("DINO") || b.includes("BEE") || b.includes("BNART") || n.includes("BEE") || n.includes("BNART")) {
+        return {
+          teamCode: "TEAM_DINO",
+          sortOrder: 301,
+          groupKey: "TEAM DINO",
+          groupLabel: "Team Dino",
+          displayHTML: "TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bee & Bnart</span>",
+          isTraffic: false
+        };
+      }
+      if (g.includes("GIMBAL") || g.includes("MEDIA") || b.includes("GIMBAL") || b.includes("MEDIA")) {
+        return {
+          teamCode: "GIMBAL_MEDIA",
+          sortOrder: 401,
+          groupKey: "GIMBAL / MEDIA",
+          groupLabel: "Gimbal / Media",
+          displayHTML: "GIMBAL / MEDIA",
+          isTraffic: false
+        };
+      }
+      return {
+        teamCode: "OTHER",
+        sortOrder: 999,
+        groupKey: normalizeGroupName(emp.group),
+        groupLabel: normalizeGroupName(emp.group),
+        displayHTML: normalizeGroupName(emp.group),
+        isTraffic: false
+      };
+    }
+
     function syncCurrentMonthEmployees() {
       const currentPrefix = getMonthPrefix(displayYear, displayMonth);
       const rawList = getEmployeesForMonth(currentPrefix);
@@ -1649,6 +1733,9 @@
         if (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER")) {
           finalRole = "TEACHER DANCE";
           finalGroup = "TEACHER";
+        } else if (finalRole === "LIVESTEAM" || finalRole === "LIVESTREAM") {
+          const meta = getLivestreamGroupMeta(e);
+          finalGroup = meta.groupKey;
         }
 
         return {
@@ -1881,29 +1968,91 @@
       if(employeesData && employeesData.length > 0) {
          employeesData.forEach(emp => {
              if (!matchesMobileFilter(emp, monthPrefixGlobal)) return;
-             let roleStr = emp.role ? String(emp.role).trim() : "KHÁC"; let groupStr = emp.group ? String(emp.group).trim() : "KHÁC";
-             if (!depts[roleStr]) depts[roleStr] = {}; if (!depts[roleStr][groupStr]) depts[roleStr][groupStr] = [];
-             let nUp = emp.name ? String(emp.name).toUpperCase() : ""; let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
-             if (isTeacher) depts[roleStr][groupStr].unshift(emp); else depts[roleStr][groupStr].push(emp);
+             let roleStr = emp.role ? String(emp.role).trim() : "KHÁC"; 
+             let groupStr = emp.group ? String(emp.group).trim() : "KHÁC";
+             if (!depts[roleStr]) depts[roleStr] = {}; 
+             if (!depts[roleStr][groupStr]) depts[roleStr][groupStr] = [];
+             depts[roleStr][groupStr].push(emp);
          });
       }
 
       let swappingDates = leavesData.filter(l => l.swapFrom).map(l => l.name + "_" + l.swapFrom);
 
-      for (let deptKey in depts) {
+      const getDeptOrder = (r) => {
+        let ru = String(r).toUpperCase();
+        if (ru === "LIVESTEAM" || ru === "LIVESTREAM") return 1;
+        if (ru === "TEACHER DANCE") return 2;
+        if (ru === "MANAGER") return 3;
+        if (ru === "ACCOUNTANT") return 4;
+        return 9;
+      };
+
+      const sortedDeptKeys = Object.keys(depts).sort((a, b) => getDeptOrder(a) - getDeptOrder(b));
+
+      const getGroupSortOrder = (deptKey, groupKey) => {
+        if (deptKey === "LIVESTEAM" || deptKey === "LIVESTREAM") {
+          if (groupKey === "TEAM KEN - ANGELIK") return 101;
+          if (groupKey === "TEAM KEN - ORION") return 102;
+          if (groupKey === "TEAM U - FASHION") return 201;
+          if (groupKey === "TEAM U - ROYEN:ONE") return 202;
+          if (groupKey === "TEAM DINO") return 301;
+          if (groupKey === "GIMBAL / MEDIA") return 401;
+          return 999;
+        }
+        return 500;
+      };
+
+      for (let deptKey of sortedDeptKeys) {
           let displayRole = String(deptKey).toUpperCase();
           if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
-          else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+          else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; 
+          else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
           tbody.innerHTML += `<tr><td colspan="${daysInMonth + 2}" class="dept-divider">${displayRole}</td></tr>`;
 
-          for (let group in depts[deptKey]) {
+          let sortedGroups = Object.keys(depts[deptKey]).sort((a, b) => {
+            let ordA = getGroupSortOrder(deptKey, a);
+            let ordB = getGroupSortOrder(deptKey, b);
+            if (ordA !== ordB) return ordA - ordB;
+            return a.localeCompare(b);
+          });
+
+          for (let group of sortedGroups) {
+             let isTraffic = (group === "TEAM KEN - ORION" || group === "TEAM U - ROYEN:ONE");
+             
+             // SẮP XẾP NHÂN SỰ:
+             // Trong 2 nhóm lưu lượng: Operation đẩy lên đầu (1), MC tiếp theo (2), Idol (3) theo sau
+             depts[deptKey][group].sort((a, b) => {
+                let nUpA = String(a.name).toUpperCase();
+                let nUpB = String(b.name).toUpperCase();
+                let isTeacherA = (nUpA === "KEN" || nUpA === "U" || nUpA === "DINO" || nUpA.includes("TEACHER"));
+                let isTeacherB = (nUpB === "KEN" || nUpB === "U" || nUpB === "DINO" || nUpB.includes("TEACHER"));
+                if (isTeacherA && !isTeacherB) return -1;
+                if (!isTeacherA && isTeacherB) return 1;
+
+                if (isTraffic) {
+                  let rankA = getMemberRoleRank(a);
+                  let rankB = getMemberRoleRank(b);
+                  if (rankA !== rankB) return rankA - rankB;
+                }
+
+                return String(a.name).localeCompare(String(b.name));
+             });
+
+             let groupDisplayHTML = group;
+             if (group === "TEAM KEN - ANGELIK") groupDisplayHTML = `TEAM KEN<br><span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Nhóm Angelik</span>`;
+             else if (group === "TEAM KEN - ORION") groupDisplayHTML = `TEAM KEN<br><span style="font-size:0.75rem; color:#7c3aed; font-weight:700;">Nhóm Orion<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(Lưu lượng)</small></span>`;
+             else if (group === "TEAM U - FASHION") groupDisplayHTML = `TEAM U<br><span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Nhóm Fashion</span>`;
+             else if (group === "TEAM U - ROYEN:ONE") groupDisplayHTML = `TEAM U<br><span style="font-size:0.75rem; color:#2563eb; font-weight:700;">Nhóm Royen:One<br><small style="font-size:0.68rem; color:#3b82f6; font-weight:600;">(Lưu lượng)</small></span>`;
+             else if (group === "TEAM DINO") groupDisplayHTML = `TEAM DINO<br><span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Nhóm Bee & Bnart</span>`;
+             else if (group === "GIMBAL / MEDIA") groupDisplayHTML = `GIMBAL / MEDIA`;
+
              depts[deptKey][group].forEach((emp, idx) => {
                 let name = emp.name; let role = emp.role; let nUp = String(emp.name).toUpperCase(); let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
                 let userLeavesThisMonth = leavesData.filter(l => String(l.name).trim() === String(name).trim() && l.date.startsWith(monthPrefix) && (l.status === "Approved" || l.status === "Pending") && !swappingDates.includes(name + "_" + l.date)).length;
                 let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER")); let userBadge = generateBadgeHTML(emp);
                 let cleanGroupLabel = normalizeGroupName(group);
                 
-                let tr = `<tr>`; if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" class="group-cell">${group}</td>`;
+                let tr = `<tr>`; if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" class="group-cell">${groupDisplayHTML}</td>`;
                 tr += `<td class="name-cell ${isTeacher ? 'teacher-highlight' : ''}" onclick="openBadgeContextMenu(event, '${name}')" title="${name}">
                          <div style="display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 100%; padding: 2px 0;">
                            <span class="mobile-group-microtag">${cleanGroupLabel}</span>
@@ -2594,15 +2743,22 @@ function initMobileCalSwipeGesture() {
   let options = "";
   
   if (role === "LIVESTEAM" || role === "LIVESTREAM") {
-    options = '<option value="Team Dino">Team Dino</option>' +
-              '<option value="Team Ken">Team Ken</option>' +
-              '<option value="Team U">Team U</option>' +
-              '<option value="Team U Royen:One">Team U Royen:One</option>' +
-              '<option value="Angelik">Angelik</option>' +
-              '<option value="Fashion">Fashion</option>' +
-              '<option value="Orion">Orion</option>' +
-              '<option value="Bnart">Bnart</option>' +
-              '<option value="Bee">Bee</option>';
+    options = '<optgroup label="👑 TEAM KEN (Thầy Ken)">' +
+                '<option value="Team Ken - Angelik">Team Ken - Angelik (Nhóm nhảy)</option>' +
+                '<option value="Team Ken - Orion">Team Ken - Orion (Nhóm lưu lượng)</option>' +
+              '</optgroup>' +
+              '<optgroup label="👑 TEAM U (Cô U)">' +
+                '<option value="Team U - Fashion">Team U - Fashion (Nhóm nhảy)</option>' +
+                '<option value="Team U - Royen:One">Team U - Royen:One (Nhóm lưu lượng)</option>' +
+              '</optgroup>' +
+              '<optgroup label="👑 TEAM DINO (Thầy Dino)">' +
+                '<option value="Team Dino">Team Dino (Bee & Bnart)</option>' +
+                '<option value="Team Dino - Bee">Team Dino - Bee</option>' +
+                '<option value="Team Dino - Bnart">Team Dino - Bnart</option>' +
+              '</optgroup>' +
+              '<optgroup label="🎥 HỖ TRỢ">' +
+                '<option value="Gimbal / Media">Gimbal / Media</option>' +
+              '</optgroup>';
   }
   else if (role === "TEACHER DANCE") {
     options = '<option value="Teacher">Teacher (Riêng biệt)</option>';
