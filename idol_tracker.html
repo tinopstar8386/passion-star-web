@@ -873,20 +873,20 @@
     <!-- NEW WEEK (MONDAY) ALERT BANNER -->
     <div id="mondayNewWeekBanner" class="hidden bg-gradient-to-r from-rose-600 via-pink-600 to-indigo-700 text-white px-4 py-2.5 shadow-md">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm">
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-2.5 min-w-0">
                 <span class="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
                     <i class="fa-solid fa-bell animate-bounce"></i>
                 </span>
-                <div>
-                    <strong id="mondayBannerTitle">Đã bước sang Thứ 2 tuần mới!</strong>
-                    <span id="mondayBannerDesc" class="ml-1 text-rose-100">Hệ thống đã tổng kết danh sách chưa đủ 2 bài của tuần trước.</span>
+                <div class="min-w-0">
+                    <strong id="mondayBannerTitle" class="break-words">Đã bước sang Thứ 2 tuần mới!</strong>
+                    <span id="mondayBannerDesc" class="ml-1 text-rose-100 break-words">Hệ thống đã tổng kết danh sách chưa đủ 2 bài của tuần trước.</span>
                 </div>
             </div>
-            <div class="flex items-center gap-2 self-end sm:self-auto">
-                <button onclick="openLastWeekReportModal()" class="px-3 py-1.5 rounded-lg bg-white text-rose-700 font-bold text-xs hover:bg-rose-50 transition shadow-xs">
-                    Xem ai chưa đủ bài tuần trước
+            <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <button onclick="openLastWeekReportModal()" class="px-3 py-1.5 rounded-lg bg-white text-rose-700 font-bold text-xs hover:bg-rose-50 transition shadow-xs cursor-pointer">
+                    <span id="mondayBannerBtnText">Xem ai chưa đủ bài tuần trước</span>
                 </button>
-                <button onclick="dismissMondayBanner()" class="p-1 text-white/80 hover:text-white">
+                <button onclick="dismissMondayBanner()" class="p-1 text-white/80 hover:text-white cursor-pointer" title="Đóng thông báo">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -2291,7 +2291,7 @@
                 <div>
                     <h3 class="text-base sm:text-lg font-extrabold flex items-center gap-2">
                         <i class="fa-solid fa-bell"></i>
-                        <span>Thông Báo Tuần Mới: Danh Sách Chưa Đủ 2 Bài / Tuần</span>
+                        <span id="lastWeekModalTitle">Thông Báo Tuần Mới: Danh Sách Chưa Đủ 2 Bài / Tuần</span>
                     </h3>
                     <p id="lastWeekModalSubtitle" class="text-xs text-rose-100 mt-0.5">Kiểm tra các tài khoản chưa đăng đủ bài trong tuần</p>
                 </div>
@@ -4825,15 +4825,38 @@ service cloud.firestore {
             if (now.getDay() === 1) {
                 const prevWeekMonday = addDaysStr(mondayLocal, -7);
                 const prevMissing = getMissingAccountsForWeek(prevWeekMonday, 'POSTED');
-                if (prevMissing.length > 0) {
-                    const banner = document.getElementById('mondayNewWeekBanner');
-                    const title = document.getElementById('mondayBannerTitle');
-                    const desc = document.getElementById('mondayBannerDesc');
-                    if (banner && !banner.dataset.dismissed) {
-                        banner.classList.remove('hidden');
-                        title.textContent = `Thứ 2 Tuần Mới (${formatShortDateVN(mondayLocal)} - ${formatShortDateVN(sundayDeadlineLocal)})!`;
-                        desc.textContent = `Tuần trước (${formatShortDateVN(prevWeekMonday)} - ${formatShortDateVN(addDaysStr(prevWeekMonday, 6))}) có ${prevMissing.length}/43 tài khoản chưa đủ 2 bài.`;
+                const banner = document.getElementById('mondayNewWeekBanner');
+                const title = document.getElementById('mondayBannerTitle');
+                const desc = document.getElementById('mondayBannerDesc');
+                const btnText = document.getElementById('mondayBannerBtnText');
+
+                if (banner && !banner.dataset.dismissed) {
+                    if (currentOperatorGroup) {
+                        const grpAccounts = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === currentOperatorGroup.toUpperCase());
+                        const grpMissing = prevMissing.filter(a => extractCleanGroupName(a).toUpperCase() === currentOperatorGroup.toUpperCase());
+                        if (grpMissing.length > 0) {
+                            banner.classList.remove('hidden');
+                            if (title) title.textContent = `Thứ 2 Tuần Mới (${formatShortDateVN(mondayLocal)} - ${formatShortDateVN(sundayDeadlineLocal)}) • Nhóm ${currentOperatorGroup}!`;
+                            if (desc) desc.textContent = `Tuần trước (${formatShortDateVN(prevWeekMonday)} - ${formatShortDateVN(addDaysStr(prevWeekMonday, 6))}) nhóm có ${grpMissing.length}/${grpAccounts.length} tài khoản chưa đủ 2 bài.`;
+                            if (btnText) btnText.textContent = `Xem ai chưa đủ bài (Nhóm ${currentOperatorGroup})`;
+                        } else {
+                            banner.classList.add('hidden');
+                        }
+                    } else {
+                        if (prevMissing.length > 0) {
+                            banner.classList.remove('hidden');
+                            if (title) title.textContent = `Thứ 2 Tuần Mới (${formatShortDateVN(mondayLocal)} - ${formatShortDateVN(sundayDeadlineLocal)})!`;
+                            if (desc) desc.textContent = `Tuần trước (${formatShortDateVN(prevWeekMonday)} - ${formatShortDateVN(addDaysStr(prevWeekMonday, 6))}) có ${prevMissing.length}/${accounts.length} tài khoản chưa đủ 2 bài.`;
+                            if (btnText) btnText.textContent = `Xem ai chưa đủ bài tuần trước`;
+                        } else {
+                            banner.classList.add('hidden');
+                        }
                     }
+                }
+            } else {
+                const banner = document.getElementById('mondayNewWeekBanner');
+                if (banner && !banner.dataset.dismissed) {
+                    banner.classList.add('hidden');
                 }
             }
         }
@@ -4899,8 +4922,20 @@ service cloud.firestore {
                 subtitle.textContent = `Tuần ${formatShortDateVN(activeWeek)} (T2) → ${formatShortDateVN(sunStr)} (CN) • KPI: 2 bài/tuần`;
             }
 
-            const missingList = getMissingAccountsForWeek(activeWeek, sidebarKpiMode);
-            const missingPostedCount = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
+            const isGroupMode = !!currentOperatorGroup;
+            const targetGroupUpper = isGroupMode ? currentOperatorGroup.toUpperCase() : null;
+
+            let missingList = getMissingAccountsForWeek(activeWeek, sidebarKpiMode);
+            let missingPostedList = getMissingAccountsForWeek(activeWeek, 'POSTED');
+            let targetAccounts = accounts;
+
+            if (isGroupMode) {
+                missingList = missingList.filter(a => extractCleanGroupName(a).toUpperCase() === targetGroupUpper);
+                missingPostedList = missingPostedList.filter(a => extractCleanGroupName(a).toUpperCase() === targetGroupUpper);
+                targetAccounts = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === targetGroupUpper);
+            }
+
+            const missingPostedCount = missingPostedList.length;
 
             const headerBadge = document.getElementById('headerMissingBadge');
             const floatBadge = document.getElementById('floatingMissingCount');
@@ -4913,8 +4948,8 @@ service cloud.firestore {
             if (floatBadge) floatBadge.textContent = missingPostedCount;
             if (sidebarCountText) {
                 sidebarCountText.innerHTML = isWeekExpired
-                    ? `<span class="text-rose-600 font-black">🚨 ${missingList.length}/${accounts.length} kênh BỊ PHẠT</span> (quá hạn)`
-                    : `${missingList.length}/${accounts.length} tài khoản thiếu bài`;
+                    ? `<span class="text-rose-600 font-black">🚨 ${missingList.length}/${targetAccounts.length} kênh BỊ PHẠT</span> (quá hạn)`
+                    : `${missingList.length}/${targetAccounts.length} tài khoản thiếu bài`;
             }
 
             const container = document.getElementById('sidebarAccountsList');
@@ -4926,7 +4961,7 @@ service cloud.firestore {
                     <div class="p-6 text-center bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-800">
                         <i class="fa-solid fa-trophy text-2xl text-emerald-500 mb-2"></i>
                         <p class="font-bold text-sm">Tuyệt vời! 100% kênh đã đủ bài tuần</p>
-                        <p class="text-xs text-emerald-600 mt-1">Tất cả 43 tài khoản đã đủ tối thiểu 2 bài trong tuần này.</p>
+                        <p class="text-xs text-emerald-600 mt-1">Tất cả ${targetAccounts.length} tài khoản ${isGroupMode ? ('nhóm ' + currentOperatorGroup) : ''} đã đủ tối thiểu 2 bài trong tuần này.</p>
                     </div>
                 `;
                 return;
@@ -5017,20 +5052,82 @@ service cloud.firestore {
         function renderLastWeekReportContent(weekMondayStr) {
             const container = document.getElementById('lastWeekReportBody');
             const sub = document.getElementById('lastWeekModalSubtitle');
+            const modalTitle = document.getElementById('lastWeekModalTitle');
             const sunStr = addDaysStr(weekMondayStr, 6);
-            if (sub) {
-                sub.textContent = `Tuần kiểm tra: Thứ 2 (${formatDateVN(weekMondayStr)}) → Chủ Nhật (${formatDateVN(sunStr)})`;
+
+            const isGroupMode = !!currentOperatorGroup;
+            const targetGroupUpper = isGroupMode ? currentOperatorGroup.toUpperCase() : null;
+
+            if (modalTitle) {
+                modalTitle.textContent = isGroupMode
+                    ? `Thông Báo Tuần: Danh Sách Chưa Đủ 2 Bài (${currentOperatorGroup})`
+                    : `Thông Báo Tuần Mới: Danh Sách Chưa Đủ 2 Bài / Tuần`;
             }
 
-            const missingPosted = getMissingAccountsForWeek(weekMondayStr, 'POSTED');
+            if (sub) {
+                sub.textContent = isGroupMode
+                    ? `Tuần kiểm tra: Thứ 2 (${formatDateVN(weekMondayStr)}) → Chủ Nhật (${formatDateVN(sunStr)}) • Nhóm ${currentOperatorGroup}`
+                    : `Tuần kiểm tra: Thứ 2 (${formatDateVN(weekMondayStr)}) → Chủ Nhật (${formatDateVN(sunStr)}) • Toàn Hệ Thống`;
+            }
+
+            const targetAccounts = isGroupMode
+                ? accounts.filter(a => extractCleanGroupName(a).toUpperCase() === targetGroupUpper)
+                : accounts;
+
+            let missingPosted = getMissingAccountsForWeek(weekMondayStr, 'POSTED');
+            if (isGroupMode) {
+                missingPosted = missingPosted.filter(a => extractCleanGroupName(a).toUpperCase() === targetGroupUpper);
+            }
+
             const zeroPosts = missingPosted.filter(a => getAccountWeeklyProgress(a.id, weekMondayStr).postedCount === 0);
             const onePost = missingPosted.filter(a => getAccountWeeklyProgress(a.id, weekMondayStr).postedCount === 1);
+            const doneCount = targetAccounts.length - missingPosted.length;
+
+            let listHtml = '';
+            if (missingPosted.length === 0) {
+                listHtml = `
+                    <div class="p-6 text-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 mt-2">
+                        <i class="fa-solid fa-circle-check text-3xl text-emerald-500 mb-2"></i>
+                        <p class="font-extrabold text-sm sm:text-base">🎉 Tuyệt vời! 100% tài khoản đã đủ bài!</p>
+                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                            ${isGroupMode ? `Tất cả ${targetAccounts.length} tài khoản của Nhóm <strong>${currentOperatorGroup}</strong>` : `Tất cả ${accounts.length} tài khoản trên hệ thống`} đã đạt tối thiểu 2 bài trong tuần này.
+                        </p>
+                    </div>
+                `;
+            } else {
+                listHtml = `
+                    <div class="space-y-2 mt-3">
+                        ${missingPosted.map(acc => {
+                            const p = getAccountWeeklyProgress(acc.id, weekMondayStr);
+                            const grpName = extractCleanGroupName(acc);
+                            const idolShort = extractCleanIdolName(acc);
+                            const theme = getGroupTheme(grpName);
+                            return `
+                                <div class="p-3 rounded-xl border ${p.postedCount === 0 ? 'bg-rose-50/50 border-rose-200' : 'bg-amber-50/50 border-amber-200'} flex items-center justify-between gap-2">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="text-[10px] font-extrabold px-2 py-0.5 rounded border ${acc.role === 'GROUP' ? 'bg-slate-900 text-white border-slate-900' : theme.badgeBg}">
+                                            ${acc.role === 'GROUP' ? ('👥 NHÓM ' + grpName.toUpperCase()) : (theme.icon + ' ' + grpName)}
+                                        </span>
+                                        <span class="font-black text-xs sm:text-sm text-slate-900">${acc.role === 'GROUP' ? 'Kênh Nhóm' : idolShort}</span>
+                                        <a href="${acc.url}" target="_blank" rel="noopener noreferrer" class="text-xs text-pink-600 hover:underline font-medium">${acc.handle}</a>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="text-xs font-extrabold ${p.postedCount === 0 ? 'text-rose-600' : 'text-amber-700'}">
+                                            Đã đăng: ${p.postedCount}/2 ${p.scheduledCount > 0 ? `(+${p.scheduledCount} lịch)` : ''}
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
 
             container.innerHTML = `
                 <div class="grid grid-cols-3 gap-2.5 text-center">
                     <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
                         <p class="text-[11px] font-bold text-emerald-700 uppercase">Đã Đủ (&ge;2 Bài)</p>
-                        <p class="text-xl font-extrabold text-emerald-600 mt-0.5">${accounts.length - missingPosted.length}</p>
+                        <p class="text-xl font-extrabold text-emerald-600 mt-0.5">${doneCount}</p>
                     </div>
                     <div class="p-3 rounded-xl bg-amber-50 border border-amber-200">
                         <p class="text-[11px] font-bold text-amber-800 uppercase">Mới Đăng 1 Bài</p>
@@ -5041,30 +5138,7 @@ service cloud.firestore {
                         <p class="text-xl font-extrabold text-rose-600 mt-0.5">${zeroPosts.length}</p>
                     </div>
                 </div>
-                <div class="space-y-2 mt-3">
-                    ${missingPosted.map(acc => {
-                        const p = getAccountWeeklyProgress(acc.id, weekMondayStr);
-                        const grpName = extractCleanGroupName(acc);
-                        const idolShort = extractCleanIdolName(acc);
-                        const theme = getGroupTheme(grpName);
-                        return `
-                            <div class="p-3 rounded-xl border ${p.postedCount === 0 ? 'bg-rose-50/50 border-rose-200' : 'bg-amber-50/50 border-amber-200'} flex items-center justify-between gap-2">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="text-[10px] font-extrabold px-2 py-0.5 rounded border ${acc.role === 'GROUP' ? 'bg-slate-900 text-white border-slate-900' : theme.badgeBg}">
-                                        ${acc.role === 'GROUP' ? ('👥 NHÓM ' + grpName.toUpperCase()) : (theme.icon + ' ' + grpName)}
-                                    </span>
-                                    <span class="font-black text-xs sm:text-sm text-slate-900">${acc.role === 'GROUP' ? 'Kênh Nhóm' : idolShort}</span>
-                                    <a href="${acc.url}" target="_blank" class="text-xs text-pink-600 hover:underline font-medium">${acc.handle}</a>
-                                </div>
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <span class="text-xs font-extrabold ${p.postedCount === 0 ? 'text-rose-600' : 'text-amber-700'}">
-                                        Đã đăng: ${p.postedCount}/2 ${p.scheduledCount > 0 ? `(+${p.scheduledCount} lịch)` : ''}
-                                    </span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
+                ${listHtml}
             `;
         }
 
