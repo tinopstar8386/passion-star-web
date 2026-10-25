@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- THƯ VIỆN KÉO THẢ CHO MOBILE -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.css">
+  <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root { --bg-color: #f8fafc; --card-bg: #ffffff; --border-color: #cbd5e1; --text-main: #0f172a; --off-bg: #ef4444; --pending-bg: #d97706; --table-header: #f1f5f9; --row-hover: #e2e8f0; --cell-off: #fee2e2; --cell-pend: #fef3c7; --teacher-color: #d97706;}
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0;}
+    button { transition: transform 0.1s ease, filter 0.2s ease, background-color 0.2s ease !important; outline: none; }
+    button:active { transform: scale(0.92) !important; filter: brightness(0.85) !important; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: var(--card-bg); border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px;}
+    .toolbar h2 { margin: 0; font-size: 1.25rem; font-weight: 700; color: #3b82f6; }
+    
+    table { border: 2px solid var(--border-color); border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.85rem; text-align: center; background: white;}
+    th, td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); height: 46px; padding: 2px; vertical-align: middle; position: relative; }
+    .table-container { max-height: 85vh; overflow-y: auto; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); margin: 0 30px 100px 30px;}
+    thead th { position: sticky; top: 0; z-index: 10; background-color: var(--table-header); }
+    
+    .group-cell { font-weight: 800; text-transform: uppercase; width: 85px; min-width: 85px; max-width: 85px; font-size: 0.7rem; white-space: normal; word-wrap: break-word; line-height: 1.2; padding-left: 4px;}
+    .name-cell { text-align: left; padding-left: 7px; width: 170px; min-width: 170px; max-width: 170px; font-weight: 600; cursor: pointer; font-size: 0.75rem; white-space: normal; word-wrap: break-word; line-height: 1.2;}
+    th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { width: 42px; min-width: 42px; max-width: 42px; }
+    
+    .teacher-highlight { color: var(--teacher-color) !important; font-weight: 800; }
+    .dept-divider { font-weight: 800; text-align: center; background: #334155; color: #ffffff; }
+    
+    /* CSS CHO KÉO THẢ */
+    .day-cell { cursor: pointer; transition: all 0.2s; -webkit-user-select: none; user-select: none; }
+    [draggable="true"] { touch-action: none; -webkit-user-drag: element; }
+    
+    .day-cell:hover:not(.cell-selected):not(.cell-cancel-selected) { background-color: var(--row-hover); }
+    
+    .cell-selected { background-color: #fef2f2 !important; position: relative;}
+    .cell-selected::after { content: "OFF"; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);}
+    
+    .cell-cancel-selected { background-color: #fee2e2 !important; position: relative; border: 2px solid #ef4444 !important; box-sizing: border-box; }
+    .cell-cancel-selected::after { content: "HỦY"; position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 70%; height: 20px; font-size: 0.65rem; border-radius: 4px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; z-index: 5;}
+
+    /* FIX LỖI HIỂN THỊ VIỀN KHI DRAG OVER (BẰNG PSEUDO-ELEMENT) */
+    .day-cell.drag-over { background-color: rgba(59, 130, 246, 0.2) !important; position: relative; }
+    .day-cell.drag-over::before {
+      content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      box-sizing: border-box; border: 2px dashed #3b82f6; pointer-events: none; z-index: 20;
+    }
+    
+    .cell-off { background-color: var(--cell-off); }
+    .cell-pending { background-color: var(--cell-pend); }
+    
+    .badge { display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); pointer-events: none;}
+    .badge-off { background-color: var(--off-bg); }
+    .badge-pending { background-color: var(--pending-bg); animation: flash 2s infinite;}
+    @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+    
+    .vip-badge { position: relative; color: #ffffff; padding: 3px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 800; margin: 0; border: 1px solid rgba(255,255,255,0.3); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); display: inline-flex; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; vertical-align: middle; box-shadow: 0 2px 5px rgba(0,0,0,0.2); white-space: nowrap;}
+    .vip-badge::after { content: ""; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); animation: shine-badge 3s infinite; }
+    @keyframes shine-badge { 0% { left: -100%; } 20% { left: 200%; } 100% { left: 200%; } }
+    
+    #actionBar { position: fixed; bottom: -100px; left: 0; width: 100%; background: #ffffff; padding: 15px 30px; box-shadow: 0 -10px 15px -3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; transition: bottom 0.3s ease; z-index: 1000; box-sizing: border-box; border-top: 2px solid #3b82f6;}
+    #actionBar.show { bottom: 0; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 1001; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s ease;}
+    .modal-overlay.active { opacity: 1; visibility: visible; }
+    .modal-box { background: var(--card-bg); width: 400px; padding: 25px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); text-align: left;}
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;}
+    .modal-actions button, #actionBar button { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none;}
+    .btn-cancel { background: #e2e8f0; color: #475569; }
+    .btn-ok { background: #3b82f6; color: white; }
+    #toast { position: fixed; top: 20px; left: 50%; transform: translate(-50%, -20px) scale(0.9); background: #10b981; color: white; padding: 15px 30px; border-radius: 12px; font-weight: 800; font-size: 1.1rem; opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; min-width: 320px; text-transform: uppercase; letter-spacing: 0.5px;}
+    #toast.show { opacity: 1; visibility: visible; transform: translate(-50%, 0) scale(1); }
+    #toast.error { background: #ef4444; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4); }
+    #toast.success-boom { background: #059669; box-shadow: 0 0 50px rgba(16, 185, 129, 0.9); transform: translate(-50%, 0) scale(1.15); }
+    .mc-calendar-view { table-layout: fixed; width: 100%; min-width: 600px; max-width: 680px; margin: 0 auto; border-collapse: separate; border-spacing: 0; border: 2px solid #cbd5e1; border-radius: 16px; overflow: hidden; background: #ffffff; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);}
+    .mc-calendar-view th, .mc-calendar-view td { border: none; }
+
+    /* CSS MOBILE */
+    @media (max-width: 768px) {
+      .toolbar { flex-direction: column; gap: 12px; padding: 15px 10px; text-align: center; margin-bottom: 10px;}
+      .toolbar h2 { font-size: 1.1rem; }
+      .table-container { margin: 0 5px 120px 5px; max-height: 70vh; -webkit-overflow-scrolling: touch; }
+      .group-cell { width: 55px !important; min-width: 55px !important; max-width: 55px !important; font-size: 0.6rem; }
+      .name-cell { width: 110px !important; min-width: 110px !important; max-width: 110px !important; font-size: 0.7rem; padding-left: 4px; }
+      th:not(.group-cell):not(.name-cell), td:not(.group-cell):not(.name-cell):not(.dept-divider) { width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
+      
+      table:not(.mc-calendar-view) thead th:nth-child(1), table:not(.mc-calendar-view) tbody td:nth-child(1) { position: sticky; left: 0; z-index: 11; background: var(--card-bg); outline: 1px solid var(--border-color); }
+      table:not(.mc-calendar-view) thead th:nth-child(2), table:not(.mc-calendar-view) tbody td:nth-child(2) { position: sticky; left: 55px; z-index: 11; background: var(--card-bg); outline: 1px solid var(--border-color); box-shadow: 3px 0 5px rgba(0,0,0,0.05); }
+      table:not(.mc-calendar-view) thead th:nth-child(1), table:not(.mc-calendar-view) thead th:nth-child(2) { background: var(--table-header); z-index: 12; }
+      
+      .mc-calendar-view { min-width: 100%; border: 1px solid #cbd5e1; }
+      .mc-calendar-view td { height: 60px !important; padding: 4px !important; }
+      .mc-calendar-view td > div:first-child { font-size: 0.9rem !important; }
+      .month-text { display: none !important; }
+
+      #actionBar { flex-direction: column; gap: 10px; padding: 10px; text-align: center; }
+      #actionBar > div { width: 100%; justify-content: center; }
+      .modal-box { width: 90%; padding: 20px; }
+      .badge { width: 30px; height: 22px; font-size: 0.55rem; }
+      
+      #toast { top: 15px !important; bottom: auto !important; right: 15px !important; left: auto !important; padding: 6px 12px !important; font-size: 0.75rem !important; min-width: auto !important; width: max-content !important; border-radius: 6px !important; transform: translateY(-15px) scale(0.9) !important; z-index: 9999999 !important; }
+      #toast.show { transform: translateY(0) scale(1) !important; }
+      #toast.success-boom { transform: translateY(0) scale(1.05) !important; }
+    }
+  
+    /* =========================================================================
+       MODERN MASTER UI UPGRADE FOR MCFORM.HTML (GROUP VIEW & PERSONAL CALENDAR)
+       ========================================================================= */
+    :root {
+      --primary-blue: #2563eb;
+      --primary-hover: #1d4ed8;
+      --slate-bg: #f8fafc;
+      --border-light: #e2e8f0;
+      --text-dark: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    body {
+      background: #f8fafc !important;
+      color: #1e293b !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+
+    /* MODERN TOOLBAR */
+    .toolbar {
+      background: #ffffff !important;
+      border-bottom: 1px solid var(--border-light) !important;
+      padding: 12px 24px !important;
+      margin-bottom: 16px !important;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      flex-wrap: wrap !important;
+      gap: 12px !important;
+    }
+    .toolbar h2 {
+      font-size: 1.15rem !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      margin: 0 !important;
+    }
+    #groupTitleDisplay {
+      background: #eff6ff !important;
+      color: #2563eb !important;
+      font-size: 0.8rem !important;
+      font-weight: 800 !important;
+      padding: 3px 10px !important;
+      border-radius: 8px !important;
+      border: 1px solid #bfdbfe !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.03em !important;
+    }
+
+    /* MONTH NAV PILL */
+    .month-nav-pill {
+      display: flex;
+      align-items: center;
+      background: #f1f5f9;
+      border: 1px solid var(--border-light);
+      border-radius: 9px;
+      padding: 2px 4px;
+      gap: 2px;
+    }
+    .btn-month-nav {
+      background: transparent !important;
+      border: none !important;
+      color: #475569 !important;
+      width: 28px !important;
+      height: 28px !important;
+      padding: 0 !important;
+      border-radius: 6px !important;
+      font-size: 0.72rem !important;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .btn-month-nav:hover {
+      background: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+    #monthLabel {
+      font-size: 0.88rem !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      padding: 4px 12px !important;
+      white-space: nowrap;
+    }
+
+    /* ACTION BUTTONS */
+    .btn-mc-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+      color: white !important;
+      border: none !important;
+      padding: 7px 14px !important;
+      border-radius: 8px !important;
+      font-weight: 700 !important;
+      font-size: 0.78rem !important;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(37,99,235,0.25) !important;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-mc-primary:hover {
+      background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
+    }
+
+    .btn-mc-emerald {
+      background: #ecfdf5 !important;
+      border: 1px solid #a7f3d0 !important;
+      color: #059669 !important;
+      padding: 7px 14px !important;
+      border-radius: 8px !important;
+      font-weight: 700 !important;
+      font-size: 0.78rem !important;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-mc-emerald:hover {
+      background: #d1fae5 !important;
+    }
+
+    /* TABLE LAYOUT NO HORIZONTAL SCROLL ON PC */
+    .table-container {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      margin: 0 0 100px 0 !important;
+      padding: 0 16px !important;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    #scheduleTable:not(.mc-calendar-view) {
+      width: 100% !important;
+      table-layout: fixed !important;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
+      background: #ffffff !important;
+      border-radius: 12px !important;
+      border: 1px solid var(--border-light) !important;
+      box-shadow: 0 4px 12px -2px rgba(0,0,0,0.05) !important;
+      overflow: hidden !important;
+    }
+
+    #scheduleTable:not(.mc-calendar-view) th {
+      background: #f8fafc !important;
+      color: #475569 !important;
+      border-bottom: 2px solid #e2e8f0 !important;
+      border-right: 1px solid #eef2f6 !important;
+      padding: 3px 1px !important;
+      height: 42px !important;
+    }
+
+    #scheduleTable:not(.mc-calendar-view) td {
+      border-bottom: 1px solid #eef2f6 !important;
+      border-right: 1px solid #eef2f6 !important;
+      height: 44px !important;
+      padding: 2px 1px !important;
+      box-sizing: border-box !important;
+    }
+
+    /* CỘT TÊN CÂN ĐỐI, THOÁNG ĐÃNG, KHÔNG DÍNH LỀ TRÁI */
+    .name-cell-header, #scheduleTable:not(.mc-calendar-view) th.name-cell {
+      width: 185px !important;
+      min-width: 170px !important;
+      max-width: 195px !important;
+      text-align: left !important;
+      padding-left: 18px !important;
+      font-size: 0.76rem !important;
+      font-weight: 800 !important;
+      color: #334155 !important;
+      position: sticky !important;
+      left: 0 !important;
+      z-index: 15 !important;
+      background: #f8fafc !important;
+      border-right: 2px solid #e2e8f0 !important;
+    }
+
+    .name-cell, #scheduleTable:not(.mc-calendar-view) td.name-cell {
+      text-align: left !important;
+      padding: 5px 12px 5px 18px !important;
+      width: 185px !important;
+      min-width: 170px !important;
+      max-width: 195px !important;
+      background: #ffffff !important;
+      position: sticky !important;
+      left: 0 !important;
+      z-index: 5 !important;
+      border-right: 2px solid #e2e8f0 !important;
+    }
+
+    /* TH DATE BOX */
+    .th-date-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.15;
+      padding: 2px 0;
+      width: 100%;
+    }
+    .th-day-num {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+    }
+    .th-day-txt {
+      font-size: 0.58rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+
+    /* BADGES VIBRANT HIGH-CONTRAST CHỮ TRẮNG NỀN ĐỎ RỰC */
+    .day-cell .badge, .badge {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 90% !important;
+      max-width: 34px !important;
+      height: 22px !important;
+      font-size: 0.68rem !important;
+      font-weight: 900 !important;
+      border-radius: 5px !important;
+      line-height: 1 !important;
+      margin: 0 auto !important;
+      user-select: none;
+      letter-spacing: 0.5px;
+    }
+
+    /* CHỮ OFF ĐỎ RỰC RỠ, ĐẬM NÉT */
+    .badge-off {
+      background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+      color: #ffffff !important;
+      border: 1px solid #b91c1c !important;
+      box-shadow: 0 2px 4px rgba(220, 38, 38, 0.4) !important;
+    }
+    .badge-pending {
+      background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+      color: #ffffff !important;
+      border: 1px solid #b45309 !important;
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.35) !important;
+    }
+    .badge-swap {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+      color: #ffffff !important;
+      border: 1px solid #6d28d9 !important;
+      box-shadow: 0 2px 4px rgba(139, 92, 246, 0.35) !important;
+    }
+
+    /* Ô ĐƯỢC CHỌN TRONG GROUP VIEW */
+    .cell-selected {
+      background-color: #eff6ff !important;
+      position: relative;
+    }
+    .cell-selected::after {
+      content: "ĐK NGHỈ" !important;
+      position: absolute !important;
+      bottom: 8px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      width: 85% !important;
+      max-width: 50px !important;
+      height: 22px !important;
+      font-size: 0.62rem !important;
+      border-radius: 5px !important;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+      color: white !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.5px !important;
+      pointer-events: none !important;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.35) !important;
+    }
+
+    /* =========================================================================
+       NÂNG CẤP LỊCH CÁ NHÂN 1 NGƯỜI (PERSONAL CALENDAR CARD VIEW)
+       ========================================================================= */
+    .mc-calendar-view {
+      table-layout: fixed !important;
+      width: 100% !important;
+      max-width: 720px !important;
+      margin: 10px auto 30px auto !important;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
+      border: 1px solid var(--border-light) !important;
+      border-radius: 18px !important;
+      overflow: hidden !important;
+      background: #ffffff !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0,0,0,0.03) !important;
+    }
+
+    .mc-cal-header-card {
+      padding: 24px 20px 18px !important;
+      text-align: center !important;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+      border-bottom: 2px solid #e2e8f0 !important;
+      border-radius: 18px 18px 0 0 !important;
+    }
+
+    .mc-cal-emp-name {
+      font-size: 1.85rem !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 10px !important;
+      flex-wrap: wrap !important;
+      margin: 4px 0 8px 0 !important;
+      letter-spacing: -0.02em !important;
+    }
+
+    .mc-cal-pill-dept {
+      font-size: 0.8rem !important;
+      font-weight: 700 !important;
+      color: #475569 !important;
+      background: #f1f5f9 !important;
+      padding: 3px 12px !important;
+      border-radius: 20px !important;
+      display: inline-block !important;
+      border: 1px solid #e2e8f0 !important;
+    }
+
+    .mc-cal-pill-range {
+      font-size: 0.78rem !important;
+      font-weight: 800 !important;
+      color: #2563eb !important;
+      background: #eff6ff !important;
+      padding: 4px 14px !important;
+      border-radius: 20px !important;
+      display: inline-block !important;
+      border: 1px solid #bfdbfe !important;
+      margin-left: 6px !important;
+    }
+
+    /* THANH THAO TÁC NỔI DƯỚI ĐÁY (ACTION BAR) */
+    #actionBar {
+      background: rgba(255, 255, 255, 0.95) !important;
+      backdrop-filter: blur(12px) !important;
+      border-top: 1px solid var(--border-light) !important;
+      box-shadow: 0 -10px 25px -5px rgba(0,0,0,0.08) !important;
+      padding: 12px 30px !important;
+    }
+    #actionBarTextWrapper {
+      font-size: 0.95rem !important;
+      font-weight: 600 !important;
+      color: #334155 !important;
+    }
+    #selectedCount {
+      color: #2563eb !important;
+      font-size: 1.3rem !important;
+    }
+    .btn-ok {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+      color: white !important;
+      font-weight: 800 !important;
+      border-radius: 8px !important;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.3) !important;
+    }
+    .btn-cancel {
+      background: #f1f5f9 !important;
+      color: #475569 !important;
+      border: 1px solid #cbd5e1 !important;
+      font-weight: 700 !important;
+      border-radius: 8px !important;
+    }
+
+  </style>
+  <!-- THÊM FIREBASE SDK VÀO TRƯỚC THẺ </HEAD> -->
+  <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+      import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+      
+      const firebaseConfig = {
+          apiKey: "AIzaSyAORs3ad5xDKZoGzqR_feTDamgL0gk3bPA",
+          authDomain: "passionstar-2014d.firebaseapp.com",
+          projectId: "passionstar-2014d",
+          storageBucket: "passionstar-2014d.firebasestorage.app",
+          messagingSenderId: "1079694484883",
+          appId: "1:1079694484883:web:1d0d02f58723895cfef466"
+      };
+      const app = initializeApp(firebaseConfig);
+      window.db = getFirestore(app);
+      window.fs = { collection, getDocs, doc, setDoc, deleteDoc, writeBatch };
+  </script>
+  
+</head>
+<body>
+  <div class="toolbar">
+    <h2>📅 Lịch Đăng Ký OFF <span id="groupTitleDisplay" style="color: #ef4444;"></span></h2>
+    <div style="display: flex; align-items: center; gap: 15px; font-weight: 700; font-size: 1.2rem;">
+      <button style="padding: 5px 12px; cursor: pointer; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #0f172a;" onclick="changeMonth(-1)">◀</button>
+      <span id="monthLabel"></span>
+      <button style="padding: 5px 12px; cursor: pointer; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #0f172a;" onclick="changeMonth(1)">▶</button>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="btnExportMc" style="display: none; padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="exportPersonalCalendar()">📸 Xuất Ảnh</button>
+      <button style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="refreshData()">🔄 Làm mới</button>
+    </div>
+  </div>
+
+  <div class="table-container" style="border:none; box-shadow:none; background:transparent;">
+    <table id="scheduleTable">
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  
+  <div id="actionBar">
+    <div id="actionBarTextWrapper">Đã chọn <span id="selectedCount" style="font-weight: 800; color: #3b82f6; font-size: 1.4rem; margin: 0 5px;">0</span> ngày nghỉ</div>
+    <div style="display: flex; gap: 12px;">
+      <button class="btn-cancel" onclick="clearSelection()">Hủy bỏ</button>
+      <button class="btn-ok" id="actionBarOkBtn" onclick="showConfirmModal()">Gửi Đơn Xin Nghỉ</button>
+    </div>
+  </div>
+  
+  <div id="toast">Đang đồng bộ...</div>
+  
+  <div class="modal-overlay" id="customModal">
+    <div class="modal-box">
+      <h3 id="modalTitle" style="margin-top:0;">Xác nhận</h3>
+      <p id="modalMsg"></p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Đóng</button>
+        <button class="btn-ok" id="modalOkBtn">Đồng ý</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // BẮT BUỘC ĐIỀN LINK GOOGLE APPS SCRIPT WEB APP VÀO ĐÂY
+    const API_URL = "https://script.google.com/macros/s/AKfycbxXGOJkbgCgmBl1QxQ4qbJVIIp1fz_yJglRPLLNiG3DLdZJjJCs0Bpmpwn4LfEz7AR5/exec"; 
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const TARGET_GROUP = urlParams.get('target') || ""; 
+
+    let baseEmployeesData = [], monthEmployeesData = {};
+    let employeesData = [], leavesData = [], badgesData = {}, quotasData = {};
+    let isSyncing = false; 
+    let selectedCells = []; 
+    let selectedCancelCells = []; 
+    let today = new Date();
+    let displayMonth = today.getMonth();
+    let displayYear = today.getFullYear();
+    if (displayMonth > 11) { displayMonth = 0; displayYear++; }
+
+    // HÀM GỌI API BẰNG FIREBASE SIÊU TỐC
+    async function callAPI(action, payload = {}) {
+        const safeID = (str) => str.replace(/\//g, '-');
+        
+        // Đợi Firebase nạp xong
+        while (!window.db || !window.fs) { await new Promise(r => setTimeout(r, 50)); }
+        const db = window.db; const fs = window.fs;
+
+        try {
+            if (action === 'getInitialData') {
+                let employees = [], leaves = [], badges = {}, quotas = {}, monthEmployees = {};
+                const empSnap = await fs.getDocs(fs.collection(db, "off_employees"));
+                empSnap.forEach(d => employees.push(d.data()));
+
+                try {
+                    const monthEmpSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
+                    monthEmpSnap.forEach(d => { monthEmployees[d.id] = d.data().employees || []; });
+                } catch(e) { console.warn("off_month_employees:", e); }
+                
+                const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
+                leaveSnap.forEach(d => leaves.push(d.data()));
+                
+                const configSnap = await fs.getDocs(fs.collection(db, "system_config"));
+                configSnap.forEach(d => {
+                    if(d.id === 'general') { badges = d.data().badges || {}; quotas = d.data().quotas || {}; }
+                });
+                return { employees, leaves, badges, quotas, monthEmployees };
+            }
+
+            if (action === 'registerMultipleMCLeaves') {
+                const { leaveRequests } = payload;
+                const batch = fs.writeBatch(db);
+                for (let req of leaveRequests) {
+                    const docId = safeID(req.name) + "_" + req.dateStr;
+                    batch.set(fs.doc(db, "off_leaves", docId), {
+                        name: req.name,
+                        role: req.role,
+                        date: req.dateStr,
+                        status: "Pending", // Đơn mới MC gửi lên luôn ở trạng thái chờ duyệt
+                        swapFrom: "",
+                        reason: "Đăng ký nghỉ tháng"
+                    }, { merge: true });
+                }
+                await batch.commit(); return "SUCCESS";
+            }
+
+            if (action === 'processMCDragDrop') {
+                const { name, oldDateStr, newDateStr } = payload;
+                const docId = safeID(name) + "_" + newDateStr;
+                await fs.setDoc(fs.doc(db, "off_leaves", docId), {
+                    name: name,
+                    date: newDateStr,
+                    status: "Pending", // Kéo thả dời ngày cũng về trạng thái chờ duyệt
+                    swapFrom: oldDateStr
+                }, { merge: true });
+                return "SUCCESS";
+            }
+
+            if (action === 'cancelPendingMC') {
+                const { name, dateStr } = payload;
+                const docId = safeID(name) + "_" + dateStr;
+                await fs.deleteDoc(fs.doc(db, "off_leaves", docId));
+                return "SUCCESS";
+            }
+
+            throw new Error("Action không tồn tại");
+        } catch (error) { console.error(error); throw error; }
+    }
+
+    function toggleBlocker(show, msg) {
+        let blocker = document.getElementById('clickBlocker');
+        if(!blocker) {
+            blocker = document.createElement('div');
+            blocker.id = 'clickBlocker';
+            blocker.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 999999; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; opacity: 0; visibility: hidden;';
+            blocker.innerHTML = `
+                <div style="background: white; padding: 25px 40px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; gap: 15px; transform: translateY(20px); transition: all 0.3s ease;" id="blockerContent">
+                    <div style="width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spinLoader 1s linear infinite;"></div>
+                    <div id="blockerMsg" style="font-weight: 700; color: #334155; font-size: 1.05rem; text-align: center;">Đang xử lý...</div>
+                </div>
+                <style>@keyframes spinLoader { to { transform: rotate(360deg); } }</style>
+            `;
+            document.body.appendChild(blocker);
+        }
+        if(show) {
+            document.getElementById('blockerMsg').innerHTML = msg || "Đang xử lý...";
+            blocker.classList.add('active');
+            document.getElementById('blockerContent').style.transform = "translateY(0)";
+        } else {
+            blocker.classList.remove('active');
+            document.getElementById('blockerContent').style.transform = "translateY(20px)";
+        }
+    }
+
+  document.addEventListener("DOMContentLoaded", () => {
+      // KÍCH HOẠT THƯ VIỆN KÉO THẢ CHO ĐIỆN THOẠI
+      MobileDragDrop.polyfill({ holdToDrag: 300 });
+      
+      // --- BẮT ĐẦU ĐOẠN FIX LỖI MOBILE ---
+      
+      // 1. Cấm điện thoại tự cuộn trang khi đang nắm kéo cục OFF
+      window.addEventListener('touchmove', function() {}, {passive: false});
+      
+      // 2. Ép trình duyệt Mobile phải nhận diện các ô lịch là nơi được phép thả
+      document.addEventListener('dragenter', function(e) {
+         if (e.target.closest('.day-cell')) {
+             e.preventDefault();
+         }
+      }, false);
+      
+      // --- KẾT THÚC ĐOẠN FIX LỖI MOBILE ---
+
+      document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`;
+      if (TARGET_GROUP) {
+        let displayTitle = TARGET_GROUP.replace("PERSON:", "").replace("GROUP:", "");
+        document.getElementById('groupTitleDisplay').innerText = "- " + displayTitle.toUpperCase();
+        if (TARGET_GROUP.startsWith("PERSON:")) document.getElementById('btnExportMc').style.display = 'inline-block';
+      }
+      refreshData();
+    });
+    function generateBadgeHTML(emp) {
+      if (emp.customBadge && badgesData[emp.customBadge]) {
+         return `<span class="vip-badge" style="background: ${badgesData[emp.customBadge]}; border: 1px solid rgba(255,255,255,0.4);">${emp.customBadge}</span>`;
+      }
+      let nUp = String(emp.name).toUpperCase(), rUp = String(emp.role).toUpperCase(), gUp = String(emp.group).toUpperCase();
+      let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
+      
+      if (gUp.includes("HR") || rUp.includes("HR")) return `<span class="vip-badge badge-hr">HR</span>`;
+      if (gUp.includes("TECH") || rUp.includes("TECH")) return `<span class="vip-badge badge-tech">TECH</span>`;
+      if (gUp.includes("OPERATION") || gUp.includes("OPS") || rUp.includes("OPERATION")) return `<span class="vip-badge badge-operation">OPS</span>`;
+      if (gUp.includes("TRANS") || gUp.includes("TRANSLATION") || rUp.includes("TRANS")) return `<span class="vip-badge badge-translation">TRANS</span>`;
+      if (gUp.includes("MANAGER") || rUp.includes("MANAGER")) return `<span class="vip-badge badge-manager">MANAGER</span>`;
+      if (gUp.includes("ACCOUNTANT") || rUp.includes("ACCOUNTANT")) return `<span class="vip-badge badge-accountant">ACC</span>`;
+      if (isTeacher) return `<span class="vip-badge badge-teacher">TEACHER</span>`;
+      if (nUp.includes("BNART")) return `<span class="vip-badge badge-bnart">BNART</span>`;
+      if (nUp.includes("BETERNAL")) return `<span class="vip-badge badge-beternal">BETERNAL</span>`;
+      if (nUp.includes("ASTRA")) return `<span class="vip-badge badge-astrax">ASTRAX</span>`;
+      if (nUp.includes("FASHION")) return `<span class="vip-badge badge-fashion">FASHION</span>`;
+      if (nUp.includes("ANGELIK")) return `<span class="vip-badge badge-angelik">ANGELIK</span>`;
+      if (nUp.includes("BEE")) return `<span class="vip-badge badge-bee">BEE</span>`;
+      return "";
+    }
+
+    function getMonthPrefix(year, month) {
+      return `${year}-${(month + 1).toString().padStart(2, '0')}`;
+    }
+
+    function normalizeGroupName(str) {
+      return String(str || 'KHÁC').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim() || 'KHÁC';
+    }
+
+    function getMemberRoleRank(emp) {
+      const nameUpper = String(emp.name || '').toUpperCase();
+      const roleUpper = String(emp.role || '').toUpperCase();
+      const badgeUpper = String(emp.customBadge || '').toUpperCase();
+      if (nameUpper.includes("OPERATION") || roleUpper.includes("OPERATION") || badgeUpper.includes("OPERATION")) return 1;
+      if (nameUpper.includes("MC") || roleUpper.includes("MC") || badgeUpper.includes("MC")) return 2;
+      return 3;
+    }
+
+    function getLivestreamGroupMeta(emp) {
+      const g = normalizeGroupName(emp.group).toUpperCase();
+      const n = String(emp.name || '').toUpperCase();
+      const b = String(emp.customBadge || '').toUpperCase();
+
+      if (g.includes("ORION") || b.includes("ORION") || n.includes("ORION")) {
+        return {
+          teamCode: "TEAM_KEN",
+          sortOrder: 102,
+          groupKey: "TEAM KEN - ORION",
+          displayHTML: "TEAM KEN<br><span style='font-size:0.75rem; color:#7c3aed; font-weight:700;'>Nhóm Orion (Lưu lượng)</span>",
+          isTraffic: true
+        };
+      }
+      if (g.includes("KEN") || b.includes("ANGELIK") || n.includes("ANGELIK")) {
+        return {
+          teamCode: "TEAM_KEN",
+          sortOrder: 101,
+          groupKey: "TEAM KEN - ANGELIK",
+          displayHTML: "TEAM KEN<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Angelik</span>",
+          isTraffic: false
+        };
+      }
+      if (g.includes("ROYEN") || b.includes("ROYEN") || n.includes("ROYEN")) {
+        return {
+          teamCode: "TEAM_U",
+          sortOrder: 202,
+          groupKey: "TEAM U - ROYEN:ONE",
+          displayHTML: "TEAM U<br><span style='font-size:0.75rem; color:#2563eb; font-weight:700;'>Nhóm Royen:One (Lưu lượng)</span>",
+          isTraffic: true
+        };
+      }
+      if (g.includes("TEAM U") || b.includes("FASHION") || n.includes("FASHION")) {
+        return {
+          teamCode: "TEAM_U",
+          sortOrder: 201,
+          groupKey: "TEAM U - FASHION",
+          displayHTML: "TEAM U<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Fashion</span>",
+          isTraffic: false
+        };
+      }
+      if (g.includes("DINO") || b.includes("BEE") || b.includes("BNART") || n.includes("BEE") || n.includes("BNART")) {
+        return {
+          teamCode: "TEAM_DINO",
+          sortOrder: 301,
+          groupKey: "TEAM DINO",
+          displayHTML: "TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bee & Bnart</span>",
+          isTraffic: false
+        };
+      }
+      if (g.includes("GIMBAL") || g.includes("MEDIA") || b.includes("GIMBAL") || b.includes("MEDIA")) {
+        return {
+          teamCode: "GIMBAL_MEDIA",
+          sortOrder: 401,
+          groupKey: "GIMBAL / MEDIA",
+          displayHTML: "GIMBAL / MEDIA",
+          isTraffic: false
+        };
+      }
+      return {
+        teamCode: "OTHER",
+        sortOrder: 999,
+        groupKey: normalizeGroupName(emp.group),
+        displayHTML: normalizeGroupName(emp.group),
+        isTraffic: false
+      };
+    }
+
+    function syncCurrentMonthEmployees() {
+      const currentPrefix = getMonthPrefix(displayYear, displayMonth);
+      let rawList = [];
+      if (monthEmployeesData && monthEmployeesData[currentPrefix] && Array.isArray(monthEmployeesData[currentPrefix]) && monthEmployeesData[currentPrefix].length > 0) {
+        rawList = JSON.parse(JSON.stringify(monthEmployeesData[currentPrefix]));
+      } else {
+        const allMonths = Object.keys(monthEmployeesData || {}).sort();
+        const prevMonths = allMonths.filter(m => m < currentPrefix);
+        if (prevMonths.length > 0) {
+          const latestPrev = prevMonths[prevMonths.length - 1];
+          if (monthEmployeesData[latestPrev] && monthEmployeesData[latestPrev].length > 0) {
+            rawList = JSON.parse(JSON.stringify(monthEmployeesData[latestPrev]));
+          } else {
+            rawList = JSON.parse(JSON.stringify(baseEmployeesData || []));
+          }
+        } else {
+          rawList = JSON.parse(JSON.stringify(baseEmployeesData || []));
+        }
+      }
+      
+      employeesData = rawList.map(e => {
+        let nUp = String(e.name || '').toUpperCase().trim();
+        let finalRole = e.role || 'LIVESTEAM';
+        let finalGroup = normalizeGroupName(e.group).toUpperCase();
+
+        if (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER")) {
+          finalRole = "TEACHER DANCE";
+          finalGroup = "TEACHER";
+        } else if (finalRole === "LIVESTEAM" || finalRole === "LIVESTREAM") {
+          const meta = getLivestreamGroupMeta(e);
+          finalGroup = meta.groupKey;
+        }
+
+        return {
+          name: e.name,
+          role: finalRole,
+          group: finalGroup,
+          customBadge: e.customBadge || ''
+        };
+      });
+    }
+
+    function refreshData() {
+      if(isSyncing) return showToast("Đang đồng bộ...", false, true);
+      isSyncing = true; clearSelection(); showToast("⏳ Đang tải dữ liệu...", true); 
+      callAPI('getInitialData')
+        .then(data => { 
+          baseEmployeesData = data.employees || [];
+          monthEmployeesData = data.monthEmployees || {};
+          leavesData = data.leaves || []; 
+          badgesData = data.badges || {}; 
+          quotasData = data.quotas || {};
+          syncCurrentMonthEmployees();
+          renderTable(); 
+          isSyncing = false; 
+          showToast("✅ Đã làm mới xong!"); 
+        })
+        .catch(err => { showToast("Lỗi lấy dữ liệu!", false, true); isSyncing = false; });
+    }
+
+    function renderTable() {
+      try {
+        if (TARGET_GROUP && TARGET_GROUP.startsWith("PERSON:")) {
+            renderInteractiveCalendar(TARGET_GROUP.replace("PERSON:", "").trim());
+            return;
+        }
+
+        document.getElementById("scheduleTable").classList.remove("mc-calendar-view");
+        document.querySelector(".table-container").style.border = "1px solid var(--border-color)";
+        const daysInMonth = new Date(displayYear, displayMonth + 1, 0).getDate();
+        const thead = document.getElementById("tableHead");
+        const tbody = document.getElementById("tableBody");
+        thead.innerHTML = ""; tbody.innerHTML = "";
+
+        let headerRow = '<tr><th class="group-cell">NHÓM</th><th class="name-cell">TÊN</th>';
+        for (let i = 1; i <= daysInMonth; i++) {
+          let d = new Date(displayYear, displayMonth, i), dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+          headerRow += `<th style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">${(i<10?'0'+i:i)}/${(displayMonth+1<10?'0'+(displayMonth+1):displayMonth+1)}<br><span style="font-weight:400; font-size:0.65rem">${dayNames[d.getDay()]}</span></th>`;
+        }
+        thead.innerHTML = headerRow + "</tr>";
+
+        let depts = {};
+        employeesData.forEach(emp => {
+          let roleUpper = String(emp.role).trim().toUpperCase(); let empName = String(emp.name).trim(); let empGroup = String(emp.group).trim();
+          let keep = false;
+          if (!TARGET_GROUP) keep = true;
+          else if (TARGET_GROUP.startsWith("GROUP:")) { let targetGrp = TARGET_GROUP.replace("GROUP:", "").trim().toUpperCase(); if (empGroup.toUpperCase() === targetGrp || roleUpper === targetGrp) keep = true; } 
+          else { let target = TARGET_GROUP.toUpperCase().replace(/\s+/g, ''); if (empName.toUpperCase().replace(/\s+/g, '').includes(target) || empGroup.toUpperCase().replace(/\s+/g, '').includes(target)) keep = true; }
+          
+          if (!keep) return;
+          let roleStr = emp.role ? String(emp.role).trim() : "KHÁC"; let groupStr = emp.group ? String(emp.group).trim() : "KHÁC";
+          if (!depts[roleStr]) depts[roleStr] = {}; if (!depts[roleStr][groupStr]) depts[roleStr][groupStr] = [];
+
+          let nUp = String(emp.name).toUpperCase(); let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
+          if (isTeacher) depts[roleStr][groupStr].unshift(emp); else depts[roleStr][groupStr].push(emp);
+        });
+
+        let tbodyHTML = "";
+        for (let deptKey in depts) {
+          let displayRole = String(deptKey).toUpperCase();
+          if (displayRole === "TEACHER DANCE" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+          else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+          tbodyHTML += `<tr><td colspan="${daysInMonth + 2}" class="dept-divider" style="border-bottom: 1px solid var(--border-color);">${displayRole}</td></tr>`;
+
+          const getGroupSortOrder = (deptKey, groupKey) => {
+            if (deptKey === "LIVESTEAM" || deptKey === "LIVESTREAM") {
+              if (groupKey === "TEAM KEN - ANGELIK") return 101;
+              if (groupKey === "TEAM KEN - ORION") return 102;
+              if (groupKey === "TEAM U - FASHION") return 201;
+              if (groupKey === "TEAM U - ROYEN:ONE") return 202;
+              if (groupKey === "TEAM DINO") return 301;
+              if (groupKey === "GIMBAL / MEDIA") return 401;
+              return 999;
+            }
+            return 500;
+          };
+
+          let sortedGroups = Object.keys(depts[deptKey]).sort((a, b) => {
+            let ordA = getGroupSortOrder(deptKey, a);
+            let ordB = getGroupSortOrder(deptKey, b);
+            if (ordA !== ordB) return ordA - ordB;
+            return a.localeCompare(b);
+          });
+
+          for (let group of sortedGroups) {
+             let isTraffic = (group === "TEAM KEN - ORION" || group === "TEAM U - ROYEN:ONE");
+             depts[deptKey][group].sort((a, b) => {
+                let nUpA = String(a.name).toUpperCase();
+                let nUpB = String(b.name).toUpperCase();
+                let isTeacherA = (nUpA === "KEN" || nUpA === "U" || nUpA === "DINO" || nUpA.includes("TEACHER"));
+                let isTeacherB = (nUpB === "KEN" || nUpB === "U" || nUpB === "DINO" || nUpB.includes("TEACHER"));
+                if (isTeacherA && !isTeacherB) return -1;
+                if (!isTeacherA && isTeacherB) return 1;
+
+                if (isTraffic) {
+                  let rankA = getMemberRoleRank(a);
+                  let rankB = getMemberRoleRank(b);
+                  if (rankA !== rankB) return rankA - rankB;
+                }
+                return String(a.name).localeCompare(String(b.name));
+             });
+
+             let groupDisplayHTML = group;
+             if (group === "TEAM KEN - ANGELIK") groupDisplayHTML = `TEAM KEN<br><span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Nhóm Angelik</span>`;
+             else if (group === "TEAM KEN - ORION") groupDisplayHTML = `TEAM KEN<br><span style="font-size:0.75rem; color:#7c3aed; font-weight:700;">Nhóm Orion<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(Lưu lượng)</small></span>`;
+             else if (group === "TEAM U - FASHION") groupDisplayHTML = `TEAM U<br><span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Nhóm Fashion</span>`;
+             else if (group === "TEAM U - ROYEN:ONE") groupDisplayHTML = `TEAM U<br><span style="font-size:0.75rem; color:#2563eb; font-weight:700;">Nhóm Royen:One<br><small style="font-size:0.68rem; color:#3b82f6; font-weight:600;">(Lưu lượng)</small></span>`;
+             else if (group === "TEAM DINO") groupDisplayHTML = `TEAM DINO<br><span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Nhóm Bee & Bnart</span>`;
+             else if (group === "GIMBAL / MEDIA") groupDisplayHTML = `GIMBAL / MEDIA`;
+
+             depts[deptKey][group].forEach((emp, idx) => {
+                let name = emp.name; let userBadge = generateBadgeHTML(emp);
+                let tr = `<tr>`;
+                if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" class="group-cell" style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">${groupDisplayHTML}</td>`;
+                tr += `<td class="name-cell" style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">
+                         <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 100%; padding: 4px 0;">
+                           <span style="font-size: 0.75rem; line-height: 1.2;">${name}</span>
+                           <div style="display: flex; align-items: center;">${userBadge}</div>
+                         </div>
+                       </td>`;
+
+                for (let i = 1; i <= daysInMonth; i++) {
+                  let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+                  let checkDate = `${monthPrefix}-${i.toString().padStart(2, '0')}`;
+                  let isMoved = leavesData.some(l => String(l.name).trim() === String(name).trim() && l.swapFrom === checkDate);
+                  let leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isMoved);
+                  let baseStyle = "border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 0; margin: 0; position: relative;";
+                  
+                  let isSelected = selectedCells.some(c => c.name === name && c.date === checkDate);
+                  let isCancelSelected = selectedCancelCells.some(c => c.name === name && c.date === checkDate);
+
+                  let isDraggable = false;
+                  let tdAttrs = "";
+                  let sClass = "";
+                  let dropEvents = `ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"`;
+
+                  if (leave) {
+                    if (leave.status === "Pending") {
+                       sClass = isCancelSelected ? 'cell-pending cell-cancel-selected' : 'cell-pending';
+                       isDraggable = true;
+                       tdAttrs = `style="${baseStyle}" class="day-cell ${sClass}" onclick="toggleCancelSelection(this, '${name}', '${checkDate}'); event.stopPropagation();" ${dropEvents}`;
+                    } else {
+                       sClass = 'cell-off';
+                       isDraggable = true;
+                       tdAttrs = `style="${baseStyle}" class="day-cell ${sClass}" onclick="showToast('💡 ĐỂ DỜI NGÀY: NHẤN GIỮ rồi KÉO thả sang ô trống!');" ${dropEvents}`;
+                    }
+                  } else {
+                    sClass = isSelected ? 'cell-selected' : '';
+                    tdAttrs = `style="${baseStyle}" class="day-cell ${sClass}" onclick="toggleCellSelection(this, '${deptKey}', '${name}', '${checkDate}')" ${dropEvents}`;
+                  }
+
+                  let innerContent = "";
+                  if (leave) {
+                    if (leave.status === "Pending") {
+                        innerContent = `<div class="badge badge-pending" title="Đang chờ duyệt">⏳</div>`;
+                    } else {
+                        innerContent = `<div class="badge badge-off" title="Kéo thả để dời ngày">OFF</div>`;
+                    }
+                  }
+
+                  if (isDraggable) {
+                      innerContent = `<div draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" style="width: 100%; height: 100%; min-height: 42px; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; -webkit-user-drag: element;">${innerContent}</div>`;
+                  }
+
+                  tr += `<td ${tdAttrs}>${innerContent}</td>`;
+                }
+                tbodyHTML += tr + `</tr>`;
+             });
+          }
+        }
+        
+        if (tbodyHTML === "") {
+          let displayTitle = TARGET_GROUP.replace("PERSON:", "").replace("GROUP:", "");
+          tbody.innerHTML = `<tr><td colspan="${daysInMonth + 2}" style="text-align: center; color: #ef4444; padding: 40px; font-weight: 600;">⚠️ Không tìm thấy thông tin đăng nhập của bạn trong hệ thống.</td></tr>`;
+        } else { tbody.innerHTML = tbodyHTML; }
+      } catch (err) { showToast("Lỗi vẽ bảng: " + err, false, true); }
+    }
+
+    function renderInteractiveCalendar(empName) {
+      const thead = document.getElementById("tableHead");
+      const tbody = document.getElementById("tableBody");
+      document.getElementById("scheduleTable").classList.add("mc-calendar-view");
+      document.querySelector(".table-container").style.border = "none";
+      // Gỡ bỏ giới hạn chiều cao để bung full bảng trên điện thoại
+      document.querySelector(".table-container").style.maxHeight = "none";
+      document.querySelector(".table-container").style.overflow = "visible";
+      document.querySelector(".table-container").style.marginBottom = "30px";
+      thead.innerHTML = ""; tbody.innerHTML = "";
+
+      let emp = employeesData.find(e => String(e.name).trim().toUpperCase() === empName.toUpperCase());
+      if (!emp) { tbody.innerHTML = `<tr><td style="padding: 40px; color: #ef4444; text-align: center; font-weight: bold;">⚠️ Không tìm thấy thông tin của ${empName}.</td></tr>`; return; }
+
+      let startDate = new Date(displayYear, displayMonth, 1);
+      let endDate = new Date(displayYear, displayMonth + 1, 0);
+      let startGrid = new Date(startDate); startGrid.setDate(startDate.getDate() - startDate.getDay());
+      let endGrid = new Date(endDate); endGrid.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+      let sdStr = `${startDate.getDate()}/${startDate.getMonth() + 1}`;
+      let edStr = `${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`;
+
+      let role = emp.role;
+      let userBadgeHTML = generateBadgeHTML(emp);
+
+      let html = `
+        <tr>
+          <td colspan="7" style="padding: 25px 20px 20px 20px; text-align: center; background: #ffffff; border-bottom: 2px solid #cbd5e1 !important; cursor: default; border-radius: 12px 12px 0 0;">
+             <div style="font-size: 0.85rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Lịch Nghỉ Cá Nhân</div>
+             <div style="font-size: 2.2rem; font-weight: 800; color: #3b82f6; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
+               ${emp.name} ${userBadgeHTML}
+             </div>
+             <div style="font-size: 1.05rem; color: #475569; margin-top: 5px; font-weight: 600;">Bộ phận: ${emp.group || "Khác"}</div>
+             <div style="font-size: 0.95rem; color: #ef4444; margin-top: 15px; background: #fee2e2; display: inline-block; padding: 6px 18px; border-radius: 20px; font-weight: 700;">Từ ${sdStr} đến ${edStr}</div>
+             <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 12px; font-style: italic;">* KÉO THẢ ngày đã duyệt (OFF) sang ô trống để dời ngày</div>
+          </td>
+        </tr>
+        <tr style="background: #ffffff;">
+          <td style="width: 14.28%; color: #ef4444; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">CN</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T2</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T3</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T4</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T5</td>
+          <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0;">T6</td>
+          <td style="width: 14.28%; color: #3b82f6; padding: 15px 0; font-size: 1rem; font-weight: 800; border-bottom: 1px solid #e2e8f0;">T7</td>
+        </tr>
+      `;
+
+      let loopDate = new Date(startGrid);
+      let tr = "<tr>";
+      let cellCount = 0;
+
+      while (loopDate <= endGrid) {
+        let dNum = loopDate.getDate(); let mNum = loopDate.getMonth() + 1;
+        let checkDate = loopDate.getFullYear() + '-' + mNum.toString().padStart(2, '0') + '-' + dNum.toString().padStart(2, '0');
+        let isOutOfRange = (loopDate.getMonth() !== displayMonth);
+
+        let isMoved = leavesData.some(l => String(l.name).trim() === String(emp.name).trim() && l.swapFrom === checkDate);
+        let leave = leavesData.find(l => String(l.name).trim() === String(emp.name).trim() && l.date === checkDate && (l.status === "Approved" || l.status === "Pending") && !isMoved);
+        let isSelected = selectedCells.some(c => c.name === emp.name && c.date === checkDate);
+        let isCancelSelected = selectedCancelCells.some(c => c.name === emp.name && c.date === checkDate);
+
+        let rightBorder = (cellCount % 7 === 6) ? "" : "border-right: 1px solid #e2e8f0;";
+        let bottomBorder = "border-bottom: 1px solid #e2e8f0;";
+        let cellStyle = `height: 85px; vertical-align: top; text-align: left; padding: 10px; position: relative; transition: background 0.2s; box-sizing: border-box; ${bottomBorder} ${rightBorder}`;
+
+        if (isOutOfRange) {
+             cellStyle += ` background-color: #f8fafc;`;
+        } else if (leave && !isCancelSelected) {
+             cellStyle += ` background-color: #fef2f2;`;
+        } else if (isSelected) {
+             cellStyle += ` background-color: #fef2f2;`;
+        } else {
+             cellStyle += ` background-color: #ffffff;`;
+        }
+
+        let isDraggable = false;
+        let tdAttrs = "";
+        let sClass = "";
+        let dropEvents = `ondrop="drop(event, '${emp.name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"`;
+
+        if (!isOutOfRange) {
+          if (leave) {
+            if (leave.status === "Pending") {
+               sClass = isCancelSelected ? 'cell-pending cell-cancel-selected' : 'cell-pending';
+               isDraggable = true;
+               tdAttrs = `style="${cellStyle}" class="day-cell ${sClass}" onclick="toggleCancelSelection(this, '${emp.name}', '${checkDate}'); event.stopPropagation();" ${dropEvents}`;
+            } else {
+               sClass = 'cell-off';
+               isDraggable = true;
+               tdAttrs = `style="${cellStyle}" class="day-cell ${sClass}" onclick="showToast('💡 ĐỂ DỜI NGÀY: NHẤN GIỮ rồi KÉO thả sang ô trống!', true);" ${dropEvents}`;
+            }
+          } else {
+            sClass = isSelected ? 'cell-selected' : '';
+            tdAttrs = `style="${cellStyle}" class="day-cell ${sClass}" onclick="toggleCellSelection(this, '${role}', '${emp.name}', '${checkDate}')" ${dropEvents}`;
+          }
+        } else {
+            tdAttrs = `style="${cellStyle}" class="day-cell"`;
+        }
+
+        let dColor = isOutOfRange ? '#cbd5e1' : '#0f172a';
+        let mColor = isOutOfRange ? '#e2e8f0' : '#94a3b8';
+
+        let innerContent = `<div style="font-weight: 800; font-size: 1.15rem; margin-bottom: 8px; color: ${dColor}; pointer-events: none;">${dNum} <span class="month-text" style="font-size: 0.75rem; font-weight: 600; color: ${mColor};">Thg${mNum}</span></div>`;
+
+        if (!isOutOfRange && leave) {
+            if (leave.status === "Pending") {
+               innerContent += `<div class="badge badge-pending" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; pointer-events: none; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">⏳ PEND</div>`;
+            } else {
+               innerContent += `<div class="badge badge-off" style="width: 80%; max-width: 60px; height: 26px; font-size: 0.75rem; border-radius: 6px; box-sizing: border-box; margin: 0 auto; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; pointer-events: none; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">OFF</div>`;
+            }
+        }
+
+        if (isDraggable) {
+            innerContent = `<div draggable="true" ondragstart="drag(event, '${emp.name}', '${checkDate}')" style="width: 100%; height: 100%; min-height: 60px; cursor: grab; touch-action: none; -webkit-user-drag: element;" title="Kéo thả để dời ngày">${innerContent}</div>`;
+        }
+
+        tr += `<td ${tdAttrs}>${innerContent}</td>`;
+        
+        cellCount++;
+        if (cellCount % 7 === 0) { tr += "</tr>"; if (loopDate < endGrid) tr += "<tr>"; }
+        loopDate.setDate(loopDate.getDate() + 1);
+      }
+      tbody.innerHTML = html + tr;
+    }
+
+    function drag(ev, name, date) { 
+        ev.dataTransfer.setData("text/plain", name + "|" + date);
+        ev.dataTransfer.effectAllowed = "move"; 
+    }
+    
+    function allowDrop(ev) { 
+        ev.preventDefault(); 
+        ev.dataTransfer.dropEffect = "move";
+        ev.currentTarget.classList.add("drag-over"); 
+    }
+    
+    function dragLeave(ev) { 
+        ev.currentTarget.classList.remove("drag-over"); 
+    }
+    
+    function drop(ev, targetName, newDate) {
+      ev.preventDefault(); 
+      ev.currentTarget.classList.remove("drag-over"); 
+      ev.stopPropagation(); 
+      if(isSyncing) return;
+      
+      let data = ev.dataTransfer.getData("text/plain");
+      if (!data || !data.includes("|")) return;
+      
+      let parts = data.split("|");
+      let dragName = parts[0]; 
+      let oldDate = parts[1];
+      
+      if (!dragName || dragName !== targetName || oldDate === newDate) return;
+      
+      let existingTarget = leavesData.find(l => String(l.name).trim() === String(targetName).trim() && l.date === newDate);
+      if(existingTarget) return showToast("⚠️ Ngày này đã có lịch!", false, true);
+      
+      document.getElementById('modalTitle').innerHTML = "Xác nhận Đổi Ngày";
+      document.getElementById('modalMsg').innerHTML = `Di chuyển ngày nghỉ của <b>${dragName}</b> sang <b style="color:#10b981;">${newDate}</b>?`;
+      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng Ý"; btn.style = "";
+      
+      btn.onclick = () => { 
+        closeModal(); isSyncing = true;
+        toggleBlocker(true, "⏳ Đang dời ngày, vui lòng đợi...");
+        
+        callAPI('processMCDragDrop', { name: dragName, oldDateStr: oldDate, newDateStr: newDate })
+            .then(res => { 
+                isSyncing = false; toggleBlocker(false);
+                if(res === "SUCCESS") { 
+                    let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(dragName).trim() && l.date === oldDate);
+                    if(lIndex > -1) { leavesData[lIndex].date = newDate; leavesData[lIndex].status = "Pending"; leavesData[lIndex].swapFrom = oldDate; } 
+                    else { leavesData.push({name: dragName, date: newDate, status: "Pending", swapFrom: oldDate}); }
+                    renderTable(); 
+                    showToast("✅ Đã dời ngày (Về trạng thái Chờ duyệt)!", false, false, true); 
+                } else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } 
+            })
+            .catch(err => { isSyncing = false; toggleBlocker(false); refreshData(); });
+      }; 
+      document.getElementById('customModal').classList.add('active');
+    }
+
+    function toggleCellSelection(tdElement, role, name, checkDate) {
+      if(isSyncing) return;
+      if(selectedCancelCells.length > 0) clearSelection();
+
+      let idx = selectedCells.findIndex(c => c.name === name && c.date === checkDate);
+      if(idx > -1) { 
+          selectedCells.splice(idx, 1); 
+          tdElement.classList.remove('cell-selected'); 
+      } else {
+         let monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
+         let currentQuota = quotasData[monthPrefix];
+         if (currentQuota === undefined || currentQuota === null) currentQuota = 4;
+
+         let existingLeaves = leavesData.filter(l => String(l.name).trim() === String(name).trim() && l.date.startsWith(monthPrefix) && (l.status === "Approved" || l.status === "Pending")).length;
+         let currentlySelected = selectedCells.filter(c => c.name === name).length;
+         if (existingLeaves + currentlySelected >= currentQuota) return showToast(`⚠️ Lỗi: ${name} đã hết Quota (${currentQuota} ngày/tháng)!`, false, true);
+         
+         selectedCells.push({role: role, name: name, date: checkDate, td: tdElement}); 
+         tdElement.classList.add('cell-selected');
+      }
+      updateActionBar();
+    }
+
+    function toggleCancelSelection(tdElement, name, checkDate) {
+      if(isSyncing) return;
+      if(selectedCells.length > 0) clearSelection();
+
+      let idx = selectedCancelCells.findIndex(c => c.name === name && c.date === checkDate);
+      if(idx > -1) { 
+          selectedCancelCells.splice(idx, 1); 
+          tdElement.classList.remove('cell-cancel-selected'); 
+      } else {
+          selectedCancelCells.push({name: name, date: checkDate, td: tdElement}); 
+          tdElement.classList.add('cell-cancel-selected');
+          showToast("Đã chọn! Bấm nút HỦY ĐƠN ở thanh dưới cùng", true); 
+      }
+      updateActionBar();
+    }
+
+    function updateActionBar() {
+      const bar = document.getElementById('actionBar');
+      const textWrapper = document.getElementById('actionBarTextWrapper');
+      const okBtn = document.getElementById('actionBarOkBtn');
+
+      if (selectedCells.length > 0) {
+        textWrapper.innerHTML = `Đã chọn <span style="font-weight: 800; color: #3b82f6; font-size: 1.4rem; margin: 0 5px;">${selectedCells.length}</span> ngày nghỉ`;
+        okBtn.innerText = "Gửi Đơn Xin Nghỉ";
+        okBtn.style.background = "#3b82f6";
+        okBtn.onclick = () => { showConfirmModal(); };
+        bar.classList.add('show');
+      } else if (selectedCancelCells.length > 0) {
+        textWrapper.innerHTML = `Đã chọn <span style="font-weight: 800; color: #ef4444; font-size: 1.4rem; margin: 0 5px;">${selectedCancelCells.length}</span> đơn để hủy`;
+        okBtn.innerText = "Hủy Các Đơn Đã Chọn";
+        okBtn.style.background = "#ef4444";
+        okBtn.onclick = () => { showConfirmCancelModal(); };
+        bar.classList.add('show');
+      } else {
+        bar.classList.remove('show');
+      }
+    }
+
+    function clearSelection() { 
+      selectedCells.forEach(c => c.td.classList.remove('cell-selected')); 
+      selectedCancelCells.forEach(c => c.td.classList.remove('cell-cancel-selected')); 
+      selectedCells = []; 
+      selectedCancelCells = []; 
+      updateActionBar(); 
+    }
+
+    function showConfirmModal() {
+      document.getElementById('modalTitle').innerHTML = "Xác nhận Đăng ký OFF"; let grouped = {};
+      selectedCells.forEach(c => { if(!grouped[c.name]) grouped[c.name] = []; grouped[c.name].push(c.date.slice(-2) + "/" + c.date.slice(5,7)); });
+      let msgHtml = "Gửi đơn xin nghỉ cho:<br><ul style='text-align:left; margin-top:10px; padding-left: 20px;'>";
+      for(let name in grouped) { grouped[name].sort((a,b) => parseInt(a.split('/')[0]) - parseInt(b.split('/')[0])); msgHtml += `<li><b>${name}</b>: Ngày ${grouped[name].join(", ")}</li>`; }
+      document.getElementById('modalMsg').innerHTML = msgHtml + "</ul>";
+      const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Đồng ý Gửi"; btn.style = ""; 
+      btn.onclick = () => { executeMultipleLeaves(); }; 
+      document.getElementById('customModal').classList.add('active');
+    }
+
+    function showConfirmCancelModal() {
+      document.getElementById('modalTitle').innerHTML = "Xác nhận Hủy Đơn";
+      let msgHtml = "Bạn chắc chắn muốn hủy các đơn xin nghỉ sau:<br><ul style='text-align:left; margin-top:10px; padding-left: 20px;'>";
+      selectedCancelCells.forEach(c => { msgHtml += `<li>Ngày <b style="color:#ef4444">${c.date.slice(-2)}/${c.date.slice(5,7)}</b></li>`; });
+      document.getElementById('modalMsg').innerHTML = msgHtml + "</ul>";
+      const btn = document.getElementById('modalOkBtn');
+      btn.className = "btn-ok"; btn.innerText = "Đồng ý Hủy"; btn.style.background = "#ef4444";
+      btn.onclick = () => { executeMultipleCancels(); };
+      document.getElementById('customModal').classList.add('active');
+    }
+
+    function executeMultipleLeaves() {
+      closeModal(); if(isSyncing) return; isSyncing = true;
+      toggleBlocker(true, "⏳ Đang chốt đơn, vui lòng đợi..."); 
+      
+      let payload = selectedCells.map(c => ({ role: c.role, name: c.name, dateStr: c.date }));
+      
+      callAPI('registerMultipleMCLeaves', { leaveRequests: payload })
+        .then(res => { 
+            isSyncing = false; toggleBlocker(false);
+            if(res === "SUCCESS") { 
+                payload.forEach(req => { leavesData.push({ name: req.name, date: req.dateStr, status: "Pending", swapFrom: "", reason: "Đăng ký nghỉ tháng" }); });
+                clearSelection(); renderTable(); 
+                showToast("🎉 ĐÃ LƯU THÀNH CÔNG!", false, false, true); 
+            } else { showToast("❌ Lỗi: " + res, false, true); refreshData(); } 
+        })
+        .catch(err => { isSyncing = false; toggleBlocker(false); refreshData(); });
+    }
+
+    async function executeMultipleCancels() {
+      closeModal(); if(isSyncing) return; isSyncing = true;
+      toggleBlocker(true, "⏳ Đang hủy các đơn đã chọn...");
+
+      let payload = [...selectedCancelCells];
+      payload.forEach(req => {
+        let lIndex = leavesData.findIndex(l => String(l.name).trim() === String(req.name).trim() && l.date === req.date && l.status === "Pending");
+        if(lIndex > -1) leavesData.splice(lIndex, 1);
+      });
+      clearSelection(); renderTable();
+
+      try {
+         for (let req of payload) {
+             await callAPI('cancelPendingMC', { name: req.name, dateStr: req.date });
+         }
+         isSyncing = false; toggleBlocker(false);
+         showToast("🗑️ Đã hủy các đơn thành công!", false, false, true);
+      } catch(err) {
+         isSyncing = false; toggleBlocker(false);
+         showToast("❌ Có lỗi xảy ra, vui lòng tải lại!", false, true); refreshData();
+      }
+    }
+
+    function closeModal() { document.getElementById('customModal').classList.remove('active'); }
+    let toastTimer; function showToast(msg, keep = false, isError = false, isBoom = false) { const toast = document.getElementById('toast'); toast.innerHTML = msg; toast.className = ''; if (isError) toast.classList.add('error'); if (isBoom) toast.classList.add('success-boom'); void toast.offsetWidth; toast.classList.add('show'); clearTimeout(toastTimer); if(!keep) toastTimer = setTimeout(() => toast.classList.remove('show', 'success-boom', 'error'), 2000); }
+    function changeMonth(offset) { if(isSyncing) return; displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} /${displayYear}`; syncCurrentMonthEmployees(); clearSelection(); renderTable(); }
+
+    function exportPersonalCalendar() {
+      if(isSyncing) return;
+      let empName = TARGET_GROUP.replace("PERSON:", "").trim();
+      let emp = employeesData.find(e => String(e.name).trim().toUpperCase() === empName.toUpperCase()); 
+      let groupStr = emp ? (emp.group || "Khác") : "Khác";
+      
+      toggleBlocker(true, "📸 Đang tạo ảnh lịch...");
+      
+      let container = document.createElement("div");
+      container.style.position = "absolute"; container.style.top = "-9999px"; container.style.left = "-9999px"; 
+      container.style.width = "680px"; container.style.background = "#ffffff"; container.style.padding = "20px";
+      document.body.appendChild(container);
+      
+      let startDate = new Date(displayYear, displayMonth, 1), endDate = new Date(displayYear, displayMonth + 1, 0);
+      let startGrid = new Date(startDate); startGrid.setDate(startDate.getDate() - startDate.getDay()); 
+      let endGrid = new Date(endDate); endGrid.setDate(endDate.getDate() + (6 - endDate.getDay()));
+      
+      let sdStr = `${startDate.getDate()}/${startDate.getMonth() + 1}`;
+      let edStr = `${endDate.getDate()}/${endDate.getMonth() + 1}/${endDate.getFullYear()}`;
+      
+      let html = `
+        <div style="background: #e2e8f0; width: 100%; border-radius: 16px; border: 2px solid #cbd5e1; overflow: hidden; font-family: 'Inter', sans-serif;">
+          <div style="background: #f8fafc; padding: 25px 20px 20px 20px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+             <div style="font-size: 0.85rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Lịch Nghỉ Cá Nhân / 个人休假表</div>
+             <div style="font-size: 2.2rem; font-weight: 800; color: #3b82f6;">${emp.name}</div>
+             <div style="font-size: 1.05rem; color: #475569; margin-top: 5px; font-weight: 600;">Bộ phận / 部门: ${groupStr}</div>
+             <div style="font-size: 0.95rem; color: #ef4444; margin-top: 15px; background: #fee2e2; display: inline-block; padding: 6px 18px; border-radius: 20px; font-weight: 700;">Từ / 从 ${sdStr} đến / 到 ${edStr}</div>
+          </div>
+          <table style="width: 100%; border-collapse: separate; border-spacing: 1px; text-align: center; table-layout: fixed; background: #e2e8f0;">
+            <tr>
+              <td style="width: 14.28%; color: #ef4444; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">CN / 日</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T2 / 一</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T3 / 二</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T4 / 三</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T5 / 四</td>
+              <td style="width: 14.28%; color: #0f172a; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T6 / 五</td>
+              <td style="width: 14.28%; color: #3b82f6; padding: 15px 0; font-size: 1rem; font-weight: 800; background: #ffffff;">T7 / 六</td>
+            </tr>
+      `;
+
+      let loopDate = new Date(startGrid), cellCount = 0, tr = "<tr>";
+      
+      while (loopDate <= endGrid) {
+          let dNum = loopDate.getDate(); let mNum = loopDate.getMonth() + 1;
+          let dateStr = loopDate.getFullYear() + '-' + mNum.toString().padStart(2, '0') + '-' + dNum.toString().padStart(2, '0');
+          let isOutOfRange = (loopDate < startDate || loopDate > endDate);
+          
+          let dColor = isOutOfRange ? '#cbd5e1' : '#0f172a';
+          let mColor = isOutOfRange ? '#e2e8f0' : '#94a3b8';
+          
+          let movedToLeave = leavesData.find(l => String(l.name).trim() === String(emp.name).trim() && l.swapFrom === dateStr);
+          let leave = leavesData.find(l => String(l.name).trim() === String(emp.name).trim() && l.date === dateStr && (l.status === "Approved" || l.status === "Pending") && !movedToLeave);
+          let isSelected = selectedCells.some(c => c.date === dateStr);
+          let isPendingSwapOut = leavesData.some(l => String(l.name).trim() === String(emp.name).trim() && l.status === "Pending" && l.swapFrom === dateStr);
+
+          let bgColor = "#ffffff";
+          if (!isOutOfRange) {
+              if (leave || isSelected) bgColor = (leave && leave.swapFrom) ? "#f3e8ff" : "#fef2f2";
+              else if (movedToLeave || isPendingSwapOut) bgColor = "#f8fafc";
+          }
+          
+          let cellStyle = `height: 90px; vertical-align: top; text-align: left; padding: 10px; background-color: ${bgColor};`;
+          let cellContent = `<div style="font-weight: 800; font-size: 1.15rem; margin-bottom: 10px; color: ${dColor};">${dNum} <span style="font-size: 0.75rem; font-weight: 600; color: ${mColor};">Thg${mNum}</span></div>`;
+
+          if (!isOutOfRange) {
+              if (leave || isSelected) {
+                  if (leave && leave.swapFrom) {
+                      let oldD = new Date(leave.swapFrom); let oldDStr = oldD.getDate() + "/" + (oldD.getMonth()+1);
+                      cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #9333ea; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(147, 51, 234, 0.3); line-height: 1.2;">DỜI TỪ<br>${oldDStr}</div>`;
+                  } else if (leave && leave.status === "Pending") {
+                      cellContent += `<div style="width: 60px; height: 28px; font-size: 0.75rem; border-radius: 6px; background-color: #f59e0b; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; margin: 0 auto; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">PEND</div>`;
+                  } else {
+                      cellContent += `<div style="width: 60px; height: 28px; font-size: 0.75rem; border-radius: 6px; background-color: #ef4444; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; margin: 0 auto; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);">OFF</div>`;
+                  }
+              } else if (isPendingSwapOut) {
+                  cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #475569; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1.2;">NGÀY<br>THAY ĐỔI</div>`;
+              } else if (movedToLeave) {
+                  let newD = new Date(movedToLeave.date); let newDStr = newD.getDate() + "/" + (newD.getMonth()+1);
+                  cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #94a3b8; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-decoration: line-through; line-height: 1.2;">ĐÃ DỜI<br>RA ${newDStr}</div>`;
+              }
+          }
+
+          tr += `<td style="${cellStyle}">${cellContent}</td>`; cellCount++;
+          if (cellCount % 7 === 0) { tr += "</tr>"; if (loopDate < endGrid) tr += "<tr>"; }
+          loopDate.setDate(loopDate.getDate() + 1);
+      }
+      
+      let legendHtml = `<div style="margin-top: 15px; padding: 12px 15px; border-radius: 12px; background: #f8fafc; border: 2px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; font-size: 0.85rem; font-weight: 600; color: #475569;">
+          <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #ef4444; border-radius: 4px;"></div> OFF bình thường</div>
+          <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #9333ea; border-radius: 4px;"></div> Ngày cũ muốn DỜI</div>
+          <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 16px; height: 16px; background: #94a3b8; border-radius: 4px;"></div> Ngày MỚI ĐÃ DỜI</div>
+      </div>`;
+      
+      html += tr + "</table>" + legendHtml + "</div>"; container.innerHTML = html;
+      
+      setTimeout(() => { 
+          html2canvas(container, { scale: 3, useCORS: true, backgroundColor: "#ffffff" }).then(canvas => { 
+              let link = document.createElement('a'); link.download = `LichNghi_${emp.name}_Thang${displayMonth+1}.png`; 
+              link.href = canvas.toDataURL("image/png"); link.click(); document.body.removeChild(container); toggleBlocker(false); showToast("📸 Đã tải ảnh xuống thành công!"); 
+          }); 
+      }, 600);
+    }
+  </script>
+</body>
+</html>
