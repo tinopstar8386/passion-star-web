@@ -105,6 +105,166 @@
       #toast.show { transform: translateY(0) scale(1) !important; }
       #toast.success-boom { transform: translateY(0) scale(1.05) !important; }
     }
+  
+    /* MODERN MASTER UI & OFF BADGE REFINEMENT */
+    body {
+      background: #f8fafc !important;
+      font-family: 'Inter', sans-serif !important;
+    }
+    .table-container {
+      max-height: calc(100vh - 120px) !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      margin: 0 0 80px 0 !important;
+      padding: 0 16px !important;
+      border: none !important;
+      background: transparent !important;
+    }
+
+    #scheduleTable:not(.mc-calendar-view) {
+      width: 100% !important;
+      table-layout: fixed !important;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+      background: white !important;
+      box-shadow: 0 4px 12px -2px rgba(0,0,0,0.05) !important;
+    }
+
+    #scheduleTable:not(.mc-calendar-view) thead th {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 20 !important;
+      background: #f8fafc !important;
+      border-bottom: 2px solid #cbd5e1 !important;
+      padding: 3px 1px !important;
+      height: 42px !important;
+    }
+
+    .name-cell-header, #scheduleTable:not(.mc-calendar-view) th.name-cell {
+      width: 185px !important;
+      min-width: 170px !important;
+      max-width: 195px !important;
+      text-align: left !important;
+      padding-left: 18px !important;
+      position: sticky !important;
+      top: 0 !important;
+      left: 0 !important;
+      z-index: 25 !important;
+      background: #f8fafc !important;
+      border-right: 2px solid #cbd5e1 !important;
+    }
+
+    .name-cell, #scheduleTable:not(.mc-calendar-view) td.name-cell {
+      width: 185px !important;
+      min-width: 170px !important;
+      max-width: 195px !important;
+      text-align: left !important;
+      padding: 5px 12px 5px 18px !important;
+      position: sticky !important;
+      left: 0 !important;
+      z-index: 15 !important;
+      background: #ffffff !important;
+      border-right: 2px solid #cbd5e1 !important;
+    }
+
+    /* CHỮ OFF ĐỎ TƯƠI SANG TRỌNG THEO ĐÚNG HÌNH USER */
+    .day-cell .badge-off, .badge-off {
+      background-color: #eb3b5a !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 0.72rem !important;
+      letter-spacing: 0.4px !important;
+      width: 36px !important;
+      height: 22px !important;
+      border-radius: 6px !important;
+      border: none !important;
+      box-shadow: none !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      line-height: 1 !important;
+      margin: 0 auto !important;
+    }
+
+    .day-cell .badge-pending, .badge-pending {
+      background-color: #f39c12 !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 0.65rem !important;
+      width: 36px !important;
+      height: 22px !important;
+      border-radius: 6px !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .day-cell .badge-swap, .badge-swap {
+      background-color: #8854d0 !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      width: 36px !important;
+      height: 22px !important;
+      border-radius: 6px !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .cell-off {
+      background-color: rgba(235, 59, 90, 0.04) !important;
+    }
+
+    .cell-selected {
+      background-color: #eff6ff !important;
+      position: relative;
+    }
+    .cell-selected::after {
+      content: "ĐK NGHỈ" !important;
+      position: absolute !important;
+      bottom: 8px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      width: 85% !important;
+      max-width: 50px !important;
+      height: 22px !important;
+      font-size: 0.62rem !important;
+      border-radius: 5px !important;
+      background: #2563eb !important;
+      color: white !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.5px !important;
+      pointer-events: none !important;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3) !important;
+    }
+
+    /* TH DATE BOX */
+    .th-date-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.15;
+      padding: 2px 0;
+      width: 100%;
+    }
+    .th-day-num {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #1e293b;
+    }
+    .th-day-txt {
+      font-size: 0.58rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+
   </style>
   <!-- THÊM FIREBASE SDK VÀO TRƯỚC THẺ </HEAD> -->
   <script type="module">
@@ -174,7 +334,6 @@
     const urlParams = new URLSearchParams(window.location.search);
     const TARGET_GROUP = urlParams.get('target') || ""; 
 
-    let baseEmployeesData = [], monthEmployeesData = {};
     let employeesData = [], leavesData = [], badgesData = {}, quotasData = {};
     let isSyncing = false; 
     let selectedCells = []; 
@@ -194,14 +353,9 @@
 
         try {
             if (action === 'getInitialData') {
-                let employees = [], leaves = [], badges = {}, quotas = {}, monthEmployees = {};
+                let employees = [], leaves = [], badges = {}, quotas = {};
                 const empSnap = await fs.getDocs(fs.collection(db, "off_employees"));
                 empSnap.forEach(d => employees.push(d.data()));
-
-                try {
-                    const monthEmpSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
-                    monthEmpSnap.forEach(d => { monthEmployees[d.id] = d.data().employees || []; });
-                } catch(e) { console.warn("off_month_employees:", e); }
                 
                 const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
                 leaveSnap.forEach(d => leaves.push(d.data()));
@@ -210,7 +364,7 @@
                 configSnap.forEach(d => {
                     if(d.id === 'general') { badges = d.data().badges || {}; quotas = d.data().quotas || {}; }
                 });
-                return { employees, leaves, badges, quotas, monthEmployees };
+                return { employees, leaves, badges, quotas };
             }
 
             if (action === 'registerMultipleMCLeaves') {
@@ -327,147 +481,19 @@
       return "";
     }
 
-    function getMonthPrefix(year, month) {
-      return `${year}-${(month + 1).toString().padStart(2, '0')}`;
-    }
-
-    function normalizeGroupName(str) {
-      return String(str || 'KHÁC').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim() || 'KHÁC';
-    }
-
-    function getMemberRoleRank(emp) {
-      const nameUpper = String(emp.name || '').toUpperCase();
-      const roleUpper = String(emp.role || '').toUpperCase();
-      const badgeUpper = String(emp.customBadge || '').toUpperCase();
-      if (nameUpper.includes("OPERATION") || roleUpper.includes("OPERATION") || badgeUpper.includes("OPERATION")) return 1;
-      if (nameUpper.includes("MC") || roleUpper.includes("MC") || badgeUpper.includes("MC")) return 2;
-      return 3;
-    }
-
-    function getLivestreamGroupMeta(emp) {
-      const g = normalizeGroupName(emp.group).toUpperCase();
-      const n = String(emp.name || '').toUpperCase();
-      const b = String(emp.customBadge || '').toUpperCase();
-
-      if (g.includes("ORION") || b.includes("ORION") || n.includes("ORION")) {
-        return {
-          teamCode: "TEAM_KEN",
-          sortOrder: 102,
-          groupKey: "TEAM KEN - ORION",
-          displayHTML: "TEAM KEN<br><span style='font-size:0.75rem; color:#7c3aed; font-weight:700;'>Nhóm Orion (Lưu lượng)</span>",
-          isTraffic: true
-        };
-      }
-      if (g.includes("KEN") || b.includes("ANGELIK") || n.includes("ANGELIK")) {
-        return {
-          teamCode: "TEAM_KEN",
-          sortOrder: 101,
-          groupKey: "TEAM KEN - ANGELIK",
-          displayHTML: "TEAM KEN<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Angelik</span>",
-          isTraffic: false
-        };
-      }
-      if (g.includes("ROYEN") || b.includes("ROYEN") || n.includes("ROYEN")) {
-        return {
-          teamCode: "TEAM_U",
-          sortOrder: 202,
-          groupKey: "TEAM U - ROYEN:ONE",
-          displayHTML: "TEAM U<br><span style='font-size:0.75rem; color:#2563eb; font-weight:700;'>Nhóm Royen:One (Lưu lượng)</span>",
-          isTraffic: true
-        };
-      }
-      if (g.includes("TEAM U") || b.includes("FASHION") || n.includes("FASHION")) {
-        return {
-          teamCode: "TEAM_U",
-          sortOrder: 201,
-          groupKey: "TEAM U - FASHION",
-          displayHTML: "TEAM U<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Fashion</span>",
-          isTraffic: false
-        };
-      }
-      if (g.includes("DINO") || b.includes("BEE") || b.includes("BNART") || n.includes("BEE") || n.includes("BNART")) {
-        return {
-          teamCode: "TEAM_DINO",
-          sortOrder: 301,
-          groupKey: "TEAM DINO",
-          displayHTML: "TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bee & Bnart</span>",
-          isTraffic: false
-        };
-      }
-      if (g.includes("GIMBAL") || g.includes("MEDIA") || b.includes("GIMBAL") || b.includes("MEDIA")) {
-        return {
-          teamCode: "GIMBAL_MEDIA",
-          sortOrder: 401,
-          groupKey: "GIMBAL / MEDIA",
-          displayHTML: "GIMBAL / MEDIA",
-          isTraffic: false
-        };
-      }
-      return {
-        teamCode: "OTHER",
-        sortOrder: 999,
-        groupKey: normalizeGroupName(emp.group),
-        displayHTML: normalizeGroupName(emp.group),
-        isTraffic: false
-      };
-    }
-
-    function syncCurrentMonthEmployees() {
-      const currentPrefix = getMonthPrefix(displayYear, displayMonth);
-      let rawList = [];
-      if (monthEmployeesData && monthEmployeesData[currentPrefix] && Array.isArray(monthEmployeesData[currentPrefix]) && monthEmployeesData[currentPrefix].length > 0) {
-        rawList = JSON.parse(JSON.stringify(monthEmployeesData[currentPrefix]));
-      } else {
-        const allMonths = Object.keys(monthEmployeesData || {}).sort();
-        const prevMonths = allMonths.filter(m => m < currentPrefix);
-        if (prevMonths.length > 0) {
-          const latestPrev = prevMonths[prevMonths.length - 1];
-          if (monthEmployeesData[latestPrev] && monthEmployeesData[latestPrev].length > 0) {
-            rawList = JSON.parse(JSON.stringify(monthEmployeesData[latestPrev]));
-          } else {
-            rawList = JSON.parse(JSON.stringify(baseEmployeesData || []));
-          }
-        } else {
-          rawList = JSON.parse(JSON.stringify(baseEmployeesData || []));
-        }
-      }
-      
-      employeesData = rawList.map(e => {
-        let nUp = String(e.name || '').toUpperCase().trim();
-        let finalRole = e.role || 'LIVESTEAM';
-        let finalGroup = normalizeGroupName(e.group).toUpperCase();
-
-        if (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER")) {
-          finalRole = "TEACHER DANCE";
-          finalGroup = "TEACHER";
-        } else if (finalRole === "LIVESTEAM" || finalRole === "LIVESTREAM") {
-          const meta = getLivestreamGroupMeta(e);
-          finalGroup = meta.groupKey;
-        }
-
-        return {
-          name: e.name,
-          role: finalRole,
-          group: finalGroup,
-          customBadge: e.customBadge || ''
-        };
-      });
-    }
-
     function refreshData() {
       if(isSyncing) return showToast("Đang đồng bộ...", false, true);
       isSyncing = true; clearSelection(); showToast("⏳ Đang tải dữ liệu...", true); 
       callAPI('getInitialData')
         .then(data => { 
-          baseEmployeesData = data.employees || [];
-          monthEmployeesData = data.monthEmployees || {};
-          leavesData = data.leaves || []; 
-          badgesData = data.badges || {}; 
-          quotasData = data.quotas || {};
-          syncCurrentMonthEmployees();
-          renderTable(); 
-          isSyncing = false; 
-          showToast("✅ Đã làm mới xong!"); 
+          if(data && data.employees) { 
+              employeesData = data.employees; 
+              leavesData = data.leaves || []; 
+              badgesData = data.badges || {}; 
+              quotasData = data.quotas || {};
+              renderTable(); 
+          }
+          isSyncing = false; showToast("✅ Đã làm mới xong!");
         })
         .catch(err => { showToast("Lỗi lấy dữ liệu!", false, true); isSyncing = false; });
     }
@@ -516,56 +542,11 @@
           else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
           tbodyHTML += `<tr><td colspan="${daysInMonth + 2}" class="dept-divider" style="border-bottom: 1px solid var(--border-color);">${displayRole}</td></tr>`;
 
-          const getGroupSortOrder = (deptKey, groupKey) => {
-            if (deptKey === "LIVESTEAM" || deptKey === "LIVESTREAM") {
-              if (groupKey === "TEAM KEN - ANGELIK") return 101;
-              if (groupKey === "TEAM KEN - ORION") return 102;
-              if (groupKey === "TEAM U - FASHION") return 201;
-              if (groupKey === "TEAM U - ROYEN:ONE") return 202;
-              if (groupKey === "TEAM DINO") return 301;
-              if (groupKey === "GIMBAL / MEDIA") return 401;
-              return 999;
-            }
-            return 500;
-          };
-
-          let sortedGroups = Object.keys(depts[deptKey]).sort((a, b) => {
-            let ordA = getGroupSortOrder(deptKey, a);
-            let ordB = getGroupSortOrder(deptKey, b);
-            if (ordA !== ordB) return ordA - ordB;
-            return a.localeCompare(b);
-          });
-
-          for (let group of sortedGroups) {
-             let isTraffic = (group === "TEAM KEN - ORION" || group === "TEAM U - ROYEN:ONE");
-             depts[deptKey][group].sort((a, b) => {
-                let nUpA = String(a.name).toUpperCase();
-                let nUpB = String(b.name).toUpperCase();
-                let isTeacherA = (nUpA === "KEN" || nUpA === "U" || nUpA === "DINO" || nUpA.includes("TEACHER"));
-                let isTeacherB = (nUpB === "KEN" || nUpB === "U" || nUpB === "DINO" || nUpB.includes("TEACHER"));
-                if (isTeacherA && !isTeacherB) return -1;
-                if (!isTeacherA && isTeacherB) return 1;
-
-                if (isTraffic) {
-                  let rankA = getMemberRoleRank(a);
-                  let rankB = getMemberRoleRank(b);
-                  if (rankA !== rankB) return rankA - rankB;
-                }
-                return String(a.name).localeCompare(String(b.name));
-             });
-
-             let groupDisplayHTML = group;
-             if (group === "TEAM KEN - ANGELIK") groupDisplayHTML = `TEAM KEN<br><span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Nhóm Angelik</span>`;
-             else if (group === "TEAM KEN - ORION") groupDisplayHTML = `TEAM KEN<br><span style="font-size:0.75rem; color:#7c3aed; font-weight:700;">Nhóm Orion<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(Lưu lượng)</small></span>`;
-             else if (group === "TEAM U - FASHION") groupDisplayHTML = `TEAM U<br><span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Nhóm Fashion</span>`;
-             else if (group === "TEAM U - ROYEN:ONE") groupDisplayHTML = `TEAM U<br><span style="font-size:0.75rem; color:#2563eb; font-weight:700;">Nhóm Royen:One<br><small style="font-size:0.68rem; color:#3b82f6; font-weight:600;">(Lưu lượng)</small></span>`;
-             else if (group === "TEAM DINO") groupDisplayHTML = `TEAM DINO<br><span style="font-size:0.75rem; color:#0284c7; font-weight:700;">Nhóm Bee & Bnart</span>`;
-             else if (group === "GIMBAL / MEDIA") groupDisplayHTML = `GIMBAL / MEDIA`;
-
+          for (let group in depts[deptKey]) {
              depts[deptKey][group].forEach((emp, idx) => {
                 let name = emp.name; let userBadge = generateBadgeHTML(emp);
                 let tr = `<tr>`;
-                if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" class="group-cell" style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">${groupDisplayHTML}</td>`;
+                if (idx === 0) tr += `<td rowspan="${depts[deptKey][group].length}" class="group-cell" style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">${group}</td>`;
                 tr += `<td class="name-cell" style="border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">
                          <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 100%; padding: 4px 0;">
                            <span style="font-size: 0.75rem; line-height: 1.2;">${name}</span>
@@ -947,7 +928,7 @@
 
     function closeModal() { document.getElementById('customModal').classList.remove('active'); }
     let toastTimer; function showToast(msg, keep = false, isError = false, isBoom = false) { const toast = document.getElementById('toast'); toast.innerHTML = msg; toast.className = ''; if (isError) toast.classList.add('error'); if (isBoom) toast.classList.add('success-boom'); void toast.offsetWidth; toast.classList.add('show'); clearTimeout(toastTimer); if(!keep) toastTimer = setTimeout(() => toast.classList.remove('show', 'success-boom', 'error'), 2000); }
-    function changeMonth(offset) { if(isSyncing) return; displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} /${displayYear}`; syncCurrentMonthEmployees(); clearSelection(); renderTable(); }
+    function changeMonth(offset) { if(isSyncing) return; displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} /${displayYear}`; clearSelection(); renderTable(); }
 
     function exportPersonalCalendar() {
       if(isSyncing) return;
