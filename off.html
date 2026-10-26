@@ -2879,13 +2879,15 @@
           </div>
         </div>
 
-        <!-- GIMBAL / MEDIA -->
+        <!-- BỘ PHẬN MEDIA (TÁCH RIÊNG THÀNH BỘ PHẬN ĐỘC LẬP) -->
+        <div class="sidebar-section-header" style="margin-top: 14px;">
+          <span>Bộ Phận Media</span>
+        </div>
         <div class="sidebar-teacher-block">
-          <div class="sidebar-teacher-header" id="sideHead-MEDIA" onclick="selectSidebarFilter('GROUP:GIMBAL / MEDIA')">
+          <div class="sidebar-teacher-header" id="sideHead-MEDIA" onclick="selectSidebarFilter('DEPT:MEDIA')">
             <div class="side-left-wrap">
               <span class="teacher-dot dot-media"></span>
-              <span class="teacher-name">Gimbal / Media</span>
-              
+              <span class="teacher-name">Media & Kỹ thuật</span>
             </div>
             <span class="side-item-badge" id="sideBadge-MEDIA">0</span>
           </div>
@@ -2951,7 +2953,9 @@
             <button type="button" class="modern-btn btn-primary-gradient" onclick="openAddEmployeeModal()" title="Thêm nhân sự mới">
               ➕ Thêm NS
             </button>
-            
+            <button type="button" class="modern-btn btn-secondary-outline" onclick="openEditEmployeeModal()" title="Chỉnh sửa nhân sự (Đổi Bộ phận / Nhóm / Tên)">
+              ✏️ Sửa NS
+            </button>
             <button type="button" class="modern-btn btn-secondary-outline" onclick="openBadgeLibraryModal()" title="Quản lý thư viện Badge">
               🎨 Badge
             </button>
@@ -3143,6 +3147,7 @@
       <div style="margin-bottom: 12px;">
         <label style="font-weight: 600; font-size: 0.85rem;">Bộ phận (Department):</label>
         <select id="newEmpRole" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;" onchange="updateGroupDropdown()">
+          <option value="MEDIA">MEDIA / KỸ THUẬT</option>
           <option value="LIVESTEAM">LIVESTREAM</option>
           <option value="TEACHER DANCE">TEACHER DANCE</option>
           <option value="MANAGER">MANAGER</option>
@@ -3174,6 +3179,57 @@
       <div class="modal-actions" style="justify-content: flex-end;">
         <button class="btn-cancel" onclick="closeAddEmployeeModal()">Hủy</button>
         <button class="btn-ok" onclick="submitNewEmployee()" style="background:#10b981;">✅ Thêm Mới</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="editEmployeeModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0; color: #2563eb;">✏️ Chỉnh Sửa Nhân Sự (<span id="editEmpMonthName" style="color: #1d4ed8;"></span>)</h3>
+      <div style="margin-bottom: 12px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Chọn nhân sự cần sửa:</label>
+        <select id="editEmpSelect" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box; font-weight: 700; color: #1e293b;" onchange="onEditEmpSelected()"></select>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Tên nhân sự (Sửa tên):</label>
+        <input type="text" id="editEmpName" placeholder="Tên nhân sự..." style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Bộ phận (Department):</label>
+        <select id="editEmpRole" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;" onchange="updateEditGroupDropdown()">
+          <option value="MEDIA">MEDIA / KỸ THUẬT</option>
+          <option value="LIVESTEAM">LIVESTREAM</option>
+          <option value="TEACHER DANCE">TEACHER DANCE</option>
+          <option value="MANAGER">MANAGER</option>
+          <option value="ACCOUNTANT">ACCOUNTANT</option>
+          <option value="KHÁC">BỘ PHẬN KHÁC</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight: 600; font-size: 0.85rem;">Chức vụ / Nhóm (Role/Group):</label>
+        <select id="editEmpGroup" style="width:100%; padding:10px; margin-top:5px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box;" onchange="checkEditCustomGroup()"></select>
+        <input type="text" id="editEmpGroupCustom" placeholder="Nhập tên nhóm mới..." style="width:100%; padding:10px; margin-top:8px; border-radius:6px; border:1px solid #cbd5e1; box-sizing:border-box; display:none;">
+      </div>
+      <div style="margin-bottom: 20px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <label style="font-weight: 700; font-size: 0.85rem; color: #334155; display: block; margin-bottom: 6px;">🗓️ Phạm vi cập nhật:</label>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="editEmpScope" value="CURRENT" checked>
+            <span><b>Chỉ áp dụng tháng này</b> (<span class="editEmpCurrentMonthText"></span>) - <span style="color:#059669; font-size: 0.8rem;">Không ảnh hưởng tháng khác</span></span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="editEmpScope" value="FUTURE">
+            <span><b>Từ tháng này trở đi</b> (<span class="editEmpCurrentMonthText"></span> và tương lai) - <span style="color:#059669; font-size: 0.8rem;">Không ảnh hưởng tháng trước</span></span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="editEmpScope" value="ALL">
+            <span><b>Tất cả các tháng</b></span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions" style="justify-content: space-between;">
+        <button class="btn-cancel" onclick="closeEditEmployeeModal()">Hủy</button>
+        <button class="btn-ok" onclick="submitEditEmployee()" style="background:#2563eb;">💾 Lưu Thay Đổi</button>
       </div>
     </div>
   </div>
@@ -3546,6 +3602,80 @@
                 return "SUCCESS";
             }
 
+            if (action === 'editEmployee') {
+                const { oldName, newName, group, role, monthStr, scope = 'CURRENT', currentListSnapshot = [] } = payload;
+                const safeOld = safeID(oldName);
+                const safeNew = safeID(newName);
+
+                const updateList = (list) => {
+                    let res = (list || []).map(e => ({ ...e }));
+                    const idx = res.findIndex(e => String(e.name).trim().toUpperCase() === String(oldName).trim().toUpperCase());
+                    if (idx > -1) {
+                        res[idx] = { ...res[idx], name: newName, group, role };
+                    }
+                    return res;
+                };
+
+                const targetList = updateList(currentListSnapshot);
+
+                if (scope === 'CURRENT') {
+                    await fs.setDoc(fs.doc(db, "off_month_employees", monthStr), { 
+                        employees: targetList, 
+                        updatedAt: new Date().toISOString() 
+                    }, { merge: true });
+                } else if (scope === 'FUTURE') {
+                    const batch = fs.writeBatch(db);
+                    batch.set(fs.doc(db, "off_month_employees", monthStr), { 
+                        employees: targetList, 
+                        updatedAt: new Date().toISOString() 
+                    }, { merge: true });
+                    const monthSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
+                    monthSnap.forEach(d => {
+                        if (d.id > monthStr) {
+                            let list = updateList(d.data().employees || []);
+                            batch.set(d.ref, { employees: list, updatedAt: new Date().toISOString() }, { merge: true });
+                        }
+                    });
+                    await batch.commit();
+                } else if (scope === 'ALL') {
+                    const batch = fs.writeBatch(db);
+                    if (safeOld !== safeNew) {
+                        batch.delete(fs.doc(db, "off_employees", safeOld));
+                    }
+                    batch.set(fs.doc(db, "off_employees", safeNew), { name: newName, group, role });
+                    batch.set(fs.doc(db, "off_month_employees", monthStr), { 
+                        employees: targetList, 
+                        updatedAt: new Date().toISOString() 
+                    }, { merge: true });
+                    const monthSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
+                    monthSnap.forEach(d => {
+                        let list = updateList(d.data().employees || []);
+                        batch.set(d.ref, { employees: list, updatedAt: new Date().toISOString() }, { merge: true });
+                    });
+                    await batch.commit();
+                }
+
+                if (String(oldName).trim().toUpperCase() !== String(newName).trim().toUpperCase()) {
+                    const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
+                    const leaveBatch = fs.writeBatch(db);
+                    let movedCount = 0;
+                    leaveSnap.forEach(d => {
+                        const lData = d.data();
+                        if (String(lData.name).trim().toUpperCase() === String(oldName).trim().toUpperCase()) {
+                            leaveBatch.delete(d.ref);
+                            const newLeaveRef = fs.doc(db, "off_leaves", safeNew + "_" + lData.date);
+                            leaveBatch.set(newLeaveRef, { ...lData, name: newName, role: role });
+                            movedCount++;
+                        }
+                    });
+                    if (movedCount > 0) {
+                        await leaveBatch.commit();
+                    }
+                }
+
+                return "SUCCESS";
+            }
+
             if (action === 'deleteEmployee') {
                 const { name, monthStr, scope = 'CURRENT', currentListSnapshot = [] } = payload;
                 const safeName = safeID(name);
@@ -3866,6 +3996,10 @@
           html += `<div style="text-align:center; font-weight:800; font-size:1rem; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border-color); color:var(--text-main);">👤 Tùy chọn: ${empName}</div>`;
         }
         
+        html += `<div class="context-menu-item" style="color: #1d4ed8; font-weight: 800; background: #eff6ff; display: flex; align-items: center; gap: 8px; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #bfdbfe;" onclick="openEditEmployeeModal('${empName}')">✏️ Sửa Tên / Bộ phận / Nhóm</div>`;
+        html += `<div class="context-menu-divider"></div>`;
+        html += `<div style="font-size: 0.72rem; font-weight: 700; color: #64748b; padding: 4px 6px; text-transform: uppercase;">Gán Danh Hiệu (VIP Badge):</div>`;
+
         for (let key in badgesData) { 
           html += `<div class="context-menu-item" onclick="submitContextBadge('${key}')"><span class="vip-badge" style="background: ${badgesData[key]}; border:none; margin-left:0;">${key}</span></div>`; 
         }
@@ -4099,9 +4233,17 @@
         if (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER")) {
           finalRole = "TEACHER DANCE";
           finalGroup = "TEACHER";
+        } else if (String(finalRole).toUpperCase() === "MEDIA" || finalGroup.includes("MEDIA") || finalGroup.includes("GIMBAL") || String(e.role || '').toUpperCase().includes("MEDIA")) {
+          finalRole = "MEDIA";
+          finalGroup = normalizeGroupName(e.group).toUpperCase() || "GIMBAL / MEDIA";
         } else if (finalRole === "LIVESTEAM" || finalRole === "LIVESTREAM") {
           const meta = getLivestreamGroupMeta(e);
-          finalGroup = meta.groupKey;
+          if (meta.teamCode === "GIMBAL_MEDIA") {
+            finalRole = "MEDIA";
+            finalGroup = "GIMBAL / MEDIA";
+          } else {
+            finalGroup = meta.groupKey;
+          }
         }
 
         return {
@@ -4215,8 +4357,10 @@
     for (let deptKey in depts) {
         let displayRole = deptKey;
         if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+        else if (displayRole === "MEDIA") displayRole = "BỘ PHẬN MEDIA & KỸ THUẬT";
         else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; 
         else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+        else if (displayRole === "TEACHER DANCE") displayRole = "BỘ PHẬN TEACHER DANCE";
         else displayRole = "BỘ PHẬN " + displayRole;
 
         let deptOpt = document.createElement('option');
@@ -4287,6 +4431,10 @@
       if (mobileGroupFilter === 'TEAM:DINO') {
         return empNormGroup.includes('DINO') || empNormGroup.includes('BEE') || empNormGroup.includes('BNART');
       }
+      if (mobileGroupFilter === 'DEPT:MEDIA' || mobileGroupFilter === 'GROUP:GIMBAL / MEDIA') {
+        const r = String(emp.role || '').toUpperCase();
+        return r === 'MEDIA' || empNormGroup.includes('MEDIA') || empNormGroup.includes('GIMBAL');
+      }
       if (mobileGroupFilter.startsWith('GROUP:')) {
         const targetG = mobileGroupFilter.replace('GROUP:', '').toUpperCase();
         return empNormGroup === targetG || empNormGroup.includes(targetG) || targetG.includes(empNormGroup);
@@ -4308,7 +4456,7 @@
         { key: 'GROUP:TEAM U - ROYEN:ONE', label: 'U: Royen:One ⚡' },
         { key: 'GROUP:TEAM U - FASHION', label: 'U: Fashion' },
         { key: 'TEAM:DINO', label: 'Dino: Bee & Bnart' },
-        { key: 'GROUP:GIMBAL / MEDIA', label: 'Gimbal / Media' }
+        { key: 'DEPT:MEDIA', label: '🎥 Media / Kỹ thuật' }
       ];
 
       if (pendingCount > 0 || mobileGroupFilter === 'PENDING') {
@@ -4343,7 +4491,11 @@
       if (f === 'TEAM:KEN') return groupKey === 'TEAM KEN - ANGELIK' || groupKey === 'TEAM KEN - ORION';
       if (f === 'TEAM:U') return groupKey === 'TEAM U - FASHION' || groupKey === 'TEAM U - ROYEN:ONE';
       if (f === 'TEAM:DINO') return groupKey === 'TEAM DINO';
-      if (f === 'GROUP:GIMBAL / MEDIA') return groupKey === 'GIMBAL / MEDIA';
+      if (f === 'DEPT:MEDIA' || f === 'GROUP:GIMBAL / MEDIA') {
+        const dk = String(deptKey).toUpperCase();
+        const gk = String(groupKey).toUpperCase();
+        return dk === 'MEDIA' || gk.includes('MEDIA') || gk.includes('GIMBAL');
+      }
       if (f.startsWith('GROUP:')) {
         return groupKey === f.replace('GROUP:', '');
       }
@@ -4374,7 +4526,7 @@
       else if (filterKey === 'GROUP:TEAM U - ROYEN:ONE') activeEl = document.getElementById('sideItem-ROYENONE');
       else if (filterKey === 'TEAM:DINO') activeEl = document.getElementById('sideHead-DINO');
       else if (filterKey === 'GROUP:TEAM DINO') activeEl = document.getElementById('sideItem-DINOSUB');
-      else if (filterKey === 'GROUP:GIMBAL / MEDIA') activeEl = document.getElementById('sideHead-MEDIA');
+      else if (filterKey === 'DEPT:MEDIA' || filterKey === 'GROUP:GIMBAL / MEDIA') activeEl = document.getElementById('sideHead-MEDIA');
       else {
         let dynamicEl = document.getElementById('sideDynamic-' + filterKey.replace(/[^a-zA-Z0-9]/g, ''));
         if (dynamicEl) activeEl = dynamicEl;
@@ -4418,9 +4570,9 @@
         else if (g.includes('FASHION')) countFashion++;
         else if (g.includes('ROYEN')) countRoyen++;
         else if (g.includes('DINO') || g.includes('BEE') || g.includes('BNART')) countDino++;
-        else if (g.includes('GIMBAL') || g.includes('MEDIA')) countMedia++;
+        else if (r === 'MEDIA' || g.includes('GIMBAL') || g.includes('MEDIA')) countMedia++;
         else {
-          if (r && r !== 'LIVESTREAM' && r !== 'LIVESTEAM') {
+          if (r && r !== 'LIVESTREAM' && r !== 'LIVESTEAM' && r !== 'MEDIA') {
             otherDepts[emp.role] = (otherDepts[emp.role] || 0) + 1;
           }
         }
@@ -4497,9 +4649,9 @@
       } else if (f === 'TEAM:DINO' || f === 'GROUP:TEAM DINO') {
         deptLabel = 'Bộ Phận Livestream';
         targetLabel = 'Team Thầy Dino (Bee & Bnart)';
-      } else if (f === 'GROUP:GIMBAL / MEDIA') {
-        deptLabel = 'Bộ Phận Livestream';
-        targetLabel = 'Gimbal / Media';
+      } else if (f === 'DEPT:MEDIA' || f === 'GROUP:GIMBAL / MEDIA') {
+        deptLabel = 'Bộ Phận Media';
+        targetLabel = 'Media & Kỹ Thuật';
       } else if (f.startsWith('DEPT:')) {
         deptLabel = 'Bộ Phận';
         targetLabel = f.replace('DEPT:', '');
@@ -4712,9 +4864,10 @@
       const getDeptOrder = (r) => {
         let ru = String(r).toUpperCase();
         if (ru === "LIVESTEAM" || ru === "LIVESTREAM") return 1;
-        if (ru === "TEACHER DANCE") return 2;
-        if (ru === "MANAGER") return 3;
-        if (ru === "ACCOUNTANT") return 4;
+        if (ru === "MEDIA" || ru.includes("MEDIA") || ru.includes("KỸ THUẬT")) return 2;
+        if (ru === "TEACHER DANCE") return 3;
+        if (ru === "MANAGER") return 4;
+        if (ru === "ACCOUNTANT") return 5;
         return 9;
       };
 
@@ -4727,8 +4880,10 @@
           if (groupKey === "TEAM U - FASHION") return 201;
           if (groupKey === "TEAM U - ROYEN:ONE") return 202;
           if (groupKey === "TEAM DINO") return 301;
-          if (groupKey === "GIMBAL / MEDIA") return 401;
           return 999;
+        }
+        if (deptKey === "MEDIA") {
+          return 100;
         }
         return 500;
       };
@@ -4749,8 +4904,11 @@
           if (!window.selectedSidebarFilter || window.selectedSidebarFilter === 'ALL') {
             let displayRole = String(deptKey).toUpperCase();
             if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+            else if (displayRole === "MEDIA" || displayRole.includes("MEDIA")) displayRole = "BỘ PHẬN MEDIA & KỸ THUẬT";
             else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; 
             else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+            else if (displayRole === "TEACHER DANCE") displayRole = "BỘ PHẬN TEACHER DANCE";
+            else displayRole = "BỘ PHẬN " + displayRole;
             tbody.innerHTML += `<tr><td colspan="${daysInMonth + 1}" class="dept-divider">${displayRole}</td></tr>`;
           }
 
@@ -4898,8 +5056,11 @@
       for (let deptKey in depts) {
         let displayRole = String(deptKey).toUpperCase();
         if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+        else if (displayRole === "MEDIA" || displayRole.includes("MEDIA")) displayRole = "BỘ PHẬN MEDIA & KỸ THUẬT";
         else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; 
         else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+        else if (displayRole === "TEACHER DANCE") displayRole = "BỘ PHẬN TEACHER DANCE";
+        else displayRole = "BỘ PHẬN " + displayRole;
         
         html += `<div class="m-dept-header"><span>🏢 ${displayRole}</span></div>`;
 
@@ -5586,77 +5747,260 @@ function initMobileCalSwipeGesture() {
     }
     function closeAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.remove('active'); }
   function updateGroupDropdown() {
-  const role = document.getElementById('newEmpRole').value;
-  const groupSelect = document.getElementById('newEmpGroup'); 
-  let options = "";
-  
-  if (role === "LIVESTEAM" || role === "LIVESTREAM") {
-    options = '<optgroup label="👑 TEAM KEN (Thầy Ken)">' +
-                '<option value="Team Ken - Angelik">Team Ken - Angelik (Nhóm nhảy)</option>' +
-                '<option value="Team Ken - Orion">Team Ken - Orion (Nhóm lưu lượng)</option>' +
-              '</optgroup>' +
-              '<optgroup label="👑 TEAM U (Cô U)">' +
-                '<option value="Team U - Fashion">Team U - Fashion (Nhóm nhảy)</option>' +
-                '<option value="Team U - Royen:One">Team U - Royen:One (Nhóm lưu lượng)</option>' +
-              '</optgroup>' +
-              '<optgroup label="👑 TEAM DINO (Thầy Dino)">' +
-                '<option value="Team Dino">Team Dino (Bee & Bnart)</option>' +
-                '<option value="Team Dino - Bee">Team Dino - Bee</option>' +
-                '<option value="Team Dino - Bnart">Team Dino - Bnart</option>' +
-              '</optgroup>' +
-              '<optgroup label="🎥 HỖ TRỢ">' +
-                '<option value="Gimbal / Media">Gimbal / Media</option>' +
-              '</optgroup>';
-  }
-  else if (role === "TEACHER DANCE") {
-    options = '<option value="Teacher">Teacher (Riêng biệt)</option>';
-  }
-  else if (role === "MANAGER") {
-    options = '<option value="Manager Team">Manager Team</option>' +
-              '<option value="Operation">Operation</option>' +
-              '<option value="Translation">Translation</option>' +
-              '<option value="Tech">Tech</option>' +
-              '<option value="HR">HR</option>';
-  }
-  else if (role === "ACCOUNTANT") {
-    options = '<option value="Accountant Team">Accountant Team</option>';
-  }
-  
-  options += '<option value="CUSTOM">➕ Khác (Thêm nhóm mới)...</option>'; 
-  groupSelect.innerHTML = options; 
-  checkCustomGroup();
-}
-    function checkCustomGroup() { let val = document.getElementById('newEmpGroup').value; document.getElementById('newEmpGroupCustom').style.display = (val === 'CUSTOM') ? 'block' : 'none'; }
-    function submitNewEmployee() {
-      let name = document.getElementById('newEmpName').value.trim(), role = document.getElementById('newEmpRole').value, group = document.getElementById('newEmpGroup').value;
-      if (group === 'CUSTOM') group = document.getElementById('newEmpGroupCustom').value.trim();
-      if (!name || !group) return showToast("Vui lòng điền đủ Tên và Nhóm!", false, true);
-
-      let scope = 'CURRENT';
-      const scopeRadio = document.querySelector('input[name="addEmpScope"]:checked');
-      if (scopeRadio) scope = scopeRadio.value;
-
-      let monthPrefix = getMonthPrefix(displayYear, displayMonth);
-      closeAddEmployeeModal(); showToast("⏳ Đang lưu nhân sự...", true);
-      
-      callAPI('addEmployee', { 
-        role: role, 
-        group: group, 
-        name: name, 
-        monthStr: monthPrefix, 
-        scope: scope, 
-        currentListSnapshot: employeesData 
-      })
-        .then(res => { 
-          if (res === "SUCCESS") { 
-            showToast(`✅ Đã thêm nhân sự vào Tháng ${displayMonth + 1}/${displayYear}!`); 
-            refreshData(); 
-          } else { 
-            showToast(res, false, true); 
-          } 
-        })
-        .catch(err => { showToast("Lỗi kết nối", false, true); });
+    const role = document.getElementById('newEmpRole').value;
+    const groupSelect = document.getElementById('newEmpGroup'); 
+    let options = "";
+    
+    if (role === "MEDIA") {
+      options = '<optgroup label="🎥 BỘ PHẬN MEDIA & KỸ THUẬT">' +
+                  '<option value="Gimbal / Media">Gimbal / Media</option>' +
+                  '<option value="Media / Quay dựng">Media / Quay dựng</option>' +
+                  '<option value="Editor / Hậu kỳ">Editor / Hậu kỳ</option>' +
+                  '<option value="Kỹ thuật Livestream">Kỹ thuật Livestream</option>' +
+                '</optgroup>';
     }
+    else if (role === "LIVESTEAM" || role === "LIVESTREAM") {
+      options = '<optgroup label="👑 TEAM KEN (Thầy Ken)">' +
+                  '<option value="Team Ken - Angelik">Team Ken - Angelik (Nhóm nhảy)</option>' +
+                  '<option value="Team Ken - Orion">Team Ken - Orion (Nhóm lưu lượng)</option>' +
+                '</optgroup>' +
+                '<optgroup label="👑 TEAM U (Cô U)">' +
+                  '<option value="Team U - Fashion">Team U - Fashion (Nhóm nhảy)</option>' +
+                  '<option value="Team U - Royen:One">Team U - Royen:One (Nhóm lưu lượng)</option>' +
+                '</optgroup>' +
+                '<optgroup label="👑 TEAM DINO (Thầy Dino)">' +
+                  '<option value="Team Dino">Team Dino (Bee & Bnart)</option>' +
+                  '<option value="Team Dino - Bee">Team Dino - Bee</option>' +
+                  '<option value="Team Dino - Bnart">Team Dino - Bnart</option>' +
+                '</optgroup>';
+    }
+    else if (role === "TEACHER DANCE") {
+      options = '<option value="Teacher">Teacher (Riêng biệt)</option>';
+    }
+    else if (role === "MANAGER") {
+      options = '<option value="Manager Team">Manager Team</option>' +
+                '<option value="Operation">Operation</option>' +
+                '<option value="Translation">Translation</option>' +
+                '<option value="Tech">Tech</option>' +
+                '<option value="HR">HR</option>';
+    }
+    else if (role === "ACCOUNTANT") {
+      options = '<option value="Accountant Team">Accountant Team</option>';
+    }
+    
+    options += '<option value="CUSTOM">➕ Khác (Thêm nhóm mới)...</option>'; 
+    groupSelect.innerHTML = options; 
+    checkCustomGroup();
+  }
+
+  function checkCustomGroup() { 
+    let val = document.getElementById('newEmpGroup').value; 
+    document.getElementById('newEmpGroupCustom').style.display = (val === 'CUSTOM') ? 'block' : 'none'; 
+  }
+
+  function submitNewEmployee() {
+    let name = document.getElementById('newEmpName').value.trim();
+    let role = document.getElementById('newEmpRole').value;
+    let group = document.getElementById('newEmpGroup').value;
+    if (group === 'CUSTOM') group = document.getElementById('newEmpGroupCustom').value.trim();
+    if (!name || !group) return showToast("Vui lòng điền đủ Tên và Nhóm!", false, true);
+
+    let scope = 'CURRENT';
+    const scopeRadio = document.querySelector('input[name="addEmpScope"]:checked');
+    if (scopeRadio) scope = scopeRadio.value;
+
+    let monthPrefix = getMonthPrefix(displayYear, displayMonth);
+    closeAddEmployeeModal(); showToast("⏳ Đang lưu nhân sự...", true);
+    
+    callAPI('addEmployee', { 
+      role: role, 
+      group: group, 
+      name: name, 
+      monthStr: monthPrefix, 
+      scope: scope, 
+      currentListSnapshot: employeesData 
+    })
+      .then(res => { 
+        if (res === "SUCCESS") { 
+          showToast(`✅ Đã thêm nhân sự vào Tháng ${displayMonth + 1}/${displayYear}!`); 
+          refreshData(); 
+        } else { 
+          showToast(res, false, true); 
+        } 
+      })
+      .catch(err => { showToast("Lỗi kết nối", false, true); });
+  }
+
+  // =========================================================================
+  // CHỈNH SỬA THÔNG TIN NHÂN SỰ (ĐỔI TÊN / BỘ PHẬN / NHÓM)
+  // =========================================================================
+  function openEditEmployeeModal(empName) {
+    closeAllMobileSheets();
+    if (!employeesData || employeesData.length === 0) {
+      return showToast("Chưa có dữ liệu nhân sự để sửa!", false, true);
+    }
+
+    const monthLabel = `Tháng ${displayMonth + 1}/${displayYear}`;
+    const titleSpan = document.getElementById('editEmpMonthName');
+    if (titleSpan) titleSpan.innerText = monthLabel;
+    document.querySelectorAll('.editEmpCurrentMonthText').forEach(el => {
+      el.innerText = monthLabel;
+    });
+
+    const select = document.getElementById('editEmpSelect');
+    select.innerHTML = '';
+    
+    const sorted = [...employeesData].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    sorted.forEach(emp => {
+      const opt = document.createElement('option');
+      opt.value = emp.name;
+      opt.innerText = `${emp.name} [${emp.role || 'LIVESTREAM'} - ${emp.group || ''}]`;
+      select.appendChild(opt);
+    });
+
+    if (empName && employeesData.some(e => e.name === empName)) {
+      select.value = empName;
+    }
+
+    onEditEmpSelected();
+    document.getElementById('editEmployeeModal').classList.add('active');
+  }
+
+  function closeEditEmployeeModal() {
+    document.getElementById('editEmployeeModal').classList.remove('active');
+  }
+
+  function onEditEmpSelected() {
+    const selectedName = document.getElementById('editEmpSelect').value;
+    const emp = employeesData.find(e => e.name === selectedName);
+    if (!emp) return;
+
+    document.getElementById('editEmpName').value = emp.name;
+
+    let r = emp.role ? String(emp.role).trim().toUpperCase() : 'LIVESTREAM';
+    let g = emp.group ? String(emp.group).trim() : '';
+
+    if (r === 'MEDIA' || g.toUpperCase().includes('MEDIA') || g.toUpperCase().includes('GIMBAL')) {
+      document.getElementById('editEmpRole').value = 'MEDIA';
+    } else if (r === 'LIVESTEAM' || r === 'LIVESTREAM') {
+      document.getElementById('editEmpRole').value = 'LIVESTEAM';
+    } else if (r === 'TEACHER DANCE') {
+      document.getElementById('editEmpRole').value = 'TEACHER DANCE';
+    } else if (r === 'MANAGER') {
+      document.getElementById('editEmpRole').value = 'MANAGER';
+    } else if (r === 'ACCOUNTANT') {
+      document.getElementById('editEmpRole').value = 'ACCOUNTANT';
+    } else {
+      document.getElementById('editEmpRole').value = 'KHÁC';
+    }
+
+    updateEditGroupDropdown(g);
+  }
+
+  function updateEditGroupDropdown(preselectGroup) {
+    const role = document.getElementById('editEmpRole').value;
+    const groupSelect = document.getElementById('editEmpGroup');
+    let options = "";
+
+    if (role === "MEDIA") {
+      options = '<optgroup label="🎥 BỘ PHẬN MEDIA & KỸ THUẬT">' +
+                  '<option value="Gimbal / Media">Gimbal / Media</option>' +
+                  '<option value="Media / Quay dựng">Media / Quay dựng</option>' +
+                  '<option value="Editor / Hậu kỳ">Editor / Hậu kỳ</option>' +
+                  '<option value="Kỹ thuật Livestream">Kỹ thuật Livestream</option>' +
+                '</optgroup>';
+    } else if (role === "LIVESTEAM" || role === "LIVESTREAM") {
+      options = '<optgroup label="👑 TEAM KEN (Thầy Ken)">' +
+                  '<option value="Team Ken - Angelik">Team Ken - Angelik (Nhóm nhảy)</option>' +
+                  '<option value="Team Ken - Orion">Team Ken - Orion (Nhóm lưu lượng)</option>' +
+                '</optgroup>' +
+                '<optgroup label="👑 TEAM U (Cô U)">' +
+                  '<option value="Team U - Fashion">Team U - Fashion (Nhóm nhảy)</option>' +
+                  '<option value="Team U - Royen:One">Team U - Royen:One (Nhóm lưu lượng)</option>' +
+                '</optgroup>' +
+                '<optgroup label="👑 TEAM DINO (Thầy Dino)">' +
+                  '<option value="Team Dino">Team Dino (Bee & Bnart)</option>' +
+                  '<option value="Team Dino - Bee">Team Dino - Bee</option>' +
+                  '<option value="Team Dino - Bnart">Team Dino - Bnart</option>' +
+                '</optgroup>';
+    } else if (role === "TEACHER DANCE") {
+      options = '<option value="Teacher">Teacher (Riêng biệt)</option>';
+    } else if (role === "MANAGER") {
+      options = '<option value="Manager Team">Manager Team</option>' +
+                '<option value="Operation">Operation</option>' +
+                '<option value="Translation">Translation</option>' +
+                '<option value="Tech">Tech</option>' +
+                '<option value="HR">HR</option>';
+    } else if (role === "ACCOUNTANT") {
+      options = '<option value="Accountant Team">Accountant Team</option>';
+    }
+
+    options += '<option value="CUSTOM">➕ Khác (Nhóm tùy chỉnh)...</option>';
+    groupSelect.innerHTML = options;
+
+    if (preselectGroup) {
+      let found = false;
+      for (let i = 0; i < groupSelect.options.length; i++) {
+        if (groupSelect.options[i].value.toUpperCase() === preselectGroup.toUpperCase()) {
+          groupSelect.selectedIndex = i;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        groupSelect.value = 'CUSTOM';
+        document.getElementById('editEmpGroupCustom').value = preselectGroup;
+      }
+    }
+
+    checkEditCustomGroup();
+  }
+
+  function checkEditCustomGroup() {
+    let val = document.getElementById('editEmpGroup').value;
+    document.getElementById('editEmpGroupCustom').style.display = (val === 'CUSTOM') ? 'block' : 'none';
+  }
+
+  function submitEditEmployee() {
+    let oldName = document.getElementById('editEmpSelect').value;
+    let newName = document.getElementById('editEmpName').value.trim();
+    let role = document.getElementById('editEmpRole').value;
+    let group = document.getElementById('editEmpGroup').value;
+    if (group === 'CUSTOM') group = document.getElementById('editEmpGroupCustom').value.trim();
+
+    if (!oldName || !newName || !group) {
+      return showToast("Vui lòng điền đủ Tên và Nhóm!", false, true);
+    }
+
+    let scope = 'CURRENT';
+    const scopeRadio = document.querySelector('input[name="editEmpScope"]:checked');
+    if (scopeRadio) scope = scopeRadio.value;
+
+    let monthPrefix = getMonthPrefix(displayYear, displayMonth);
+    closeEditEmployeeModal();
+    showToast("⏳ Đang cập nhật nhân sự...", true);
+
+    callAPI('editEmployee', {
+      oldName: oldName,
+      newName: newName,
+      role: role,
+      group: group,
+      monthStr: monthPrefix,
+      scope: scope,
+      currentListSnapshot: employeesData
+    })
+    .then(res => {
+      if (res === "SUCCESS") {
+        showToast(`✅ Đã cập nhật nhân sự "${newName}" thành công!`);
+        refreshData();
+      } else {
+        showToast(res, false, true);
+      }
+    })
+    .catch(err => {
+      showToast("Lỗi kết nối khi cập nhật", false, true);
+    });
+  }
 
     function openCopyMonthModal() {
       const targetPrefix = getMonthPrefix(displayYear, displayMonth);
@@ -5743,8 +6087,10 @@ function initMobileCalSwipeGesture() {
     for (let deptKey in depts) {
         let displayRole = deptKey;
         if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM";
+        else if (displayRole === "MEDIA") displayRole = "BỘ PHẬN MEDIA & KỸ THUẬT";
         else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER"; 
         else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT";
+        else if (displayRole === "TEACHER DANCE") displayRole = "BỘ PHẬN TEACHER DANCE";
         else displayRole = "BỘ PHẬN " + displayRole;
 
         container.innerHTML += `<div style="grid-column: 1 / -1; font-weight: 800; color: #0f172a; margin-top: 10px; font-size: 0.9rem;">${displayRole}</div>`;
@@ -5772,8 +6118,10 @@ function initMobileCalSwipeGesture() {
     for (let r in depts) {
         let displayR = r;
         if (displayR === "LIVESTEAM" || displayR === "LIVESTREAM") displayR = "BỘ PHẬN LIVESTREAM";
+        else if (displayR === "MEDIA") displayR = "BỘ PHẬN MEDIA & KỸ THUẬT";
         else if (displayR === "MANAGER") displayR = "BỘ PHẬN MANAGER"; 
         else if (displayR === "ACCOUNTANT") displayR = "BỘ PHẬN ACCOUNTANT";
+        else if (displayR === "TEACHER DANCE") displayR = "BỘ PHẬN TEACHER DANCE";
         else displayR = "BỘ PHẬN " + displayR;
         
         optHTML += `<option value="ROLE:${r}">🏢 ${displayR}</option>`;
@@ -5892,7 +6240,11 @@ function initMobileCalSwipeGesture() {
           }
 
           if (displayRole === "LIVESTEAM" || displayRole === "LIVESTREAM") displayRole = "BỘ PHẬN LIVESTREAM / 直播部";
-          else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER / 管理部"; else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT / 财务部";
+          else if (displayRole === "MEDIA") displayRole = "BỘ PHẬN MEDIA & KỸ THUẬT / 媒体技术部";
+          else if (displayRole === "MANAGER") displayRole = "BỘ PHẬN MANAGER / 管理部";
+          else if (displayRole === "ACCOUNTANT") displayRole = "BỘ PHẬN ACCOUNTANT / 财务部";
+          else if (displayRole === "TEACHER DANCE") displayRole = "BỘ PHẬN TEACHER DANCE / 舞蹈老师";
+          else displayRole = "BỘ PHẬN " + displayRole;
           tbodyHtml += `<tr><td colspan="${dayCount + 2}" style="font-weight: 800; text-align: center; background: #1e293b; color: #ffffff; border-bottom: 2px solid #cbd5e1; padding: 12px 0;">${displayRole}</td></tr>`;
           
           for (let group in depts[deptKey]) {
