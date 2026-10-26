@@ -889,7 +889,7 @@
             
             if (teams.length > 0) {
                 teams.forEach((team, index) => {
-                    let safeName = team.name.replace(/\s+/g, '').toLowerCase();
+                    let safeName = String(team.name || '').replace(/\s+/g, '').toLowerCase();
 
                     if (safeName === "royen:one") {
                         activeStatus[index] = team.isActiveOriginal;
@@ -980,6 +980,7 @@
             
             const batch = window.fs.writeBatch(window.db);
             sortedTeamsArray.forEach((team, index) => {
+                if (!team || !team.name) return;
                 const teamRef = window.fs.doc(window.db, "timeline_teams", team.name); 
                 batch.set(teamRef, { order: index + 1 }, { merge: true }); 
             });
@@ -1038,7 +1039,7 @@
             
             teams.forEach((team, index) => {
                 if (activeStatus[index]) {
-                    const safeName = team.name.replace(/\s+/g, '').toLowerCase();
+                    const safeName = String(team.name || '').replace(/\s+/g, '').toLowerCase();
                     const shiftMinutes = timeToMinutes(team.shift);
                     let startMakeup;
                     let displayShiftMinutes;
@@ -1577,7 +1578,7 @@
         updateDailyFooter();
 
         // === 2. LẤY DỮ LIỆU TỪ FIREBASE SIÊU TỐC ===
-        document.addEventListener("DOMContentLoaded", async function() {
+        async function initFirebaseTimeline() {
             const container = document.getElementById('togglesContainer');
             if(container) container.innerHTML = "<div style='padding: 10px; font-weight: bold; color: var(--text-muted); text-align: center;'>⏳ Đang tải dữ liệu từ Firebase...</div>";
 
@@ -1591,14 +1592,18 @@
             let tom = new Date(); tom.setDate(tom.getDate() + 1);
             let tomorrowStr = getFormattedDate(tom);
 
+            let retryCount = 0;
             let checkDb = setInterval(async () => {
+                retryCount++;
                 if(window.db && window.fs) {
                     clearInterval(checkDb);
                     try {
-                        const q = window.fs.query(window.fs.collection(window.db, "timeline_teams"), window.fs.orderBy("order", "asc"));
-                        const teamSnapshot = await window.fs.getDocs(q);
+                        const teamSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "timeline_teams"));
                         let timelineData = [];
-                        teamSnapshot.forEach((doc) => { timelineData.push(doc.data()); });
+                        teamSnapshot.forEach((doc) => { 
+                            timelineData.push({ id: doc.id, ...doc.data() }); 
+                        });
+                        timelineData.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
                         
                         const empSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "off_employees"));
                         let offEmployees = [];
@@ -1609,22 +1614,26 @@
                         leaveSnapshot.forEach((doc) => { offLeaves.push(doc.data()); });
 
                         let lsEmps = offEmployees
-                            .filter(e => e.role.toUpperCase() === 'LIVESTREAM' || e.role.toUpperCase() === 'LIVESTEAM')
-                            .map(e => e.name.toLowerCase());
+                            .filter(e => e && e.role && (String(e.role).toUpperCase() === 'LIVESTREAM' || String(e.role).toUpperCase() === 'LIVESTEAM'))
+                            .map(e => String(e.name || '').toLowerCase())
+                            .filter(Boolean);
 
                         teams = timelineData.map(t => {
-                            let tName = t.name.toLowerCase();
+                            let tName = String(t.name || t.id || '').toLowerCase();
                             let safeName = tName.replace(/\s+/g, '');
                             let isOffToday = false;
                             let isOffTomorrow = false;
 
                             if (safeName !== "royen:one" && lsEmps.includes(tName)) {
-                                isOffToday = offLeaves.some(l => l.name.toLowerCase() === tName && l.date === todayStr && l.swapFrom !== todayStr && (l.status === 'Approved' || l.status === 'Pending'));
-                                isOffTomorrow = offLeaves.some(l => l.name.toLowerCase() === tName && l.date === tomorrowStr && l.swapFrom !== tomorrowStr && (l.status === 'Approved' || l.status === 'Pending'));
+                                isOffToday = offLeaves.some(l => l && l.name && String(l.name).toLowerCase() === tName && l.date === todayStr && l.swapFrom !== todayStr && (l.status === 'Approved' || l.status === 'Pending'));
+                                isOffTomorrow = offLeaves.some(l => l && l.name && String(l.name).toLowerCase() === tName && l.date === tomorrowStr && l.swapFrom !== tomorrowStr && (l.status === 'Approved' || l.status === 'Pending'));
                             }
                             return {
-                                name: t.name, shift: t.shift, duration: t.duration, liveDelay: t.liveDelay,
-                                isActiveOriginal: (t.isActiveOriginal !== undefined ? t.isActiveOriginal : t.isActive),
+                                name: t.name || t.id, 
+                                shift: t.shift || '08:00', 
+                                duration: Number(t.duration) || 0, 
+                                liveDelay: Number(t.liveDelay) || 0,
+                                isActiveOriginal: (t.isActiveOriginal !== undefined ? t.isActiveOriginal : (t.isActive !== undefined ? t.isActive : true)),
                                 isOffToday: isOffToday,
                                 isOffTomorrow: isOffTomorrow
                             };
@@ -1635,12 +1644,23 @@
                         showToast("Đã đồng bộ dữ liệu thành công!", "success", 2000);
 
                     } catch (error) {
-                        if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Lỗi kết nối Firebase</div>";
+                        console.error("Lỗi đồng bộ Firebase:", error);
+                        if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Lỗi kết nối Firebase: " + (error.message || error) + "</div>";
                         showToast("Lỗi: " + error.message, "error", 4000);
                     }
+                } else if (retryCount > 200) {
+                    clearInterval(checkDb);
+                    if(container) container.innerHTML = "<div style='color:red; text-align:center;'>❌ Hết thời gian chờ Firebase SDK (Timeout)</div>";
+                    showToast("Lỗi: Không tải được thư viện Firebase", "error", 4000);
                 }
             }, 50);
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener("DOMContentLoaded", initFirebaseTimeline);
+        } else {
+            initFirebaseTimeline();
+        }
     </script>
 </body>
 </html>
