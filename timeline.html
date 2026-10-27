@@ -954,7 +954,8 @@
                 <div class="form-group" style="margin-top: 10px; margin-bottom: 5px;">
                     <label>Khổ giấy in PDF</label>
                     <select id="pdfOrientationEvent" onchange="autoSaveEventTimeline()">
-                        <option value="landscape" selected>A4 Ngang (Thích hợp nhiều phòng)</option>
+                        <option value="auto" selected>🎯 Tự động tối ưu (Fit 1 trang A4)</option>
+                        <option value="landscape">A4 Ngang (Thích hợp nhiều phòng)</option>
                         <option value="portrait">A4 Dọc (Thích hợp bảng dài nhiều hàng)</option>
                     </select>
                 </div>
@@ -1978,22 +1979,23 @@
                 clone.classList.add('compact-medium');
             }
 
-            // Bảo vệ phần Footer Note: Tuyệt đối không bị cắt xén chữ ở đáy
+            // BẢO VỆ TUYỆT ĐỐI PHẦN FOOTER NOTE: Đệm lề đáy 35px để không bao giờ bị cắt xén
             const footerEl = clone.querySelector('.footer-note');
             if (footerEl) {
                 footerEl.style.whiteSpace = 'pre-wrap';
                 footerEl.style.wordBreak = 'break-word';
                 footerEl.style.lineHeight = '1.6';
-                footerEl.style.padding = '16px 20px 24px 20px';
+                footerEl.style.padding = '18px 24px 35px 24px';
                 footerEl.style.boxSizing = 'border-box';
             }
 
-            // Đảm bảo khung ngoài không cắt xén viền dưới
+            // Khung ngoài tự co dãn tự do, không bao giờ bị overflow: hidden cắt xén
             const frameEl = clone.querySelector('.timeline-frame');
             if (frameEl) {
                 frameEl.style.overflow = 'visible';
+                frameEl.style.boxSizing = 'border-box';
             }
-            clone.style.paddingBottom = '22px';
+            clone.style.padding = '16px 20px 40px 20px';
             clone.style.boxSizing = 'border-box';
 
             stage.appendChild(clone);
@@ -2001,23 +2003,16 @@
             // Chờ 2 frame để trình duyệt hoàn tất bố cục & render font
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-            const rect = clone.getBoundingClientRect();
-            const w = Math.ceil(Math.max(clone.offsetWidth, clone.scrollWidth, rect.width));
-            const h = Math.ceil(Math.max(clone.offsetHeight, clone.scrollHeight, rect.height)) + 16;
-            const safeScale = Math.min(2.5, Math.max(1.5, Math.floor((4000 / Math.max(w, h)) * 10) / 10));
-
+            // html2canvas tự đo chiều cao thực tế của phần tử (KHÔNG truyền height cứng ép crop)
             const canvas = await html2canvas(clone, {
                 scale: 2,
                 useCORS: true,
                 backgroundColor: bgColor,
-                width: w,
-                height: h,
-                windowWidth: Math.max(2600, w + 300),
-                windowHeight: Math.max(3500, h + 600),
+                logging: false,
                 scrollX: 0,
                 scrollY: 0,
-                x: 0,
-                y: 0
+                windowWidth: 2600,
+                windowHeight: 4500
             });
 
             stage.innerHTML = '';
