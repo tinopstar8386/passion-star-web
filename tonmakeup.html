@@ -22,7 +22,6 @@
                         sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
                     },
                     colors: {
-                        // Tông màu Xanh lá (Emerald/Green) & Xanh ngọc (Teal/Mint) nhẹ nhàng
                         theme: {
                             50: '#f0fdf4',
                             100: '#dcfce7',
@@ -53,7 +52,7 @@
         }
     </script>
     <style>
-        /* Quy tắc sống còn: Tuyệt đối không sinh thanh cuộn ngang */
+        /* Quy tắc sống còn: Không sinh thanh cuộn ngang */
         html, body {
             overflow-x: hidden;
             width: 100%;
@@ -68,7 +67,7 @@
         .sheet-table {
             border-collapse: collapse;
             width: 100%;
-            table-layout: fixed; /* Khóa độ rộng để không đẩy tràn ngang */
+            table-layout: fixed; /* Khóa độ rộng để người dùng kéo chỉnh tự do */
         }
         .sheet-table th, 
         .sheet-table td {
@@ -80,6 +79,7 @@
             border-bottom: 2px solid #0d9488;
             background-color: #f0fdfa;
             color: #0f766e;
+            position: relative;
         }
         .sheet-table tbody tr:hover {
             background-color: #f0fdf4;
@@ -88,6 +88,23 @@
             border-top: 2px solid #0d9488;
             border-bottom: 2px solid #cbd5e1;
             background-color: #f0fdfa;
+        }
+
+        /* TAY CẦM KÉO CO GIÃN CỘT (COLUMN RESIZER) */
+        .col-resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 7px;
+            height: 100%;
+            cursor: col-resize;
+            user-select: none;
+            z-index: 20;
+            transition: background-color 0.15s ease;
+        }
+        .col-resizer:hover, .col-resizer.is-resizing {
+            background-color: #0d9488 !important;
+            opacity: 0.8;
         }
 
         .shadow-2xs {
@@ -164,7 +181,7 @@
 
             <!-- Right Controls: Bộ chọn tháng, Tỷ giá, Chuyển ngữ -->
             <div class="flex items-center gap-2 sm:gap-3">
-                <!-- BỘ CHỌN THÁNG (MONTH SELECTOR) TRỰC QUAN -->
+                <!-- BỘ CHỌN THÁNG (MONTH SELECTOR) -->
                 <div class="flex items-center bg-teal-50/80 border border-teal-300 rounded-xl px-2 py-1 shadow-2xs no-print">
                     <button
                         onclick="navigateMonth(-1)"
@@ -237,7 +254,7 @@
     <!-- Main Content Container -->
     <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5">
 
-        <!-- KPI Summary Cards (Tông Xanh Lá & Xanh Ngọc) -->
+        <!-- KPI Summary Cards -->
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <!-- Card 1: Total Products -->
             <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-teal-200/80 shadow-2xs flex items-center justify-between">
@@ -275,7 +292,7 @@
                 </div>
             </div>
 
-            <!-- Card 4: Grand Total (Gradient Xanh ngọc & Xanh lá sang trọng) -->
+            <!-- Card 4: Grand Total -->
             <div class="rounded-xl p-3.5 sm:p-4 border-2 border-teal-500 bg-gradient-to-br from-emerald-600 via-teal-600 to-teal-700 text-white shadow-sm flex items-center justify-between col-span-2 lg:col-span-1">
                 <div>
                     <p id="ui-stat-total-label" class="text-xs font-extrabold uppercase tracking-wider text-teal-100">Tổng tiền đề xuất</p>
@@ -327,7 +344,7 @@
 
             <!-- Right: Action Buttons -->
             <div class="flex flex-wrap items-center gap-2">
-                <!-- NÚT SAO CHÉP DỮ LIỆU TỪ THÁNG TRƯỚC (Rất tiện cho việc làm mỗi tháng) -->
+                <!-- NÚT SAO CHÉP DỮ LIỆU TỪ THÁNG TRƯỚC -->
                 <button
                     onclick="copyFromPreviousMonth()"
                     class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 transition-all shadow-2xs"
@@ -381,7 +398,7 @@
             </div>
         </section>
 
-        <!-- Main Spreadsheet Card (Không cuộn ngang, Ô hình ảnh siêu gọn gàng) -->
+        <!-- Main Spreadsheet Card (HỖ TRỢ KÉO CO GIÃN CỘT RESIZABLE COLUMNS) -->
         <section class="bg-white rounded-2xl border-2 border-teal-300/80 shadow-sm overflow-hidden print-full">
             <!-- Table Header Banner -->
             <div class="px-5 py-3.5 bg-teal-50/70 border-b border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
@@ -392,51 +409,79 @@
                     </h2>
                 </div>
                 <div class="flex items-center gap-2">
+                    <!-- Nút reset kích thước cột về mặc định cân đối -->
+                    <button
+                        onclick="resetColumnWidths()"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-teal-800 bg-white hover:bg-teal-100/70 border border-teal-300 shadow-2xs transition-all no-print"
+                        title="Đặt lại kích thước các cột về tỉ lệ chuẩn cân đối"
+                    >
+                        <i data-lucide="rotate-ccw" class="w-3 h-3 text-teal-600"></i>
+                        <span>Cân bằng lại cột</span>
+                    </button>
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-teal-800 bg-white border border-teal-300 shadow-2xs no-print">
-                        <i data-lucide="info" class="w-3.5 h-3.5 text-teal-600"></i>
-                        <span id="ui-table-tip">Mẹo: Nhấp vào ảnh để xem to hoặc bấm camera để đổi ảnh từ máy</span>
+                        <i data-lucide="move-horizontal" class="w-3.5 h-3.5 text-teal-600"></i>
+                        <span>Kéo mép cột để chỉnh độ rộng</span>
                     </span>
                 </div>
             </div>
 
             <!-- Table Wrapper -->
             <div class="w-full overflow-hidden">
-                <table class="sheet-table w-full text-left">
+                <table id="main-spreadsheet-table" class="sheet-table w-full text-left">
                     <thead>
                         <tr class="text-teal-900 text-xs font-bold uppercase tracking-wider">
                             <!-- STT: Cố định hẹp -->
-                            <th class="py-3 px-2 text-center w-10 sm:w-12 bg-teal-50">#</th>
+                            <th id="th-idx" data-col="0" class="py-3 px-2 text-center bg-teal-50" style="width: 45px;">
+                                <span>#</span>
+                                <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
+                            </th>
                             
-                            <!-- TÊN HÀNG: Cột rộng nhất, tự do dãn đều toàn màn hình -->
-                            <th id="th-product-name" class="py-3 px-3.5 bg-teal-50">TÊN HÀNG</th>
+                            <!-- TÊN HÀNG: Cân đối, có resizer -->
+                            <th id="th-product-name" data-col="1" class="py-3 px-3.5 bg-teal-50" style="width: 320px;">
+                                <span>TÊN HÀNG</span>
+                                <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
+                            </th>
                             
-                            <!-- HÌNH THỂ HIỆN: THU GỌN TỐI ĐA (CHỈ 48px - 56px), KHÔNG CHIẾM DIỆN TÍCH -->
-                            <th id="th-image" class="py-3 px-1 text-center w-12 sm:w-14 bg-teal-50">HÌNH</th>
+                            <!-- HÌNH THỂ HIỆN: THU GỌN VỪA KHÍT 60px -->
+                            <th id="th-image" data-col="2" class="py-3 px-1 text-center bg-teal-50" style="width: 60px;">
+                                <span>HÌNH</span>
+                                <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
+                            </th>
                             
-                            <!-- GIÁ TIỀN -->
-                            <th id="th-price" class="py-3 px-3 text-right w-32 sm:w-36 cursor-pointer hover:bg-teal-100 transition-colors bg-teal-50 select-none" onclick="toggleSort('price')">
-                                <div class="inline-flex items-center justify-end gap-1">
+                            <!-- GIÁ TIỀN: Cân đối -->
+                            <th id="th-price" data-col="3" class="py-3 px-3 text-right bg-teal-50 select-none" style="width: 140px;">
+                                <div class="inline-flex items-center justify-end gap-1 cursor-pointer hover:text-teal-700" onclick="toggleSort('price')">
                                     <span id="th-price-text">ĐƠN GIÁ (VNĐ)</span>
                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-teal-600"></i>
                                 </div>
+                                <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
                             
-                            <!-- LINK SẢN PHẨM: Nút bấm gọn gàng -->
-                            <th id="th-link" class="py-3 px-2 text-center w-32 sm:w-36 bg-teal-50">LINK SẢN PHẨM</th>
+                            <!-- LINK SẢN PHẨM -->
+                            <th id="th-link" data-col="4" class="py-3 px-2 text-center bg-teal-50" style="width: 140px;">
+                                <span>LINK SẢN PHẨM</span>
+                                <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
+                            </th>
                             
                             <!-- SỐ LƯỢNG -->
-                            <th id="th-quantity" class="py-3 px-2 text-center w-24 sm:w-28 bg-teal-50">SỐ LƯỢNG</th>
+                            <th id="th-quantity" data-col="5" class="py-3 px-2 text-center bg-teal-50" style="width: 110px;">
+                                <span>SỐ LƯỢNG</span>
+                                <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
+                            </th>
                             
                             <!-- THÀNH TIỀN -->
-                            <th id="th-subtotal" class="py-3 px-3 text-right w-36 sm:w-40 cursor-pointer hover:bg-teal-100 transition-colors bg-teal-50 select-none" onclick="toggleSort('subtotal')">
-                                <div class="inline-flex items-center justify-end gap-1">
+                            <th id="th-subtotal" data-col="6" class="py-3 px-3 text-right bg-teal-50 select-none" style="width: 160px;">
+                                <div class="inline-flex items-center justify-end gap-1 cursor-pointer hover:text-teal-700" onclick="toggleSort('subtotal')">
                                     <span id="th-subtotal-text">THÀNH TIỀN (VNĐ)</span>
                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-teal-600"></i>
                                 </div>
+                                <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
                             
                             <!-- THAO TÁC -->
-                            <th id="th-actions" class="py-3 px-2 text-center w-20 sm:w-24 bg-teal-50 no-print">THAO TÁC</th>
+                            <th id="th-actions" data-col="7" class="py-3 px-2 text-center bg-teal-50 no-print" style="width: 85px;">
+                                <span>THAO TÁC</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="product-table-body" class="text-sm">
@@ -517,12 +562,12 @@
     <!-- Footer -->
     <footer class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-5 text-center text-xs text-slate-500 border-t border-slate-300 mt-auto no-print font-medium">
         <p id="ui-footer-copyright">
-            Bảng Quản Lý Đề Xuất Đồ Makeup • Quản lý linh hoạt theo từng tháng • Đồng bộ Firebase • Giao diện Xanh Ngọc nhẹ nhàng
+            Bảng Quản Lý Đề Xuất Đồ Makeup • Kéo chỉnh cột tùy ý • Quản lý linh hoạt theo tháng • Phím Esc đóng xem ảnh nhanh
         </p>
     </footer>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 1: NHẬP TỪ SHEET (HỖ TRỢ CẢ LINK ẢNH VÀ UPLOAD ẢNH TỪ MÁY)          -->
+    <!-- MODAL 1: NHẬP TỪ SHEET                                                   -->
     <!-- ========================================================================= -->
     <div id="import-sheet-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl max-w-4xl w-full border-2 border-teal-300 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
@@ -534,12 +579,15 @@
                     </div>
                     <div>
                         <h3 class="text-sm sm:text-base font-bold text-slate-900">Nhập dữ liệu từ Excel / Google Sheets vào <span id="modal-import-month-title" class="text-teal-700 font-extrabold">Tháng 11/2026</span></h3>
-                        <p class="text-xs text-slate-500">Dán dữ liệu sao chép hoặc tải file .xlsx / .csv (Hỗ trợ cả link ảnh và tải ảnh từ máy)</p>
+                        <p class="text-xs text-slate-500">Dán dữ liệu sao chép hoặc tải file .xlsx / .csv</p>
                     </div>
                 </div>
-                <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] text-slate-400 hidden sm:inline">Phím Esc để đóng</span>
+                    <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="p-5 space-y-4 max-h-[82vh] overflow-y-auto">
@@ -615,7 +663,7 @@
                     </div>
                 </div>
 
-                <!-- 2 PHƯƠNG THỨC NHẬP: DÁN HOẶC TẢI FILE EXCEL -->
+                <!-- 2 PHƯƠNG THỨC NHẬP -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Cách 1: Dán trực tiếp từ Sheet -->
                     <div class="bg-white border-2 border-teal-200 rounded-xl p-3.5 space-y-2">
@@ -745,9 +793,12 @@
                     </div>
                     <h3 id="modal-title" class="text-base font-bold text-slate-900">Thêm sản phẩm đề xuất</h3>
                 </div>
-                <button onclick="closeProductModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200 transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] text-slate-400 hidden sm:inline">Phím Esc để đóng</span>
+                    <button onclick="closeProductModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
             </div>
 
             <!-- Modal Form -->
@@ -888,16 +939,20 @@
         </div>
     </div>
 
-    <!-- Modal: Image Lightbox Preview -->
+    <!-- Modal: Image Lightbox Preview (Hỗ trợ phím Escape / Esc để tắt) -->
     <div id="lightbox-modal" onclick="closeLightbox()" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/80 backdrop-blur-xs p-4">
-        <div class="relative max-w-lg w-full bg-white rounded-2xl p-4 shadow-2xl border-2 border-teal-300" onclick="event.stopPropagation()">
+        <div class="relative max-w-lg w-full bg-white rounded-2xl p-4 shadow-2xl border-2 border-teal-300 animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
                 <h4 id="lightbox-title" class="text-sm font-bold text-slate-900">Hình thể hiện sản phẩm</h4>
                 <div class="flex items-center gap-2">
-                    <button id="lightbox-btn-change-img" class="px-2 py-1 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-lg transition-colors">
+                    <button id="lightbox-btn-change-img" class="px-2.5 py-1 text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-lg transition-colors">
                         Đổi ảnh từ máy
                     </button>
-                    <button onclick="closeLightbox()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+                    <!-- Nhãn hướng dẫn phím Esc -->
+                    <span class="text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded shadow-2xs select-none">
+                        Bấm Esc để đóng
+                    </span>
+                    <button onclick="closeLightbox()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="Đóng (Esc)">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -947,7 +1002,7 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'passionstar-makeup-sheet1';
 
         // ============================================================================
-        // 2. DEFAULT FALLBACK SVG IMAGE (TÔNG XANH NGỌC)
+        // 2. DEFAULT FALLBACK SVG IMAGE
         // ============================================================================
         const DEFAULT_MAKEUP_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
@@ -1096,7 +1151,7 @@
                 btnPrint: 'In / PDF',
                 btnAddTop: 'Thêm sản phẩm',
                 tableHeading: (monthStr) => `BẢNG ĐỀ XUẤT ĐỒ MAKE UP - ${monthStr}`,
-                tableTip: '💡 Mẹo: Nhấp vào ảnh để xem to hoặc bấm camera để đổi ảnh từ máy',
+                tableTip: '💡 Mẹo: Kéo mép cột để chỉnh độ rộng tùy ý • Bấm Esc để đóng cửa sổ xem ảnh',
                 thProductName: 'TÊN HÀNG',
                 thImage: 'HÌNH',
                 thPrice: 'ĐƠN GIÁ (VNĐ)',
@@ -1108,7 +1163,7 @@
                 btnAddQuickRow: '+ Thêm nhanh dòng trống',
                 totalFooterLabel: 'TỔNG TIỀN ĐỀ XUẤT',
                 totalFooterNote: '(VNĐ ₫ • Quy đổi Nhân dân tệ ¥)',
-                footerCopyright: 'Bảng Quản Lý Đề Xuất Đồ Makeup • Quản lý linh hoạt theo từng tháng • Đồng bộ Firebase • Giao diện Xanh Ngọc nhẹ nhàng',
+                footerCopyright: 'Bảng Quản Lý Đề Xuất Đồ Makeup • Kéo chỉnh cột tùy ý • Quản lý linh hoạt theo tháng • Phím Esc đóng xem ảnh nhanh',
                 openLink: 'Mở link',
                 copyLink: 'Sao chép link',
                 addLink: '+ Gắn link',
@@ -1136,7 +1191,8 @@
                 toastAddedRow: 'Đã thêm 1 dòng sản phẩm mới.',
                 toastImageUpdated: 'Đã cập nhật ảnh thành công!',
                 toastImportSuccess: (count) => `Nhập thành công ${count} sản phẩm vào tháng này!`,
-                toastMonthCopied: (count, prevMonth) => `Đã sao chép ${count} sản phẩm từ ${prevMonth} sang tháng này!`
+                toastMonthCopied: (count, prevMonth) => `Đã sao chép ${count} sản phẩm từ ${prevMonth} sang tháng này!`,
+                toastColsReset: 'Đã khôi phục kích thước các cột về tỉ lệ chuẩn cân đối!'
             },
             zh: {
                 appTitle: '美妆采购提案管理表',
@@ -1160,7 +1216,7 @@
                 btnPrint: '打印 / PDF',
                 btnAddTop: '添加商品',
                 tableHeading: (monthStr) => `美妆采购提案明细表 - ${monthStr}`,
-                tableTip: '💡 提示：点击图片查看大图，或悬停点击相机直接更换图片',
+                tableTip: '💡 提示：可拖动表头边缘自由调整列宽 • 按 Esc 键可快速关闭图片弹窗',
                 thProductName: '商品名称',
                 thImage: '图片',
                 thPrice: '单价 (VNĐ)',
@@ -1172,7 +1228,7 @@
                 btnAddQuickRow: '+ 快速新增空白行',
                 totalFooterLabel: '合计总金额',
                 totalFooterNote: '(默认越南盾 VNĐ • 换算人民币 ¥)',
-                footerCopyright: '美妆采购提案管理系统 • 月度管理 • Firebase 实时云同步 • 柔和青翠色调',
+                footerCopyright: '美妆采购提案管理系统 • 可调列宽 • 按月度管理 • Esc 快捷退出看图',
                 openLink: '打开链接',
                 copyLink: '复制链接',
                 addLink: '+ 添加链接',
@@ -1200,7 +1256,8 @@
                 toastAddedRow: '已在表格末尾新增一行商品。',
                 toastImageUpdated: '图片已更新成功！',
                 toastImportSuccess: (count) => `成功导入 ${count} 项商品！`,
-                toastMonthCopied: (count, prevMonth) => `已从 ${prevMonth} 复制 ${count} 项商品！`
+                toastMonthCopied: (count, prevMonth) => `已从 ${prevMonth} 复制 ${count} 项商品！`,
+                toastColsReset: '已恢复表格默认标准列宽！'
             }
         };
 
@@ -1215,7 +1272,7 @@
         let parsedImportRows = [];
         let targetQuickUploadId = null;
 
-        // Quản lý tháng: Mặc định tháng 11/2026 như yêu cầu
+        // Quản lý tháng
         let selectedMonth = '2026-11';
         let unsubscribeCurrentMonthListener = null;
 
@@ -1236,7 +1293,6 @@
             return doc(db, 'artifacts', appId, 'public', 'data', 'makeup_settings', 'config');
         }
 
-        // Chuyển đổi tháng được chọn
         async function changeSelectedMonth(newMonth) {
             if (!newMonth || newMonth === selectedMonth) return;
             selectedMonth = newMonth;
@@ -1265,7 +1321,6 @@
             if (importTitle) importTitle.textContent = monthStr;
         }
 
-        // Lắng nghe dữ liệu theo tháng
         function subscribeToMonthData(monthKey) {
             if (unsubscribeCurrentMonthListener) {
                 unsubscribeCurrentMonthListener();
@@ -1275,7 +1330,6 @@
             unsubscribeCurrentMonthListener = onSnapshot(
                 colRef,
                 async (snapshot) => {
-                    // Nếu tháng 11/2026 chưa có dữ liệu trong collection mới, thử import từ collection gốc cũ nếu có
                     if (snapshot.empty && monthKey === '2026-11') {
                         try {
                             const oldColRef = collection(db, 'artifacts', appId, 'public', 'data', 'makeup_products');
@@ -1286,7 +1340,7 @@
                                 for (const item of oldItems) {
                                     await setDoc(doc(colRef, item.id), item, { merge: true });
                                 }
-                                return; // onSnapshot sẽ tự trigger lại
+                                return;
                             }
                         } catch (e) {
                             console.debug('Migration check:', e);
@@ -1308,7 +1362,6 @@
             );
         }
 
-        // Sao chép toàn bộ danh mục từ tháng trước sang tháng hiện tại
         async function copyFromPreviousMonth() {
             const [y, m] = selectedMonth.split('-').map(Number);
             let prevDate = new Date(y, m - 2, 1);
@@ -1329,7 +1382,6 @@
                 if (!prevSnap.empty) {
                     prevSnap.forEach(d => sourceItems.push(d.data()));
                 } else if (prevMonthKey === '2026-10' || selectedMonth === '2026-11') {
-                    // Fallback sang collection gốc nếu tháng trước rỗng
                     const oldCol = collection(db, 'artifacts', appId, 'public', 'data', 'makeup_products');
                     const oldSnap = await getDocs(oldCol);
                     oldSnap.forEach(d => sourceItems.push(d.data()));
@@ -1389,7 +1441,6 @@
                 console.debug('Auth notice:', authErr?.message || authErr);
             }
 
-            // Lắng nghe cài đặt tỷ giá
             onSnapshot(
                 getSettingsDocRef(),
                 (docSnap) => {
@@ -1408,7 +1459,6 @@
                 (err) => console.debug('Settings listener warning:', err)
             );
 
-            // Bắt đầu lắng nghe tháng mặc định (2026-11)
             subscribeToMonthData(selectedMonth);
         }
 
@@ -1533,13 +1583,8 @@
             updateMonthHeaderUI();
 
             document.getElementById('ui-table-tip').textContent = t.tableTip;
-            document.getElementById('th-product-name').textContent = t.thProductName;
-            document.getElementById('th-image').textContent = t.thImage;
             document.getElementById('th-price-text').textContent = t.thPrice;
-            document.getElementById('th-link').textContent = t.thLink;
-            document.getElementById('th-quantity').textContent = t.thQuantity;
             document.getElementById('th-subtotal-text').textContent = t.thSubtotal;
-            document.getElementById('th-actions').textContent = t.thActions;
 
             document.getElementById('ui-btn-add-bottom').textContent = t.btnAddBottom;
             document.getElementById('ui-btn-add-quick-row').textContent = t.btnAddQuickRow;
@@ -1564,7 +1609,123 @@
         }
 
         // ============================================================================
-        // 8. RENDER TABLE: Ô HÌNH ẢNH NHỎ GỌN TINH TẾ, KHÔNG DÀI DÒNG
+        // 8. TÍNH NĂNG KÉO CO GIÃN CỘT (COLUMN RESIZING VỚI LOCALSTORAGE)
+        // ============================================================================
+        const DEFAULT_COLUMN_WIDTHS = {
+            'th-idx': 45,          // Cột #
+            'th-product-name': 320, // Cột Tên Hàng
+            'th-image': 60,        // Cột Hình
+            'th-price': 140,       // Cột Đơn Giá
+            'th-link': 140,        // Cột Link
+            'th-quantity': 110,    // Cột Số Lượng
+            'th-subtotal': 160,    // Cột Thành Tiền
+            'th-actions': 85       // Cột Thao Tác
+        };
+
+        const MIN_COLUMN_WIDTHS = {
+            'th-idx': 35,
+            'th-product-name': 160,
+            'th-image': 45,
+            'th-price': 100,
+            'th-link': 100,
+            'th-quantity': 80,
+            'th-subtotal': 120,
+            'th-actions': 70
+        };
+
+        function initColumnResizers() {
+            const table = document.getElementById('main-spreadsheet-table');
+            if (!table) return;
+
+            // Đọc cấu hình độ rộng đã lưu từ localStorage nếu có
+            let savedWidths = null;
+            try {
+                const stored = localStorage.getItem('makeup_custom_col_widths_v2');
+                if (stored) savedWidths = JSON.parse(stored);
+            } catch (e) {}
+
+            const thElements = table.querySelectorAll('thead th');
+            thElements.forEach((th) => {
+                const thId = th.id;
+                // Áp dụng chiều rộng lưu trữ hoặc mặc định
+                const currentW = (savedWidths && savedWidths[thId]) ? savedWidths[thId] : (DEFAULT_COLUMN_WIDTHS[thId] || th.offsetWidth);
+                th.style.width = currentW + 'px';
+
+                // Tìm resizer
+                const resizer = th.querySelector('.col-resizer');
+                if (!resizer) return;
+
+                resizer.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const startX = e.pageX;
+                    const startWidth = th.offsetWidth;
+                    const minWidth = MIN_COLUMN_WIDTHS[thId] || 50;
+
+                    resizer.classList.add('is-resizing');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+
+                    function onMouseMove(moveEvent) {
+                        const diff = moveEvent.pageX - startX;
+                        const newWidth = Math.max(minWidth, startWidth + diff);
+                        th.style.width = newWidth + 'px';
+                    }
+
+                    function onMouseUp() {
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+
+                        resizer.classList.remove('is-resizing');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+
+                        // Lưu lại toàn bộ kích thước cột vào localStorage
+                        saveAllColumnWidths();
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+        }
+
+        function saveAllColumnWidths() {
+            const table = document.getElementById('main-spreadsheet-table');
+            if (!table) return;
+            const thElements = table.querySelectorAll('thead th');
+            const widths = {};
+            thElements.forEach(th => {
+                if (th.id) {
+                    widths[th.id] = th.offsetWidth;
+                }
+            });
+            try {
+                localStorage.setItem('makeup_custom_col_widths_v2', JSON.stringify(widths));
+            } catch (e) {}
+        }
+
+        function resetColumnWidths() {
+            try {
+                localStorage.removeItem('makeup_custom_col_widths_v2');
+            } catch (e) {}
+
+            const table = document.getElementById('main-spreadsheet-table');
+            if (!table) return;
+
+            const thElements = table.querySelectorAll('thead th');
+            thElements.forEach(th => {
+                if (th.id && DEFAULT_COLUMN_WIDTHS[th.id]) {
+                    th.style.width = DEFAULT_COLUMN_WIDTHS[th.id] + 'px';
+                }
+            });
+
+            showToast(I18N[currentLang].toastColsReset);
+        }
+
+        // ============================================================================
+        // 9. RENDER TABLE: BỐ CỤC CÂN ĐỐI
         // ============================================================================
         function getFilteredAndSortedProducts() {
             const query = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
@@ -1645,7 +1806,7 @@
 
                             <!-- TÊN HÀNG: Hiển thị đầy đủ 100%, tự động xuống dòng -->
                             <td class="py-2.5 px-3">
-                                <div class="flex items-start justify-between gap-2">
+                                <div class="flex items-start justify-between gap-1.5">
                                     <div 
                                         class="font-bold text-slate-900 text-sm leading-snug break-words whitespace-normal flex-1"
                                         title="${escapeHtml(displayName)}"
@@ -1663,7 +1824,7 @@
                                 </div>
                             </td>
 
-                            <!-- HÌNH ẢNH: TINH CHỈNH SIÊU GỌN GÀNG (40px), KHÔNG DÀI DÒNG, CLICK HOẶC HOVER ĐỔI ẢNH -->
+                            <!-- HÌNH ẢNH: GỌN GÀNG, CLICK XEM TO (ESC ĐÓNG), HOVER ĐỔI ẢNH -->
                             <td class="py-2 px-1 text-center">
                                 <div class="relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-teal-200 bg-white p-0.5 overflow-hidden shadow-2xs group/img">
                                     <img
@@ -1672,9 +1833,8 @@
                                         onclick="openLightbox('${item.id}')"
                                         onerror="this.src='https://placehold.co/100x100/f0fdfa/0d9488?text=Make+Up'"
                                         class="w-full h-full object-contain cursor-zoom-in transition-transform duration-200 group-hover/img:scale-110"
-                                        title="Nhấp để xem ảnh to"
+                                        title="Nhấp để xem to (Esc để đóng)"
                                     />
-                                    <!-- Nút đổi ảnh nhanh khi hover -->
                                     <button
                                         type="button"
                                         onclick="triggerQuickUpload('${item.id}')"
@@ -1706,7 +1866,7 @@
                                 </div>
                             </td>
 
-                            <!-- LINK SẢN PHẨM: Tông Xanh Ngọc thanh lịch -->
+                            <!-- LINK SẢN PHẨM -->
                             <td class="py-2.5 px-2 text-center">
                                 ${hasLink ? `
                                     <div class="inline-flex items-center gap-1">
@@ -1847,7 +2007,7 @@
         }
 
         // ============================================================================
-        // 9. QUICK UPLOAD & DIRECT IMAGE CHANGING
+        // 10. QUICK UPLOAD & DIRECT IMAGE CHANGING
         // ============================================================================
         function triggerQuickUpload(productId) {
             targetQuickUploadId = productId;
@@ -1877,7 +2037,7 @@
         }
 
         // ============================================================================
-        // 10. CRUD & FIELD UPDATE
+        // 11. CRUD & FIELD UPDATE
         // ============================================================================
         let fieldSaveTimers = {};
         function updateProductField(id, field, rawValue) {
@@ -1974,7 +2134,7 @@
         }
 
         // ============================================================================
-        // 11. PRODUCT MODAL
+        // 12. PRODUCT MODAL
         // ============================================================================
         function openProductModal(productId = null) {
             const modal = document.getElementById('product-modal');
@@ -2132,7 +2292,7 @@
         }
 
         // ============================================================================
-        // 12. TÍNH NĂNG NHẬP TỪ SHEET THEO THÁNG
+        // 13. TÍNH NĂNG NHẬP TỪ SHEET THEO THÁNG
         // ============================================================================
         function openImportModal() {
             const modal = document.getElementById('import-sheet-modal');
@@ -2347,7 +2507,7 @@
                         <td class="py-1.5 px-2 text-center font-bold text-slate-500">${i + 1}</td>
                         <td class="py-1.5 px-3 font-semibold text-slate-900 break-words leading-snug">${escapeHtml(r.nameVi)}</td>
                         
-                        <!-- Cột Hình ảnh trong Preview: Gọn gàng -->
+                        <!-- Cột Hình ảnh trong Preview -->
                         <td class="py-1.5 px-1 text-center">
                             <div class="inline-flex items-center gap-1.5">
                                 <img
@@ -2481,7 +2641,7 @@
         }
 
         // ============================================================================
-        // 13. LIGHTBOX PREVIEW, CLIPBOARD & CSV EXPORT
+        // 14. LIGHTBOX PREVIEW, CLIPBOARD & CSV EXPORT
         // ============================================================================
         let currentLightboxProductId = null;
 
@@ -2494,7 +2654,6 @@
             document.getElementById('lightbox-title').textContent = title;
             document.getElementById('lightbox-img').src = prod.image || DEFAULT_MAKEUP_SVG;
 
-            // Nút đổi ảnh ngay trong Lightbox
             const changeBtn = document.getElementById('lightbox-btn-change-img');
             if (changeBtn) {
                 changeBtn.onclick = () => {
@@ -2619,6 +2778,17 @@
             }, 3000);
         }
 
+        // ============================================================================
+        // 15. PHÍM ESCAPE (ESC) ĐỂ ĐÓNG XEM ẢNH & MODAL
+        // ============================================================================
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+                closeLightbox();
+                closeProductModal();
+                closeImportModal();
+            }
+        });
+
         // Expose functions to global window
         Object.assign(window, {
             setLanguage,
@@ -2655,13 +2825,15 @@
             handleBulkPreviewImageUpload,
             changeSelectedMonth,
             navigateMonth,
-            copyFromPreviousMonth
+            copyFromPreviousMonth,
+            resetColumnWidths
         });
 
-        // Initialize app & Firebase
+        // Initialize app & Firebase & Resizable columns
         window.addEventListener('DOMContentLoaded', () => {
             setLanguage('vi');
             initFirebaseSync();
+            initColumnResizers();
         });
     </script>
 </body>
