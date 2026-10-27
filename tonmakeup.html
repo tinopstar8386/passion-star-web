@@ -1733,7 +1733,7 @@
         // ============================================================================
         // Khóa lưu vào bộ nhớ đệm (localStorage) RIÊNG BIỆT của trình duyệt máy tính hiện tại.
         // Tuyệt đối KHÔNG đẩy lên Firebase và KHÔNG ảnh hưởng đến các máy tính khác!
-        const STORAGE_COL_WIDTHS_KEY = 'makeup_local_col_widths_v5';
+        const STORAGE_COL_WIDTHS_KEY = 'makeup_local_col_widths_v6';
 
         const DEFAULT_COLUMN_WIDTHS = {
             'th-idx': 45,           // Cột #
@@ -1826,24 +1826,30 @@
                     const startWidthA = th.offsetWidth;
                     const startWidthB = nextTh.offsetWidth;
                     const totalWidth = startWidthA + startWidthB;
+                    let hasDragged = false;
+                    const DRAG_THRESHOLD = 3; // Ngưỡng 3px để phân biệt rạch ròi giữa bấm chuột (click) và kéo chuột (drag)
 
-                    // Giới hạn khoảng an toàn kép: cả Cột A và Cột B đều phải nằm trong [MIN, MAX]
-                    const lowerBoundA = Math.max(minW_A, totalWidth - maxW_B);
-                    const upperBoundA = Math.min(maxW_A, totalWidth - minW_B);
-
-                    resizer.classList.add('is-resizing');
-                    document.body.style.cursor = 'col-resize';
-                    document.body.style.userSelect = 'none';
+                    // Giới hạn an toàn:
+                    // 1. Cột A không bao giờ nhỏ hơn minW_A
+                    // 2. Cột B không bao giờ nhỏ hơn minW_B (đồng nghĩa Cột A không bao giờ vượt quá totalWidth - minW_B)
+                    // 3. Cột A không vượt quá maxW_A
+                    const maxAllowedA = Math.min(maxW_A, totalWidth - minW_B);
 
                     function moveHandler(moveX) {
                         const diff = moveX - startX;
-                        let newWidthA = startWidthA + diff;
-
-                        if (lowerBoundA <= upperBoundA) {
-                            newWidthA = Math.max(lowerBoundA, Math.min(upperBoundA, newWidthA));
-                        } else {
-                            newWidthA = Math.max(minW_A, Math.min(maxW_A, newWidthA));
+                        if (!hasDragged) {
+                            if (Math.abs(diff) < DRAG_THRESHOLD) {
+                                return; // Nếu chỉ bấm chuột hoặc rung nhẹ < 3px thì TUYỆT ĐỐI KHÔNG làm xê dịch ô!
+                            }
+                            hasDragged = true;
+                            resizer.classList.add('is-resizing');
+                            document.body.style.cursor = 'col-resize';
+                            document.body.style.userSelect = 'none';
                         }
+
+                        // Tính độ rộng mới mượt mà xuất phát chính xác từ startWidthA (không nhảy vọt)
+                        let newWidthA = startWidthA + diff;
+                        newWidthA = Math.max(minW_A, Math.min(maxAllowedA, newWidthA));
                         const newWidthB = totalWidth - newWidthA;
 
                         th.style.width = newWidthA + 'px';
@@ -1868,11 +1874,12 @@
                         document.removeEventListener('touchmove', onTouchMove);
                         document.removeEventListener('touchend', endResize);
 
-                        resizer.classList.remove('is-resizing');
-                        document.body.style.cursor = '';
-                        document.body.style.userSelect = '';
-
-                        saveAllColumnWidths();
+                        if (hasDragged) {
+                            resizer.classList.remove('is-resizing');
+                            document.body.style.cursor = '';
+                            document.body.style.userSelect = '';
+                            saveAllColumnWidths();
+                        }
                     }
 
                     document.addEventListener('mousemove', onMouseMove);
@@ -1885,6 +1892,11 @@
                     e.preventDefault();
                     e.stopPropagation();
                     startResize(e.pageX);
+                });
+
+                resizer.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                 });
 
                 resizer.addEventListener('touchstart', (e) => {
