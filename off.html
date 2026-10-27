@@ -4023,12 +4023,17 @@
         <span>💡 Chạm ô trống: <b>Thêm OFF</b> • Chạm ô đỏ: <b>Xóa / Dời</b> • Vuốt ngang: <b>Đổi người</b></span>
       </div>
 
-      <!-- HÀNG LƯU TRỰC TIẾP TRONG LỊCH CÁ NHÂN KHI CÓ DRAFT -->
+      <!-- HÀNG LƯU / HỦY TRỰC TIẾP TRONG LỊCH CÁ NHÂN KHI CÓ DRAFT -->
       <div id="mCalSaveRow" style="display: none; margin-top: 10px;">
-        <button type="button" id="mCalSaveBtn" onclick="saveBulkChanges()" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.45); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
-          <span>💾</span>
-          <span>Lưu Thay Đổi Ngay (<b id="mCalDraftCount">0</b>)</span>
-        </button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button type="button" class="m-cal-cancel-btn" onclick="discardAllDrafts(event)" style="flex: 1; min-height: 44px; padding: 10px 14px; border-radius: 12px; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; touch-action: manipulation;">
+            ✕ Hủy
+          </button>
+          <button type="button" id="mCalSaveBtn" class="m-cal-save-btn" onclick="saveBulkChanges(event)" style="flex: 2; min-height: 44px; padding: 10px 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.45); display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; touch-action: manipulation;">
+            <span>💾</span>
+            <span>Lưu Ngay (<b id="mCalDraftCount">0</b>)</span>
+          </button>
+        </div>
       </div>
 
       <div style="display:flex; gap:8px; margin-top:10px;">
@@ -5604,11 +5609,14 @@
         }
       }
 
-      // 2. Thanh Dock Lưu Nổi trên màn hình Mobile / iPhone
+      const isCalModalOpen = (activeMobileCalEmpName !== null) || 
+        (document.getElementById('mobileEmpCalendarModal') && document.getElementById('mobileEmpCalendarModal').classList.contains('active'));
+
+      // 2. Thanh Dock Lưu Nổi trên màn hình Mobile / iPhone (chỉ hiện khi KHÔNG mở modal lịch cá nhân để tránh đè chạm)
       const barMobile = document.getElementById('mobileFloatingSaveBar');
       const countMobile = document.getElementById('mobileFloatingSaveCount');
       if (barMobile) {
-        if (count > 0) {
+        if (count > 0 && !isCalModalOpen) {
           barMobile.style.display = 'block';
           if (countMobile) countMobile.innerText = count;
         } else {
@@ -5616,11 +5624,11 @@
         }
       }
 
-      // 3. Nút Lưu Trực Tiếp bên trong Bottom Sheet Lịch Cá Nhân Mobile
+      // 3. Nút Lưu / Hủy Trực Tiếp bên trong Bottom Sheet Lịch Cá Nhân Mobile
       const mCalSaveRow = document.getElementById('mCalSaveRow');
       const mCalCount = document.getElementById('mCalDraftCount');
       if (mCalSaveRow) {
-        if (count > 0) {
+        if (count > 0 && isCalModalOpen) {
           mCalSaveRow.style.display = 'block';
           if (mCalCount) mCalCount.innerText = count;
         } else {
@@ -5630,12 +5638,29 @@
     }
     window.updateSaveButtonUI = updateSaveButtonUI;
 
-    function discardAllDrafts() {
-      if (draftQueue.length === 0) return;
+    function discardAllDrafts(event) {
+      if (event) {
+        if (event.stopPropagation) event.stopPropagation();
+        if (event.preventDefault) event.preventDefault();
+      }
+      if (window.event && window.event.stopPropagation) {
+        window.event.stopPropagation();
+      }
+
+      if (draftQueue.length === 0) {
+        updateSaveButtonUI();
+        return;
+      }
+
       draftQueue = [];
+      mobileCalMoveOldDate = null;
+      mobileMoveState = null;
+
       updateSaveButtonUI();
       renderTable();
-      if (activeMobileCalEmpName) renderMobileEmpCalendar();
+      if (activeMobileCalEmpName) {
+        renderMobileEmpCalendar();
+      }
       showToast("↩️ Đã hủy các thay đổi chưa lưu!");
     }
     window.discardAllDrafts = discardAllDrafts;
@@ -6854,18 +6879,15 @@
       if (headBox) { headBox.style.transform = 'translate3d(0,0,0)'; headBox.style.opacity = '1'; }
       renderMobileEmpCalendar();
       document.getElementById('mobileEmpCalendarModal').classList.add('active');
+      updateSaveButtonUI();
     }
 
     function closeMobileEmpCalendar(ev) {
       if (ev && ev.target && ev.target.id !== 'mobileEmpCalendarModal') return;
       document.getElementById('mobileEmpCalendarModal').classList.remove('active');
       mobileCalMoveOldDate = null;
-      // Đợi hiệu ứng trượt xuống kết thúc (350ms) mới xóa tên nhân sự đang chọn
-      setTimeout(() => {
-        if (!document.getElementById('mobileEmpCalendarModal').classList.contains('active')) {
-          activeMobileCalEmpName = null;
-        }
-      }, 360);
+      activeMobileCalEmpName = null;
+      updateSaveButtonUI();
     }
 
     // Hiệu ứng Slide + Cross-fade 2 chiều khi bấm "◀ Trước" hoặc "Tiếp ▶"
