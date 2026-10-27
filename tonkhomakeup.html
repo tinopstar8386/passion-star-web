@@ -83,9 +83,22 @@
         }
         .sheet-table thead th {
             border-bottom: 2px solid #0d9488;
-            background-color: #f0fdfa;
+            background-color: #f0fdfa !important;
             color: #0f766e;
-            position: relative;
+            position: sticky;
+            top: 0;
+            z-index: 25;
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Triệt tiêu nút tăng giảm mặc định để không che khuất chữ số tỷ giá */
+        input[type=number].no-spinners::-webkit-inner-spin-button,
+        input[type=number].no-spinners::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number].no-spinners {
+            -moz-appearance: textfield;
         }
         .sheet-table tbody tr:hover {
             background-color: #f0fdf4;
@@ -207,7 +220,7 @@
 
             <!-- Right Controls: Tỷ giá, Chuyển ngữ, Trạng thái Cloud -->
             <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-                <!-- Currency Exchange Rate Helper (CHỐNG XUỐNG DÒNG TUYỆT ĐỐI) -->
+                <!-- Currency Exchange Rate Helper (CHỐNG XUỐNG DÒNG TUYỆT ĐỐI & KHÔNG BỊ CHE SỐ) -->
                 <div class="hidden lg:flex items-center gap-1.5 bg-emerald-50/60 border border-emerald-300 rounded-lg px-2.5 py-1 text-xs text-slate-700 shadow-2xs no-print whitespace-nowrap shrink-0">
                     <span id="ui-rate-label" class="font-semibold text-slate-600 whitespace-nowrap shrink-0">Tỷ giá:</span>
                     <span class="font-bold text-slate-900 whitespace-nowrap shrink-0">1 ¥ =</span>
@@ -218,7 +231,7 @@
                         min="1"
                         step="50"
                         onchange="updateExchangeRate(this.value)"
-                        class="w-14 bg-white border border-emerald-300 rounded px-1.5 py-0.5 text-right font-extrabold text-teal-700 focus:outline-none focus:ring-1 focus:ring-teal-500 shrink-0"
+                        class="w-[68px] bg-white border border-emerald-300 rounded px-1.5 py-0.5 text-center font-black text-teal-800 no-spinners focus:outline-none focus:ring-1 focus:ring-teal-500 shrink-0"
                     />
                     <span class="font-bold text-slate-900 shrink-0">₫</span>
                 </div>
@@ -354,21 +367,31 @@
                     </button>
                 </div>
 
-                <!-- Category Filter -->
-                <select
-                    id="category-filter-select"
-                    onchange="handleSearchAndFilter()"
-                    class="h-10 px-3 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
-                >
-                    <option value="ALL">📦 Tất cả danh mục</option>
-                    <option value="Lông mi & Keo">Lông mi & Keo</option>
-                    <option value="Son môi">Son môi</option>
-                    <option value="Cọ & Mút">Cọ & Mút</option>
-                    <option value="Phấn & Má hồng">Phấn & Má hồng</option>
-                    <option value="Kem nền & Che khuyết điểm">Kem nền & Che khuyết điểm</option>
-                    <option value="Tẩy trang & Phụ kiện">Tẩy trang & Phụ kiện</option>
-                    <option value="Dụng cụ khác">Dụng cụ khác</option>
-                </select>
+                <!-- Category Filter & Management -->
+                <div class="flex items-center gap-1">
+                    <select
+                        id="category-filter-select"
+                        onchange="handleSearchAndFilter()"
+                        class="h-10 px-3 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
+                    >
+                        <option value="ALL">📦 Tất cả danh mục</option>
+                        <option value="Lông mi & Keo">Lông mi & Keo</option>
+                        <option value="Son môi">Son môi</option>
+                        <option value="Cọ & Mút">Cọ & Mút</option>
+                        <option value="Phấn & Má hồng">Phấn & Má hồng</option>
+                        <option value="Kem nền & Che khuyết điểm">Kem nền & Che khuyết điểm</option>
+                        <option value="Tẩy trang & Phụ kiện">Tẩy trang & Phụ kiện</option>
+                        <option value="Dụng cụ khác">Dụng cụ khác</option>
+                    </select>
+                    <button
+                        type="button"
+                        onclick="openCategoryManageModal()"
+                        class="h-10 w-10 flex items-center justify-center rounded-lg bg-slate-50 hover:bg-teal-50 text-slate-600 hover:text-teal-700 border border-slate-300 hover:border-teal-300 shadow-2xs transition-all shrink-0"
+                        title="Quản lý danh mục: Thêm, sửa, xóa danh mục"
+                    >
+                        <i data-lucide="folder-cog" class="w-4 h-4 text-teal-600"></i>
+                    </button>
+                </div>
 
                 <!-- Status Filter -->
                 <select
@@ -437,9 +460,9 @@
         </section>
 
         <!-- Main Spreadsheet Card (KÉO CO GIÃN CỘT CHUẨN XÁC, KHÔNG CUỘN NGANG) -->
-        <section class="bg-white rounded-2xl border-2 border-teal-300/80 shadow-sm overflow-hidden print-full">
+        <section class="bg-white rounded-2xl border-2 border-teal-300/80 shadow-sm print-full">
             <!-- Table Header Banner -->
-            <div class="px-5 py-3.5 bg-teal-50/70 border-b border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="px-5 py-3.5 bg-teal-50/70 border-b border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-t-2xl">
                 <div class="flex items-center gap-2.5">
                     <span class="w-3.5 h-3.5 rounded-full bg-teal-500 ring-4 ring-teal-100 shrink-0"></span>
                     <h2 id="ui-table-heading" class="text-sm sm:text-base font-extrabold text-teal-950 uppercase tracking-wide">
@@ -468,15 +491,15 @@
                 </div>
             </div>
 
-            <!-- Table Wrapper -->
-            <div class="w-full overflow-hidden">
+            <!-- Table Wrapper (FREEZE THEAD CHUẨN XÁC KHI CUỘN TRANG) -->
+            <div class="w-full">
                 <table id="main-spreadsheet-table" class="sheet-table w-full text-left">
                     <colgroup>
                         <col id="col-idx" style="width: 45px;">
                         <col id="col-sku" style="width: 110px;">
                         <col id="col-product-name" style="width: 280px;">
                         <col id="col-image" style="width: 120px;">
-                        <col id="col-category" style="width: 155px;">
+                        <col id="col-category" style="width: 165px;">
                         <col id="col-unit" style="width: 60px;">
                         <col id="col-stock" style="width: 120px;">
                         <col id="col-min-stock" style="width: 70px;">
@@ -511,7 +534,7 @@
                             </th>
                             
                             <!-- DANH MỤC -->
-                            <th id="th-category" data-col="4" class="py-3 px-2.5 bg-teal-50" style="width: 155px;">
+                            <th id="th-category" data-col="4" class="py-3 px-2.5 bg-teal-50" style="width: 165px;">
                                 <span>DANH MỤC</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
@@ -681,7 +704,18 @@
 
                     <!-- Danh mục -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Danh mục phân loại *</label>
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-xs font-bold text-slate-700">Danh mục phân loại *</label>
+                            <button
+                                type="button"
+                                onclick="openCategoryManageModal()"
+                                class="text-[11px] font-bold text-teal-700 hover:text-teal-900 inline-flex items-center gap-1 transition-colors"
+                                title="Mở bảng quản lý thêm, sửa, xóa danh mục"
+                            >
+                                <i data-lucide="folder-cog" class="w-3 h-3 text-teal-600"></i>
+                                <span>Quản lý</span>
+                            </button>
+                        </div>
                         <select
                             id="item-form-category"
                             required
@@ -727,7 +761,18 @@
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="text-xs font-bold text-slate-700">Tên tiếng Trung (中文名称)</label>
-                        <span id="item-translate-indicator" class="text-[11px] text-teal-600 hidden font-medium">Đang tự động dịch...</span>
+                        <div class="flex items-center gap-1.5">
+                            <span id="item-translate-indicator" class="text-[11px] text-teal-600 hidden font-medium">Đang dịch...</span>
+                            <button
+                                type="button"
+                                onclick="triggerManualTranslate()"
+                                class="px-2 py-0.5 text-[11px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-md transition-all inline-flex items-center gap-1 shadow-2xs"
+                                title="Bấm để dịch tự động tên tiếng Việt sang tiếng Trung ngay lập tức"
+                            >
+                                <i data-lucide="languages" class="w-3 h-3 text-teal-600"></i>
+                                <span>⚡ Dịch tự động</span>
+                            </button>
+                        </div>
                     </div>
                     <input
                         type="text"
@@ -1489,6 +1534,89 @@
         </div>
     </div>
 
+    <!-- ========================================================================= -->
+    <!-- MODAL 8: QUẢN LÝ DANH MỤC VẬT LIỆU (THÊM, SỬA TÊN, XÓA DANH MỤC)         -->
+    <!-- ========================================================================= -->
+    <div
+        id="category-manage-modal"
+        class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+        role="dialog"
+        aria-modal="true"
+        onclick="closeCategoryManageModal()"
+    >
+        <div 
+            class="bg-white rounded-2xl max-w-lg w-full border border-teal-200 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            onclick="event.stopPropagation()"
+        >
+            <!-- Modal Header -->
+            <div class="px-5 py-4 border-b border-teal-100 flex items-center justify-between bg-teal-50/80 shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-teal-100 border border-teal-300 flex items-center justify-center text-teal-700 shrink-0">
+                        <i data-lucide="folder-cog" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-black text-slate-900">Quản lý danh mục vật liệu</h3>
+                        <p class="text-xs text-slate-500">Thêm danh mục mới, đổi tên hoặc xóa danh mục</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onclick="closeCategoryManageModal()"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-teal-100/60 transition-colors"
+                >
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-5 flex-1 overflow-y-auto space-y-4">
+                <!-- Thêm danh mục mới Form -->
+                <div class="bg-teal-50/70 border border-teal-200 p-3.5 rounded-xl">
+                    <label class="block text-xs font-bold text-teal-950 mb-1.5">+ Thêm danh mục mới</label>
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            id="new-category-input"
+                            placeholder="VD: Xịt khoáng & Cấp ẩm, Mascara..."
+                            class="flex-1 px-3 py-2 bg-white border border-teal-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                            onkeydown="if(event.key === 'Enter'){ event.preventDefault(); addNewCategory(); }"
+                        />
+                        <button
+                            type="button"
+                            onclick="addNewCategory()"
+                            class="px-4 py-2 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-bold text-xs rounded-lg shadow-xs transition-all whitespace-nowrap"
+                        >
+                            Thêm
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Danh sách danh mục hiện có -->
+                <div>
+                    <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>Danh sách danh mục (<span id="cat-count">0</span>)</span>
+                        <span class="text-[11px] font-normal text-slate-500">Sửa tên hoặc xóa trực tiếp</span>
+                    </h4>
+                    <div id="category-list-container" class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+                        <!-- Rendered dynamically via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+                <span class="text-xs text-slate-500">Tự động đồng bộ lên Cloud Firebase</span>
+                <button
+                    type="button"
+                    onclick="closeCategoryManageModal()"
+                    class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-lg transition-all"
+                >
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
 
@@ -1927,6 +2055,7 @@
             subscribeToInventory();
             subscribeToTransactions();
             subscribeToSettings();
+            subscribeToCategories();
         }
 
         function backupLocally() {
@@ -2028,6 +2157,344 @@
             );
         }
 
+        // ============================================================================
+        // 5B. CATEGORY MANAGEMENT (FIREBASE + LOCAL CACHE + SYNC)
+        // ============================================================================
+        const DEFAULT_CATEGORIES = [
+            'Lông mi & Keo',
+            'Son môi',
+            'Cọ & Mút',
+            'Phấn & Má hồng',
+            'Kem nền & Che khuyết điểm',
+            'Tẩy trang & Phụ kiện',
+            'Dụng cụ khác'
+        ];
+
+        let categoriesList = [...DEFAULT_CATEGORIES];
+        let editingCategoryIndex = null;
+        let deletingCategoryIndex = null;
+
+        function getCategoriesDocRef() {
+            return doc(db, 'artifacts', appId, 'public', 'settings_categories');
+        }
+
+        function subscribeToCategories() {
+            try {
+                const cached = localStorage.getItem('makeup_inv_categories_v1');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        categoriesList = parsed;
+                        renderCategorySelects();
+                    }
+                }
+            } catch (e) {}
+
+            const docRef = getCategoriesDocRef();
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (Array.isArray(data.categories) && data.categories.length > 0) {
+                        categoriesList = data.categories;
+                        try {
+                            localStorage.setItem('makeup_inv_categories_v1', JSON.stringify(categoriesList));
+                        } catch (e) {}
+                        renderCategorySelects();
+                        const catModal = document.getElementById('category-manage-modal');
+                        if (catModal && !catModal.classList.contains('hidden')) {
+                            renderCategoryManageList();
+                        }
+                    }
+                } else {
+                    saveCategoriesToFirebase(categoriesList);
+                }
+            }, (err) => {
+                console.warn('Categories offline sync fallback:', err);
+            });
+        }
+
+        async function saveCategoriesToFirebase(newList) {
+            categoriesList = newList;
+            try {
+                localStorage.setItem('makeup_inv_categories_v1', JSON.stringify(categoriesList));
+            } catch (e) {}
+            renderCategorySelects();
+            try {
+                await setDoc(getCategoriesDocRef(), { categories: categoriesList, updatedAt: Date.now() }, { merge: true });
+            } catch (e) {
+                console.error('Error saving categories:', e);
+            }
+        }
+
+        function renderCategorySelects() {
+            // 1. Filter Select
+            const filterSel = document.getElementById('category-filter-select');
+            if (filterSel) {
+                const curVal = filterSel.value;
+                let html = '<option value="ALL">📦 Tất cả danh mục</option>';
+                categoriesList.forEach(c => {
+                    html += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+                });
+                filterSel.innerHTML = html;
+                if (curVal && (curVal === 'ALL' || categoriesList.includes(curVal))) {
+                    filterSel.value = curVal;
+                }
+            }
+
+            // 2. Item Form Select
+            const formSel = document.getElementById('item-form-category');
+            if (formSel) {
+                const curFormVal = formSel.value;
+                let html = '';
+                categoriesList.forEach(c => {
+                    html += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+                });
+                formSel.innerHTML = html;
+                if (curFormVal && categoriesList.includes(curFormVal)) {
+                    formSel.value = curFormVal;
+                }
+            }
+        }
+
+        function openCategoryManageModal() {
+            const modal = document.getElementById('category-manage-modal');
+            if (!modal) return;
+            editingCategoryIndex = null;
+            deletingCategoryIndex = null;
+            modal.classList.remove('hidden');
+            renderCategoryManageList();
+            const input = document.getElementById('new-category-input');
+            if (input) {
+                input.value = '';
+                setTimeout(() => input.focus(), 100);
+            }
+        }
+
+        function closeCategoryManageModal() {
+            const modal = document.getElementById('category-manage-modal');
+            if (modal) modal.classList.add('hidden');
+            editingCategoryIndex = null;
+            deletingCategoryIndex = null;
+        }
+
+        function renderCategoryManageList() {
+            const container = document.getElementById('category-list-container');
+            const countEl = document.getElementById('cat-count');
+            if (!container) return;
+
+            if (countEl) countEl.textContent = categoriesList.length;
+
+            if (categoriesList.length === 0) {
+                container.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Chưa có danh mục nào. Hãy thêm danh mục mới ở trên.</div>';
+                return;
+            }
+
+            const countMap = {};
+            inventoryItems.forEach(item => {
+                const cat = item.category || 'Chung';
+                countMap[cat] = (countMap[cat] || 0) + 1;
+            });
+
+            container.innerHTML = categoriesList.map((cat, idx) => {
+                const itemCount = countMap[cat] || 0;
+                const isEditing = editingCategoryIndex === idx;
+                const isDeleting = deletingCategoryIndex === idx;
+
+                if (isEditing) {
+                    return `
+                        <div class="flex items-center justify-between p-2.5 bg-teal-50 border-l-4 border-teal-600 gap-2">
+                            <input
+                                type="text"
+                                id="edit-cat-input-${idx}"
+                                value="${escapeHtml(cat)}"
+                                class="flex-1 px-2.5 py-1.5 bg-white border border-teal-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                                onkeydown="if(event.key==='Enter') saveCategoryInlineEdit(${idx}); if(event.key==='Escape') cancelCategoryInlineEdit();"
+                            />
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button
+                                    type="button"
+                                    onclick="saveCategoryInlineEdit(${idx})"
+                                    class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-2xs"
+                                >
+                                    Lưu
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick="cancelCategoryInlineEdit()"
+                                    class="px-2 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-600 hover:bg-slate-100"
+                                >
+                                    Hủy
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (isDeleting) {
+                    return `
+                        <div class="flex items-center justify-between p-2.5 bg-red-50 border-l-4 border-red-500 gap-2">
+                            <div class="text-xs text-red-950 font-bold truncate">
+                                Xóa "${escapeHtml(cat)}"${itemCount > 0 ? ` (${itemCount} món sẽ về "Dụng cụ khác")` : ''}?
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button
+                                    type="button"
+                                    onclick="confirmDeleteCategoryAction(${idx})"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-bold bg-red-600 hover:bg-red-700 text-white shadow-2xs"
+                                >
+                                    Xóa
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick="cancelDeleteCategory()"
+                                    class="px-2 py-1 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-600 hover:bg-slate-100"
+                                >
+                                    Hủy
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="flex items-center justify-between p-3 hover:bg-teal-50/30 transition-colors group">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-2 h-2 rounded-full bg-teal-500 shrink-0"></span>
+                            <span class="font-bold text-slate-800 text-sm truncate">${escapeHtml(cat)}</span>
+                            <span class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full shrink-0">
+                                ${itemCount} món
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button
+                                type="button"
+                                onclick="startEditCategory(${idx})"
+                                class="p-1.5 rounded-lg text-slate-500 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                                title="Đổi tên danh mục này"
+                            >
+                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button
+                                type="button"
+                                onclick="startDeleteCategory(${idx})"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Xóa danh mục này"
+                            >
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        async function addNewCategory() {
+            const input = document.getElementById('new-category-input');
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) {
+                showToast('Vui lòng nhập tên danh mục!');
+                input.focus();
+                return;
+            }
+            if (categoriesList.some(c => c.toLowerCase() === val.toLowerCase())) {
+                showToast('Danh mục này đã tồn tại!');
+                input.focus();
+                return;
+            }
+
+            const updated = [...categoriesList, val];
+            await saveCategoriesToFirebase(updated);
+            input.value = '';
+            renderCategoryManageList();
+            showToast(`Đã thêm danh mục "${val}" thành công!`);
+        }
+
+        function startEditCategory(idx) {
+            editingCategoryIndex = idx;
+            deletingCategoryIndex = null;
+            renderCategoryManageList();
+            setTimeout(() => {
+                const el = document.getElementById(`edit-cat-input-${idx}`);
+                if (el) el.focus();
+            }, 50);
+        }
+
+        function cancelCategoryInlineEdit() {
+            editingCategoryIndex = null;
+            renderCategoryManageList();
+        }
+
+        async function saveCategoryInlineEdit(idx) {
+            const el = document.getElementById(`edit-cat-input-${idx}`);
+            if (!el) return;
+            const newName = el.value.trim();
+            const oldName = categoriesList[idx];
+            if (!newName) {
+                showToast('Tên danh mục không được để trống!');
+                return;
+            }
+            if (newName === oldName) {
+                cancelCategoryInlineEdit();
+                return;
+            }
+            if (categoriesList.some((c, i) => i !== idx && c.toLowerCase() === newName.toLowerCase())) {
+                showToast('Tên danh mục này đã tồn tại!');
+                return;
+            }
+
+            const updated = [...categoriesList];
+            updated[idx] = newName;
+
+            let updatedCount = 0;
+            for (const item of inventoryItems) {
+                if (item.category === oldName) {
+                    item.category = newName;
+                    await saveItemToFirebase(item);
+                    updatedCount++;
+                }
+            }
+
+            editingCategoryIndex = null;
+            await saveCategoriesToFirebase(updated);
+            renderTable();
+            renderCategoryManageList();
+            showToast(`Đã đổi tên thành "${newName}" (${updatedCount} sản phẩm cập nhật)`);
+        }
+
+        function startDeleteCategory(idx) {
+            deletingCategoryIndex = idx;
+            editingCategoryIndex = null;
+            renderCategoryManageList();
+        }
+
+        function cancelDeleteCategory() {
+            deletingCategoryIndex = null;
+            renderCategoryManageList();
+        }
+
+        async function confirmDeleteCategoryAction(idx) {
+            const catName = categoriesList[idx];
+            if (!catName) return;
+
+            const usingItems = inventoryItems.filter(i => i.category === catName);
+            const fallbackCat = categoriesList.find(c => c !== catName) || 'Dụng cụ khác';
+
+            for (const item of usingItems) {
+                item.category = fallbackCat;
+                await saveItemToFirebase(item);
+            }
+
+            const updated = categoriesList.filter((_, i) => i !== idx);
+            deletingCategoryIndex = null;
+            await saveCategoriesToFirebase(updated);
+            renderTable();
+            renderCategoryManageList();
+            showToast(`Đã xóa danh mục "${catName}"!`);
+        }
+
         async function saveItemToFirebase(item) {
             try {
                 if (!item.id) item.id = 'inv-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
@@ -2069,14 +2536,14 @@
         // ============================================================================
         // 6. COLUMN RESIZING (SAFE PIXEL SYNC & DUAL-BOUND ZERO-JUMP ALGORITHM v7)
         // ============================================================================
-        const STORAGE_COL_WIDTHS_KEY = 'makeup_inv_col_widths_v4';
+        const STORAGE_COL_WIDTHS_KEY = 'makeup_inv_col_widths_v5';
 
         const DEFAULT_COLUMN_WIDTHS = {
             'th-idx': 45,           // #
             'th-sku': 110,          // SKU
-            'th-product-name': 280, // Tên vật liệu
+            'th-product-name': 275, // Tên vật liệu
             'th-image': 120,        // Hình (64px + nút [Máy] [Link])
-            'th-category': 155,     // Danh mục (không bao giờ bị cắt chữ)
+            'th-category': 165,     // Danh mục (không bao giờ bị cắt chữ)
             'th-unit': 60,          // ĐVT
             'th-stock': 120,        // Tồn kho thực tế (+/- stepper)
             'th-min-stock': 70,     // Tồn tối thiểu
@@ -2090,7 +2557,7 @@
             'th-sku': 95,
             'th-product-name': 200,
             'th-image': 115,        // Đủ chỗ cho thumbnail 64px và 2 nút Máy/Link
-            'th-category': 140,     // Đủ chỗ cho badge danh mục dài
+            'th-category': 145,     // Đủ chỗ cho badge danh mục dài
             'th-unit': 50,
             'th-stock': 110,        // Đủ chỗ cho stepper +/-
             'th-min-stock': 60,
@@ -2520,9 +2987,12 @@
                                 </div>
                             </td>
 
-                            <!-- DANH MỤC -->
-                            <td class="py-2.5 px-2.5 text-xs font-semibold text-slate-700 overflow-hidden whitespace-nowrap">
-                                <span class="bg-slate-100 border border-slate-200 px-2 py-1 rounded-md text-[11px]">
+                            <!-- DANH MỤC: Tự động xuống dòng mềm mại, không bao giờ bị cắt chữ -->
+                            <td class="py-2 px-2 text-left overflow-hidden">
+                                <span 
+                                    class="inline-block max-w-full bg-slate-100 text-slate-800 border border-slate-200 px-2 py-1 rounded-md text-[11px] font-semibold leading-snug break-words whitespace-normal"
+                                    title="${escapeHtml(item.category || 'Chung')}"
+                                >
                                     ${escapeHtml(item.category || 'Chung')}
                                 </span>
                             </td>
@@ -3030,15 +3500,67 @@
         // 13. ITEM MASTER MODAL (CREATE / EDIT ITEM)
         // ============================================================================
         let modalTranslateTimer = null;
+        const translationCache = new Map();
+
         async function autoTranslateToChinese(textVi) {
             const clean = (textVi || '').trim();
             if (!clean) return '';
-            if (/[\u4e00-\u9fa5]/.test(clean)) return clean;
-            const lower = clean.toLowerCase();
-            if (MAKEUP_DICT_VI_TO_ZH[lower]) return MAKEUP_DICT_VI_TO_ZH[lower];
-            for (const [k, v] of Object.entries(MAKEUP_DICT_VI_TO_ZH)) {
-                if (lower.includes(k)) return v;
+
+            // Nếu đã là chữ Hán thì giữ nguyên
+            if (/[\u4e00-\u9fa5]/.test(clean)) {
+                return clean;
             }
+
+            const lower = clean.toLowerCase();
+            if (MAKEUP_DICT_VI_TO_ZH[lower]) {
+                return MAKEUP_DICT_VI_TO_ZH[lower];
+            }
+            if (translationCache.has(lower)) {
+                return translationCache.get(lower);
+            }
+
+            // 1. Google Translate API (gtx client - 100% Miễn phí & Siêu nhanh)
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q=${encodeURIComponent(clean)}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && Array.isArray(data[0])) {
+                        const translated = data[0].map(part => part[0]).join('').trim();
+                        if (translated) {
+                            translationCache.set(lower, translated);
+                            return translated;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Google translate fallback:', err);
+            }
+
+            // 2. MyMemory Translation API (Dự phòng thứ cấp miễn phí)
+            try {
+                const url2 = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=vi|zh-CN`;
+                const res2 = await fetch(url2);
+                if (res2.ok) {
+                    const data2 = await res2.json();
+                    if (data2 && data2.responseData && data2.responseData.translatedText) {
+                        const tr2 = data2.responseData.translatedText.trim();
+                        if (tr2 && !tr2.includes('MYMEMORY WARNING')) {
+                            translationCache.set(lower, tr2);
+                            return tr2;
+                        }
+                    }
+                }
+            } catch (err2) {}
+
+            // 3. Khớp một phần theo từ điển makeup
+            for (const [k, v] of Object.entries(MAKEUP_DICT_VI_TO_ZH)) {
+                if (lower.includes(k)) {
+                    translationCache.set(lower, v);
+                    return v;
+                }
+            }
+
             return '';
         }
 
@@ -3057,7 +3579,37 @@
                         zhInput.dataset.autoFilled = 'true';
                     }
                 }
-            }, 300);
+            }, 350);
+        }
+
+        async function triggerManualTranslate() {
+            const viInput = document.getElementById('item-form-name-vi');
+            const zhInput = document.getElementById('item-form-name-zh');
+            const indicator = document.getElementById('item-translate-indicator');
+            if (!viInput || !zhInput) return;
+
+            const viVal = viInput.value.trim();
+            if (!viVal) {
+                showToast('Vui lòng nhập tên tiếng Việt trước khi dịch!');
+                viInput.focus();
+                return;
+            }
+
+            if (indicator) indicator.classList.remove('hidden');
+            try {
+                const zh = await autoTranslateToChinese(viVal);
+                if (zh) {
+                    zhInput.value = zh;
+                    zhInput.dataset.autoFilled = 'true';
+                    showToast('Đã dịch sang tiếng Trung!');
+                } else {
+                    showToast('Không thể dịch tự động, bạn có thể gõ trực tiếp tên tiếng Trung.');
+                }
+            } catch (e) {
+                showToast('Lỗi kết nối dịch thuật.');
+            } finally {
+                if (indicator) indicator.classList.add('hidden');
+            }
         }
 
         function openItemModal(itemId = null) {
@@ -3752,6 +4304,7 @@
 
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+                closeCategoryManageModal();
                 closeConfirmDeleteModal();
                 closeProposalModal();
                 closeImageLinkModal();
@@ -3766,6 +4319,17 @@
         // ============================================================================
         // 19. GLOBAL EXPORTS
         // ============================================================================
+        window.openCategoryManageModal = openCategoryManageModal;
+        window.closeCategoryManageModal = closeCategoryManageModal;
+        window.addNewCategory = addNewCategory;
+        window.startEditCategory = startEditCategory;
+        window.cancelCategoryInlineEdit = cancelCategoryInlineEdit;
+        window.saveCategoryInlineEdit = saveCategoryInlineEdit;
+        window.startDeleteCategory = startDeleteCategory;
+        window.cancelDeleteCategory = cancelDeleteCategory;
+        window.confirmDeleteCategoryAction = confirmDeleteCategoryAction;
+        window.triggerManualTranslate = triggerManualTranslate;
+
         window.openItemModal = openItemModal;
         window.closeItemModal = closeItemModal;
         window.handleItemModalDelete = handleItemModalDelete;
@@ -3822,7 +4386,19 @@
         function startApp() {
             setLanguage('vi');
 
-            // Nạp dữ liệu cache tức thì (0ms)
+            // Nạp dữ liệu cache danh mục & tồn kho tức thì (0ms)
+            try {
+                const cachedCat = localStorage.getItem('makeup_inv_categories_v1');
+                if (cachedCat) {
+                    const parsedCat = JSON.parse(cachedCat);
+                    if (Array.isArray(parsedCat) && parsedCat.length > 0) {
+                        categoriesList = parsedCat;
+                    }
+                }
+            } catch (e) {}
+
+            renderCategorySelects();
+
             try {
                 const cached = localStorage.getItem('makeup_inventory_cache_v1');
                 if (cached) {
