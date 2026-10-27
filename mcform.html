@@ -1064,6 +1064,20 @@
     const TARGET_GROUP = rawTarget ? decodeURIComponent(rawTarget).trim() : ''; 
 
     let employeesData = [], leavesData = [], badgesData = {}, quotasData = {};
+let trafficGroupsData = ["ORION", "ROYEN:ONE"];
+
+function isTrafficGroup(groupNameOrKey) {
+  if (!groupNameOrKey) return false;
+  const s = String(groupNameOrKey).toUpperCase().trim();
+  const list = (Array.isArray(trafficGroupsData) && trafficGroupsData.length > 0)
+    ? trafficGroupsData
+    : ["ORION", "ROYEN:ONE"];
+  return list.some(item => {
+    const it = String(item).toUpperCase().trim();
+    return s === it || s.includes(it) || it.includes(s);
+  });
+}
+window.isTrafficGroup = isTrafficGroup;
     let isSyncing = false; 
     let selectedCells = []; 
     let selectedCancelCells = []; 
@@ -1116,11 +1130,18 @@
                 const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
                 leaveSnap.forEach(d => leaves.push(d.data()));
                 
+                let trafficGroups = ["ORION", "ROYEN:ONE"];
                 const configSnap = await fs.getDocs(fs.collection(db, "system_config"));
                 configSnap.forEach(d => {
-                    if(d.id === 'general') { badges = d.data().badges || {}; quotas = d.data().quotas || {}; }
+                    if(d.id === 'general') { 
+                        badges = d.data().badges || {}; 
+                        quotas = d.data().quotas || {}; 
+                        if (d.data().trafficGroups && Array.isArray(d.data().trafficGroups)) {
+                            trafficGroups = d.data().trafficGroups;
+                        }
+                    }
                 });
-                return { employees, leaves, badges, quotas, monthEmployees };
+                return { employees, leaves, badges, quotas, monthEmployees, trafficGroups };
             }
 
             if (action === 'registerMultipleMCLeaves') {
@@ -1335,7 +1356,7 @@
       const monthPrefix = `${displayYear}-${(displayMonth + 1).toString().padStart(2, '0')}`;
 
       let displayTitle = TARGET_GROUP.replace("GROUP:", "").trim();
-      let isTraffic = (displayTitle.toUpperCase().includes("ORION") || displayTitle.toUpperCase().includes("ROYEN"));
+      let isTraffic = isTrafficGroup(displayTitle);
 
       // Lấy tất cả nhân sự trong nhóm
       let groupEmps = [];
@@ -1493,24 +1514,25 @@
       const b = String(emp.customBadge || '').toUpperCase();
 
       if (g.includes("ORION") || b.includes("ORION") || n.includes("ORION")) {
-        return { teamCode: "TEAM_KEN", sortOrder: 102, groupKey: "TEAM KEN - ORION", groupLabel: "Team Ken - Orion", isTraffic: true };
+        return { teamCode: "TEAM_KEN", sortOrder: 102, groupKey: "TEAM KEN - ORION", groupLabel: "Team Ken - Orion", isTraffic: isTrafficGroup("TEAM KEN - ORION") };
       }
       if (g.includes("KEN") || b.includes("ANGELIK") || n.includes("ANGELIK") || g.includes("ANGELIK")) {
-        return { teamCode: "TEAM_KEN", sortOrder: 101, groupKey: "TEAM KEN - ANGELIK", groupLabel: "Team Ken - Angelik", isTraffic: false };
+        return { teamCode: "TEAM_KEN", sortOrder: 101, groupKey: "TEAM KEN - ANGELIK", groupLabel: "Team Ken - Angelik", isTraffic: isTrafficGroup("TEAM KEN - ANGELIK") };
       }
       if (g.includes("ROYEN") || b.includes("ROYEN") || n.includes("ROYEN")) {
-        return { teamCode: "TEAM_U", sortOrder: 202, groupKey: "TEAM U - ROYEN:ONE", groupLabel: "Team U - Royen:One", isTraffic: true };
+        return { teamCode: "TEAM_U", sortOrder: 202, groupKey: "TEAM U - ROYEN:ONE", groupLabel: "Team U - Royen:One", isTraffic: isTrafficGroup("TEAM U - ROYEN:ONE") };
       }
       if (g.includes("TEAM U") || b.includes("FASHION") || n.includes("FASHION") || g.includes("FASHION")) {
-        return { teamCode: "TEAM_U", sortOrder: 201, groupKey: "TEAM U - FASHION", groupLabel: "Team U - Fashion", isTraffic: false };
+        return { teamCode: "TEAM_U", sortOrder: 201, groupKey: "TEAM U - FASHION", groupLabel: "Team U - Fashion", isTraffic: isTrafficGroup("TEAM U - FASHION") };
       }
       if (g.includes("BNART") || b.includes("BNART") || n.includes("BNART")) {
-        return { teamCode: "TEAM_DINO", sortOrder: 302, groupKey: "TEAM DINO - BNART", groupLabel: "Team Dino - Bnart", isTraffic: false };
+        return { teamCode: "TEAM_DINO", sortOrder: 302, groupKey: "TEAM DINO - BNART", groupLabel: "Team Dino - Bnart", isTraffic: isTrafficGroup("TEAM DINO - BNART") };
       }
       if (g.includes("BEE") || b.includes("BEE") || n.includes("BEE") || g.includes("DINO")) {
-        return { teamCode: "TEAM_DINO", sortOrder: 301, groupKey: "TEAM DINO - BEE", groupLabel: "Team Dino - Bee", isTraffic: false };
+        return { teamCode: "TEAM_DINO", sortOrder: 301, groupKey: "TEAM DINO - BEE", groupLabel: "Team Dino - Bee", isTraffic: isTrafficGroup("TEAM DINO - BEE") };
       }
-      return { teamCode: "OTHER", sortOrder: 999, groupKey: emp.group || "KHÁC", groupLabel: emp.group || "Khác", isTraffic: false };
+      const rawG = emp.group || "KHÁC";
+      return { teamCode: "OTHER", sortOrder: 999, groupKey: rawG, groupLabel: rawG, isTraffic: isTrafficGroup(rawG) };
     }
 
     function getEmployeesForMonth(monthPrefix) {
@@ -1610,6 +1632,7 @@
           leavesData = (data && data.leaves) ? data.leaves : []; 
           badgesData = (data && data.badges) ? data.badges : {}; 
           quotasData = (data && data.quotas) ? data.quotas : {};
+          trafficGroupsData = (data && data.trafficGroups) ? data.trafficGroups : ["ORION", "ROYEN:ONE"];
           syncCurrentMonthEmployees();
           renderTable(); 
           isSyncing = false; 
@@ -1713,7 +1736,7 @@
 
         for (let deptKey of deptKeys) {
           for (let group in depts[deptKey]) {
-             let isTraffic = (group.toUpperCase().includes("ORION") || group.toUpperCase().includes("ROYEN"));
+             let isTraffic = isTrafficGroup(group);
              
              // SẮP XẾP NHÂN SỰ: Operation (1), MC (2), Idol (3)
              depts[deptKey][group].sort((a, b) => {

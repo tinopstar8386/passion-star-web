@@ -22,17 +22,30 @@
                         sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
                     },
                     colors: {
-                        brand: {
-                            50: '#fdf6f5',
-                            100: '#fbeae7',
-                            200: '#f6d6d0',
-                            300: '#eeb7ad',
-                            400: '#e28d7e',
-                            500: '#d36654',
-                            600: '#be4d3b',
-                            700: '#9f3e2f',
-                            800: '#84362a',
-                            900: '#6e3128',
+                        // Tông màu Xanh lá (Emerald/Green) & Xanh ngọc (Teal/Mint) nhẹ nhàng
+                        theme: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        teal: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
                         }
                     }
                 }
@@ -40,7 +53,7 @@
         }
     </script>
     <style>
-        /* Quy tắc sống còn: Tuyệt đối không sinh thanh cuộn ngang ở bất kỳ độ phân giải nào */
+        /* Quy tắc sống còn: Tuyệt đối không sinh thanh cuộn ngang */
         html, body {
             overflow-x: hidden;
             width: 100%;
@@ -55,7 +68,7 @@
         .sheet-table {
             border-collapse: collapse;
             width: 100%;
-            table-layout: fixed; /* Khóa độ rộng cột để không đẩy tràn ngang */
+            table-layout: fixed; /* Khóa độ rộng để không đẩy tràn ngang */
         }
         .sheet-table th, 
         .sheet-table td {
@@ -64,17 +77,17 @@
         }
         .sheet-table thead th {
             border: 1px solid #cbd5e1;
-            border-bottom: 2px solid #94a3b8;
-            background-color: #f1f5f9;
-            color: #1e293b;
+            border-bottom: 2px solid #0d9488;
+            background-color: #f0fdfa;
+            color: #0f766e;
         }
         .sheet-table tbody tr:hover {
-            background-color: #fff1f2;
+            background-color: #f0fdf4;
         }
         .sheet-table tfoot tr.footer-total-row td {
-            border-top: 2px solid #e11d48;
+            border-top: 2px solid #0d9488;
             border-bottom: 2px solid #cbd5e1;
-            background-color: #fff1f2;
+            background-color: #f0fdfa;
         }
 
         .shadow-2xs {
@@ -120,39 +133,70 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-rose-100 selection:text-rose-900 bg-slate-100/70">
+<body class="min-h-screen flex flex-col selection:bg-teal-100 selection:text-teal-900 bg-slate-100/70">
 
-    <!-- Hidden global file input for quick image upload directly from table -->
+    <!-- Global file input for quick image upload directly from table -->
     <input type="file" id="quick-image-upload-input" accept="image/*" class="hidden" onchange="handleQuickUploadFile(event)" />
 
-    <!-- Top Navigation Bar -->
-    <header class="sticky top-0 z-30 bg-white border-b border-slate-300 shadow-2xs">
+    <!-- Top Navigation Bar (Tông xanh ngọc & xanh lá dịu mắt) -->
+    <header class="sticky top-0 z-30 bg-white border-b border-teal-200/80 shadow-2xs">
         <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3">
-            <!-- Brand & Title (Không có chữ Sheet 1) -->
+            <!-- Brand & Title kèm Tháng hiện tại -->
             <div class="flex items-center gap-3 shrink-0">
-                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-amber-500 flex items-center justify-center text-white shadow-xs border border-rose-600/30 shrink-0">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 flex items-center justify-center text-white shadow-xs border border-teal-600/30 shrink-0">
                     <i data-lucide="sparkles" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h1 id="ui-app-title" class="text-base sm:text-xl font-black text-slate-900 tracking-tight">
-                        ĐỀ XUẤT ĐỒ MAKE UP
-                    </h1>
+                    <div class="flex items-center gap-2">
+                        <h1 id="ui-app-title" class="text-base sm:text-xl font-black text-slate-900 tracking-tight">
+                            ĐỀ XUẤT ĐỒ MAKE UP
+                        </h1>
+                        <!-- Badge hiển thị tháng hiện tại -->
+                        <span id="header-month-badge" class="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-teal-100 text-teal-800 border border-teal-300">
+                            Tháng 11/2026
+                        </span>
+                    </div>
                     <p id="ui-app-subtitle" class="text-xs sm:text-sm text-slate-600 font-medium">
-                        Hệ thống quản lý danh mục, báo giá & link đặt hàng sản phẩm trang điểm
+                        Hệ thống quản lý danh mục, báo giá & link đặt hàng sản phẩm trang điểm theo từng tháng
                     </p>
                 </div>
             </div>
 
-            <!-- Right Controls: Firebase status, Tỷ giá, Chuyển ngữ -->
-            <div class="flex items-center gap-2.5 sm:gap-3">
-                <!-- Firebase Realtime Status Badge -->
-                <div id="firebase-status-badge" class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs no-print" title="Firebase Firestore: passionstar-2014d">
-                    <span id="firebase-status-dot" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                    <span id="firebase-status-text">Đang kết nối...</span>
+            <!-- Right Controls: Bộ chọn tháng, Tỷ giá, Chuyển ngữ -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- BỘ CHỌN THÁNG (MONTH SELECTOR) TRỰC QUAN -->
+                <div class="flex items-center bg-teal-50/80 border border-teal-300 rounded-xl px-2 py-1 shadow-2xs no-print">
+                    <button
+                        onclick="navigateMonth(-1)"
+                        class="p-1 rounded-lg hover:bg-teal-200/70 text-teal-800 transition-colors"
+                        title="Tháng trước"
+                    >
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    </button>
+                    
+                    <div class="flex items-center gap-1.5 px-1.5 font-black text-teal-900 text-xs sm:text-sm">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-teal-700"></i>
+                        <input
+                            type="month"
+                            id="month-selector-input"
+                            value="2026-11"
+                            onchange="changeSelectedMonth(this.value)"
+                            class="bg-transparent font-black text-teal-900 border-none focus:outline-none cursor-pointer text-xs sm:text-sm"
+                            title="Chọn tháng đề xuất"
+                        />
+                    </div>
+
+                    <button
+                        onclick="navigateMonth(1)"
+                        class="p-1 rounded-lg hover:bg-teal-200/70 text-teal-800 transition-colors"
+                        title="Tháng sau"
+                    >
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </button>
                 </div>
 
                 <!-- Currency Exchange Rate Helper -->
-                <div class="hidden lg:flex items-center gap-1.5 bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-700 shadow-2xs no-print">
+                <div class="hidden lg:flex items-center gap-1.5 bg-emerald-50/60 border border-emerald-300 rounded-lg px-2.5 py-1 text-xs text-slate-700 shadow-2xs no-print">
                     <span id="ui-rate-label" class="font-semibold text-slate-600">Tỷ giá:</span>
                     <span class="font-bold text-slate-900">1 ¥ =</span>
                     <input
@@ -162,7 +206,7 @@
                         min="1"
                         step="50"
                         onchange="updateExchangeRate(this.value)"
-                        class="w-16 bg-white border border-slate-300 rounded px-1.5 py-0.5 text-right font-extrabold text-rose-600 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                        class="w-16 bg-white border border-emerald-300 rounded px-1.5 py-0.5 text-right font-extrabold text-teal-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
                     />
                     <span class="font-bold text-slate-900">₫</span>
                 </div>
@@ -172,7 +216,7 @@
                     <button
                         id="btn-lang-vi"
                         onclick="setLanguage('vi')"
-                        class="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-rose-600 shadow-xs border border-slate-300"
+                        class="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-teal-700 shadow-xs border border-teal-300"
                     >
                         <span>🇻🇳</span>
                         <span>Tiếng Việt</span>
@@ -193,48 +237,48 @@
     <!-- Main Content Container -->
     <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5">
 
-        <!-- KPI Summary Cards -->
+        <!-- KPI Summary Cards (Tông Xanh Lá & Xanh Ngọc) -->
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <!-- Card 1: Total Products -->
-            <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-300 shadow-2xs flex items-center justify-between">
+            <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-teal-200/80 shadow-2xs flex items-center justify-between">
                 <div>
                     <p id="ui-stat-items-label" class="text-xs font-bold uppercase tracking-wider text-slate-500">Danh mục hàng</p>
                     <p id="stat-total-items" class="text-2xl sm:text-3xl font-black text-slate-900 mt-0.5">0</p>
                     <p id="ui-stat-items-sub" class="text-[11px] sm:text-xs font-medium text-slate-600">Sản phẩm đề xuất</p>
                 </div>
-                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-teal-50 border border-teal-200 text-teal-600 flex items-center justify-center shrink-0">
                     <i data-lucide="package" class="w-5 h-5"></i>
                 </div>
             </div>
 
             <!-- Card 2: Total Quantity -->
-            <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-300 shadow-2xs flex items-center justify-between">
+            <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-teal-200/80 shadow-2xs flex items-center justify-between">
                 <div>
                     <p id="ui-stat-qty-label" class="text-xs font-bold uppercase tracking-wider text-slate-500">Tổng số lượng</p>
                     <p id="stat-total-qty" class="text-2xl sm:text-3xl font-black text-slate-900 mt-0.5">0</p>
                     <p id="ui-stat-qty-sub" class="text-[11px] sm:text-xs font-medium text-slate-600">Đơn vị sản phẩm</p>
                 </div>
-                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
                     <i data-lucide="layers" class="w-5 h-5"></i>
                 </div>
             </div>
 
             <!-- Card 3: Link Status -->
-            <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-300 shadow-2xs flex items-center justify-between">
+            <div class="bg-white rounded-xl p-3.5 sm:p-4 border border-teal-200/80 shadow-2xs flex items-center justify-between">
                 <div>
                     <p id="ui-stat-links-label" class="text-xs font-bold uppercase tracking-wider text-slate-500">Link sản phẩm</p>
-                    <p id="stat-links-count" class="text-2xl sm:text-3xl font-black text-emerald-600 mt-0.5">0 / 0</p>
+                    <p id="stat-links-count" class="text-2xl sm:text-3xl font-black text-teal-700 mt-0.5">0 / 0</p>
                     <p id="ui-stat-links-sub" class="text-[11px] sm:text-xs font-medium text-slate-600">Đã gắn link đặt hàng</p>
                 </div>
-                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-teal-50 border border-teal-200 text-teal-600 flex items-center justify-center shrink-0">
                     <i data-lucide="link-2" class="w-5 h-5"></i>
                 </div>
             </div>
 
-            <!-- Card 4: Grand Total -->
-            <div class="rounded-xl p-3.5 sm:p-4 border-2 border-rose-500 bg-gradient-to-br from-rose-600 via-rose-600 to-amber-600 text-white shadow-sm flex items-center justify-between col-span-2 lg:col-span-1">
+            <!-- Card 4: Grand Total (Gradient Xanh ngọc & Xanh lá sang trọng) -->
+            <div class="rounded-xl p-3.5 sm:p-4 border-2 border-teal-500 bg-gradient-to-br from-emerald-600 via-teal-600 to-teal-700 text-white shadow-sm flex items-center justify-between col-span-2 lg:col-span-1">
                 <div>
-                    <p id="ui-stat-total-label" class="text-xs font-extrabold uppercase tracking-wider text-rose-100">Tổng tiền đề xuất</p>
+                    <p id="ui-stat-total-label" class="text-xs font-extrabold uppercase tracking-wider text-teal-100">Tổng tiền đề xuất</p>
                     <div class="flex items-baseline gap-1 mt-0.5">
                         <p id="stat-grand-total" class="text-xl sm:text-2xl font-black text-white">0 ₫</p>
                     </div>
@@ -258,7 +302,7 @@
                         type="text"
                         oninput="handleSearchAndFilter()"
                         placeholder="Tìm tên hàng, mã hàng, link..."
-                        class="w-full pl-9 pr-8 py-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
+                        class="w-full pl-9 pr-8 py-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
                     />
                     <button
                         id="clear-search-btn"
@@ -273,7 +317,7 @@
                 <select
                     id="filter-link-select"
                     onchange="handleSearchAndFilter()"
-                    class="px-3 py-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
+                    class="px-3 py-2 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
                 >
                     <option value="all" id="opt-filter-all">Tất cả sản phẩm</option>
                     <option value="has-link" id="opt-filter-has-link">Đã có link</option>
@@ -283,13 +327,23 @@
 
             <!-- Right: Action Buttons -->
             <div class="flex flex-wrap items-center gap-2">
+                <!-- NÚT SAO CHÉP DỮ LIỆU TỪ THÁNG TRƯỚC (Rất tiện cho việc làm mỗi tháng) -->
+                <button
+                    onclick="copyFromPreviousMonth()"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 transition-all shadow-2xs"
+                    title="Sao chép toàn bộ danh mục từ tháng trước sang tháng hiện tại"
+                >
+                    <i data-lucide="copy-plus" class="w-4 h-4 text-teal-600"></i>
+                    <span id="ui-btn-copy-month">Copy từ tháng trước</span>
+                </button>
+
                 <!-- Nút NHẬP TỪ SHEET -->
                 <button
                     onclick="openImportModal()"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-300 transition-all shadow-2xs"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-all shadow-2xs"
                     title="Nhập dữ liệu từ Excel, Google Sheets, chọn ảnh từ máy hoặc dán link"
                 >
-                    <i data-lucide="file-up" class="w-4 h-4 text-indigo-600"></i>
+                    <i data-lucide="file-up" class="w-4 h-4 text-emerald-600"></i>
                     <span id="ui-btn-import">Nhập từ Sheet</span>
                 </button>
 
@@ -319,7 +373,7 @@
 
                 <button
                     onclick="openProductModal()"
-                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 border border-rose-700 shadow-xs transition-all"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 active:bg-teal-800 border border-teal-700 shadow-xs transition-all"
                 >
                     <i data-lucide="plus-circle" class="w-4 h-4"></i>
                     <span id="ui-btn-add-top">Thêm sản phẩm</span>
@@ -327,20 +381,20 @@
             </div>
         </section>
 
-        <!-- Main Spreadsheet Card (Không cuộn ngang, bố cục khóa độ rộng) -->
-        <section class="bg-white rounded-2xl border-2 border-slate-300 shadow-sm overflow-hidden print-full">
+        <!-- Main Spreadsheet Card (Không cuộn ngang, Ô hình ảnh siêu gọn gàng) -->
+        <section class="bg-white rounded-2xl border-2 border-teal-300/80 shadow-sm overflow-hidden print-full">
             <!-- Table Header Banner -->
-            <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="px-5 py-3.5 bg-teal-50/70 border-b border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div class="flex items-center gap-2.5">
-                    <span class="w-3.5 h-3.5 rounded-full bg-rose-500 ring-4 ring-rose-100 shrink-0"></span>
-                    <h2 id="ui-table-heading" class="text-sm sm:text-base font-extrabold text-slate-900 uppercase tracking-wide">
-                        BẢNG ĐỀ XUẤT ĐỒ MAKE UP
+                    <span class="w-3.5 h-3.5 rounded-full bg-teal-500 ring-4 ring-teal-100 shrink-0"></span>
+                    <h2 id="ui-table-heading" class="text-sm sm:text-base font-extrabold text-teal-950 uppercase tracking-wide">
+                        BẢNG ĐỀ XUẤT ĐỒ MAKE UP - THÁNG 11/2026
                     </h2>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-slate-700 bg-white border border-slate-300 shadow-2xs no-print">
-                        <i data-lucide="info" class="w-3.5 h-3.5 text-rose-500"></i>
-                        <span id="ui-table-tip">Mẹo: Giá mặc định VNĐ (₫), đổi ảnh trực tiếp từ máy hoặc link web</span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-teal-800 bg-white border border-teal-300 shadow-2xs no-print">
+                        <i data-lucide="info" class="w-3.5 h-3.5 text-teal-600"></i>
+                        <span id="ui-table-tip">Mẹo: Nhấp vào ảnh để xem to hoặc bấm camera để đổi ảnh từ máy</span>
                     </span>
                 </div>
             </div>
@@ -349,40 +403,40 @@
             <div class="w-full overflow-hidden">
                 <table class="sheet-table w-full text-left">
                     <thead>
-                        <tr class="text-slate-800 text-xs font-bold uppercase tracking-wider">
+                        <tr class="text-teal-900 text-xs font-bold uppercase tracking-wider">
                             <!-- STT: Cố định hẹp -->
-                            <th class="py-3 px-2 text-center w-10 sm:w-12 bg-slate-100">#</th>
+                            <th class="py-3 px-2 text-center w-10 sm:w-12 bg-teal-50">#</th>
                             
-                            <!-- TÊN HÀNG: Cột rộng nhất, tự động xuống dòng và dãn đều toàn màn hình -->
-                            <th id="th-product-name" class="py-3 px-3.5 bg-slate-100">TÊN HÀNG</th>
+                            <!-- TÊN HÀNG: Cột rộng nhất, tự do dãn đều toàn màn hình -->
+                            <th id="th-product-name" class="py-3 px-3.5 bg-teal-50">TÊN HÀNG</th>
                             
-                            <!-- HÌNH THỂ HIỆN: Hỗ trợ đổi ảnh từ máy & dán link trực tiếp -->
-                            <th id="th-image" class="py-3 px-1 text-center w-22 sm:w-26 bg-slate-100">HÌNH ẢNH</th>
+                            <!-- HÌNH THỂ HIỆN: THU GỌN TỐI ĐA (CHỈ 48px - 56px), KHÔNG CHIẾM DIỆN TÍCH -->
+                            <th id="th-image" class="py-3 px-1 text-center w-12 sm:w-14 bg-teal-50">HÌNH</th>
                             
                             <!-- GIÁ TIỀN -->
-                            <th id="th-price" class="py-3 px-3 text-right w-32 sm:w-36 cursor-pointer hover:bg-slate-200 transition-colors bg-slate-100 select-none" onclick="toggleSort('price')">
+                            <th id="th-price" class="py-3 px-3 text-right w-32 sm:w-36 cursor-pointer hover:bg-teal-100 transition-colors bg-teal-50 select-none" onclick="toggleSort('price')">
                                 <div class="inline-flex items-center justify-end gap-1">
                                     <span id="th-price-text">ĐƠN GIÁ (VNĐ)</span>
-                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-500"></i>
+                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-teal-600"></i>
                                 </div>
                             </th>
                             
-                            <!-- LINK SẢN PHẨM: Nút bấm gọn gàng, không bị tràn -->
-                            <th id="th-link" class="py-3 px-2 text-center w-32 sm:w-36 bg-slate-100">LINK SẢN PHẨM</th>
+                            <!-- LINK SẢN PHẨM: Nút bấm gọn gàng -->
+                            <th id="th-link" class="py-3 px-2 text-center w-32 sm:w-36 bg-teal-50">LINK SẢN PHẨM</th>
                             
                             <!-- SỐ LƯỢNG -->
-                            <th id="th-quantity" class="py-3 px-2 text-center w-24 sm:w-28 bg-slate-100">SỐ LƯỢNG</th>
+                            <th id="th-quantity" class="py-3 px-2 text-center w-24 sm:w-28 bg-teal-50">SỐ LƯỢNG</th>
                             
                             <!-- THÀNH TIỀN -->
-                            <th id="th-subtotal" class="py-3 px-3 text-right w-36 sm:w-40 cursor-pointer hover:bg-slate-200 transition-colors bg-slate-100 select-none" onclick="toggleSort('subtotal')">
+                            <th id="th-subtotal" class="py-3 px-3 text-right w-36 sm:w-40 cursor-pointer hover:bg-teal-100 transition-colors bg-teal-50 select-none" onclick="toggleSort('subtotal')">
                                 <div class="inline-flex items-center justify-end gap-1">
                                     <span id="th-subtotal-text">THÀNH TIỀN (VNĐ)</span>
-                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-500"></i>
+                                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-teal-600"></i>
                                 </div>
                             </th>
                             
                             <!-- THAO TÁC -->
-                            <th id="th-actions" class="py-3 px-2 text-center w-20 sm:w-24 bg-slate-100 no-print">THAO TÁC</th>
+                            <th id="th-actions" class="py-3 px-2 text-center w-20 sm:w-24 bg-teal-50 no-print">THAO TÁC</th>
                         </tr>
                     </thead>
                     <tbody id="product-table-body" class="text-sm">
@@ -392,33 +446,33 @@
                     <!-- Table Footer: Add Product Row & Grand Total Row -->
                     <tfoot>
                         <!-- Quick Add Product Button Row -->
-                        <tr class="bg-slate-50/90 no-print">
+                        <tr class="bg-teal-50/50 no-print">
                             <td colspan="8" class="px-4 py-2.5">
                                 <div class="flex flex-wrap items-center justify-between gap-2.5">
                                     <div class="flex items-center gap-2">
                                         <button
                                             onclick="openProductModal()"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-300 transition-all shadow-2xs"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-teal-800 bg-teal-100/70 hover:bg-teal-200/80 border border-teal-300 transition-all shadow-2xs"
                                         >
                                             <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                                             <span id="ui-btn-add-bottom">Thêm sản phẩm mới</span>
                                         </button>
                                         <button
                                             onclick="addQuickBlankRow()"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-all shadow-2xs"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-white hover:bg-teal-50 border border-slate-300 transition-all shadow-2xs"
                                         >
                                             <i data-lucide="rows" class="w-3.5 h-3.5 text-slate-500"></i>
                                             <span id="ui-btn-add-quick-row">+ Thêm nhanh dòng trống</span>
                                         </button>
                                         <button
                                             onclick="openImportModal()"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all shadow-2xs"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 transition-all shadow-2xs"
                                         >
                                             <i data-lucide="file-up" class="w-3.5 h-3.5"></i>
                                             <span>Nhập hàng loạt từ Sheet</span>
                                         </button>
                                     </div>
-                                    <span id="ui-footer-RowCount" class="text-xs text-slate-600 font-semibold bg-white border border-slate-300 px-2.5 py-1 rounded-md shadow-2xs">
+                                    <span id="ui-footer-RowCount" class="text-xs text-teal-800 font-semibold bg-white border border-teal-300 px-2.5 py-1 rounded-md shadow-2xs">
                                         Hiển thị 0 sản phẩm
                                     </span>
                                 </div>
@@ -426,28 +480,28 @@
                         </tr>
 
                         <!-- TỔNG TIỀN (Grand Total) Row at the bottom -->
-                        <tr class="footer-total-row bg-rose-50/80">
+                        <tr class="footer-total-row bg-teal-50/90">
                             <td colspan="5" class="py-3 px-4 text-right font-extrabold text-slate-900">
                                 <div class="inline-flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5 justify-end">
-                                    <span id="ui-total-footer-label" class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide">
+                                    <span id="ui-total-footer-label" class="text-sm sm:text-base font-black text-teal-950 uppercase tracking-wide">
                                         TỔNG TIỀN ĐỀ XUẤT
                                     </span>
-                                    <span id="ui-total-footer-note" class="text-[11px] text-slate-600 font-semibold bg-white/90 border border-rose-200 px-2 py-0.5 rounded">
+                                    <span id="ui-total-footer-note" class="text-[11px] text-teal-800 font-semibold bg-white border border-teal-300 px-2 py-0.5 rounded">
                                         (VNĐ ₫ • Quy đổi Nhân dân tệ ¥)
                                     </span>
                                 </div>
                             </td>
                             <td class="py-3 px-2 text-center">
-                                <span id="footer-total-qty" class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-lg bg-white border border-slate-300 text-xs sm:text-sm font-black text-slate-900 shadow-2xs">
+                                <span id="footer-total-qty" class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-lg bg-white border border-teal-300 text-xs sm:text-sm font-black text-teal-900 shadow-2xs">
                                     0
                                 </span>
                             </td>
                             <td class="py-3 px-3 text-right">
                                 <div class="flex flex-col items-end">
-                                    <span id="footer-grand-total" class="text-base sm:text-xl font-black text-rose-600 tracking-tight">
+                                    <span id="footer-grand-total" class="text-base sm:text-xl font-black text-teal-700 tracking-tight">
                                         0 ₫
                                     </span>
-                                    <span id="footer-grand-total-cny" class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-800 bg-white border border-rose-300 px-1.5 py-0.5 rounded shadow-2xs mt-0.5">
+                                    <span id="footer-grand-total-cny" class="inline-flex items-center gap-1 text-[11px] font-bold text-teal-900 bg-white border border-teal-300 px-1.5 py-0.5 rounded shadow-2xs mt-0.5">
                                         ≈ ¥ 0
                                     </span>
                                 </div>
@@ -463,7 +517,7 @@
     <!-- Footer -->
     <footer class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-5 text-center text-xs text-slate-500 border-t border-slate-300 mt-auto no-print font-medium">
         <p id="ui-footer-copyright">
-            Bảng Quản Lý Đề Xuất Đồ Makeup • Đồng bộ thời gian thực với Firebase • Tự động dịch Việt - Trung
+            Bảng Quản Lý Đề Xuất Đồ Makeup • Quản lý linh hoạt theo từng tháng • Đồng bộ Firebase • Giao diện Xanh Ngọc nhẹ nhàng
         </p>
     </footer>
 
@@ -471,16 +525,16 @@
     <!-- MODAL 1: NHẬP TỪ SHEET (HỖ TRỢ CẢ LINK ẢNH VÀ UPLOAD ẢNH TỪ MÁY)          -->
     <!-- ========================================================================= -->
     <div id="import-sheet-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-4xl w-full border-2 border-slate-300 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
+        <div class="bg-white rounded-2xl max-w-4xl w-full border-2 border-teal-300 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
             <!-- Modal Header -->
-            <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-300 flex items-center justify-between">
+            <div class="px-5 py-3.5 bg-teal-50 border-b border-teal-200 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-indigo-100 border border-indigo-200 text-indigo-700 flex items-center justify-center">
+                    <div class="w-8 h-8 rounded-lg bg-teal-100 border border-teal-300 text-teal-700 flex items-center justify-center">
                         <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
                     </div>
                     <div>
-                        <h3 class="text-sm sm:text-base font-bold text-slate-900">Nhập dữ liệu từ Excel / Google Sheets</h3>
-                        <p class="text-xs text-slate-500">Dán dữ liệu sao chép hoặc tải file .xlsx / .csv (Hỗ trợ cả link ảnh và tải ảnh từ máy lên web)</p>
+                        <h3 class="text-sm sm:text-base font-bold text-slate-900">Nhập dữ liệu từ Excel / Google Sheets vào <span id="modal-import-month-title" class="text-teal-700 font-extrabold">Tháng 11/2026</span></h3>
+                        <p class="text-xs text-slate-500">Dán dữ liệu sao chép hoặc tải file .xlsx / .csv (Hỗ trợ cả link ảnh và tải ảnh từ máy)</p>
                     </div>
                 </div>
                 <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-200 transition-colors">
@@ -490,16 +544,16 @@
 
             <div class="p-5 space-y-4 max-h-[82vh] overflow-y-auto">
                 <!-- HƯỚNG DẪN CẤU TRÚC CỘT CHI TIẾT -->
-                <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-3.5">
+                <div class="bg-teal-50/70 border border-teal-200 rounded-xl p-3.5">
                     <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2 text-indigo-900 font-bold text-xs uppercase tracking-wide">
-                            <i data-lucide="help-circle" class="w-4 h-4 text-indigo-600"></i>
-                            <span>Quy chuẩn các cột cần thông tin gì để file nhập đúng thông tin vào web:</span>
+                        <div class="flex items-center gap-2 text-teal-900 font-bold text-xs uppercase tracking-wide">
+                            <i data-lucide="help-circle" class="w-4 h-4 text-teal-600"></i>
+                            <span>Quy chuẩn các cột cần thông tin gì để file nhập đúng vào web:</span>
                         </div>
                         <button
                             type="button"
                             onclick="downloadSampleExcel()"
-                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold text-indigo-700 bg-white hover:bg-indigo-100 border border-indigo-300 shadow-2xs transition-all"
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold text-teal-800 bg-white hover:bg-teal-100 border border-teal-300 shadow-2xs transition-all"
                         >
                             <i data-lucide="download" class="w-3.5 h-3.5"></i>
                             <span>Tải file Excel mẫu (.xlsx)</span>
@@ -507,9 +561,9 @@
                     </div>
 
                     <!-- Bảng chỉ dẫn vị trí ô -->
-                    <div class="overflow-x-auto rounded-lg border border-indigo-200 bg-white">
+                    <div class="overflow-x-auto rounded-lg border border-teal-200 bg-white">
                         <table class="w-full text-xs text-left">
-                            <thead class="bg-indigo-100/70 text-indigo-950 font-bold border-b border-indigo-200">
+                            <thead class="bg-teal-100/70 text-teal-950 font-bold border-b border-teal-200">
                                 <tr>
                                     <th class="py-2 px-3 w-16 text-center">Cột</th>
                                     <th class="py-2 px-3 w-36">Tên thông tin</th>
@@ -518,57 +572,55 @@
                                     <th class="py-2 px-3 w-48">Ví dụ mẫu</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-indigo-100 text-slate-700">
+                            <tbody class="divide-y divide-teal-100 text-slate-700">
                                 <tr>
-                                    <td class="py-2 px-3 text-center font-bold text-indigo-700 bg-indigo-50/50">Cột A</td>
+                                    <td class="py-2 px-3 text-center font-bold text-teal-700 bg-teal-50/50">Cột A</td>
                                     <td class="py-2 px-3 font-bold text-slate-900">Tên hàng</td>
-                                    <td class="py-2 px-2.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700">Bắt buộc</span></td>
+                                    <td class="py-2 px-2.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-300">Bắt buộc</span></td>
                                     <td class="py-2 px-3 text-slate-600">Tên sản phẩm đầy đủ, mã phân loại. Hệ thống tự động dịch sang tiếng Trung.</td>
                                     <td class="py-2 px-3 font-medium text-slate-800">Mi Faneves mã SJ122,SJ007</td>
                                 </tr>
                                 <tr>
-                                    <td class="py-2 px-3 text-center font-bold text-indigo-700 bg-indigo-50/50">Cột B</td>
+                                    <td class="py-2 px-3 text-center font-bold text-teal-700 bg-teal-50/50">Cột B</td>
                                     <td class="py-2 px-3 font-bold text-slate-900">Giá tiền (VNĐ)</td>
-                                    <td class="py-2 px-2.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700">Bắt buộc</span></td>
+                                    <td class="py-2 px-2.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-300">Bắt buộc</span></td>
                                     <td class="py-2 px-3 text-slate-600">Đơn giá tiền Việt. Có thể có dấu phẩy hoặc chấm (hệ thống tự lọc số).</td>
                                     <td class="py-2 px-3 font-medium text-slate-800">31999 hoặc 32,000</td>
                                 </tr>
                                 <tr>
-                                    <td class="py-2 px-3 text-center font-bold text-indigo-700 bg-indigo-50/50">Cột C</td>
+                                    <td class="py-2 px-3 text-center font-bold text-teal-700 bg-teal-50/50">Cột C</td>
                                     <td class="py-2 px-3 font-bold text-slate-900">Số lượng</td>
                                     <td class="py-2 px-2.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">Tùy chọn</span></td>
                                     <td class="py-2 px-3 text-slate-600">Số lượng sản phẩm cần mua (mặc định là 1 nếu để trống).</td>
                                     <td class="py-2 px-3 font-medium text-slate-800">10 hoặc 20</td>
                                 </tr>
                                 <tr>
-                                    <td class="py-2 px-3 text-center font-bold text-indigo-700 bg-indigo-50/50">Cột D</td>
+                                    <td class="py-2 px-3 text-center font-bold text-teal-700 bg-teal-50/50">Cột D</td>
                                     <td class="py-2 px-3 font-bold text-slate-900">Link sản phẩm</td>
                                     <td class="py-2 px-2.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">Tùy chọn</span></td>
                                     <td class="py-2 px-3 text-slate-600">Đường link Shopee, Taobao, 1688, Lazada,...</td>
                                     <td class="py-2 px-3 font-medium text-slate-800 truncate max-w-[150px]">https://shopee.vn/...</td>
                                 </tr>
-                                <tr class="bg-amber-50/40">
-                                    <td class="py-2 px-3 text-center font-bold text-indigo-700 bg-indigo-50/50">Cột E</td>
-                                    <td class="py-2 px-3 font-bold text-slate-900">Hình ảnh sản phẩm</td>
+                                <tr class="bg-emerald-50/30">
+                                    <td class="py-2 px-3 text-center font-bold text-teal-700 bg-teal-50/50">Cột E</td>
+                                    <td class="py-2 px-3 font-bold text-slate-900">Hình ảnh</td>
                                     <td class="py-2 px-2.5 text-center"><span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">Tùy chọn</span></td>
                                     <td class="py-2 px-3 text-slate-600">
-                                        <strong>Nhận cả 2 hình thức:</strong>
-                                        <div class="mt-0.5">1. Điền <strong>Link ảnh trực tuyến</strong> (URL https://...) vào cột này.</div>
-                                        <div>2. Hoặc để trống cột này rồi <strong>chọn ảnh từ máy tính</strong> tải lên trực tiếp trong bảng xem trước bên dưới (hệ thống sẽ nén và up thẳng ảnh lên web).</div>
+                                        Điền link ảnh online hoặc để trống (có thể chọn ảnh từ máy ở bảng xem trước bên dưới).
                                     </td>
-                                    <td class="py-2 px-3 font-medium text-slate-800">https://.../anh.jpg <br><span class="text-indigo-600 text-[11px] font-semibold">(hoặc tải từ máy)</span></td>
+                                    <td class="py-2 px-3 font-medium text-slate-800">https://.../anh.jpg</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- 2 PHƯƠNG THỨC NHẬP: DÁN TRỰC TIẾP HOẶC TẢI FILE EXCEL -->
+                <!-- 2 PHƯƠNG THỨC NHẬP: DÁN HOẶC TẢI FILE EXCEL -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Cách 1: Dán trực tiếp từ Sheet -->
-                    <div class="bg-white border-2 border-slate-300 rounded-xl p-3.5 space-y-2">
+                    <div class="bg-white border-2 border-teal-200 rounded-xl p-3.5 space-y-2">
                         <div class="flex items-center gap-2 text-slate-800 font-bold text-xs uppercase">
-                            <span class="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs">1</span>
+                            <span class="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs">1</span>
                             <span>Cách 1: Dán từ Google Sheets / Excel</span>
                         </div>
                         <p class="text-xs text-slate-500">
@@ -579,15 +631,15 @@
                             rows="5"
                             oninput="handlePasteInput(this.value)"
                             placeholder="Dán dữ liệu copy từ Excel hoặc Google Sheets vào đây...&#10;Ví dụ:&#10;Mi Faneves mã SJ122	31999	20	https://shopee.vn/...&#10;Bông mút đánh má hồng	28000	10"
-                            class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:bg-white focus:border-indigo-500 shadow-2xs"
+                            class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono focus:outline-none focus:bg-white focus:border-teal-500 shadow-2xs"
                         ></textarea>
                     </div>
 
                     <!-- Cách 2: Chọn file Excel -->
-                    <div class="bg-white border-2 border-slate-300 rounded-xl p-3.5 space-y-2 flex flex-col justify-between">
+                    <div class="bg-white border-2 border-teal-200 rounded-xl p-3.5 space-y-2 flex flex-col justify-between">
                         <div>
                             <div class="flex items-center gap-2 text-slate-800 font-bold text-xs uppercase">
-                                <span class="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs">2</span>
+                                <span class="w-5 h-5 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs">2</span>
                                 <span>Cách 2: Tải file Excel (.xlsx, .csv)</span>
                             </div>
                             <p class="text-xs text-slate-500 mt-1">
@@ -595,9 +647,9 @@
                             </p>
                         </div>
 
-                        <label class="border-2 border-dashed border-indigo-300 hover:border-indigo-500 bg-indigo-50/40 hover:bg-indigo-50/80 rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all">
-                            <i data-lucide="upload-cloud" class="w-8 h-8 text-indigo-600 mb-1.5"></i>
-                            <span class="text-xs font-bold text-indigo-900">Nhấp để chọn file Excel / CSV</span>
+                        <label class="border-2 border-dashed border-teal-300 hover:border-teal-500 bg-teal-50/40 hover:bg-teal-50/80 rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all">
+                            <i data-lucide="upload-cloud" class="w-8 h-8 text-teal-600 mb-1.5"></i>
+                            <span class="text-xs font-bold text-teal-900">Nhấp để chọn file Excel / CSV</span>
                             <span class="text-[11px] text-slate-500 mt-0.5">Hỗ trợ .xlsx, .xls, .csv</span>
                             <input type="file" id="import-file-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelFileUpload(event)" />
                         </label>
@@ -605,18 +657,18 @@
                     </div>
                 </div>
 
-                <!-- BẢNG XEM TRƯỚC (PREVIEW) - HỖ TRỢ CHỌN ẢNH TỪ MÁY & DÁN LINK TRỰC TIẾP TỪNG DÒNG -->
+                <!-- BẢNG XEM TRƯỚC (PREVIEW) -->
                 <div id="import-preview-section" class="hidden space-y-2">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-300">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-teal-50/60 p-2.5 rounded-xl border border-teal-200">
                         <div class="flex items-center gap-2">
                             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                                 <i data-lucide="eye" class="w-4 h-4 text-emerald-600"></i>
-                                <span>Xem trước dữ liệu (<span id="preview-row-count" class="text-emerald-600 font-black">0</span> dòng)</span>
+                                <span>Xem trước (<span id="preview-row-count" class="text-emerald-700 font-black">0</span> dòng)</span>
                             </h4>
 
-                            <!-- Nút tải hàng loạt nhiều ảnh từ máy tính cùng lúc -->
-                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 border border-indigo-300 transition-all shadow-2xs" title="Chọn nhiều file ảnh từ máy tính gán tự động vào các dòng">
-                                <i data-lucide="images" class="w-3.5 h-3.5 text-indigo-600"></i>
+                            <!-- Nút tải hàng loạt ảnh từ máy tính -->
+                            <label class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold text-teal-800 bg-teal-100/80 hover:bg-teal-200 border border-teal-300 transition-all shadow-2xs" title="Chọn nhiều file ảnh từ máy tính gán tự động vào các dòng">
+                                <i data-lucide="images" class="w-3.5 h-3.5 text-teal-700"></i>
                                 <span>Chọn hàng loạt ảnh từ máy</span>
                                 <input type="file" multiple accept="image/*" class="hidden" onchange="handleBulkPreviewImageUpload(event)" />
                             </label>
@@ -625,26 +677,26 @@
                         <!-- Lựa chọn ghi đè hay thêm nối tiếp -->
                         <div class="flex items-center gap-3 text-xs font-semibold text-slate-700">
                             <label class="flex items-center gap-1.5 cursor-pointer">
-                                <input type="radio" name="import-mode" value="append" checked class="text-indigo-600 focus:ring-indigo-500" />
-                                <span>Thêm vào danh sách hiện tại</span>
+                                <input type="radio" name="import-mode" value="append" checked class="text-teal-600 focus:ring-teal-500" />
+                                <span>Thêm vào tháng hiện tại</span>
                             </label>
                             <label class="flex items-center gap-1.5 cursor-pointer">
                                 <input type="radio" name="import-mode" value="replace" class="text-rose-600 focus:ring-rose-500" />
-                                <span class="text-rose-600">Thay thế toàn bộ danh sách cũ</span>
+                                <span class="text-rose-600">Thay thế toàn bộ tháng này</span>
                             </label>
                         </div>
                     </div>
 
-                    <!-- Bảng Preview cuộn nội bộ kèm cột Hình ảnh linh hoạt -->
-                    <div class="max-h-60 overflow-y-auto border border-slate-300 rounded-lg shadow-inner">
+                    <!-- Bảng Preview -->
+                    <div class="max-h-60 overflow-y-auto border border-teal-200 rounded-lg shadow-inner">
                         <table class="w-full text-xs text-left">
-                            <thead class="bg-slate-100 text-slate-800 sticky top-0 border-b border-slate-300 font-bold z-10">
+                            <thead class="bg-teal-100/70 text-teal-950 sticky top-0 border-b border-teal-300 font-bold z-10">
                                 <tr>
                                     <th class="py-2 px-2 w-10 text-center">#</th>
                                     <th class="py-2 px-3">Tên hàng</th>
-                                    <th class="py-2 px-2 text-center w-36">Hình ảnh (Máy / Link)</th>
+                                    <th class="py-2 px-1 text-center w-28">Hình ảnh</th>
                                     <th class="py-2 px-3 text-right w-24">Đơn giá</th>
-                                    <th class="py-2 px-2 text-center w-16">SL</th>
+                                    <th class="py-2 px-2 text-center w-14">SL</th>
                                     <th class="py-2 px-3 text-right w-28">Thành tiền</th>
                                     <th class="py-2 px-3 w-32">Link sản phẩm</th>
                                 </tr>
@@ -670,7 +722,7 @@
                         id="btn-confirm-import"
                         onclick="confirmImportData()"
                         disabled
-                        class="px-5 py-2 rounded-lg text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed border border-indigo-700 shadow-xs transition-all flex items-center gap-1.5"
+                        class="px-5 py-2 rounded-lg text-xs sm:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-40 disabled:cursor-not-allowed border border-teal-700 shadow-xs transition-all flex items-center gap-1.5"
                     >
                         <i data-lucide="check" class="w-4 h-4"></i>
                         <span id="btn-confirm-import-text">Xác nhận nhập vào web</span>
@@ -684,11 +736,11 @@
     <!-- MODAL 2: THÊM / SỬA CHI TIẾT SẢN PHẨM                                    -->
     <!-- ========================================================================= -->
     <div id="product-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-slate-300 shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-teal-300 shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
             <!-- Modal Header -->
-            <div class="px-6 py-4 bg-slate-50 border-b border-slate-300 flex items-center justify-between">
+            <div class="px-6 py-4 bg-teal-50 border-b border-teal-200 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center">
+                    <div class="w-8 h-8 rounded-lg bg-teal-100 border border-teal-300 text-teal-700 flex items-center justify-center">
                         <i data-lucide="package-plus" class="w-4 h-4"></i>
                     </div>
                     <h3 id="modal-title" class="text-base font-bold text-slate-900">Thêm sản phẩm đề xuất</h3>
@@ -703,7 +755,7 @@
                 <input type="hidden" id="modal-product-id" value="" />
                 <input type="hidden" id="modal-auto-zh" value="" />
 
-                <!-- Product Name: Hiển thị đầy đủ multiline, không bị cắt -->
+                <!-- Product Name: Hiển thị đầy đủ multiline -->
                 <div>
                     <label id="lbl-modal-name-vi" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
                         Tên hàng (Tự động dịch sang Tiếng Trung) *
@@ -714,12 +766,12 @@
                         rows="2"
                         oninput="scheduleModalAutoTranslate(this.value)"
                         placeholder="VD: Mi Faneves mã: SJ122,SJ007,SJ012..."
-                        class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs leading-relaxed"
+                        class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs leading-relaxed"
                     ></textarea>
                     <!-- Live Auto-Translated Chinese Preview -->
-                    <div class="mt-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-300 flex items-center justify-between gap-2 text-xs">
+                    <div class="mt-1.5 px-3 py-1.5 rounded-lg bg-teal-50/50 border border-teal-200 flex items-center justify-between gap-2 text-xs">
                         <span id="lbl-auto-translate-caption" class="text-slate-600 font-semibold flex items-center gap-1 shrink-0">
-                            <i data-lucide="languages" class="w-3.5 h-3.5 text-rose-600"></i>
+                            <i data-lucide="languages" class="w-3.5 h-3.5 text-teal-600"></i>
                             <span>Bản dịch Tiếng Trung:</span>
                         </span>
                         <span id="modal-zh-preview" class="font-bold text-slate-900 truncate text-right">—</span>
@@ -740,7 +792,7 @@
                             required
                             placeholder="46000"
                             oninput="updateModalSubtotalPreview()"
-                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-extrabold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
+                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-extrabold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
                         />
                     </div>
                     <div>
@@ -755,15 +807,15 @@
                             required
                             value="1"
                             oninput="updateModalSubtotalPreview()"
-                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-extrabold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
+                            class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-extrabold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
                         />
                     </div>
                 </div>
 
                 <!-- Calculated Subtotal Preview -->
-                <div class="bg-rose-50 border border-rose-300 rounded-lg px-4 py-2.5 flex items-center justify-between">
-                    <span id="lbl-modal-subtotal" class="text-xs font-bold text-rose-900 uppercase">Thành tiền dự kiến:</span>
-                    <span id="modal-subtotal-preview" class="text-base font-black text-rose-600">0 ₫</span>
+                <div class="bg-teal-50 border border-teal-300 rounded-lg px-4 py-2.5 flex items-center justify-between">
+                    <span id="lbl-modal-subtotal" class="text-xs font-bold text-teal-950 uppercase">Thành tiền dự kiến:</span>
+                    <span id="modal-subtotal-preview" class="text-base font-black text-teal-700">0 ₫</span>
                 </div>
 
                 <!-- Product Link -->
@@ -775,39 +827,39 @@
                         id="modal-link"
                         type="url"
                         placeholder="https://vn.shp.ee/... hoặc https://e.tb.cn/..."
-                        class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-2xs"
+                        class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
                     />
                 </div>
 
-                <!-- Product Image (Upload máy hoặc Link ảnh) -->
+                <!-- Product Image -->
                 <div>
                     <label id="lbl-modal-image" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                        Hình thể hiện (Nhận cả ảnh từ máy & Link trực tuyến)
+                        Hình thể hiện (Tải ảnh từ máy hoặc dán Link)
                     </label>
                     <div class="flex items-center gap-3">
-                        <div id="modal-img-preview-box" class="w-16 h-16 rounded-xl border border-slate-300 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                        <div id="modal-img-preview-box" class="w-14 h-14 rounded-xl border border-teal-300 bg-teal-50 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
                             <img id="modal-img-preview" src="" alt="Preview" class="w-full h-full object-contain hidden" />
-                            <i id="modal-img-placeholder" data-lucide="image" class="w-5 h-5 text-slate-400"></i>
+                            <i id="modal-img-placeholder" data-lucide="image" class="w-5 h-5 text-teal-500"></i>
                         </div>
                         <div class="flex-1 space-y-2">
-                            <!-- Cách 1: Tải ảnh từ máy -->
+                            <!-- Chọn ảnh máy -->
                             <div class="flex items-center gap-2">
-                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-300 transition-all shadow-2xs">
-                                    <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-600"></i>
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-300 transition-all shadow-2xs">
+                                    <i data-lucide="upload" class="w-3.5 h-3.5 text-teal-600"></i>
                                     <span id="lbl-upload-btn">Tải ảnh từ máy</span>
                                     <input type="file" accept="image/*" class="hidden" onchange="handleModalFileUpload(event)" />
                                 </label>
                                 <span id="lbl-paste-hint" class="text-[11px] font-medium text-slate-500">hoặc bấm Ctrl+V để dán ảnh</span>
                             </div>
 
-                            <!-- Cách 2: Dán link ảnh trực tuyến -->
+                            <!-- Link online -->
                             <div class="relative">
                                 <input
                                     id="modal-image-url"
                                     type="text"
                                     placeholder="Hoặc dán đường dẫn link ảnh trực tuyến (https://...)"
                                     oninput="previewModalImageUrl(this.value)"
-                                    class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-rose-500 shadow-2xs"
+                                    class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-teal-500 shadow-2xs"
                                 />
                             </div>
                         </div>
@@ -827,7 +879,7 @@
                     <button
                         type="submit"
                         id="btn-modal-save"
-                        class="px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 border border-rose-700 shadow-xs transition-all"
+                        class="px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 border border-teal-700 shadow-xs transition-all"
                     >
                         Lưu sản phẩm
                     </button>
@@ -838,12 +890,17 @@
 
     <!-- Modal: Image Lightbox Preview -->
     <div id="lightbox-modal" onclick="closeLightbox()" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/80 backdrop-blur-xs p-4">
-        <div class="relative max-w-lg w-full bg-white rounded-2xl p-4 shadow-2xl border-2 border-slate-300" onclick="event.stopPropagation()">
+        <div class="relative max-w-lg w-full bg-white rounded-2xl p-4 shadow-2xl border-2 border-teal-300" onclick="event.stopPropagation()">
             <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
                 <h4 id="lightbox-title" class="text-sm font-bold text-slate-900">Hình thể hiện sản phẩm</h4>
-                <button onclick="closeLightbox()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button id="lightbox-btn-change-img" class="px-2 py-1 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-300 rounded-lg transition-colors">
+                        Đổi ảnh từ máy
+                    </button>
+                    <button onclick="closeLightbox()" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
             </div>
             <div class="aspect-square w-full rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-200 shadow-inner">
                 <img id="lightbox-img" src="" alt="Product Preview" class="w-full h-full object-contain" />
@@ -863,6 +920,7 @@
             doc,
             setDoc,
             deleteDoc,
+            getDocs,
             onSnapshot
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import {
@@ -889,14 +947,14 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'passionstar-makeup-sheet1';
 
         // ============================================================================
-        // 2. DEFAULT FALLBACK SVG IMAGE
+        // 2. DEFAULT FALLBACK SVG IMAGE (TÔNG XANH NGỌC)
         // ============================================================================
         const DEFAULT_MAKEUP_SVG = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-                <rect width="200" height="200" rx="24" fill="#fdf2f8"/>
-                <circle cx="100" cy="100" r="48" fill="#fbcfe8" stroke="#f43f5e" stroke-width="2.5"/>
-                <path d="M75 125 C85 95 115 95 125 125 Z" fill="#e11d48"/>
-                <circle cx="100" cy="80" r="14" fill="#fda4af"/>
+                <rect width="200" height="200" rx="24" fill="#f0fdfa"/>
+                <circle cx="100" cy="100" r="48" fill="#ccfbf1" stroke="#0d9488" stroke-width="2.5"/>
+                <path d="M75 125 C85 95 115 95 125 125 Z" fill="#0d9488"/>
+                <circle cx="100" cy="80" r="14" fill="#5eead4"/>
             </svg>
         `.trim());
 
@@ -1013,12 +1071,12 @@
         }
 
         // ============================================================================
-        // 4. BILINGUAL DICTIONARY (VIETNAMESE & CHINESE)
+        // 4. BILINGUAL DICTIONARY
         // ============================================================================
         const I18N = {
             vi: {
                 appTitle: 'ĐỀ XUẤT ĐỒ MAKE UP',
-                appSubtitle: 'Hệ thống quản lý danh mục, báo giá VNĐ (quy đổi Tệ ¥) & link đặt hàng trang điểm',
+                appSubtitle: 'Hệ thống quản lý danh mục, báo giá & link đặt hàng sản phẩm trang điểm theo từng tháng',
                 rateLabel: 'Tỷ giá:',
                 statItemsLabel: 'Danh mục hàng',
                 statItemsSub: 'Sản phẩm đề xuất',
@@ -1031,15 +1089,16 @@
                 filterAll: 'Tất cả sản phẩm',
                 filterHasLink: 'Đã có link',
                 filterMissingLink: 'Chưa có link',
+                btnCopyMonth: 'Copy từ tháng trước',
                 btnImport: 'Nhập từ Sheet',
                 btnCopy: 'Sao chép báo giá',
                 btnExport: 'Xuất Excel (.CSV)',
                 btnPrint: 'In / PDF',
                 btnAddTop: 'Thêm sản phẩm',
-                tableHeading: 'BẢNG ĐỀ XUẤT ĐỒ MAKE UP',
-                tableTip: '💡 Mẹo: Giá mặc định VNĐ (₫), đổi ảnh trực tiếp từ máy hoặc link web',
+                tableHeading: (monthStr) => `BẢNG ĐỀ XUẤT ĐỒ MAKE UP - ${monthStr}`,
+                tableTip: '💡 Mẹo: Nhấp vào ảnh để xem to hoặc bấm camera để đổi ảnh từ máy',
                 thProductName: 'TÊN HÀNG',
-                thImage: 'HÌNH ẢNH',
+                thImage: 'HÌNH',
                 thPrice: 'ĐƠN GIÁ (VNĐ)',
                 thLink: 'LINK SẢN PHẨM',
                 thQuantity: 'SỐ LƯỢNG',
@@ -1049,7 +1108,7 @@
                 btnAddQuickRow: '+ Thêm nhanh dòng trống',
                 totalFooterLabel: 'TỔNG TIỀN ĐỀ XUẤT',
                 totalFooterNote: '(VNĐ ₫ • Quy đổi Nhân dân tệ ¥)',
-                footerCopyright: 'Bảng Quản Lý Đề Xuất Đồ Makeup • Đồng bộ thời gian thực với Firebase • Tự động dịch Việt - Trung',
+                footerCopyright: 'Bảng Quản Lý Đề Xuất Đồ Makeup • Quản lý linh hoạt theo từng tháng • Đồng bộ Firebase • Giao diện Xanh Ngọc nhẹ nhàng',
                 openLink: 'Mở link',
                 copyLink: 'Sao chép link',
                 addLink: '+ Gắn link',
@@ -1063,27 +1122,25 @@
                 lblModalQty: 'Số lượng *',
                 lblModalSubtotal: 'Thành tiền dự kiến:',
                 lblModalLink: 'Link sản phẩm (Taobao / 1688 / Shopee...)',
-                lblModalImage: 'Hình thể hiện (Nhận cả ảnh từ máy & Link trực tuyến)',
+                lblModalImage: 'Hình thể hiện (Tải ảnh từ máy hoặc dán Link)',
                 lblUploadBtn: 'Tải ảnh từ máy',
                 lblPasteHint: 'hoặc bấm Ctrl+V để dán ảnh',
                 btnModalCancel: 'Hủy',
                 btnModalSave: 'Lưu sản phẩm',
-                emptySearch: 'Không tìm thấy sản phẩm nào phù hợp với bộ lọc.',
+                emptySearch: 'Không tìm thấy sản phẩm nào trong tháng này.',
                 showingCount: (shown, total) => `Hiển thị ${shown} / ${total} sản phẩm`,
                 toastSaved: 'Đã lưu và đồng bộ sản phẩm lên Firebase!',
                 toastDeleted: 'Đã xóa sản phẩm khỏi Firebase.',
                 toastCopiedLink: 'Đã sao chép link sản phẩm!',
                 toastCopiedSummary: 'Đã sao chép bảng tổng hợp báo giá vào bộ nhớ tạm!',
                 toastAddedRow: 'Đã thêm 1 dòng sản phẩm mới.',
-                toastImageUpdated: 'Đã tải ảnh lên trang và cập nhật thành công!',
-                toastImportSuccess: (count) => `Nhập thành công ${count} sản phẩm vào hệ thống!`,
-                fbConnected: 'Firebase kết nối',
-                fbConnecting: 'Đang kết nối...',
-                fbOffline: 'Ngoại tuyến'
+                toastImageUpdated: 'Đã cập nhật ảnh thành công!',
+                toastImportSuccess: (count) => `Nhập thành công ${count} sản phẩm vào tháng này!`,
+                toastMonthCopied: (count, prevMonth) => `Đã sao chép ${count} sản phẩm từ ${prevMonth} sang tháng này!`
             },
             zh: {
                 appTitle: '美妆采购提案管理表',
-                appSubtitle: '美妆产品采购清单、越南盾(VNĐ)核算自动换算人民币(¥)与商品链接系统',
+                appSubtitle: '按月度管理美妆产品采购清单、越南盾(VNĐ)自动换算人民币(¥)与商品链接系统',
                 rateLabel: '汇率:',
                 statItemsLabel: '商品种类',
                 statItemsSub: '提案商品总数',
@@ -1096,15 +1153,16 @@
                 filterAll: '全部商品',
                 filterHasLink: '已有链接',
                 filterMissingLink: '暂无链接',
+                btnCopyMonth: '从上月复制',
                 btnImport: '表格导入',
                 btnCopy: '复制报价单',
                 btnExport: '导出 Excel (.CSV)',
                 btnPrint: '打印 / PDF',
                 btnAddTop: '添加商品',
-                tableHeading: '美妆采购提案明细表',
-                tableTip: '💡 提示：支持本地直接上传图片与网络图片链接',
+                tableHeading: (monthStr) => `美妆采购提案明细表 - ${monthStr}`,
+                tableTip: '💡 提示：点击图片查看大图，或悬停点击相机直接更换图片',
                 thProductName: '商品名称',
-                thImage: '商品图片',
+                thImage: '图片',
                 thPrice: '单价 (VNĐ)',
                 thLink: '商品链接',
                 thQuantity: '数量',
@@ -1114,7 +1172,7 @@
                 btnAddQuickRow: '+ 快速新增空白行',
                 totalFooterLabel: '合计总金额',
                 totalFooterNote: '(默认越南盾 VNĐ • 换算人民币 ¥)',
-                footerCopyright: '美妆采购提案管理系统 • Firebase 实时云同步 • 支持越中双语',
+                footerCopyright: '美妆采购提案管理系统 • 月度管理 • Firebase 实时云同步 • 柔和青翠色调',
                 openLink: '打开链接',
                 copyLink: '复制链接',
                 addLink: '+ 添加链接',
@@ -1133,67 +1191,178 @@
                 lblPasteHint: '或按 Ctrl+V 粘贴截图',
                 btnModalCancel: '取消',
                 btnModalSave: '保存商品',
-                emptySearch: '没有找到符合筛选条件的商品。',
+                emptySearch: '本月暂无任何商品提案数据。',
                 showingCount: (shown, total) => `正在显示 ${shown} / ${total} 项商品`,
                 toastSaved: '商品信息已同步保存至 Firebase！',
                 toastDeleted: '已从 Firebase 删除该商品。',
                 toastCopiedLink: '商品链接已复制！',
                 toastCopiedSummary: '采购报价汇总已复制到剪贴板！',
                 toastAddedRow: '已在表格末尾新增一行商品。',
-                toastImageUpdated: '图片已上传并更新成功！',
+                toastImageUpdated: '图片已更新成功！',
                 toastImportSuccess: (count) => `成功导入 ${count} 项商品！`,
-                fbConnected: 'Firebase 已连接',
-                fbConnecting: '正在连接...',
-                fbOffline: '离线模式'
+                toastMonthCopied: (count, prevMonth) => `已从 ${prevMonth} 复制 ${count} 项商品！`
             }
         };
 
         // ============================================================================
-        // 5. APPLICATION STATE & FIREBASE SYNC
+        // 5. APPLICATION STATE & MONTH MANAGEMENT
         // ============================================================================
         let currentLang = 'vi';
         let exchangeRate = 3650;
         let sortField = null;
         let sortDirection = 'asc';
         let products = [];
-        let firebaseConnected = false;
-        let parsedImportRows = []; // Dữ liệu phân tích chuẩn bị nhập
-        let targetQuickUploadId = null; // ID sản phẩm đang chờ upload ảnh từ bảng chính
+        let parsedImportRows = [];
+        let targetQuickUploadId = null;
 
-        function getProductsCollectionRef() {
-            return collection(db, 'artifacts', appId, 'public', 'data', 'makeup_products');
+        // Quản lý tháng: Mặc định tháng 11/2026 như yêu cầu
+        let selectedMonth = '2026-11';
+        let unsubscribeCurrentMonthListener = null;
+
+        function getMonthDisplayString(monthKey = selectedMonth) {
+            const [y, m] = monthKey.split('-');
+            return currentLang === 'zh' ? `${y}年${m}月` : `Tháng ${m}/${y}`;
+        }
+
+        function getMonthCollectionName(monthKey = selectedMonth) {
+            return `makeup_products_${monthKey.replace(/-/g, '_')}`;
+        }
+
+        function getProductsCollectionRef(monthKey = selectedMonth) {
+            return collection(db, 'artifacts', appId, 'public', 'data', getMonthCollectionName(monthKey));
         }
 
         function getSettingsDocRef() {
             return doc(db, 'artifacts', appId, 'public', 'data', 'makeup_settings', 'config');
         }
 
-        function updateFirebaseStatusUI(status) {
-            firebaseConnected = status === 'connected';
-            const badge = document.getElementById('firebase-status-badge');
-            const dot = document.getElementById('firebase-status-dot');
-            const text = document.getElementById('firebase-status-text');
-            if (!badge || !dot || !text) return;
+        // Chuyển đổi tháng được chọn
+        async function changeSelectedMonth(newMonth) {
+            if (!newMonth || newMonth === selectedMonth) return;
+            selectedMonth = newMonth;
+            updateMonthHeaderUI();
+            subscribeToMonthData(selectedMonth);
+        }
 
-            const t = I18N[currentLang];
-            if (status === 'connected') {
-                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs no-print';
-                dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-                text.textContent = t.fbConnected;
-            } else if (status === 'connecting') {
-                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs no-print';
-                dot.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
-                text.textContent = t.fbConnecting;
-            } else {
-                badge.className = 'hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs no-print';
-                dot.className = 'w-2 h-2 rounded-full bg-slate-400';
-                text.textContent = t.fbOffline;
+        function navigateMonth(direction) {
+            const [y, m] = selectedMonth.split('-').map(Number);
+            let nextDate = new Date(y, m - 1 + direction, 1);
+            let nextY = nextDate.getFullYear();
+            let nextM = String(nextDate.getMonth() + 1).padStart(2, '0');
+            const nextMonth = `${nextY}-${nextM}`;
+            const inputEl = document.getElementById('month-selector-input');
+            if (inputEl) inputEl.value = nextMonth;
+            changeSelectedMonth(nextMonth);
+        }
+
+        function updateMonthHeaderUI() {
+            const monthStr = getMonthDisplayString(selectedMonth);
+            const badge = document.getElementById('header-month-badge');
+            if (badge) badge.textContent = monthStr;
+            const heading = document.getElementById('ui-table-heading');
+            if (heading) heading.textContent = I18N[currentLang].tableHeading(monthStr);
+            const importTitle = document.getElementById('modal-import-month-title');
+            if (importTitle) importTitle.textContent = monthStr;
+        }
+
+        // Lắng nghe dữ liệu theo tháng
+        function subscribeToMonthData(monthKey) {
+            if (unsubscribeCurrentMonthListener) {
+                unsubscribeCurrentMonthListener();
+            }
+
+            const colRef = getProductsCollectionRef(monthKey);
+            unsubscribeCurrentMonthListener = onSnapshot(
+                colRef,
+                async (snapshot) => {
+                    // Nếu tháng 11/2026 chưa có dữ liệu trong collection mới, thử import từ collection gốc cũ nếu có
+                    if (snapshot.empty && monthKey === '2026-11') {
+                        try {
+                            const oldColRef = collection(db, 'artifacts', appId, 'public', 'data', 'makeup_products');
+                            const oldSnap = await getDocs(oldColRef);
+                            if (!oldSnap.empty) {
+                                const oldItems = [];
+                                oldSnap.forEach(d => oldItems.push(d.data()));
+                                for (const item of oldItems) {
+                                    await setDoc(doc(colRef, item.id), item, { merge: true });
+                                }
+                                return; // onSnapshot sẽ tự trigger lại
+                            }
+                        } catch (e) {
+                            console.debug('Migration check:', e);
+                        }
+                    }
+
+                    const loaded = [];
+                    snapshot.forEach((docSnap) => {
+                        loaded.push(docSnap.data());
+                    });
+
+                    loaded.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+                    products = loaded;
+                    renderTable();
+                },
+                (error) => {
+                    console.error('Firestore realtime sync error:', error);
+                }
+            );
+        }
+
+        // Sao chép toàn bộ danh mục từ tháng trước sang tháng hiện tại
+        async function copyFromPreviousMonth() {
+            const [y, m] = selectedMonth.split('-').map(Number);
+            let prevDate = new Date(y, m - 2, 1);
+            let prevY = prevDate.getFullYear();
+            let prevM = String(prevDate.getMonth() + 1).padStart(2, '0');
+            const prevMonthKey = `${prevY}-${prevM}`;
+            const prevDisplay = getMonthDisplayString(prevMonthKey);
+
+            if (!confirm(`Bạn có muốn sao chép toàn bộ danh sách sản phẩm từ ${prevDisplay} sang ${getMonthDisplayString(selectedMonth)} không?`)) {
+                return;
+            }
+
+            try {
+                const prevColRef = getProductsCollectionRef(prevMonthKey);
+                const prevSnap = await getDocs(prevColRef);
+
+                let sourceItems = [];
+                if (!prevSnap.empty) {
+                    prevSnap.forEach(d => sourceItems.push(d.data()));
+                } else if (prevMonthKey === '2026-10' || selectedMonth === '2026-11') {
+                    // Fallback sang collection gốc nếu tháng trước rỗng
+                    const oldCol = collection(db, 'artifacts', appId, 'public', 'data', 'makeup_products');
+                    const oldSnap = await getDocs(oldCol);
+                    oldSnap.forEach(d => sourceItems.push(d.data()));
+                }
+
+                if (sourceItems.length === 0) {
+                    alert(`Không tìm thấy dữ liệu sản phẩm của ${prevDisplay} để sao chép.`);
+                    return;
+                }
+
+                const targetColRef = getProductsCollectionRef(selectedMonth);
+                let count = 0;
+                for (const item of sourceItems) {
+                    const newId = 'mk-' + Date.now() + '-' + count;
+                    const cloned = {
+                        ...item,
+                        id: newId,
+                        createdAt: Date.now() + count
+                    };
+                    await setDoc(doc(targetColRef, newId), cloned);
+                    count++;
+                }
+
+                showToast(I18N[currentLang].toastMonthCopied(count, prevDisplay));
+            } catch (err) {
+                console.error('Lỗi sao chép tháng:', err);
+                alert('Có lỗi xảy ra khi sao chép dữ liệu. Vui lòng thử lại!');
             }
         }
 
         async function saveProductToFirebase(product) {
             try {
-                const productRef = doc(db, 'artifacts', appId, 'public', 'data', 'makeup_products', product.id);
+                const productRef = doc(db, 'artifacts', appId, 'public', 'data', getMonthCollectionName(selectedMonth), product.id);
                 await setDoc(productRef, product, { merge: true });
             } catch (err) {
                 console.error('Error saving product to Firebase:', err);
@@ -1202,7 +1371,7 @@
 
         async function deleteProductFromFirebase(productId) {
             try {
-                const productRef = doc(db, 'artifacts', appId, 'public', 'data', 'makeup_products', productId);
+                const productRef = doc(db, 'artifacts', appId, 'public', 'data', getMonthCollectionName(selectedMonth), productId);
                 await deleteDoc(productRef);
             } catch (err) {
                 console.error('Error deleting product from Firebase:', err);
@@ -1210,8 +1379,6 @@
         }
 
         async function initFirebaseSync() {
-            updateFirebaseStatusUI('connecting');
-
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
@@ -1222,7 +1389,7 @@
                 console.debug('Auth notice:', authErr?.message || authErr);
             }
 
-            // Listen to settings
+            // Lắng nghe cài đặt tỷ giá
             onSnapshot(
                 getSettingsDocRef(),
                 (docSnap) => {
@@ -1241,29 +1408,12 @@
                 (err) => console.debug('Settings listener warning:', err)
             );
 
-            // Listen to products collection
-            onSnapshot(
-                getProductsCollectionRef(),
-                async (snapshot) => {
-                    updateFirebaseStatusUI('connected');
-                    const loaded = [];
-                    snapshot.forEach((docSnap) => {
-                        loaded.push(docSnap.data());
-                    });
-
-                    loaded.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-                    products = loaded;
-                    renderTable();
-                },
-                (error) => {
-                    console.error('Firestore realtime sync error:', error);
-                    updateFirebaseStatusUI('offline');
-                }
-            );
+            // Bắt đầu lắng nghe tháng mặc định (2026-11)
+            subscribeToMonthData(selectedMonth);
         }
 
         // ============================================================================
-        // 6. FORMATTING & IMAGE COMPRESSION (TỰ ĐỘNG NÉN ĐỂ LƯU FIREBASE NHANH)
+        // 6. FORMATTING & IMAGE COMPRESSION
         // ============================================================================
         function formatNumber(num) {
             const n = Number(num) || 0;
@@ -1290,7 +1440,6 @@
                 .replace(/'/g, '&#039;');
         }
 
-        // Nén ảnh nhỏ gọn để upload trực tiếp lên Firebase Firestore an toàn
         function compressImageDataUrl(dataUrl, maxDim = 380, quality = 0.8) {
             return new Promise((resolve) => {
                 if (!dataUrl || !dataUrl.startsWith('data:image/') || dataUrl.startsWith('data:image/svg')) {
@@ -1323,7 +1472,6 @@
             });
         }
 
-        // Đọc File và nén thành dataUrl
         function readFileAsCompressedDataUrl(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -1341,7 +1489,7 @@
         }
 
         // ============================================================================
-        // 7. LANGUAGE SWITCHER (VIETNAMESE <-> CHINESE)
+        // 7. LANGUAGE SWITCHER
         // ============================================================================
         function setLanguage(lang) {
             currentLang = lang;
@@ -1351,10 +1499,10 @@
             const btnZh = document.getElementById('btn-lang-zh');
 
             if (lang === 'vi') {
-                btnVi.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-rose-600 shadow-xs border border-slate-300';
+                btnVi.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-teal-700 shadow-xs border border-teal-300';
                 btnZh.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900';
             } else {
-                btnZh.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-rose-600 shadow-xs border border-slate-300';
+                btnZh.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-teal-700 shadow-xs border border-teal-300';
                 btnVi.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900';
             }
 
@@ -1375,13 +1523,15 @@
             document.getElementById('opt-filter-has-link').textContent = t.filterHasLink;
             document.getElementById('opt-filter-missing-link').textContent = t.filterMissingLink;
 
+            document.getElementById('ui-btn-copy-month').textContent = t.btnCopyMonth;
             document.getElementById('ui-btn-import').textContent = t.btnImport;
             document.getElementById('ui-btn-copy').textContent = t.btnCopy;
             document.getElementById('ui-btn-export').textContent = t.btnExport;
             document.getElementById('ui-btn-print').textContent = t.btnPrint;
             document.getElementById('ui-btn-add-top').textContent = t.btnAddTop;
 
-            document.getElementById('ui-table-heading').textContent = t.tableHeading;
+            updateMonthHeaderUI();
+
             document.getElementById('ui-table-tip').textContent = t.tableTip;
             document.getElementById('th-product-name').textContent = t.thProductName;
             document.getElementById('th-image').textContent = t.thImage;
@@ -1399,7 +1549,7 @@
 
             // Modal labels
             document.getElementById('lbl-modal-name-vi').textContent = t.lblModalNameVi;
-            document.getElementById('lbl-auto-translate-caption').innerHTML = `<i data-lucide="languages" class="w-3.5 h-3.5 text-rose-500"></i><span>${t.lblAutoTranslateCaption}</span>`;
+            document.getElementById('lbl-auto-translate-caption').innerHTML = `<i data-lucide="languages" class="w-3.5 h-3.5 text-teal-600"></i><span>${t.lblAutoTranslateCaption}</span>`;
             document.getElementById('lbl-modal-price').textContent = t.lblModalPrice;
             document.getElementById('lbl-modal-qty').textContent = t.lblModalQty;
             document.getElementById('lbl-modal-subtotal').textContent = t.lblModalSubtotal;
@@ -1410,12 +1560,11 @@
             document.getElementById('btn-modal-cancel').textContent = t.btnModalCancel;
             document.getElementById('btn-modal-save').textContent = t.btnModalSave;
 
-            updateFirebaseStatusUI(firebaseConnected ? 'connected' : 'connecting');
             renderTable();
         }
 
         // ============================================================================
-        // 8. RENDER TABLE: HỖ TRỢ ĐỔI ẢNH TRỰC TIẾP TỪ MÁY HOẶC LINK NGAY TRÊN BẢNG
+        // 8. RENDER TABLE: Ô HÌNH ẢNH NHỎ GỌN TINH TẾ, KHÔNG DÀI DÒNG
         // ============================================================================
         function getFilteredAndSortedProducts() {
             const query = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
@@ -1463,8 +1612,16 @@
                     <tr>
                         <td colspan="8" class="py-12 px-4 text-center text-slate-500 bg-white">
                             <div class="flex flex-col items-center justify-center gap-2">
-                                <i data-lucide="package-search" class="w-8 h-8 text-slate-400"></i>
+                                <i data-lucide="package-search" class="w-8 h-8 text-teal-400"></i>
                                 <p class="text-sm font-semibold">${t.emptySearch}</p>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <button onclick="copyFromPreviousMonth()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 shadow-2xs">
+                                        <i data-lucide="copy-plus" class="w-3.5 h-3.5 inline mr-1"></i> Sao chép từ tháng trước
+                                    </button>
+                                    <button onclick="openProductModal()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 shadow-2xs">
+                                        + Thêm sản phẩm
+                                    </button>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -1480,13 +1637,13 @@
                     const isEven = idx % 2 === 1;
 
                     return `
-                        <tr class="${isEven ? 'bg-slate-50/70' : 'bg-white'} hover:bg-rose-50/50 transition-colors group">
-                            <!-- STT: Cố định gọn gàng -->
+                        <tr class="${isEven ? 'bg-slate-50/60' : 'bg-white'} hover:bg-teal-50/40 transition-colors group">
+                            <!-- STT -->
                             <td class="py-2.5 px-2 text-center font-bold text-slate-600 bg-slate-100/50 text-xs sm:text-sm">
                                 ${idx + 1}
                             </td>
 
-                            <!-- TÊN HÀNG: Hiển thị đầy đủ 100%, không bị cắt ... -->
+                            <!-- TÊN HÀNG: Hiển thị đầy đủ 100%, tự động xuống dòng -->
                             <td class="py-2.5 px-3">
                                 <div class="flex items-start justify-between gap-2">
                                     <div 
@@ -1498,7 +1655,7 @@
                                     <button 
                                         type="button" 
                                         onclick="openProductModal('${item.id}')"
-                                        class="no-print opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded transition-all shrink-0" 
+                                        class="no-print opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-teal-700 rounded transition-all shrink-0" 
                                         title="Chỉnh sửa tên và thông tin"
                                     >
                                         <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
@@ -1506,47 +1663,33 @@
                                 </div>
                             </td>
 
-                            <!-- HÌNH ẢNH: Hỗ trợ cả xem to + Tải ảnh từ máy + Dán link ngay tại chỗ -->
+                            <!-- HÌNH ẢNH: TINH CHỈNH SIÊU GỌN GÀNG (40px), KHÔNG DÀI DÒNG, CLICK HOẶC HOVER ĐỔI ẢNH -->
                             <td class="py-2 px-1 text-center">
-                                <div class="inline-flex flex-col items-center gap-1">
-                                    <div class="relative w-11 h-11 sm:w-12 sm:h-12 rounded-lg border border-slate-300 bg-white p-0.5 overflow-hidden shadow-2xs group/img">
-                                        <img
-                                            src="${item.image || DEFAULT_MAKEUP_SVG}"
-                                            alt="${escapeHtml(displayName)}"
-                                            onclick="openLightbox('${item.id}')"
-                                            onerror="this.src='https://placehold.co/100x100/fdf2f8/e11d48?text=Make+Up'"
-                                            class="w-full h-full object-contain cursor-zoom-in transition-transform duration-200 group-hover/img:scale-105"
-                                        />
-                                    </div>
-                                    <div class="no-print flex items-center justify-center gap-1">
-                                        <!-- Tải ảnh trực tiếp từ máy -->
-                                        <button
-                                            type="button"
-                                            onclick="triggerQuickUpload('${item.id}')"
-                                            class="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-700 bg-slate-100 hover:bg-indigo-100 hover:text-indigo-800 border border-slate-300 transition-colors shadow-2xs flex items-center gap-0.5"
-                                            title="Tải ảnh từ máy tính lên trang"
-                                        >
-                                            <i data-lucide="upload" class="w-2.5 h-2.5 text-indigo-600"></i>
-                                            <span>Máy</span>
-                                        </button>
-                                        <!-- Dán link ảnh online -->
-                                        <button
-                                            type="button"
-                                            onclick="promptQuickImageLink('${item.id}')"
-                                            class="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-700 bg-slate-100 hover:bg-rose-100 hover:text-rose-800 border border-slate-300 transition-colors shadow-2xs flex items-center gap-0.5"
-                                            title="Dán link ảnh online"
-                                        >
-                                            <i data-lucide="link" class="w-2.5 h-2.5 text-rose-600"></i>
-                                            <span>Link</span>
-                                        </button>
-                                    </div>
+                                <div class="relative inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-teal-200 bg-white p-0.5 overflow-hidden shadow-2xs group/img">
+                                    <img
+                                        src="${item.image || DEFAULT_MAKEUP_SVG}"
+                                        alt="${escapeHtml(displayName)}"
+                                        onclick="openLightbox('${item.id}')"
+                                        onerror="this.src='https://placehold.co/100x100/f0fdfa/0d9488?text=Make+Up'"
+                                        class="w-full h-full object-contain cursor-zoom-in transition-transform duration-200 group-hover/img:scale-110"
+                                        title="Nhấp để xem ảnh to"
+                                    />
+                                    <!-- Nút đổi ảnh nhanh khi hover -->
+                                    <button
+                                        type="button"
+                                        onclick="triggerQuickUpload('${item.id}')"
+                                        class="no-print opacity-0 group-hover/img:opacity-100 absolute inset-0 bg-teal-900/80 hover:bg-teal-700 text-white flex items-center justify-center transition-all"
+                                        title="Tải ảnh mới từ máy tính"
+                                    >
+                                        <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                                    </button>
                                 </div>
                             </td>
 
                             <!-- GIÁ TIỀN -->
                             <td class="py-2.5 px-2.5 text-right">
                                 <div class="inline-flex flex-col items-end">
-                                    <div class="inline-flex items-center justify-end gap-1 bg-white border border-slate-300 focus-within:border-rose-500 focus-within:ring-1 focus-within:ring-rose-500 rounded-md px-1.5 py-0.5 shadow-2xs">
+                                    <div class="inline-flex items-center justify-end gap-1 bg-white border border-slate-300 focus-within:border-teal-500 focus-within:ring-1 focus-within:ring-teal-500 rounded-md px-1.5 py-0.5 shadow-2xs">
                                         <input
                                             type="number"
                                             step="any"
@@ -1557,13 +1700,13 @@
                                         />
                                         <span class="text-[11px] font-bold text-slate-500 select-none">₫</span>
                                     </div>
-                                    <span id="row-price-cny-${item.id}" class="inline-flex items-center text-[10px] sm:text-[11px] font-bold text-rose-700 bg-rose-50/90 border border-rose-200 px-1 py-0.5 rounded mt-0.5">
+                                    <span id="row-price-cny-${item.id}" class="inline-flex items-center text-[10px] sm:text-[11px] font-bold text-teal-800 bg-teal-50/80 border border-teal-200 px-1 py-0.5 rounded mt-0.5">
                                         ≈ ${formatCNYFromVND(priceVnd)}
                                     </span>
                                 </div>
                             </td>
 
-                            <!-- LINK SẢN PHẨM: NÚT GỌN GÀNG -->
+                            <!-- LINK SẢN PHẨM: Tông Xanh Ngọc thanh lịch -->
                             <td class="py-2.5 px-2 text-center">
                                 ${hasLink ? `
                                     <div class="inline-flex items-center gap-1">
@@ -1571,10 +1714,10 @@
                                             href="${escapeHtml(item.link)}"
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-300 transition-colors shadow-2xs"
+                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-300 transition-colors shadow-2xs"
                                             title="${escapeHtml(item.link)}"
                                         >
-                                            <i data-lucide="external-link" class="w-3 h-3 text-rose-600"></i>
+                                            <i data-lucide="external-link" class="w-3 h-3 text-teal-700"></i>
                                             <span>${t.openLink}</span>
                                         </a>
                                         <button
@@ -1588,7 +1731,7 @@
                                         <button
                                             type="button"
                                             onclick="openProductModal('${item.id}')"
-                                            class="no-print p-1 rounded-md text-slate-400 hover:text-rose-600 bg-white hover:bg-slate-100 border border-slate-200 transition-colors"
+                                            class="no-print p-1 rounded-md text-slate-400 hover:text-teal-700 bg-white hover:bg-slate-100 border border-slate-200 transition-colors"
                                             title="Đổi link"
                                         >
                                             <i data-lucide="edit-2" class="w-2.5 h-2.5"></i>
@@ -1598,7 +1741,7 @@
                                     <button
                                         type="button"
                                         onclick="openProductModal('${item.id}')"
-                                        class="no-print inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-slate-500 hover:text-rose-600 bg-slate-50 hover:bg-white border border-dashed border-slate-300 hover:border-rose-400 transition-all"
+                                        class="no-print inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-slate-500 hover:text-teal-700 bg-slate-50 hover:bg-white border border-dashed border-slate-300 hover:border-teal-400 transition-all"
                                     >
                                         <i data-lucide="link" class="w-3 h-3 text-slate-400"></i>
                                         <span>${t.addLink}</span>
@@ -1606,7 +1749,7 @@
                                 `}
                             </td>
 
-                            <!-- SỐ LƯỢNG: Nút bấm gọn gàng -->
+                            <!-- SỐ LƯỢNG -->
                             <td class="py-2.5 px-2 text-center">
                                 <div class="inline-flex items-center bg-white border border-slate-300 rounded-md shadow-2xs overflow-hidden">
                                     <button
@@ -1640,7 +1783,7 @@
                                     <span id="row-subtotal-${item.id}" class="text-xs sm:text-sm font-black text-slate-900">
                                         ${formatVND(subtotalVnd)}
                                     </span>
-                                    <span id="row-subtotal-cny-${item.id}" class="inline-flex items-center text-[10px] sm:text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1 py-0.5 rounded mt-0.5">
+                                    <span id="row-subtotal-cny-${item.id}" class="inline-flex items-center text-[10px] sm:text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-200 px-1 py-0.5 rounded mt-0.5">
                                         ≈ ${formatCNYFromVND(subtotalVnd)}
                                     </span>
                                 </div>
@@ -1652,7 +1795,7 @@
                                     <button
                                         type="button"
                                         onclick="openProductModal('${item.id}')"
-                                        class="p-1.5 rounded-md text-slate-600 hover:text-rose-600 bg-white hover:bg-rose-50 border border-slate-300 hover:border-rose-300 transition-all shadow-2xs"
+                                        class="p-1.5 rounded-md text-slate-600 hover:text-teal-700 bg-white hover:bg-teal-50 border border-slate-300 hover:border-teal-300 transition-all shadow-2xs"
                                         title="${t.editBtnTitle}"
                                     >
                                         <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
@@ -1704,7 +1847,7 @@
         }
 
         // ============================================================================
-        // 9. QUICK UPLOAD & DIRECT IMAGE CHANGING (CHO BẢNG CHÍNH)
+        // 9. QUICK UPLOAD & DIRECT IMAGE CHANGING
         // ============================================================================
         function triggerQuickUpload(productId) {
             targetQuickUploadId = productId;
@@ -1730,21 +1873,6 @@
                 console.error('Lỗi upload ảnh:', err);
             } finally {
                 targetQuickUploadId = null;
-            }
-        }
-
-        async function promptQuickImageLink(productId) {
-            const prod = products.find(p => p.id === productId);
-            if (!prod) return;
-
-            const current = prod.image && !prod.image.startsWith('data:') ? prod.image : '';
-            const newUrl = prompt('Nhập hoặc dán đường dẫn link hình ảnh trực tuyến (https://...):', current);
-            if (newUrl !== null) {
-                const clean = newUrl.trim();
-                prod.image = clean || DEFAULT_MAKEUP_SVG;
-                renderTable();
-                await saveProductToFirebase(prod);
-                showToast(I18N[currentLang].toastImageUpdated);
             }
         }
 
@@ -1846,7 +1974,7 @@
         }
 
         // ============================================================================
-        // 11. PRODUCT MODAL (ADD / EDIT)
+        // 11. PRODUCT MODAL
         // ============================================================================
         function openProductModal(productId = null) {
             const modal = document.getElementById('product-modal');
@@ -2004,7 +2132,7 @@
         }
 
         // ============================================================================
-        // 12. TÍNH NĂNG NHẬP TỪ SHEET: HỖ TRỢ CẢ LINK ẢNH VÀ CHỌN ẢNH TỪ MÁY
+        // 12. TÍNH NĂNG NHẬP TỪ SHEET THEO THÁNG
         // ============================================================================
         function openImportModal() {
             const modal = document.getElementById('import-sheet-modal');
@@ -2013,6 +2141,7 @@
             document.getElementById('import-file-input').value = '';
             document.getElementById('import-preview-section').classList.add('hidden');
             document.getElementById('btn-confirm-import').disabled = true;
+            document.getElementById('modal-import-month-title').textContent = getMonthDisplayString(selectedMonth);
             parsedImportRows = [];
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -2056,9 +2185,9 @@
                     "Link hình ảnh": ""
                 },
                 {
-                    "Tên hàng": "Kẹp mi uốn cong trợ lực",
-                    "Giá tiền (VNĐ)": 57670,
-                    "Số lượng": 1,
+                    "Tên hàng": "Phấn sáng highlight Gella's siêu lì tone D02",
+                    "Giá tiền (VNĐ)": 66980,
+                    "Số lượng": 6,
                     "Link sản phẩm": "",
                     "Link hình ảnh": ""
                 }
@@ -2076,7 +2205,8 @@
                 { wch: 30 }
             ];
 
-            XLSX.writeFile(wb, "MAU_DE_XUAT_DO_MAKEUP.xlsx");
+            const fileName = `MAU_DE_XUAT_MAKEUP_${selectedMonth.replace('-', '_')}.xlsx`;
+            XLSX.writeFile(wb, fileName);
         }
 
         function handlePasteInput(rawText) {
@@ -2212,31 +2342,31 @@
 
             tbody.innerHTML = rows.map((r, i) => {
                 const sub = r.price * r.quantity;
-                const isCustomImg = r.image && r.image !== DEFAULT_MAKEUP_SVG;
                 return `
-                    <tr class="hover:bg-slate-50 transition-colors">
+                    <tr class="hover:bg-teal-50/50 transition-colors">
                         <td class="py-1.5 px-2 text-center font-bold text-slate-500">${i + 1}</td>
                         <td class="py-1.5 px-3 font-semibold text-slate-900 break-words leading-snug">${escapeHtml(r.nameVi)}</td>
                         
-                        <!-- Cột Hình ảnh trong Preview: Cho phép đổi ảnh từ máy hoặc dán link -->
-                        <td class="py-1.5 px-2 text-center">
+                        <!-- Cột Hình ảnh trong Preview: Gọn gàng -->
+                        <td class="py-1.5 px-1 text-center">
                             <div class="inline-flex items-center gap-1.5">
                                 <img
                                     id="preview-img-tag-${i}"
                                     src="${r.image || DEFAULT_MAKEUP_SVG}"
                                     alt="thumb"
-                                    class="w-8 h-8 rounded border object-contain shrink-0 bg-slate-50 shadow-2xs"
+                                    class="w-7 h-7 rounded border border-teal-200 object-contain shrink-0 bg-white shadow-2xs"
                                 />
-                                <div class="flex flex-col gap-0.5 text-left">
-                                    <label class="cursor-pointer px-1.5 py-0.5 rounded text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all leading-none inline-flex items-center gap-1 shadow-2xs">
+                                <div class="flex items-center gap-1">
+                                    <label class="cursor-pointer px-1 py-0.5 rounded text-[10px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 transition-all leading-none inline-flex items-center gap-0.5 shadow-2xs" title="Tải ảnh từ máy">
                                         <i data-lucide="upload" class="w-2.5 h-2.5"></i>
-                                        <span>Từ máy</span>
+                                        <span>Máy</span>
                                         <input type="file" accept="image/*" class="hidden" onchange="handlePreviewImageUpload(${i}, event)" />
                                     </label>
                                     <button
                                         type="button"
                                         onclick="promptPreviewImageLink(${i})"
-                                        class="px-1.5 py-0.5 rounded text-[10px] font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all leading-none inline-flex items-center gap-1 shadow-2xs"
+                                        class="px-1 py-0.5 rounded text-[10px] font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-300 transition-all leading-none inline-flex items-center gap-0.5 shadow-2xs"
+                                        title="Dán link ảnh"
                                     >
                                         <i data-lucide="link" class="w-2.5 h-2.5"></i>
                                         <span>Link</span>
@@ -2247,7 +2377,7 @@
 
                         <td class="py-1.5 px-3 text-right font-bold text-slate-800">${formatVND(r.price)}</td>
                         <td class="py-1.5 px-2 text-center font-bold text-slate-800">${r.quantity}</td>
-                        <td class="py-1.5 px-3 text-right font-black text-rose-600">${formatVND(sub)}</td>
+                        <td class="py-1.5 px-3 text-right font-black text-teal-700">${formatVND(sub)}</td>
                         <td class="py-1.5 px-3 text-slate-500 truncate max-w-[130px]" title="${escapeHtml(r.link)}">${escapeHtml(r.link || '—')}</td>
                     </tr>
                 `;
@@ -2255,7 +2385,6 @@
             lucide.createIcons();
         }
 
-        // Tải ảnh từ máy cho 1 dòng trong bảng Preview của Modal Import
         async function handlePreviewImageUpload(rowIndex, event) {
             const file = event.target.files?.[0];
             if (!file || !parsedImportRows[rowIndex]) return;
@@ -2270,11 +2399,10 @@
             }
         }
 
-        // Dán link ảnh online cho 1 dòng trong bảng Preview của Modal Import
         function promptPreviewImageLink(rowIndex) {
             if (!parsedImportRows[rowIndex]) return;
             const current = parsedImportRows[rowIndex].image && !parsedImportRows[rowIndex].image.startsWith('data:') ? parsedImportRows[rowIndex].image : '';
-            const newUrl = prompt('Nhập hoặc dán đường dẫn link hình ảnh trực tuyến (https://...):', current);
+            const newUrl = prompt('Nhập đường dẫn link hình ảnh trực tuyến (https://...):', current);
             if (newUrl !== null) {
                 const clean = newUrl.trim();
                 parsedImportRows[rowIndex].image = clean || DEFAULT_MAKEUP_SVG;
@@ -2283,12 +2411,10 @@
             }
         }
 
-        // Chọn hàng loạt nhiều file ảnh từ máy tính để gán vào các dòng trong bảng preview
         async function handleBulkPreviewImageUpload(event) {
             const files = Array.from(event.target.files || []);
             if (!files.length || !parsedImportRows.length) return;
 
-            // Đọc và nén tất cả các file được chọn
             for (let i = 0; i < files.length && i < parsedImportRows.length; i++) {
                 try {
                     const compressed = await readFileAsCompressedDataUrl(files[i]);
@@ -2299,7 +2425,7 @@
             }
 
             showImportPreview(parsedImportRows);
-            showToast(`Đã gán ${Math.min(files.length, parsedImportRows.length)} ảnh từ máy tính vào bảng xem trước!`);
+            showToast(`Đã gán ${Math.min(files.length, parsedImportRows.length)} ảnh vào bảng xem trước!`);
         }
 
         async function confirmImportData() {
@@ -2308,7 +2434,7 @@
             const confirmBtn = document.getElementById('btn-confirm-import');
             const btnText = document.getElementById('btn-confirm-import-text');
             confirmBtn.disabled = true;
-            btnText.textContent = 'Đang nhập & up ảnh lên web...';
+            btnText.textContent = 'Đang nhập & lưu...';
 
             const mode = document.querySelector('input[name="import-mode"]:checked')?.value || 'append';
 
@@ -2338,7 +2464,6 @@
                     products = products.concat(newItems);
                 }
 
-                // Lưu lên Firebase
                 for (const item of newItems) {
                     await saveProductToFirebase(item);
                 }
@@ -2358,13 +2483,26 @@
         // ============================================================================
         // 13. LIGHTBOX PREVIEW, CLIPBOARD & CSV EXPORT
         // ============================================================================
+        let currentLightboxProductId = null;
+
         function openLightbox(productId) {
+            currentLightboxProductId = productId;
             const prod = products.find(p => p.id === productId);
             if (!prod) return;
             const modal = document.getElementById('lightbox-modal');
             const title = currentLang === 'zh' ? (prod.nameZh || prod.nameVi) : prod.nameVi;
             document.getElementById('lightbox-title').textContent = title;
             document.getElementById('lightbox-img').src = prod.image || DEFAULT_MAKEUP_SVG;
+
+            // Nút đổi ảnh ngay trong Lightbox
+            const changeBtn = document.getElementById('lightbox-btn-change-img');
+            if (changeBtn) {
+                changeBtn.onclick = () => {
+                    closeLightbox();
+                    triggerQuickUpload(productId);
+                };
+            }
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
@@ -2373,6 +2511,7 @@
             const modal = document.getElementById('lightbox-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            currentLightboxProductId = null;
         }
 
         function copyTextToClipboard(text) {
@@ -2400,9 +2539,10 @@
         function copyProposalSummary() {
             let grandTotalVnd = 0;
             const lines = [];
+            const monthStr = getMonthDisplayString(selectedMonth);
 
             if (currentLang === 'zh') {
-                lines.push('📋 美妆采购提案明细表');
+                lines.push(`📋 美妆采购提案明细表 - ${monthStr}`);
                 lines.push('--------------------------------');
                 products.forEach((p, i) => {
                     const subVnd = (Number(p.price) || 0) * (Number(p.quantity) || 0);
@@ -2412,7 +2552,7 @@
                 lines.push('--------------------------------');
                 lines.push(`💰 合计总金额: ${formatVND(grandTotalVnd)} (≈ ${formatCNYFromVND(grandTotalVnd)})`);
             } else {
-                lines.push('📋 BẢNG ĐỀ XUẤT ĐỒ MAKE UP');
+                lines.push(`📋 BẢNG ĐỀ XUẤT ĐỒ MAKE UP - ${monthStr}`);
                 lines.push('--------------------------------');
                 products.forEach((p, i) => {
                     const subVnd = (Number(p.price) || 0) * (Number(p.quantity) || 0);
@@ -2460,7 +2600,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'DE_XUAT_DO_MAKE_UP.csv';
+            a.download = `DE_XUAT_DO_MAKE_UP_${selectedMonth.replace('-', '_')}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -2510,10 +2650,12 @@
             confirmImportData,
             triggerQuickUpload,
             handleQuickUploadFile,
-            promptQuickImageLink,
             handlePreviewImageUpload,
             promptPreviewImageLink,
-            handleBulkPreviewImageUpload
+            handleBulkPreviewImageUpload,
+            changeSelectedMonth,
+            navigateMonth,
+            copyFromPreviousMonth
         });
 
         // Initialize app & Firebase

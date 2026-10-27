@@ -891,7 +891,7 @@
                 teams.forEach((team, index) => {
                     let safeName = String(team.name || '').replace(/\s+/g, '').toLowerCase();
 
-                    if (safeName === "royen:one") {
+                    if (team.isTraffic) {
                         activeStatus[index] = team.isActiveOriginal;
                     } else {
                         if (selection === 'today' && team.isOffToday) {
@@ -943,7 +943,7 @@
                     <div class="team-item">
                         <div style="display:flex; align-items:center; gap:6px;">
                             <label class="switch"><input type="checkbox" ${activeStatus[index] ? 'checked' : ''} onchange="toggleTeam(${index})"><span class="slider"></span></label>
-                            <span style="font-weight:700; font-size:13px; margin-left:4px; width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${team.name}</span>
+                            <span style="font-weight:700; font-size:13px; margin-left:4px; width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${team.name}</span>${team.isTraffic ? '<span style="font-size:10px; color:#7c3aed; font-weight:800; margin-left:2px;" title="Nhóm Lưu Lượng (Luân phiên không nghỉ)">⚡</span>' : ''}
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
                             <span style="font-size:11px; font-weight:600; color:var(--text-muted);">MKP <input type="number" class="num-input" value="${team.duration}" onchange="updateDuration(${index}, this.value)"></span>
@@ -1618,13 +1618,34 @@
                             .map(e => String(e.name || '').toLowerCase())
                             .filter(Boolean);
 
+                        // Nạp danh sách các Nhóm Lưu Lượng từ system_config (Nhóm lưu lượng nghỉ luân phiên, không bao giờ off timeline)
+                        let trafficGroups = ["ORION", "ROYEN:ONE"];
+                        try {
+                            const configSnap = await window.fs.getDocs(window.fs.collection(window.db, "system_config"));
+                            configSnap.forEach(d => {
+                                if (d.id === 'general' && d.data() && d.data().trafficGroups) {
+                                    trafficGroups = d.data().trafficGroups;
+                                }
+                            });
+                        } catch(e) { console.warn("Lỗi đọc trafficGroups:", e); }
+
+                        const isTrafficGroup = (nameOrId) => {
+                            if (!nameOrId) return false;
+                            const s = String(nameOrId).toUpperCase().trim();
+                            return trafficGroups.some(item => {
+                                const it = String(item).toUpperCase().trim();
+                                return s === it || s.includes(it) || it.includes(s);
+                            });
+                        };
+
                         teams = timelineData.map(t => {
                             let tName = String(t.name || t.id || '').toLowerCase();
-                            let safeName = tName.replace(/\s+/g, '');
+                            let isTraffic = isTrafficGroup(t.name) || isTrafficGroup(t.id);
                             let isOffToday = false;
                             let isOffTomorrow = false;
 
-                            if (safeName !== "royen:one" && lsEmps.includes(tName)) {
+                            // Nhóm lưu lượng (isTraffic) KHÔNG BAO GIỜ NGHỈ vì nhân sự nghỉ luân phiên
+                            if (!isTraffic && lsEmps.includes(tName)) {
                                 isOffToday = offLeaves.some(l => l && l.name && String(l.name).toLowerCase() === tName && l.date === todayStr && l.swapFrom !== todayStr && (l.status === 'Approved' || l.status === 'Pending'));
                                 isOffTomorrow = offLeaves.some(l => l && l.name && String(l.name).toLowerCase() === tName && l.date === tomorrowStr && l.swapFrom !== tomorrowStr && (l.status === 'Approved' || l.status === 'Pending'));
                             }
@@ -1634,6 +1655,7 @@
                                 duration: Number(t.duration) || 0, 
                                 liveDelay: Number(t.liveDelay) || 0,
                                 isActiveOriginal: (t.isActiveOriginal !== undefined ? t.isActiveOriginal : (t.isActive !== undefined ? t.isActive : true)),
+                                isTraffic: isTraffic,
                                 isOffToday: isOffToday,
                                 isOffTomorrow: isOffTomorrow
                             };

@@ -1308,6 +1308,89 @@
       margin: 4px 0;
     }
 
+    /* NÚT & MODAL CẤU HÌNH NHÓM LƯU LƯỢNG */
+    .btn-group-traffic-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #64748b;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .btn-group-traffic-toggle:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+      color: #334155;
+    }
+    .btn-group-traffic-toggle.is-traffic {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 2px 6px -1px rgba(124, 58, 237, 0.4);
+    }
+    .btn-group-traffic-toggle.is-traffic:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .traffic-group-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      transition: all 0.2s;
+    }
+    .traffic-group-card.is-active {
+      background: #f5f3ff;
+      border-color: #c4b5fd;
+    }
+    .traffic-group-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .traffic-group-name {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .traffic-group-sub {
+      font-size: 0.75rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+    .traffic-toggle-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      cursor: pointer;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #64748b;
+      transition: all 0.2s ease;
+    }
+    .traffic-toggle-btn.is-active {
+      background: linear-gradient(135deg, #7c3aed, #6366f1);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 4px 10px -2px rgba(124, 58, 237, 0.4);
+    }
+
     /* ================= MODERN TOOLBAR ================= */
     .toolbar {
       height: var(--header-h);
@@ -3084,6 +3167,9 @@
             <button type="button" class="modern-btn btn-secondary-outline" onclick="openBadgeLibraryModal()" title="Quản lý thư viện Badge">
               🎨 Badge
             </button>
+            <button type="button" class="modern-btn btn-secondary-outline" onclick="openTrafficManagerModal()" title="Cấu hình danh sách các Nhóm Lưu Lượng (Luân phiên không off timeline)">
+              ⚡ Lưu Lượng
+            </button>
           </div>
 
           <!-- THAO TÁC DUYỆT & XUẤT -->
@@ -3262,6 +3348,35 @@
       </label>
       <div class="modal-actions" style="justify-content:center; margin-top:10px;">
         <button type="button" class="btn-cancel" onclick="closeLeaveTypeModal()">Đóng / Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CẤU HÌNH NHÓM LƯU LƯỢNG (TRAFFIC GROUPS) -->
+  <div class="modal-overlay" id="trafficManagerModal" onclick="closeTrafficManagerModal(event)">
+    <div class="modal-box" style="width: 520px; max-width: 95vw;" onclick="event.stopPropagation()">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: #7c3aed; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+          ⚡ Cấu Hình Nhóm Lưu Lượng
+        </h3>
+        <button type="button" onclick="closeTrafficManagerModal()" style="border: none; background: transparent; font-size: 1.2rem; cursor: pointer; color: #94a3b8;">✕</button>
+      </div>
+      
+      <div style="font-size: 0.8rem; color: #475569; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; line-height: 1.45;">
+        💡 <b>Đặc điểm Nhóm Lưu Lượng:</b> Nhân sự trong nhóm sẽ đăng ký nghỉ luân phiên nhau nên nhóm <b>KHÔNG BAO GIỜ NGHỈ</b> trên bảng phát sóng hàng ngày (<code>timeline.html</code>). Bạn có thể bật/tắt cho bất kỳ nhóm nào dưới đây.
+      </div>
+
+      <div id="trafficGroupsListContainer" style="max-height: 340px; overflow-y: auto; margin-bottom: 16px; padding-right: 2px;">
+        <!-- Danh sách các nhóm sẽ được JS tự động nạp -->
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 16px; align-items: center; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px dashed #cbd5e1;">
+        <input type="text" id="newCustomTrafficGroupName" placeholder="Tên nhóm mới (Ví dụ: LISA, TEAM NEW...)" style="flex: 1; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.8rem; outline: none;">
+        <button type="button" onclick="addCustomTrafficGroup()" style="padding: 8px 12px; background: #7c3aed; color: #ffffff; border: none; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">+ Thêm Lưu Lượng</button>
+      </div>
+
+      <div class="modal-actions" style="justify-content: flex-end; margin-top: 10px;">
+        <button type="button" class="btn-cancel" onclick="closeTrafficManagerModal()">Đóng</button>
       </div>
     </div>
   </div>
@@ -3466,6 +3581,129 @@
 
     let baseEmployeesData = [], monthEmployeesData = {};
     let employeesData = [], leavesData = [], badgesData = {};
+    let trafficGroupsData = ["ORION", "ROYEN:ONE"];
+
+    function isTrafficGroup(groupNameOrKey) {
+      if (!groupNameOrKey) return false;
+      const s = String(groupNameOrKey).toUpperCase().trim();
+      const list = (Array.isArray(trafficGroupsData) && trafficGroupsData.length > 0)
+        ? trafficGroupsData
+        : ["ORION", "ROYEN:ONE"];
+      
+      return list.some(item => {
+        const it = String(item).toUpperCase().trim();
+        return s === it || s.includes(it) || it.includes(s);
+      });
+    }
+    window.isTrafficGroup = isTrafficGroup;
+
+    function toggleGroupTraffic(groupKey) {
+      if (!groupKey) return;
+      const cleanKey = groupKey.toUpperCase().trim();
+      const isTr = isTrafficGroup(groupKey);
+
+      if (isTr) {
+        trafficGroupsData = trafficGroupsData.filter(g => {
+          const gu = String(g).toUpperCase().trim();
+          return gu !== cleanKey && !cleanKey.includes(gu) && !gu.includes(cleanKey);
+        });
+        showToast(`⚪ Đã chuyển ${normalizeGroupName(groupKey)} về Nhóm Thường!`);
+      } else {
+        if (!trafficGroupsData.some(g => String(g).toUpperCase().trim() === cleanKey)) {
+          trafficGroupsData.push(cleanKey);
+        }
+        showToast(`⚡ Đã gán ${normalizeGroupName(groupKey)} thành Nhóm Lưu Lượng (Không off trên Timeline)!`);
+      }
+
+      callAPI('saveTrafficGroups', { trafficGroups: trafficGroupsData })
+        .catch(err => console.error("Lỗi lưu trafficGroups:", err));
+
+      renderTable();
+      const modal = document.getElementById('trafficManagerModal');
+      if (modal && modal.classList.contains('active')) {
+        renderTrafficModalList();
+      }
+    }
+    window.toggleGroupTraffic = toggleGroupTraffic;
+
+    function openTrafficManagerModal() {
+      renderTrafficModalList();
+      const modal = document.getElementById('trafficManagerModal');
+      if (modal) modal.classList.add('active');
+    }
+    window.openTrafficManagerModal = openTrafficManagerModal;
+
+    function closeTrafficManagerModal(e) {
+      if (e && e.target && e.target.id !== 'trafficManagerModal') return;
+      const modal = document.getElementById('trafficManagerModal');
+      if (modal) modal.classList.remove('active');
+    }
+    window.closeTrafficManagerModal = closeTrafficManagerModal;
+
+    function renderTrafficModalList() {
+      const container = document.getElementById('trafficGroupsListContainer');
+      if (!container) return;
+
+      // Thu thập tất cả các nhóm Livestream hiện có
+      let uniqueGroups = new Set([
+        "TEAM KEN - ANGELIK",
+        "TEAM KEN - ORION",
+        "TEAM U - FASHION",
+        "TEAM U - ROYEN:ONE",
+        "TEAM DINO - BEE",
+        "TEAM DINO - BNART"
+      ]);
+
+      if (employeesData && employeesData.length > 0) {
+        employeesData.forEach(e => {
+          const r = String(e.role || '').toUpperCase();
+          if (r === 'LIVESTREAM' || r === 'LIVESTEAM') {
+            if (e.group) uniqueGroups.add(String(e.group).toUpperCase().trim());
+          }
+        });
+      }
+
+      // Thêm cả các nhóm trong trafficGroupsData nếu chưa có
+      trafficGroupsData.forEach(g => {
+        if (g) uniqueGroups.add(String(g).toUpperCase().trim());
+      });
+
+      let html = '';
+      Array.from(uniqueGroups).sort().forEach(grp => {
+        const isTr = isTrafficGroup(grp);
+        const cleanName = normalizeGroupName(grp);
+        html += `
+          <div class="traffic-group-card ${isTr ? 'is-active' : ''}">
+            <div class="traffic-group-info">
+              <div class="traffic-group-name">
+                <span>${isTr ? '⚡' : '⚪'}</span>
+                <span>${cleanName}</span>
+                <small style="font-size:0.7rem; color:#94a3b8; font-weight:600;">(${grp})</small>
+              </div>
+              <div class="traffic-group-sub">
+                ${isTr ? '<b style="color:#7c3aed;">⚡ Nhóm Lưu Lượng:</b> Không bao giờ off trên Timeline' : 'Nhóm Thường: Đơn vị off theo nhân sự'}
+              </div>
+            </div>
+            <button type="button" class="traffic-toggle-btn ${isTr ? 'is-active' : ''}" onclick="toggleGroupTraffic('${grp}')">
+              ${isTr ? '⚡ ĐANG BẬT' : '⚪ BẬT LƯU LƯỢNG'}
+            </button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+    window.renderTrafficModalList = renderTrafficModalList;
+
+    function addCustomTrafficGroup() {
+      const input = document.getElementById('newCustomTrafficGroupName');
+      if (!input || !input.value.trim()) return showToast("⚠️ Vui lòng nhập tên nhóm!", false, true);
+      const val = input.value.trim().toUpperCase();
+      input.value = '';
+      toggleGroupTraffic(val);
+    }
+    window.addCustomTrafficGroup = addCustomTrafficGroup;
+
     let isSyncing = false; 
     let today = new Date();
     let displayYear = today.getFullYear();
@@ -3596,7 +3834,7 @@
 
         try {
             if (action === 'getInitialData') {
-                let employees = [], leaves = [], badges = {}, quotas = {}, monthEmployees = {};
+                let employees = [], leaves = [], badges = {}, quotas = {}, monthEmployees = {}, trafficGroups = ["ORION", "ROYEN:ONE"];
                 const empSnap = await fs.getDocs(fs.collection(db, "off_employees"));
                 empSnap.forEach(d => employees.push(d.data()));
 
@@ -3610,9 +3848,20 @@
                 
                 const configSnap = await fs.getDocs(fs.collection(db, "system_config"));
                 configSnap.forEach(d => {
-                    if(d.id === 'general') { badges = d.data().badges || {}; quotas = d.data().quotas || {}; }
+                    if(d.id === 'general') { 
+                        badges = d.data().badges || {}; 
+                        quotas = d.data().quotas || {}; 
+                        if (d.data().trafficGroups && Array.isArray(d.data().trafficGroups)) {
+                            trafficGroups = d.data().trafficGroups;
+                        }
+                    }
                 });
-                return { employees, leaves, badges, quotas, monthEmployees };
+                return { employees, leaves, badges, quotas, monthEmployees, trafficGroups };
+            }
+
+            if (action === 'saveTrafficGroups') {
+                await fs.setDoc(fs.doc(db, "system_config", "general"), { trafficGroups: payload.trafficGroups }, { merge: true });
+                return "SUCCESS";
             }
 
             if (action === 'processBatchChanges') {
@@ -4330,63 +4579,69 @@
       const b = String(emp.customBadge || '').toUpperCase();
 
       if (g.includes("ORION") || b.includes("ORION") || n.includes("ORION")) {
+        const isTr = isTrafficGroup("TEAM KEN - ORION");
         return {
           teamCode: "TEAM_KEN",
           sortOrder: 102,
           groupKey: "TEAM KEN - ORION",
           groupLabel: "Team Ken - Orion",
-          displayHTML: "TEAM KEN<br><span style='font-size:0.75rem; color:#7c3aed; font-weight:700;'>Nhóm Orion<br><small style='font-size:0.68rem; color:#9333ea; font-weight:600;'>(Lưu lượng)</small></span>",
-          isTraffic: true
+          displayHTML: `TEAM KEN<br><span style='font-size:0.75rem; color:#7c3aed; font-weight:700;'>Nhóm Orion${isTr ? '<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(Lưu lượng)</small>' : ''}</span>`,
+          isTraffic: isTr
         };
       }
       if (g.includes("KEN") || b.includes("ANGELIK") || n.includes("ANGELIK")) {
+        const isTr = isTrafficGroup("TEAM KEN - ANGELIK");
         return {
           teamCode: "TEAM_KEN",
           sortOrder: 101,
           groupKey: "TEAM KEN - ANGELIK",
           groupLabel: "Team Ken - Angelik",
-          displayHTML: "TEAM KEN<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Angelik</span>",
-          isTraffic: false
+          displayHTML: `TEAM KEN<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Angelik${isTr ? '<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(Lưu lượng)</small>' : ''}</span>`,
+          isTraffic: isTr
         };
       }
       if (g.includes("ROYEN") || b.includes("ROYEN") || n.includes("ROYEN")) {
+        const isTr = isTrafficGroup("TEAM U - ROYEN:ONE");
         return {
           teamCode: "TEAM_U",
           sortOrder: 202,
           groupKey: "TEAM U - ROYEN:ONE",
           groupLabel: "Team U - Royen:One",
-          displayHTML: "TEAM U<br><span style='font-size:0.75rem; color:#2563eb; font-weight:700;'>Nhóm Royen:One<br><small style='font-size:0.68rem; color:#3b82f6; font-weight:600;'>(Lưu lượng)</small></span>",
-          isTraffic: true
+          displayHTML: `TEAM U<br><span style='font-size:0.75rem; color:#2563eb; font-weight:700;'>Nhóm Royen:One${isTr ? '<br><small style="font-size:0.68rem; color:#3b82f6; font-weight:600;">(Lưu lượng)</small>' : ''}</span>`,
+          isTraffic: isTr
         };
       }
       if (g.includes("TEAM U") || b.includes("FASHION") || n.includes("FASHION")) {
+        const isTr = isTrafficGroup("TEAM U - FASHION");
         return {
           teamCode: "TEAM_U",
           sortOrder: 201,
           groupKey: "TEAM U - FASHION",
           groupLabel: "Team U - Fashion",
-          displayHTML: "TEAM U<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Fashion</span>",
-          isTraffic: false
+          displayHTML: `TEAM U<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Fashion${isTr ? '<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(Lưu lượng)</small>' : ''}</span>`,
+          isTraffic: isTr
         };
       }
       if (g.includes("BNART") || b.includes("BNART") || n.includes("BNART")) {
+        const isTr = isTrafficGroup("TEAM DINO - BNART");
         return {
           teamCode: "TEAM_DINO",
           sortOrder: 302,
           groupKey: "TEAM DINO - BNART",
           groupLabel: "Team Dino - Bnart",
-          displayHTML: "TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bnart</span>",
-          isTraffic: false
+          displayHTML: `TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bnart${isTr ? '<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(Lưu lượng)</small>' : ''}</span>`,
+          isTraffic: isTr
         };
       }
       if (g.includes("BEE") || b.includes("BEE") || n.includes("BEE") || g.includes("DINO")) {
+        const isTr = isTrafficGroup("TEAM DINO - BEE");
         return {
           teamCode: "TEAM_DINO",
           sortOrder: 301,
           groupKey: "TEAM DINO - BEE",
           groupLabel: "Team Dino - Bee",
-          displayHTML: "TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bee</span>",
-          isTraffic: false
+          displayHTML: `TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bee${isTr ? '<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(Lưu lượng)</small>' : ''}</span>`,
+          isTraffic: isTr
         };
       }
       if (g.includes("GIMBAL") || g.includes("MEDIA") || b.includes("GIMBAL") || b.includes("MEDIA")) {
@@ -4399,13 +4654,15 @@
           isTraffic: false
         };
       }
+      const rawG = normalizeGroupName(emp.group);
+      const isTr = isTrafficGroup(rawG);
       return {
         teamCode: "OTHER",
         sortOrder: 999,
-        groupKey: normalizeGroupName(emp.group),
-        groupLabel: normalizeGroupName(emp.group),
-        displayHTML: normalizeGroupName(emp.group),
-        isTraffic: false
+        groupKey: rawG,
+        groupLabel: rawG,
+        displayHTML: `${rawG}${isTr ? '<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(Lưu lượng)</small>' : ''}`,
+        isTraffic: isTr
       };
     }
 
@@ -4499,6 +4756,7 @@
           leavesData = data.leaves || []; 
           badgesData = data.badges || {}; 
           quotasData = data.quotas || {};
+          trafficGroupsData = data.trafficGroups || ["ORION", "ROYEN:ONE"];
           syncCurrentMonthEmployees();
           renderTable(); 
           populatePersonSelect(); 
@@ -5114,7 +5372,7 @@
           }
 
           for (let group of filteredGroups) {
-             let isTraffic = (group === "TEAM KEN - ORION" || group === "TEAM U - ROYEN:ONE");
+             let isTraffic = isTrafficGroup(group);
              
              // SẮP XẾP NHÂN SỰ: Trong 2 nhóm lưu lượng: Operation đẩy lên đầu (1), MC tiếp theo (2), Idol (3) theo sau
              depts[deptKey][group].sort((a, b) => {
@@ -5169,7 +5427,9 @@
                        <span class="group-count-text">• ${depts[deptKey][group].length} nhân sự</span>
                      </div>
                      <div class="group-divider-right">
-                       
+                       <button type="button" class="btn-group-traffic-toggle ${isTraffic ? 'is-traffic' : ''}" onclick="toggleGroupTraffic('${group}')" title="${isTraffic ? 'Nhóm Lưu Lượng (Luân phiên không nghỉ timeline). Bấm để chuyển thành Nhóm Thường' : 'Bấm để gán thành Nhóm Lưu Lượng (Nghỉ luân phiên, nhóm không bao giờ off trên timeline)'}">
+                         ${isTraffic ? '⚡ Lưu Lượng' : '⚪ Đặt Lưu Lượng'}
+                       </button>
                      </div>
                    </div>
                  </td>
