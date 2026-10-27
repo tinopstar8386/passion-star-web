@@ -192,7 +192,7 @@
                             Tháng 11/2026
                         </span>
                     </div>
-                    <p id="ui-app-subtitle" class="text-xs sm:text-sm text-slate-600 font-medium">
+                    <p id="ui-app-subtitle" class="text-xs text-slate-600 font-medium truncate max-w-sm xl:max-w-md 2xl:max-w-none">
                         Hệ thống quản lý danh mục, báo giá & link đặt hàng sản phẩm trang điểm theo từng tháng
                     </p>
                 </div>
@@ -220,9 +220,9 @@
             </nav>
 
             <!-- Right Controls: Bộ chọn tháng, Tỷ giá, Chuyển ngữ -->
-            <div class="flex items-center gap-2 sm:gap-3">
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
                 <!-- BỘ CHỌN THÁNG (MONTH SELECTOR) -->
-                <div class="flex items-center bg-teal-50/80 border border-teal-300 rounded-xl px-2 py-1 shadow-2xs no-print">
+                <div class="flex items-center bg-teal-50/80 border border-teal-300 rounded-xl px-2 py-1 shadow-2xs no-print shrink-0">
                     <button
                         onclick="navigateMonth(-1)"
                         class="p-1 rounded-lg hover:bg-teal-200/70 text-teal-800 transition-colors"
@@ -252,10 +252,10 @@
                     </button>
                 </div>
 
-                <!-- Currency Exchange Rate Helper -->
-                <div class="hidden lg:flex items-center gap-1.5 bg-emerald-50/60 border border-emerald-300 rounded-lg px-2.5 py-1 text-xs text-slate-700 shadow-2xs no-print">
-                    <span id="ui-rate-label" class="font-semibold text-slate-600">Tỷ giá:</span>
-                    <span class="font-bold text-slate-900">1 ¥ =</span>
+                <!-- Currency Exchange Rate Helper (CHỐNG XUỐNG DÒNG TUYỆT ĐỐI) -->
+                <div class="hidden lg:flex items-center gap-1.5 bg-emerald-50/60 border border-emerald-300 rounded-lg px-2.5 py-1 text-xs text-slate-700 shadow-2xs no-print whitespace-nowrap shrink-0">
+                    <span id="ui-rate-label" class="font-semibold text-slate-600 whitespace-nowrap shrink-0">Tỷ giá:</span>
+                    <span class="font-bold text-slate-900 whitespace-nowrap shrink-0">1 ¥ =</span>
                     <input
                         id="exchange-rate-input"
                         type="number"
@@ -263,9 +263,9 @@
                         min="1"
                         step="50"
                         onchange="updateExchangeRate(this.value)"
-                        class="w-16 bg-white border border-emerald-300 rounded px-1.5 py-0.5 text-right font-extrabold text-teal-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        class="w-14 bg-white border border-emerald-300 rounded px-1.5 py-0.5 text-right font-extrabold text-teal-700 focus:outline-none focus:ring-1 focus:ring-teal-500 shrink-0"
                     />
-                    <span class="font-bold text-slate-900">₫</span>
+                    <span class="font-bold text-slate-900 shrink-0">₫</span>
                 </div>
 
                 <!-- 2 Language Toggle Buttons -->
@@ -1545,11 +1545,7 @@
             const sourceItems = allLoadedProducts.filter(p => (p.month === prevMonthKey) || (!p.month && prevMonthKey === '2026-11'));
 
             if (sourceItems.length === 0) {
-                alert(`Không tìm thấy dữ liệu sản phẩm của ${prevDisplay} để sao chép.`);
-                return;
-            }
-
-            if (!confirm(`Bạn có muốn sao chép ${sourceItems.length} sản phẩm từ ${prevDisplay} sang ${getMonthDisplayString(selectedMonth)} không?`)) {
+                showToast(`Không tìm thấy dữ liệu sản phẩm của ${prevDisplay} để sao chép.`);
                 return;
             }
 
@@ -1570,7 +1566,7 @@
                 showToast(I18N[currentLang].toastMonthCopied(count, prevDisplay));
             } catch (err) {
                 console.error('Lỗi sao chép tháng:', err);
-                alert('Có lỗi xảy ra khi sao chép dữ liệu. Vui lòng thử lại!');
+                showToast('Có lỗi xảy ra khi sao chép dữ liệu. Vui lòng thử lại!');
             }
         }
 
@@ -2326,7 +2322,7 @@
                 showToast(I18N[currentLang].toastImageUpdated);
             } catch (err) {
                 console.error('Lỗi upload ảnh:', err);
-                alert('Có lỗi khi xử lý ảnh, vui lòng thử lại!');
+                showToast('Có lỗi khi xử lý ảnh, vui lòng thử lại!');
             } finally {
                 targetQuickUploadId = null;
             }
@@ -2430,8 +2426,6 @@
         async function clearProductImage(productId) {
             const prod = products.find(p => p.id === productId) || allLoadedProducts.find(p => p.id === productId);
             if (!prod) return;
-
-            if (!confirm('Bạn có chắc muốn xóa ảnh của sản phẩm này không?')) return;
 
             prod.image = DEFAULT_MAKEUP_SVG;
             renderTable();
@@ -2871,7 +2865,7 @@
                     showImportPreview(rows);
                 } catch (err) {
                     console.error('Lỗi đọc file Excel:', err);
-                    alert('Không thể đọc file Excel này. Vui lòng kiểm tra định dạng hoặc thử xuất sang .csv');
+                    showToast('Không thể đọc file Excel này. Vui lòng kiểm tra định dạng hoặc thử xuất sang .csv');
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -3040,7 +3034,7 @@
                 showToast(I18N[currentLang].toastImportSuccess(newItems.length));
             } catch (err) {
                 console.error('Lỗi khi nhập dữ liệu:', err);
-                alert('Có lỗi xảy ra trong quá trình nhập. Vui lòng thử lại!');
+                showToast('Có lỗi xảy ra trong quá trình nhập. Vui lòng thử lại!');
             } finally {
                 confirmBtn.disabled = false;
                 btnText.textContent = 'Xác nhận nhập vào web';
