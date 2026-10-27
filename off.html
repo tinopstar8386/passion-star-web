@@ -1308,6 +1308,109 @@
       margin: 4px 0;
     }
 
+    /* ================= SAO CHÉP LINK TỪNG NHÂN SỰ CÁ NHÂN ================= */
+    .btn-emp-row-copy {
+      background: transparent;
+      border: none;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 1px 4px;
+      border-radius: 4px;
+      line-height: 1;
+      opacity: 0.45;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+      user-select: none;
+      margin-left: 2px;
+    }
+    .name-cell:hover .btn-emp-row-copy {
+      opacity: 1;
+      color: #2563eb;
+      background: #eff6ff;
+    }
+    .btn-emp-row-copy:hover {
+      opacity: 1 !important;
+      color: #1d4ed8 !important;
+      background: #dbeafe !important;
+      transform: scale(1.18);
+    }
+
+    .btn-view-person-link {
+      background: #f0fdf4 !important;
+      color: #15803d !important;
+      border-color: #bbf7d0 !important;
+    }
+    .btn-view-person-link:hover {
+      background: #dcfce7 !important;
+      border-color: #86efac !important;
+      color: #166534 !important;
+    }
+
+    .person-copy-dropdown-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      min-width: 250px;
+      max-height: 300px;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+      z-index: 1000;
+      padding: 6px;
+    }
+    .person-copy-dropdown-menu.show {
+      display: block;
+    }
+    .person-copy-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .person-copy-item:hover {
+      background: #f0fdf4;
+    }
+    .person-copy-item-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .person-copy-item-btn {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #16a34a;
+      background: #dcfce7;
+      border: 1px solid #bbf7d0;
+      border-radius: 6px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+
+    .person-link-list-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      transition: all 0.15s;
+    }
+    .person-link-list-card:hover {
+      background: #f0fdf4;
+      border-color: #86efac;
+    }
+
     /* ================= CẤU HÌNH NHÓM LƯU LƯỢNG (PRO TYPOGRAPHY) ================= */
     .traffic-modal-header {
       display: flex;
@@ -3309,6 +3412,9 @@
             <button type="button" class="modern-btn btn-secondary-outline" onclick="openTrafficManagerModal()" title="Cấu hình danh sách các Nhóm Lưu Lượng (Luân phiên không off timeline)">
               ⚡ Lưu Lượng
             </button>
+            <button type="button" class="modern-btn btn-secondary-outline" onclick="openAllPersonLinksModal()" title="Mở danh sách Link đăng ký của từng cá nhân để copy">
+              👤 Link Cá Nhân
+            </button>
           </div>
 
           <!-- THAO TÁC DUYỆT & XUẤT -->
@@ -3364,9 +3470,15 @@
             <span class="bc-count" id="bcCountBadge">0 nhân sự</span>
           </div>
           <div class="table-view-actions">
-            <button type="button" class="btn-view-quick btn-view-link" id="btnCopyViewLink" onclick="copyActiveViewLink()" style="display: none;">
+            <button type="button" class="btn-view-quick btn-view-link" id="btnCopyViewLink" onclick="copyActiveViewLink()" style="display: none;" title="Sao chép link đăng ký của cả nhóm">
               🔗 Copy Link Nhóm
             </button>
+            <div class="person-copy-dropdown-wrap" id="wrapPersonCopyDropdown" style="display: none; position: relative;">
+              <button type="button" class="btn-view-quick btn-view-person-link" id="btnCopyPersonDropdown" onclick="togglePersonCopyDropdown(event)" title="Chọn và chép link đăng ký của từng cá nhân trong nhóm">
+                👤 Link Từng Người ▾
+              </button>
+              <div class="person-copy-dropdown-menu" id="personCopyDropdownMenu" onclick="event.stopPropagation()"></div>
+            </div>
             <button type="button" class="btn-view-quick btn-view-export" id="btnExportViewTeam" onclick="quickExportActiveTeam()" style="display: none;">
               📸 Xuất Ảnh Nhóm
             </button>
@@ -3487,6 +3599,34 @@
       </label>
       <div class="modal-actions" style="justify-content:center; margin-top:10px;">
         <button type="button" class="btn-cancel" onclick="closeLeaveTypeModal()">Đóng / Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DANH SÁCH LINK ĐĂNG KÝ TỪNG CÁ NHÂN -->
+  <div class="modal-overlay" id="allPersonLinksModal" onclick="closeAllPersonLinksModal(event)">
+    <div class="modal-box" style="width: 540px; max-width: 95vw; padding: 22px 24px; border-radius: 18px;" onclick="event.stopPropagation()">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+        <h3 style="margin: 0; color: #16a34a; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+          👤 Danh Sách Link Cá Nhân (<span id="personLinksMonthLabel"></span>)
+        </h3>
+        <button type="button" onclick="closeAllPersonLinksModal()" style="border: none; background: transparent; font-size: 1.3rem; cursor: pointer; color: #94a3b8; padding: 4px 8px; border-radius: 8px;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">✕</button>
+      </div>
+
+      <div style="font-size: 0.8rem; color: #475569; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; line-height: 1.45;">
+        💡 Bấm <b>Chép Link</b> cạnh bất kỳ nhân sự nào để gửi riêng cho nhân sự đó. Khi mở link, hệ thống sẽ mở <b>Lịch Cá Nhân</b> riêng biệt của nhân sự đó.
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <input type="text" id="searchPersonLinkInput" placeholder="🔍 Tìm theo tên nhân sự hoặc nhóm..." oninput="handlePersonLinkSearch(this.value)" style="width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 0.85rem; font-family: 'Inter', sans-serif; outline: none; box-sizing: border-box;">
+      </div>
+
+      <div id="allPersonLinksContainer" style="max-height: 350px; overflow-y: auto; margin-bottom: 14px; padding-right: 4px;">
+        <!-- Danh sách nhân sự được nạp qua JS -->
+      </div>
+
+      <div class="modal-actions" style="justify-content: flex-end; margin-top: 0; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+        <button type="button" class="btn-cancel" onclick="closeAllPersonLinksModal()" style="padding: 8px 22px; font-weight: 600; font-size: 0.84rem; border-radius: 8px;">Đóng</button>
       </div>
     </div>
   </div>
@@ -4550,6 +4690,7 @@
           html += `<div style="text-align:center; font-weight:800; font-size:1rem; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid var(--border-color); color:var(--text-main);">👤 Tùy chọn: ${empName}</div>`;
         }
         
+        html += `<div class="context-menu-item" style="color: #16a34a; font-weight: 800; background: #f0fdf4; display: flex; align-items: center; gap: 8px; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #bbf7d0;" onclick="copyDirectPersonLink('${empName}', event)">🔗 Copy Link Cá Nhân (${empName})</div>`;
         html += `<div class="context-menu-item" style="color: #1d4ed8; font-weight: 800; background: #eff6ff; display: flex; align-items: center; gap: 8px; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #bfdbfe;" onclick="openEditEmployeeModal('${empName}')">✏️ Sửa Tên / Bộ phận / Nhóm</div>`;
         html += `<div class="context-menu-divider"></div>`;
         html += `<div style="font-size: 0.72rem; font-weight: 700; color: #64748b; padding: 4px 6px; text-transform: uppercase;">Gán Danh Hiệu (VIP Badge):</div>`;
@@ -5294,7 +5435,9 @@
       }
       const btnCopyView = document.getElementById('btnCopyViewLink');
       const btnExportView = document.getElementById('btnExportViewTeam');
+      const wrapPersonDrop = document.getElementById('wrapPersonCopyDropdown');
       if (btnCopyView) btnCopyView.style.display = (f === 'ALL') ? 'none' : 'inline-flex';
+      if (wrapPersonDrop) wrapPersonDrop.style.display = (f === 'ALL') ? 'none' : 'inline-block';
       if (btnExportView) btnExportView.style.display = (f === 'ALL') ? 'none' : 'inline-flex';
     }
 
@@ -5303,6 +5446,131 @@
     // =========================================================================
     
     // HÀM SAO CHÉP LINK ĐĂNG KÝ TRỰC TIẾP CỦA TỪNG NHÓM
+    // HÀM SAO CHÉP LINK ĐĂNG KÝ CỦA TỪNG CÁ NHÂN NHÂN SỰ
+    function copyDirectPersonLink(empName, e) {
+      if (e && e.stopPropagation) e.stopPropagation();
+      let origin = window.location.origin;
+      let path = window.location.pathname;
+      let dir = path.substring(0, path.lastIndexOf('/') + 1);
+      let monthPrefix = getMonthPrefix(displayYear, displayMonth);
+      let link = `${origin}${dir}mcform.html?target=PERSON:${encodeURIComponent(empName)}&month=${monthPrefix}`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => {
+          showToast(`✅ Đã chép Link Cá Nhân (${monthPrefix}) của: ${empName}`);
+        }).catch(() => {
+          fallbackCopyText(link);
+        });
+      } else {
+        fallbackCopyText(link);
+      }
+      closeAllMobileSheets();
+      const pDrop = document.getElementById('personCopyDropdownMenu');
+      if (pDrop) pDrop.classList.remove('show');
+    }
+    window.copyDirectPersonLink = copyDirectPersonLink;
+
+    function togglePersonCopyDropdown(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('personCopyDropdownMenu');
+      if (!menu) return;
+
+      if (menu.classList.contains('show')) {
+        menu.classList.remove('show');
+        return;
+      }
+
+      const f = window.selectedSidebarFilter || 'ALL';
+      let empsInView = [];
+      if (employeesData && employeesData.length > 0) {
+        empsInView = employeesData.filter(emp => isGroupMatchingSidebar(emp.role, emp.group));
+      }
+
+      if (empsInView.length === 0) {
+        menu.innerHTML = '<div style="padding:10px; font-size:0.8rem; color:#94a3b8; text-align:center;">Không có nhân sự nào trong nhóm này</div>';
+      } else {
+        let html = `<div style="font-size:0.7rem; font-weight:800; color:#64748b; padding:4px 8px; text-transform:uppercase; border-bottom:1px solid #f1f5f9; margin-bottom:4px;">Chép link từng người (${empsInView.length}):</div>`;
+        empsInView.forEach(emp => {
+          html += `
+            <div class="person-copy-item" onclick="copyDirectPersonLink('${emp.name}', event)">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:0.85rem;">👤</span>
+                <span class="person-copy-item-name">${emp.name}</span>
+              </div>
+              <span class="person-copy-item-btn">🔗 Chép Link</span>
+            </div>
+          `;
+        });
+        menu.innerHTML = html;
+      }
+
+      menu.classList.add('show');
+    }
+    window.togglePersonCopyDropdown = togglePersonCopyDropdown;
+
+    function openAllPersonLinksModal() {
+      const monthPrefix = getMonthPrefix(displayYear, displayMonth);
+      const labelEl = document.getElementById('personLinksMonthLabel');
+      if (labelEl) labelEl.innerText = `Tháng ${monthPrefix}`;
+      const searchInput = document.getElementById('searchPersonLinkInput');
+      if (searchInput) searchInput.value = '';
+      renderAllPersonLinksList('');
+      const modal = document.getElementById('allPersonLinksModal');
+      if (modal) modal.classList.add('active');
+    }
+    window.openAllPersonLinksModal = openAllPersonLinksModal;
+
+    function closeAllPersonLinksModal(e) {
+      if (e && e.target && e.target.id !== 'allPersonLinksModal') return;
+      const modal = document.getElementById('allPersonLinksModal');
+      if (modal) modal.classList.remove('active');
+    }
+    window.closeAllPersonLinksModal = closeAllPersonLinksModal;
+
+    function renderAllPersonLinksList(filterText = '') {
+      const container = document.getElementById('allPersonLinksContainer');
+      if (!container || !employeesData) return;
+
+      const query = (filterText || '').toLowerCase().trim();
+      const filtered = employeesData.filter(emp => {
+        if (!query) return true;
+        return String(emp.name || '').toLowerCase().includes(query) ||
+               String(emp.group || '').toLowerCase().includes(query) ||
+               String(emp.role || '').toLowerCase().includes(query);
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div style="padding:25px; text-align:center; color:#94a3b8; font-weight:600;">🔍 Không tìm thấy nhân sự nào phù hợp</div>';
+        return;
+      }
+
+      let html = '';
+      filtered.forEach(emp => {
+        const cleanGroup = normalizeGroupName(emp.group);
+        html += `
+          <div class="person-link-list-card">
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:0.88rem; font-weight:800; color:#0f172a;">${emp.name}</span>
+                <span style="font-size:0.68rem; font-weight:700; background:#ede9fe; color:#6d28d9; padding:1px 6px; border-radius:4px;">${cleanGroup}</span>
+              </div>
+              <span style="font-size:0.72rem; color:#64748b;">Bộ phận: ${emp.role || 'Khác'}</span>
+            </div>
+            <button type="button" class="modern-btn btn-emerald-soft" style="padding:6px 12px; font-size:0.75rem; font-weight:700; cursor:pointer;" onclick="copyDirectPersonLink('${emp.name}', event)">
+              🔗 Chép Link
+            </button>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+    window.renderAllPersonLinksList = renderAllPersonLinksList;
+
+    function handlePersonLinkSearch(val) {
+      renderAllPersonLinksList(val);
+    }
+    window.handlePersonLinkSearch = handlePersonLinkSearch;
+
     function copyDirectGroupLink(groupKey, e) {
       if (e && e.stopPropagation) e.stopPropagation();
       let origin = window.location.origin;
@@ -5623,6 +5891,9 @@
                          <div class="name-cell-content">
                            <div class="emp-primary-row">
                              <span class="emp-display-name">${name}</span>
+                             <button type="button" class="btn-emp-row-copy" onclick="copyDirectPersonLink('${name}', event)" title="Sao chép link đăng ký riêng của ${name}">
+                               🔗
+                             </button>
                            </div>
                            <div class="emp-secondary-row">
                              ${userBadge}
@@ -5759,6 +6030,7 @@
                     <span class="m-emp-quota ${isQuotaFull ? 'full' : ''}">${formatLeaveCount(userLeavesCount)}/${currentQuotaGlobal} ngày</span>
                   </div>
                   <div class="m-emp-actions">
+                    <button type="button" class="m-btn-icon" onclick="copyDirectPersonLink('${name}', event)" title="Sao chép link đăng ký của ${name}">🔗</button>
                     <button type="button" class="m-btn-icon" onclick="openBadgeContextMenu(event, '${name}')" title="Badge / Xóa">🏷️</button>
                     <button type="button" class="m-btn-cal" onclick="openMobileEmpCalendar('${name}')">📅 Chấm lịch</button>
                   </div>
