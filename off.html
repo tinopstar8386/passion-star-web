@@ -277,6 +277,94 @@
         gap: 4px;
       }
 
+      /* Nút Lưu nổi & Floating Dock ở đáy màn hình iPhone / Android */
+      .mobile-floating-save-container {
+        position: fixed !important;
+        bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        z-index: 99999 !important;
+        width: calc(100% - 24px) !important;
+        max-width: 400px !important;
+        pointer-events: auto !important;
+        animation: floatDockSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      @keyframes floatDockSlideUp {
+        from { transform: translateX(-50%) translateY(50px) scale(0.92); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+      }
+      .m-floating-save-inner {
+        background: #0f172a !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        border-radius: 999px !important;
+        box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.55), 0 0 0 2px rgba(245, 158, 11, 0.5) !important;
+        padding: 6px 8px 6px 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+      }
+      .m-floating-save-info {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        color: #f8fafc !important;
+        font-size: 0.82rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+      }
+      .m-floating-save-dot {
+        width: 10px;
+        height: 10px;
+        background: #f59e0b;
+        border-radius: 50%;
+        box-shadow: 0 0 8px #f59e0b;
+        animation: pulseDot 1.4s infinite;
+      }
+      @keyframes pulseDot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.8); }
+      }
+      .m-floating-save-actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+      }
+      .m-floating-cancel-btn {
+        background: rgba(255, 255, 255, 0.12) !important;
+        color: #cbd5e1 !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 999px !important;
+        padding: 7px 12px !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        cursor: pointer !important;
+        transition: background 0.15s ease !important;
+      }
+      .m-floating-cancel-btn:active {
+        background: rgba(255, 255, 255, 0.25) !important;
+        transform: scale(0.95) !important;
+      }
+      .m-floating-save-btn {
+        background: linear-gradient(135deg, #f59e0b, #ea580c) !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 999px !important;
+        padding: 8px 16px !important;
+        font-size: 0.85rem !important;
+        font-weight: 800 !important;
+        cursor: pointer !important;
+        box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        white-space: nowrap !important;
+        transition: transform 0.15s ease !important;
+      }
+      .m-floating-save-btn:active {
+        transform: scale(0.95) !important;
+      }
+
       /* Nút Lưu nổi ở đáy màn hình iPhone */
       #btnSaveChanges {
         position: fixed !important;
@@ -3834,8 +3922,8 @@
       <div id="mobileSubHeader">
         <div class="mobile-mode-bar">
           <div class="mobile-view-switch">
-            <button type="button" id="btnModeSmart" class="active" onclick="setMobileViewMode('smart')">📅 Thẻ & Lịch (Không kéo ngang)</button>
-            <button type="button" id="btnModeTable" onclick="setMobileViewMode('table')">📊 Bảng Gọn</button>
+            <button type="button" id="btnModeSmart" class="active" onclick="setMobileViewMode('smart')">📱 Dạng Thẻ</button>
+            <button type="button" id="btnModeTable" onclick="setMobileViewMode('table')">📊 Dạng Bảng</button>
           </div>
           <input type="text" id="mobileQuickSearch" class="mobile-search-input" placeholder="🔍 Tìm tên..." oninput="handleMobileSearch()">
         </div>
@@ -3844,6 +3932,20 @@
           <button type="button" class="m-qa-btn m-qa-link" onclick="copyActiveViewLink()">🔗 Copy Link Nhóm</button>
           <button type="button" class="m-qa-btn m-qa-export" onclick="quickExportActiveTeam()">📸 Xuất Ảnh Nhóm</button>
           <button type="button" class="m-qa-btn m-qa-reset" onclick="selectMobileTeamFilter('ALL')">✕ Xem Tất Cả</button>
+        </div>
+      </div>
+
+      <!-- THANH LƯU NỔI DÀNH RIÊNG CHO MOBILE / IPHONE (FLOATING SAVE DOCK) -->
+      <div id="mobileFloatingSaveBar" class="mobile-floating-save-container" style="display: none;">
+        <div class="m-floating-save-inner">
+          <div class="m-floating-save-info">
+            <span class="m-floating-save-dot"></span>
+            <span>Có <b><span id="mobileFloatingSaveCount">0</span></b> thay đổi</span>
+          </div>
+          <div class="m-floating-save-actions">
+            <button type="button" class="m-floating-cancel-btn" onclick="discardAllDrafts()">✕ Hủy</button>
+            <button type="button" class="m-floating-save-btn" onclick="saveBulkChanges()">💾 Lưu Ngay</button>
+          </div>
         </div>
       </div>
 
@@ -3921,7 +4023,15 @@
         <span>💡 Chạm ô trống: <b>Thêm OFF</b> • Chạm ô đỏ: <b>Xóa / Dời</b> • Vuốt ngang: <b>Đổi người</b></span>
       </div>
 
-      <div style="display:flex; gap:8px; margin-top:12px;">
+      <!-- HÀNG LƯU TRỰC TIẾP TRONG LỊCH CÁ NHÂN KHI CÓ DRAFT -->
+      <div id="mCalSaveRow" style="display: none; margin-top: 10px;">
+        <button type="button" id="mCalSaveBtn" onclick="saveBulkChanges()" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, #f59e0b, #ea580c); color: white; font-weight: 800; font-size: 0.92rem; box-shadow: 0 4px 14px rgba(234, 88, 12, 0.45); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+          <span>💾</span>
+          <span>Lưu Thay Đổi Ngay (<b id="mCalDraftCount">0</b>)</span>
+        </button>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:10px;">
         <button type="button" style="flex:1; padding:11px; border-radius:10px; border:1px solid var(--border-color); background:#f1f5f9; color:#334155; font-weight:700; font-size:0.85rem;" onclick="openBadgeFromMobileCal()">🏷️ Badge / Xóa NS</button>
         <button type="button" style="flex:1; padding:11px; border-radius:10px; border:none; background:#2563eb; color:white; font-weight:800; font-size:0.85rem;" onclick="closeMobileEmpCalendar()">✅ Xong</button>
       </div>
@@ -4590,7 +4700,7 @@
 
     function handleMobileSearch() {
       const input = document.getElementById('mobileQuickSearch');
-      mobileSearchQuery = input ? input.value.trim().toLowerCase() : '';
+      mobileSearchQuery = input ? escapeHTML(input.value.trim().toLowerCase()) : '';
       renderTable();
     }
 
@@ -5481,15 +5591,54 @@
     window.updateQuickLeaveModeUI = updateQuickLeaveModeUI;
 
     function updateSaveButtonUI() {
+      const count = draftQueue.length;
+
+      // 1. Nút Lưu trên thanh công cụ Desktop
       const btnSave = document.getElementById('btnSaveChanges');
-      if (!btnSave) return;
-      if (draftQueue.length > 0) {
-        btnSave.style.display = 'inline-block';
-        btnSave.innerText = `💾 Lưu (${draftQueue.length})`;
-      } else {
-        btnSave.style.display = 'none';
+      if (btnSave) {
+        if (count > 0) {
+          btnSave.style.display = 'inline-flex';
+          btnSave.innerText = `💾 Lưu (${count})`;
+        } else {
+          btnSave.style.display = 'none';
+        }
+      }
+
+      // 2. Thanh Dock Lưu Nổi trên màn hình Mobile / iPhone
+      const barMobile = document.getElementById('mobileFloatingSaveBar');
+      const countMobile = document.getElementById('mobileFloatingSaveCount');
+      if (barMobile) {
+        if (count > 0) {
+          barMobile.style.display = 'block';
+          if (countMobile) countMobile.innerText = count;
+        } else {
+          barMobile.style.display = 'none';
+        }
+      }
+
+      // 3. Nút Lưu Trực Tiếp bên trong Bottom Sheet Lịch Cá Nhân Mobile
+      const mCalSaveRow = document.getElementById('mCalSaveRow');
+      const mCalCount = document.getElementById('mCalDraftCount');
+      if (mCalSaveRow) {
+        if (count > 0) {
+          mCalSaveRow.style.display = 'block';
+          if (mCalCount) mCalCount.innerText = count;
+        } else {
+          mCalSaveRow.style.display = 'none';
+        }
       }
     }
+    window.updateSaveButtonUI = updateSaveButtonUI;
+
+    function discardAllDrafts() {
+      if (draftQueue.length === 0) return;
+      draftQueue = [];
+      updateSaveButtonUI();
+      renderTable();
+      if (activeMobileCalEmpName) renderMobileEmpCalendar();
+      showToast("↩️ Đã hủy các thay đổi chưa lưu!");
+    }
+    window.discardAllDrafts = discardAllDrafts;
 
     function submitContextBadge(badgeName) {
       closeAllMobileSheets();
@@ -7181,7 +7330,17 @@ function initMobileCalSwipeGesture() {
 
     function saveBulkChanges() {
       if (draftQueue.length === 0) return;
-      isSyncing = true; showToast("⏳ Đang đẩy dữ liệu lên hệ thống...", true);
+      if (isSyncing) return showToast("⏳ Đang đồng bộ dữ liệu, vui lòng đợi...", false, true);
+
+      // PENTEST SECURITY: Kiểm tra xác thực quyền Quản trị trước khi lưu thay đổi
+      if (sessionStorage.getItem("ps_admin_auth") !== "true") {
+        lockAdminDashboard();
+        showToast("⛔ Yêu cầu mở khóa PIN Quản trị để lưu thay đổi!");
+        return;
+      }
+
+      isSyncing = true; 
+      showToast("⏳ Đang đẩy dữ liệu lên hệ thống...", true);
       
       const monthPrefix = getMonthPrefix(displayYear, displayMonth);
       callAPI('processBatchChanges', { 
@@ -7191,10 +7350,24 @@ function initMobileCalSwipeGesture() {
       })
         .then(res => {
           isSyncing = false;
-          if (res === "SUCCESS") { showToast("✅ Đã lưu thành công!"); draftQueue = []; updateSaveButtonUI(); refreshData(); } 
-          else { showToast("Lỗi Data: " + res, false, true); refreshData(); }
+          if (res === "SUCCESS") { 
+            showToast("✅ Đã lưu thành công!"); 
+            draftQueue = []; 
+            updateSaveButtonUI(); 
+            refreshData(); 
+            if (activeMobileCalEmpName) {
+              renderMobileEmpCalendar();
+            }
+          } 
+          else { 
+            showToast("Lỗi Data: " + res, false, true); 
+            refreshData(); 
+          }
         })
-        .catch(err => { isSyncing = false; showToast("LỖI KẾT NỐI", false, true); });
+        .catch(err => { 
+          isSyncing = false; 
+          showToast("LỖI KẾT NỐI", false, true); 
+        });
     }
 
     function drag(ev, name, date) { ev.dataTransfer.setData("dragName", name); ev.dataTransfer.setData("oldDate", date); }
