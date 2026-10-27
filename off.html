@@ -4680,12 +4680,13 @@
       let origin = window.location.origin;
       let path = window.location.pathname;
       let dir = path.substring(0, path.lastIndexOf('/') + 1);
-      let link = `${origin}${dir}mcform.html?target=GROUP:${encodeURIComponent(groupKey)}`;
+      let monthPrefix = getMonthPrefix(displayYear, displayMonth);
+      let link = `${origin}${dir}mcform.html?target=GROUP:${encodeURIComponent(groupKey)}&month=${monthPrefix}`;
       
       let cleanName = normalizeGroupName(groupKey);
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(link).then(() => {
-          showToast(`✅ Đã chép Link Đăng Ký của: ${cleanName}`);
+          showToast(`✅ Đã chép Link Đăng Ký (${monthPrefix}) của: ${cleanName}`);
         }).catch(() => {
           prompt(`Link đăng ký của ${cleanName}:`, link);
         });
@@ -5699,8 +5700,12 @@ function initMobileCalSwipeGesture() {
       if (!val) return showToast("⚠️ Vui lòng chọn cá nhân/nhóm trước khi tạo link!", false, true);
       showToast("⏳ Đang tạo link...", true); 
       
-      let baseUrl = window.location.origin + "/mcform.html";
-      const fullUrl = baseUrl + "?target=" + encodeURIComponent(val); 
+      let origin = window.location.origin;
+      let path = window.location.pathname;
+      let dir = path.substring(0, path.lastIndexOf('/') + 1);
+      let monthPrefix = getMonthPrefix(displayYear, displayMonth);
+      let baseUrl = `${origin}${dir}mcform.html`;
+      const fullUrl = baseUrl + "?target=" + encodeURIComponent(val) + "&month=" + monthPrefix; 
       
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(fullUrl).then(() => { 
