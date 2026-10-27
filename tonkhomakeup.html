@@ -2161,15 +2161,6 @@
             });
         }
 
-            thElements.forEach(th => {
-                const thId = th.id;
-                const finalW = widths[thId];
-                th.style.width = finalW + 'px';
-                const col = document.getElementById(thId.replace('th-', 'col-'));
-                if (col) col.style.width = finalW + 'px';
-            });
-        }
-
         function initColumnResizers() {
             const table = document.getElementById('main-spreadsheet-table');
             if (!table) return;
@@ -3827,12 +3818,44 @@
         window.resetColumnWidths = resetColumnWidths;
         window.debounceItemTranslate = debounceItemTranslate;
 
-        // Init on DOM Ready
-        window.addEventListener('DOMContentLoaded', () => {
-            initFirebaseSync();
+        // Init on DOM Ready (Bảo đảm nạp 0ms kể cả khi DOMContentLoaded đã trôi qua)
+        function startApp() {
+            setLanguage('vi');
+
+            // Nạp dữ liệu cache tức thì (0ms)
+            try {
+                const cached = localStorage.getItem('makeup_inventory_cache_v1');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        inventoryItems = parsed;
+                    }
+                }
+            } catch (e) {}
+
+            // Nếu kho hoàn toàn trống và chưa từng khởi tạo, nạp sẵn bộ vật liệu mẫu
+            const hasInitialized = localStorage.getItem(INIT_STATUS_KEY) === 'true';
+            if (inventoryItems.length === 0 && !hasInitialized) {
+                inventoryItems = [...SEED_INVENTORY_ITEMS];
+            }
+
+            renderTable();
+            updateOverviewStats();
+            applySavedColumnWidths();
             initColumnResizers();
-            lucide.createIcons();
-        });
+
+            if (window.lucide && typeof lucide.createIcons === 'function') {
+                lucide.createIcons();
+            }
+
+            initFirebaseSync();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startApp);
+        } else {
+            startApp();
+        }
     </script>
 </body>
 </html>
