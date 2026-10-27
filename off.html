@@ -1646,8 +1646,10 @@
       justify-content: space-between !important;
       gap: 10px !important;
       box-sizing: border-box !important;
-      z-index: 90;
+      z-index: 500 !important;
       box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+      overflow: visible !important;
+      position: relative;
     }
 
     .tb-left-group {
@@ -1655,6 +1657,7 @@
       align-items: center;
       gap: 12px;
       flex-shrink: 0;
+      overflow: visible !important;
     }
 
     .tb-right-group {
@@ -1662,8 +1665,9 @@
       align-items: center;
       gap: 8px;
       flex-wrap: nowrap;
-      overflow-x: auto;
+      overflow: visible !important;
       padding-bottom: 1px;
+      position: relative;
     }
     .tb-right-group::-webkit-scrollbar { display: none; }
 
@@ -1938,24 +1942,28 @@
     /* DROPDOWN MENU CHUYÊN NGHIỆP TRÊN TOOLBAR */
     .tb-dropdown-wrap {
       position: relative;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      overflow: visible !important;
     }
     .tb-dropdown-menu {
-      display: none;
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0;
-      min-width: 250px;
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: 12px;
-      box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.15), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
-      z-index: 1000;
-      padding: 6px;
+      display: none !important;
+      position: absolute !important;
+      top: calc(100% + 6px) !important;
+      left: 0 !important;
+      min-width: 255px !important;
+      background: #ffffff !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+      box-shadow: 0 14px 35px -4px rgba(0, 0, 0, 0.22), 0 4px 10px -2px rgba(0, 0, 0, 0.08) !important;
+      z-index: 999999 !important;
+      padding: 6px !important;
       animation: tbDdFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .tb-dropdown-menu.show {
-      display: block;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
     @keyframes tbDdFadeIn {
       from { opacity: 0; transform: translateY(-4px); }
@@ -3668,7 +3676,7 @@
           </div>
           <div class="m-tb-actions">
             <button type="button" class="m-tb-btn" onclick="refreshData()" title="Tải lại">🔄</button>
-            <button type="button" class="m-tb-btn m-tb-menu-btn" onclick="openMobileAdminSheet()" title="Bảng công cụ quản trị">🛠️ Quản Trị ▾</button>
+            <button type="button" class="m-tb-btn m-tb-menu-btn" onclick="openMobileAdminSheet()" title="Bảng quản lý nhân sự & công cụ">👥 Nhân Sự ▾</button>
             <button type="button" class="m-tb-btn m-tb-lock-btn" onclick="lockAdminDashboard()" title="Khóa">🔒</button>
           </div>
         </div>
@@ -3751,8 +3759,8 @@
           </button>
 
           <!-- Dropdown Quản Trị Nhân Sự -->
-          <div class="tb-dropdown-wrap" id="empManageDropdownWrap">
-            <button type="button" class="modern-btn btn-secondary-outline tb-dropdown-trigger" onclick="toggleEmpManageDropdown(event)" title="Quản lý nhân sự, nhóm và danh hiệu">
+          <div class="tb-dropdown-wrap" id="empManageDropdownWrap" onclick="event.stopPropagation()">
+            <button type="button" class="modern-btn btn-secondary-outline tb-dropdown-trigger" id="empManageDropdownBtn" onclick="toggleEmpManageDropdown(event)" title="Quản lý nhân sự, nhóm và danh hiệu">
               👥 Nhân Sự ▾
             </button>
             <div class="tb-dropdown-menu" id="empManageDropdown" onclick="event.stopPropagation()">
@@ -4621,22 +4629,37 @@
     // =========================================================================
     // QUẢN LÝ THANH CÔNG CỤ (TOOLBAR) & MOBILE ADMIN BOTTOM SHEET
     // =========================================================================
-    function toggleEmpManageDropdown(e) {
-      if (e) {
-        e.stopPropagation();
-        e.preventDefault();
+    function toggleEmpManageDropdown(event) {
+      if (event) {
+        if (event.stopPropagation) event.stopPropagation();
+        if (event.preventDefault) event.preventDefault();
+      }
+      if (window.event && window.event.stopPropagation) {
+        window.event.stopPropagation();
       }
       const dd = document.getElementById("empManageDropdown");
       if (!dd) return;
-      const isShown = dd.classList.contains("show");
-      closeAllToolDropdowns();
-      if (!isShown) {
+
+      // Đóng các dropdown khác nếu đang mở
+      const qlm = document.getElementById('qlmDropdown');
+      if (qlm) qlm.classList.remove('show');
+      const mDrop = document.getElementById('monthDropdown');
+      if (mDrop) mDrop.classList.remove('active');
+
+      const isCurrentlyShown = dd.classList.contains("show");
+      if (isCurrentlyShown) {
+        dd.classList.remove("show");
+      } else {
         dd.classList.add("show");
       }
     }
     window.toggleEmpManageDropdown = toggleEmpManageDropdown;
 
     function closeAllToolDropdowns() {
+      const dd = document.getElementById("empManageDropdown");
+      if (dd && dd.classList.contains("show")) {
+        dd.classList.remove("show");
+      }
       document.querySelectorAll(".tb-dropdown-menu.show").forEach(el => el.classList.remove("show"));
     }
     window.closeAllToolDropdowns = closeAllToolDropdowns;
@@ -5406,7 +5429,10 @@
       if (qlmDrop && qlmDrop.classList.contains('show')) {
         qlmDrop.classList.remove('show');
       }
-      closeAllToolDropdowns();
+      const empDrop = document.getElementById('empManageDropdown');
+      if (empDrop && empDrop.classList.contains('show')) {
+        empDrop.classList.remove('show');
+      }
     });
 
     let quickLeaveMode = localStorage.getItem('ps_quick_leave_mode') || 'FULL';
