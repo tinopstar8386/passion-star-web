@@ -973,6 +973,7 @@
             <div class="event-main" style="overflow-x: auto;">
                 <!-- Thanh thao tác nhanh CHỈ HIỆN TRÊN IPHONE -->
                 <div class="mobile-only-toolbar">
+                    <button class="m-btn" style="background: #059669; font-weight:800;" onclick="manualSaveEventTimeline()">💾 Lưu</button>
                     <button class="m-btn m-sort-btn" id="btnMobileSortEvent" onclick="toggleMobileSort()">🔒 Kéo thả Idol: ĐANG KHÓA (Lướt mượt)</button>
                     <button class="m-btn btn-primary" id="btnMExportEvent" onclick="captureAndDownloadImage('capture-wrapper-event', 'btnMExportEvent', '📸 Ảnh HD')">📸 Ảnh HD</button>
                     <button class="m-btn" style="background: #8b5cf6;" id="btnMCopyEvent" onclick="copyToClipboard('capture-wrapper-event', 'btnMCopyEvent')">📋 Copy</button>
@@ -1924,10 +1925,16 @@
 
         // === BUỒNG CHỤP ẢNH / COPY / PDF CHUẨN GIAO DIỆN PC 100% (TỰ ĐỘNG FIT 1 TRANG VÀ CHỐNG CẮT XÉN) ===
         async function renderPCQualityCanvas(id, isEcoMode = false) {
+            // Chờ toàn bộ font chữ web tải xong 100% để đo đạc chuẩn tuyệt đối
+            if (document.fonts && document.fonts.ready) {
+                try { await document.fonts.ready; } catch(e) {}
+            }
+
             const stage = document.getElementById('pc-export-stage');
             stage.innerHTML = '';
 
-            const origEl = document.getElementById(id);
+            const origEl = typeof id === 'string' ? document.getElementById(id) : id;
+            if (!origEl) throw new Error('renderPCQualityCanvas: element not found for ' + id);
             const clone = origEl.cloneNode(true);
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             const bgColor = isEcoMode ? '#ffffff' : (isDark ? '#1e293b' : '#ffffff');
@@ -2000,7 +2007,7 @@
             const safeScale = Math.min(2.5, Math.max(1.5, Math.floor((4000 / Math.max(w, h)) * 10) / 10));
 
             const canvas = await html2canvas(clone, {
-                scale: safeScale,
+                scale: 2,
                 useCORS: true,
                 backgroundColor: bgColor,
                 width: w,
@@ -2079,7 +2086,7 @@
             
             try {
                 const canvas = await renderPCQualityCanvas(id, isEcoMode);
-                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
                 const { jsPDF } = window.jspdf;
                 
                 // Quyết định khổ giấy A4 Dọc hay Ngang tối ưu nhất để fit trọn vẹn 1 trang duy nhất
