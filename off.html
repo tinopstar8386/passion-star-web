@@ -1218,6 +1218,96 @@
       box-sizing: border-box;
     }
 
+    
+    /* CHẾ ĐỘ ĐÁNH DẤU NGHỈ NHANH TRÊN TOOLBAR */
+    .quick-leave-mode-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #334155;
+      position: relative;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    .quick-leave-mode-box:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .quick-leave-mode-box.mode-full {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #dc2626;
+    }
+    .quick-leave-mode-box.mode-half {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: #d97706;
+    }
+    .quick-leave-mode-box.mode-ask {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #475569;
+    }
+    .qlm-arrow {
+      font-size: 0.65rem;
+      color: #94a3b8;
+      margin-left: 2px;
+    }
+    .qlm-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      min-width: 200px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.12);
+      z-index: 1000;
+      padding: 6px;
+    }
+    .qlm-dropdown.show {
+      display: block;
+    }
+    .qlm-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .qlm-item:hover {
+      background: #f1f5f9;
+    }
+    .qlm-item-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.25;
+      text-align: left;
+    }
+    .qlm-item-text b {
+      font-size: 0.78rem;
+      color: #0f172a;
+    }
+    .qlm-item-text small {
+      font-size: 0.68rem;
+      color: #64748b;
+    }
+    .qlm-divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 4px 0;
+    }
+
     /* ================= MODERN TOOLBAR ================= */
     .toolbar {
       height: var(--header-h);
@@ -2871,10 +2961,15 @@
             <span class="side-item-badge" id="sideBadge-DINO">0</span>
           </div>
           <div class="sidebar-sub-items">
-            <div class="sidebar-sub-item" id="sideItem-DINOSUB" onclick="selectSidebarFilter('GROUP:TEAM DINO')">
-              <span class="sub-label">💃 Bee & Bnart</span>
+            <div class="sidebar-sub-item" id="sideItem-BEE" onclick="selectSidebarFilter('GROUP:TEAM DINO - BEE')">
+              <span class="sub-label">💃 Bee</span>
               <div class="side-sub-action-wrap">
-              <span class="sub-badge" id="sideBadge-DINOSUB">0</span></div>
+              <span class="sub-badge" id="sideBadge-BEE">0</span></div>
+            </div>
+            <div class="sidebar-sub-item" id="sideItem-BNART" onclick="selectSidebarFilter('GROUP:TEAM DINO - BNART')">
+              <span class="sub-label">💃 Bnart</span>
+              <div class="side-sub-action-wrap">
+              <span class="sub-badge" id="sideBadge-BNART">0</span></div>
             </div>
           </div>
         </div>
@@ -2941,6 +3036,36 @@
             <input type="number" id="currentMonthQuota" value="4">
             <span>ngày</span>
             <button type="button" class="quota-save-btn" onclick="saveQuota()" title="Lưu hạn mức nghỉ">Lưu</button>
+          </div>
+
+          <div class="quick-leave-mode-box" id="quickLeaveModeBox" onclick="toggleQuickLeaveModeDropdown(event)" title="Chế độ đánh dấu ngày nghỉ: Bấm để đổi giữa OFF Cả Ngày và OFF Nửa Ngày">
+            <span class="qlm-icon" id="qlmIcon">🔴</span>
+            <span class="qlm-text" id="qlmText">OFF Cả Ngày</span>
+            <span class="qlm-arrow">▾</span>
+            <div class="qlm-dropdown" id="qlmDropdown" onclick="event.stopPropagation()">
+              <div class="qlm-item" onclick="setQuickLeaveMode('FULL', event)">
+                <span class="qlm-item-icon">🔴</span>
+                <div class="qlm-item-text">
+                  <b>OFF Cả Ngày</b>
+                  <small>Tính 1.0 ngày nghỉ</small>
+                </div>
+              </div>
+              <div class="qlm-item" onclick="setQuickLeaveMode('HALF', event)">
+                <span class="qlm-item-icon">🌓</span>
+                <div class="qlm-item-text">
+                  <b>OFF Nửa Ngày</b>
+                  <small>Tính 0.5 ngày nghỉ</small>
+                </div>
+              </div>
+              <div class="qlm-divider"></div>
+              <div class="qlm-item" onclick="setQuickLeaveMode('ASK', event)">
+                <span class="qlm-item-icon">❓</span>
+                <div class="qlm-item-text">
+                  <b>Luôn hỏi từng ô</b>
+                  <small>Hiện bảng chọn mỗi lần nhấp</small>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -3131,7 +3256,11 @@
           <button type="button" class="card-choose-btn">✓ Chọn HALF</button>
         </div>
       </div>
-      <div class="modal-actions" style="justify-content:center; margin-top:12px;">
+      <label style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 14px auto 4px auto; font-size: 0.82rem; color: #475569; font-weight: 600; cursor: pointer;">
+        <input type="checkbox" id="chkRememberLeaveType" checked>
+        <span>Ghi nhớ lựa chọn để chọn nhanh nhiều ô tiếp theo (không hỏi lại)</span>
+      </label>
+      <div class="modal-actions" style="justify-content:center; margin-top:10px;">
         <button type="button" class="btn-cancel" onclick="closeLeaveTypeModal()">Đóng / Hủy</button>
       </div>
     </div>
@@ -3958,7 +4087,7 @@
 
     document.addEventListener("DOMContentLoaded", () => { 
       checkAdminAuthOnLoad();
-      updateMonthLabel(); 
+      updateMonthLabel(); updateQuickLeaveModeUI(); 
       syncMobileDisplayContainers();
       const todayJumpBtn = document.getElementById('mobileTodayJumpBtn');
       if (isMobileView() && todayJumpBtn && mobileViewMode === 'smart') {
@@ -4191,13 +4320,23 @@
           isTraffic: false
         };
       }
-      if (g.includes("DINO") || b.includes("BEE") || b.includes("BNART") || n.includes("BEE") || n.includes("BNART")) {
+      if (g.includes("BNART") || b.includes("BNART") || n.includes("BNART")) {
+        return {
+          teamCode: "TEAM_DINO",
+          sortOrder: 302,
+          groupKey: "TEAM DINO - BNART",
+          groupLabel: "Team Dino - Bnart",
+          displayHTML: "TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bnart</span>",
+          isTraffic: false
+        };
+      }
+      if (g.includes("BEE") || b.includes("BEE") || n.includes("BEE") || g.includes("DINO")) {
         return {
           teamCode: "TEAM_DINO",
           sortOrder: 301,
-          groupKey: "TEAM DINO",
-          groupLabel: "Team Dino",
-          displayHTML: "TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bee & Bnart</span>",
+          groupKey: "TEAM DINO - BEE",
+          groupLabel: "Team Dino - Bee",
+          displayHTML: "TEAM DINO<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>Nhóm Bee</span>",
           isTraffic: false
         };
       }
@@ -4455,7 +4594,8 @@
         { key: 'GROUP:TEAM KEN - ANGELIK', label: 'Ken: Angelik' },
         { key: 'GROUP:TEAM U - ROYEN:ONE', label: 'U: Royen:One ⚡' },
         { key: 'GROUP:TEAM U - FASHION', label: 'U: Fashion' },
-        { key: 'TEAM:DINO', label: 'Dino: Bee & Bnart' },
+        { key: 'GROUP:TEAM DINO - BEE', label: 'Dino: Bee' },
+        { key: 'GROUP:TEAM DINO - BNART', label: 'Dino: Bnart' },
         { key: 'DEPT:MEDIA', label: '🎥 Media / Kỹ thuật' }
       ];
 
@@ -4490,7 +4630,7 @@
       const f = window.selectedSidebarFilter;
       if (f === 'TEAM:KEN') return groupKey === 'TEAM KEN - ANGELIK' || groupKey === 'TEAM KEN - ORION';
       if (f === 'TEAM:U') return groupKey === 'TEAM U - FASHION' || groupKey === 'TEAM U - ROYEN:ONE';
-      if (f === 'TEAM:DINO') return groupKey === 'TEAM DINO';
+      if (f === 'TEAM:DINO') return groupKey === 'TEAM DINO - BEE' || groupKey === 'TEAM DINO - BNART' || groupKey === 'TEAM DINO';
       if (f === 'DEPT:MEDIA' || f === 'GROUP:GIMBAL / MEDIA') {
         const dk = String(deptKey).toUpperCase();
         const gk = String(groupKey).toUpperCase();
@@ -4525,7 +4665,9 @@
       else if (filterKey === 'GROUP:TEAM U - FASHION') activeEl = document.getElementById('sideItem-FASHION');
       else if (filterKey === 'GROUP:TEAM U - ROYEN:ONE') activeEl = document.getElementById('sideItem-ROYENONE');
       else if (filterKey === 'TEAM:DINO') activeEl = document.getElementById('sideHead-DINO');
-      else if (filterKey === 'GROUP:TEAM DINO') activeEl = document.getElementById('sideItem-DINOSUB');
+      else if (filterKey === 'GROUP:TEAM DINO - BEE') activeEl = document.getElementById('sideItem-BEE');
+      else if (filterKey === 'GROUP:TEAM DINO - BNART') activeEl = document.getElementById('sideItem-BNART');
+      else if (filterKey === 'GROUP:TEAM DINO') activeEl = document.getElementById('sideHead-DINO');
       else if (filterKey === 'DEPT:MEDIA' || filterKey === 'GROUP:GIMBAL / MEDIA') activeEl = document.getElementById('sideHead-MEDIA');
       else {
         let dynamicEl = document.getElementById('sideDynamic-' + filterKey.replace(/[^a-zA-Z0-9]/g, ''));
@@ -4680,12 +4822,13 @@
       let origin = window.location.origin;
       let path = window.location.pathname;
       let dir = path.substring(0, path.lastIndexOf('/') + 1);
-      let link = `${origin}${dir}mcform.html?target=GROUP:${encodeURIComponent(groupKey)}`;
+      let monthPrefix = getMonthPrefix(displayYear, displayMonth);
+      let link = `${origin}${dir}mcform.html?target=GROUP:${encodeURIComponent(groupKey)}&month=${monthPrefix}`;
       
       let cleanName = normalizeGroupName(groupKey);
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(link).then(() => {
-          showToast(`✅ Đã chép Link Đăng Ký của: ${cleanName}`);
+          showToast(`✅ Đã chép Link Đăng Ký (${monthPrefix}) của: ${cleanName}`);
         }).catch(() => {
           prompt(`Link đăng ký của ${cleanName}:`, link);
         });
@@ -4879,6 +5022,8 @@
           if (groupKey === "TEAM KEN - ORION") return 102;
           if (groupKey === "TEAM U - FASHION") return 201;
           if (groupKey === "TEAM U - ROYEN:ONE") return 202;
+          if (groupKey === "TEAM DINO - BEE") return 301;
+          if (groupKey === "TEAM DINO - BNART") return 302;
           if (groupKey === "TEAM DINO") return 301;
           return 999;
         }
@@ -5464,7 +5609,11 @@ function initMobileCalSwipeGesture() {
           renderMobileEmpCalendar();
           renderTable();
         } else {
-          promptSelectLeaveType({ role: role, name: name, checkDate: checkDate, element: null });
+          if (quickLeaveMode === 'FULL' || quickLeaveMode === 'HALF') {
+            commitAddLeaveDraft(role, name, checkDate, quickLeaveMode, null);
+          } else {
+            promptSelectLeaveType({ role: role, name: name, checkDate: checkDate, element: null });
+          }
         }
       }
     }
@@ -5699,8 +5848,12 @@ function initMobileCalSwipeGesture() {
       if (!val) return showToast("⚠️ Vui lòng chọn cá nhân/nhóm trước khi tạo link!", false, true);
       showToast("⏳ Đang tạo link...", true); 
       
-      let baseUrl = window.location.origin + "/mcform.html";
-      const fullUrl = baseUrl + "?target=" + encodeURIComponent(val); 
+      let origin = window.location.origin;
+      let path = window.location.pathname;
+      let dir = path.substring(0, path.lastIndexOf('/') + 1);
+      let monthPrefix = getMonthPrefix(displayYear, displayMonth);
+      let baseUrl = `${origin}${dir}mcform.html`;
+      const fullUrl = baseUrl + "?target=" + encodeURIComponent(val) + "&month=" + monthPrefix; 
       
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(fullUrl).then(() => { 

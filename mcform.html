@@ -1072,6 +1072,28 @@
     let displayYear = today.getFullYear();
     if (displayMonth > 11) { displayMonth = 0; displayYear++; }
 
+    // ĐỌC THÁNG ĐỒNG BỘ TỪ LINK URL NẾU ĐƯỢC CHỈ ĐỊNH
+    const monthParam = urlParams.get('month') || urlParams.get('m');
+    if (monthParam) {
+      if (monthParam.includes('-')) {
+        const parts = monthParam.split('-');
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (!isNaN(y) && !isNaN(m) && m >= 1 && m <= 12) {
+          displayYear = y;
+          displayMonth = m - 1;
+        }
+      } else {
+        const m = parseInt(monthParam, 10);
+        const yParam = urlParams.get('year') || urlParams.get('y');
+        const y = yParam ? parseInt(yParam, 10) : displayYear;
+        if (!isNaN(m) && m >= 1 && m <= 12) {
+          displayMonth = m - 1;
+          if (!isNaN(y)) displayYear = y;
+        }
+      }
+    }
+
     // HÀM GỌI API BẰNG FIREBASE SIÊU TỐC
     async function callAPI(action, payload = {}) {
         const safeID = (str) => str.replace(/\//g, '-');
@@ -1242,7 +1264,9 @@
       const isGroup = TARGET_GROUP && !TARGET_GROUP.startsWith("PERSON:");
       const onMobile = isMobileView();
 
-      if (!onMobile || !isGroup || activeMemberCalName) {
+      const isCalView = document.getElementById("scheduleTable") && document.getElementById("scheduleTable").classList.contains("mc-calendar-view");
+
+      if (!onMobile || !isGroup || activeMemberCalName || isCalView) {
         if (toggleBar) toggleBar.classList.remove('active');
         if (smartEl) smartEl.classList.remove('active');
         if (tableContainer) tableContainer.classList.remove('mobile-hidden');
@@ -1480,8 +1504,11 @@
       if (g.includes("TEAM U") || b.includes("FASHION") || n.includes("FASHION") || g.includes("FASHION")) {
         return { teamCode: "TEAM_U", sortOrder: 201, groupKey: "TEAM U - FASHION", groupLabel: "Team U - Fashion", isTraffic: false };
       }
-      if (g.includes("DINO") || g.includes("BEE") || g.includes("BNART") || b.includes("BEE") || b.includes("BNART") || n.includes("BEE") || n.includes("BNART")) {
-        return { teamCode: "TEAM_DINO", sortOrder: 301, groupKey: "TEAM DINO - BEE & BNART", groupLabel: "Team Dino - Bee & Bnart", isTraffic: false };
+      if (g.includes("BNART") || b.includes("BNART") || n.includes("BNART")) {
+        return { teamCode: "TEAM_DINO", sortOrder: 302, groupKey: "TEAM DINO - BNART", groupLabel: "Team Dino - Bnart", isTraffic: false };
+      }
+      if (g.includes("BEE") || b.includes("BEE") || n.includes("BEE") || g.includes("DINO")) {
+        return { teamCode: "TEAM_DINO", sortOrder: 301, groupKey: "TEAM DINO - BEE", groupLabel: "Team Dino - Bee", isTraffic: false };
       }
       return { teamCode: "OTHER", sortOrder: 999, groupKey: emp.group || "KHÁC", groupLabel: emp.group || "Khác", isTraffic: false };
     }
@@ -1561,7 +1588,9 @@
       if (target.includes("ORION") && (empGroup.includes("ORION") || empName.includes("ORION"))) return true;
       if (target.includes("FASHION") && (empGroup.includes("FASHION") || empName.includes("FASHION"))) return true;
       if (target.includes("ROYEN") && (empGroup.includes("ROYEN") || empName.includes("ROYEN"))) return true;
-      if ((target.includes("DINO") || target.includes("BEE") || target.includes("BNART")) && (empGroup.includes("DINO") || empGroup.includes("BEE") || empGroup.includes("BNART") || empName.includes("BEE") || empName.includes("BNART"))) return true;
+      if (target.includes("BNART") && (empGroup.includes("BNART") || empName.includes("BNART"))) return true;
+      if (target.includes("BEE") && (empGroup.includes("BEE") || empName.includes("BEE"))) return true;
+      if (target === "TEAM DINO" && (empGroup.includes("DINO") || empGroup.includes("BEE") || empGroup.includes("BNART") || empName.includes("BEE") || empName.includes("BNART"))) return true;
       if ((target.includes("GIMBAL") || target.includes("MEDIA")) && (empGroup.includes("GIMBAL") || empGroup.includes("MEDIA"))) return true;
 
       let cleanTarget = target.replace(/[^A-Z0-9]/g, '');
@@ -1631,11 +1660,26 @@
         else if (displayTitle.includes("ORION")) displayTitle = "Team Thầy Ken - Nhóm Orion (Lưu lượng)";
         else if (displayTitle.includes("FASHION")) displayTitle = "Team Cô U - Nhóm Fashion";
         else if (displayTitle.includes("ROYEN")) displayTitle = "Team Cô U - Nhóm Royen:One (Lưu lượng)";
-        else if (displayTitle.includes("DINO") || displayTitle.includes("BEE") || displayTitle.includes("BNART")) displayTitle = "Team Thầy Dino - Nhóm Bee & Bnart";
+        else if (displayTitle.includes("BNART")) displayTitle = "Team Thầy Dino - Nhóm Bnart";
+        else if (displayTitle.includes("BEE")) displayTitle = "Team Thầy Dino - Nhóm Bee";
+        else if (displayTitle.includes("DINO")) displayTitle = "Team Thầy Dino";
         else if (displayTitle.includes("GIMBAL") || displayTitle.includes("MEDIA")) displayTitle = "Gimbal / Media";
 
         const titleEl = document.getElementById("groupTitleDisplay");
         if (titleEl) titleEl.innerText = displayTitle;
+
+        // LỌC DANH SÁCH NHÂN SỰ KHỚP VỚI NHÓM MỤC TIÊU
+        const matchingEmployees = employeesData.filter(emp => matchesTargetGroup(emp, TARGET_GROUP));
+
+        // NẾU NHÓM CHỈ CÒN 1 NHÂN SỰ: TỰ ĐỘNG CHUYỂN SANG FORM LỊCH CÁ NHÂN HÌNH VUÔNG NGUYÊN THÁNG!
+        if (matchingEmployees.length === 1) {
+            renderInteractiveCalendar(matchingEmployees[0].name);
+            syncMobileDisplayContainers();
+            return;
+        }
+
+        const btnExportMcEl = document.getElementById('btnExportMc');
+        if (btnExportMcEl) btnExportMcEl.style.display = 'none';
 
         // TIÊU ĐỀ BẢNG CỐ ĐỊNH (STICKY) CỘT TÊN 185PX CÂN ĐỐI
         let headerRow = '<tr><th class="name-cell-header" style="width: 185px; min-width: 170px; max-width: 195px;">TÊN NHÂN SỰ</th>';
@@ -1751,6 +1795,8 @@
       document.querySelector(".table-container").style.overflow = "visible";
       document.querySelector(".table-container").style.marginBottom = "30px";
       thead.innerHTML = ""; tbody.innerHTML = "";
+      const btnExportMcEl = document.getElementById('btnExportMc');
+      if (btnExportMcEl) btnExportMcEl.style.display = 'inline-block';
 
       let emp = employeesData.find(e => String(e.name).trim().toUpperCase() === empName.toUpperCase());
       if (!emp) { tbody.innerHTML = `<tr><td style="padding: 40px; color: #ef4444; text-align: center; font-weight: bold;">⚠️ Không tìm thấy thông tin của ${empName}.</td></tr>`; return; }
@@ -1769,6 +1815,7 @@
       let html = `
         <tr>
           <td colspan="7" style="padding: 25px 20px 20px 20px; text-align: center; background: #ffffff; border-bottom: 2px solid #cbd5e1 !important; cursor: default; border-radius: 12px 12px 0 0;">
+             ${activeMemberCalName ? `<div style="text-align: left; margin-bottom: 10px;"><button type="button" onclick="closeMemberCalendarToGroup()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 14px; font-weight: 700; color: #475569; cursor: pointer; font-size: 0.85rem;">◀ Quay lại danh sách nhóm</button></div>` : ''}
              <div style="font-size: 0.85rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Lịch Nghỉ Cá Nhân</div>
              <div style="font-size: 2.2rem; font-weight: 800; color: #3b82f6; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">
                ${emp.name} ${userBadgeHTML}
@@ -2058,12 +2105,33 @@
 
     function closeModal() { document.getElementById('customModal').classList.remove('active'); }
     let toastTimer; function showToast(msg, keep = false, isError = false, isBoom = false) { const toast = document.getElementById('toast'); toast.innerHTML = msg; toast.className = ''; if (isError) toast.classList.add('error'); if (isBoom) toast.classList.add('success-boom'); void toast.offsetWidth; toast.classList.add('show'); clearTimeout(toastTimer); if(!keep) toastTimer = setTimeout(() => toast.classList.remove('show', 'success-boom', 'error'), 2000); }
-    function changeMonth(offset) { if(isSyncing) return; displayMonth += offset; if (displayMonth > 11) { displayMonth = 0; displayYear++; } else if (displayMonth < 0) { displayMonth = 11; displayYear--; } document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} /${displayYear}`; clearSelection(); syncCurrentMonthEmployees(); renderTable(); }
+    function changeMonth(offset) { 
+      if(isSyncing) return; 
+      displayMonth += offset; 
+      if (displayMonth > 11) { displayMonth = 0; displayYear++; } 
+      else if (displayMonth < 0) { displayMonth = 11; displayYear--; } 
+      document.getElementById('monthLabel').innerText = `Tháng ${displayMonth + 1} / ${displayYear}`; 
+      try {
+        const newMonthStr = getMonthPrefix(displayYear, displayMonth);
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('month', newMonthStr);
+        window.history.replaceState({}, '', newUrl.toString());
+      } catch(e) {}
+      clearSelection(); 
+      syncCurrentMonthEmployees(); 
+      renderTable(); 
+    }
 
     function exportPersonalCalendar() {
       if(isSyncing) return;
-      let empName = TARGET_GROUP.replace("PERSON:", "").trim();
+      let empName = activeMemberCalName || (TARGET_GROUP && TARGET_GROUP.startsWith("PERSON:") ? TARGET_GROUP.replace("PERSON:", "").trim() : "");
+      if (!empName && TARGET_GROUP) {
+        const matchingEmps = employeesData.filter(emp => matchesTargetGroup(emp, TARGET_GROUP));
+        if (matchingEmps.length === 1) empName = matchingEmps[0].name;
+      }
+      if (!empName) return showToast("⚠️ Không tìm thấy nhân sự để xuất ảnh!", false, true);
       let emp = employeesData.find(e => String(e.name).trim().toUpperCase() === empName.toUpperCase()); 
+      if (!emp) return showToast(`⚠️ Không tìm thấy dữ liệu của ${empName}!`, false, true); 
       let groupStr = emp ? (emp.group || "Khác") : "Khác";
       
       toggleBlocker(true, "📸 Đang tạo ảnh lịch...");
