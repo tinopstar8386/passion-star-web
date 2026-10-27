@@ -1733,7 +1733,7 @@
         // ============================================================================
         // Khóa lưu vào bộ nhớ đệm (localStorage) RIÊNG BIỆT của trình duyệt máy tính hiện tại.
         // Tuyệt đối KHÔNG đẩy lên Firebase và KHÔNG ảnh hưởng đến các máy tính khác!
-        const STORAGE_COL_WIDTHS_KEY = 'makeup_local_col_widths_v6';
+        const STORAGE_COL_WIDTHS_KEY = 'makeup_local_col_widths_v7';
 
         const DEFAULT_COLUMN_WIDTHS = {
             'th-idx': 45,           // Cột #
@@ -1758,40 +1758,44 @@
             'th-actions': 80        // Thao tác tối thiểu 80px
         };
 
-        // Giới hạn MAXIMUM: Ngăn người dùng kéo quá tay làm bóp nghẹt các cột lân cận
-        const MAX_COLUMN_WIDTHS = {
-            'th-idx': 70,
-            'th-product-name': 550,
-            'th-image': 160,
-            'th-price': 190,
-            'th-link': 240,
-            'th-quantity': 150,
-            'th-subtotal': 240,
-            'th-actions': 130
-        };
-
         function applySavedColumnWidths() {
+            const table = document.getElementById('main-spreadsheet-table');
+            if (!table) return;
+
             let savedWidths = null;
             try {
                 const stored = localStorage.getItem(STORAGE_COL_WIDTHS_KEY);
                 if (stored) savedWidths = JSON.parse(stored);
             } catch (e) {}
 
-            const table = document.getElementById('main-spreadsheet-table');
-            if (!table) return;
+            const thElements = Array.from(table.querySelectorAll('thead th'));
+            const tableWidth = table.clientWidth || 1100;
 
-            const thElements = table.querySelectorAll('thead th');
+            const widths = {};
+            let totalAssigned = 0;
+
             thElements.forEach(th => {
                 const thId = th.id;
                 let w = (savedWidths && savedWidths[thId]) ? savedWidths[thId] : DEFAULT_COLUMN_WIDTHS[thId];
-                if (w) {
-                    const minW = MIN_COLUMN_WIDTHS[thId] || 40;
-                    const maxW = MAX_COLUMN_WIDTHS[thId] || 600;
-                    w = Math.max(minW, Math.min(maxW, w));
-                    th.style.width = w + 'px';
-                    const col = document.getElementById(thId.replace('th-', 'col-'));
-                    if (col) col.style.width = w + 'px';
-                }
+                const minW = MIN_COLUMN_WIDTHS[thId] || 40;
+                w = Math.max(minW, w);
+                widths[thId] = w;
+                totalAssigned += w;
+            });
+
+            // Nếu bảng thực tế rộng hơn tổng các cột cơ sở (ví dụ màn hình rộng 1400px - 1600px):
+            // Phân bổ phần khoảng trống thừa vào Cột Tên Hàng để tổng 100% bằng tableWidth,
+            // triệt tiêu hoàn toàn khoảng thừa khiến trình duyệt tự động phóng to các cột!
+            if (tableWidth > totalAssigned && widths['th-product-name']) {
+                widths['th-product-name'] += (tableWidth - totalAssigned);
+            }
+
+            thElements.forEach(th => {
+                const thId = th.id;
+                const finalW = widths[thId];
+                th.style.width = finalW + 'px';
+                const col = document.getElementById(thId.replace('th-', 'col-'));
+                if (col) col.style.width = finalW + 'px';
             });
         }
 
@@ -1817,23 +1821,26 @@
                 const colA = document.getElementById(thId.replace('th-', 'col-'));
                 const colB = document.getElementById(nextThId.replace('th-', 'col-'));
                 const minW_A = MIN_COLUMN_WIDTHS[thId] || 40;
-                const maxW_A = MAX_COLUMN_WIDTHS[thId] || 600;
                 const minW_B = MIN_COLUMN_WIDTHS[nextThId] || 40;
-                const maxW_B = MAX_COLUMN_WIDTHS[nextThId] || 600;
 
                 function startResize(clientX) {
+                    const allThs = Array.from(table.querySelectorAll('thead th'));
+
+                    // ĐỒNG BỘ TUYỆT ĐỐI: Trước khi kéo, khóa cứng mọi cột về đúng kích thước rendered thực tế
+                    // Đảm bảo tổng chiều rộng các cột khai báo khớp 100% bảng, triệt tiêu mọi hiện tượng nhảy vọt
+                    allThs.forEach(thEl => {
+                        const curW = thEl.getBoundingClientRect().width;
+                        thEl.style.width = curW + 'px';
+                        const colEl = document.getElementById(thEl.id.replace('th-', 'col-'));
+                        if (colEl) colEl.style.width = curW + 'px';
+                    });
+
                     const startX = clientX;
-                    const startWidthA = th.offsetWidth;
-                    const startWidthB = nextTh.offsetWidth;
+                    const startWidthA = th.getBoundingClientRect().width;
+                    const startWidthB = nextTh.getBoundingClientRect().width;
                     const totalWidth = startWidthA + startWidthB;
                     let hasDragged = false;
                     const DRAG_THRESHOLD = 3; // Ngưỡng 3px để phân biệt rạch ròi giữa bấm chuột (click) và kéo chuột (drag)
-
-                    // Giới hạn an toàn:
-                    // 1. Cột A không bao giờ nhỏ hơn minW_A
-                    // 2. Cột B không bao giờ nhỏ hơn minW_B (đồng nghĩa Cột A không bao giờ vượt quá totalWidth - minW_B)
-                    // 3. Cột A không vượt quá maxW_A
-                    const maxAllowedA = Math.min(maxW_A, totalWidth - minW_B);
 
                     function moveHandler(moveX) {
                         const diff = moveX - startX;
@@ -1847,9 +1854,9 @@
                             document.body.style.userSelect = 'none';
                         }
 
-                        // Tính độ rộng mới mượt mà xuất phát chính xác từ startWidthA (không nhảy vọt)
+                        // Tính độ rộng mới mượt mà xuất phát CHÍNH XÁC 100% từ startWidthA (không nhảy vọt)
                         let newWidthA = startWidthA + diff;
-                        newWidthA = Math.max(minW_A, Math.min(maxAllowedA, newWidthA));
+                        newWidthA = Math.max(minW_A, Math.min(totalWidth - minW_B, newWidthA));
                         const newWidthB = totalWidth - newWidthA;
 
                         th.style.width = newWidthA + 'px';
@@ -1915,9 +1922,7 @@
             const widths = {};
             thElements.forEach(th => {
                 if (th.id) {
-                    const minW = MIN_COLUMN_WIDTHS[th.id] || 40;
-                    const maxW = MAX_COLUMN_WIDTHS[th.id] || 600;
-                    widths[th.id] = Math.max(minW, Math.min(maxW, th.offsetWidth));
+                    widths[th.id] = Math.round(th.getBoundingClientRect().width);
                 }
             });
             try {
@@ -1931,20 +1936,18 @@
                 localStorage.removeItem(STORAGE_COL_WIDTHS_KEY);
             } catch (e) {}
 
-            const table = document.getElementById('main-spreadsheet-table');
-            if (!table) return;
-
-            const thElements = table.querySelectorAll('thead th');
-            thElements.forEach(th => {
-                if (th.id && DEFAULT_COLUMN_WIDTHS[th.id]) {
-                    th.style.width = DEFAULT_COLUMN_WIDTHS[th.id] + 'px';
-                    const col = document.getElementById(th.id.replace('th-', 'col-'));
-                    if (col) col.style.width = DEFAULT_COLUMN_WIDTHS[th.id] + 'px';
-                }
-            });
-
+            applySavedColumnWidths();
             showToast(I18N[currentLang].toastColsReset);
         }
+
+        // Tự động căn chỉnh khi kích thước cửa sổ trình duyệt thay đổi
+        let windowResizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(windowResizeTimer);
+            windowResizeTimer = setTimeout(() => {
+                applySavedColumnWidths();
+            }, 100);
+        });
 
         // ============================================================================
         // 9. RENDER TABLE: BỐ CỤC CÂN ĐỐI, HIỂN THỊ HÌNH RÕ RÀNG & 2 NÚT THAO TÁC ĐỒNG BỘ
