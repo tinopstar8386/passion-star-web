@@ -4219,7 +4219,56 @@
       if (monthDrop && monthDrop.classList.contains('active')) {
         monthDrop.classList.remove('active');
       }
+      let qlmDrop = document.getElementById('qlmDropdown');
+      if (qlmDrop && qlmDrop.classList.contains('show')) {
+        qlmDrop.classList.remove('show');
+      }
     });
+
+    let quickLeaveMode = localStorage.getItem('ps_quick_leave_mode') || 'FULL';
+
+    function setQuickLeaveMode(mode, event) {
+      if (event) event.stopPropagation();
+      quickLeaveMode = mode;
+      localStorage.setItem('ps_quick_leave_mode', mode);
+      updateQuickLeaveModeUI();
+      const dd = document.getElementById('qlmDropdown');
+      if (dd) dd.classList.remove('show');
+      if (mode === 'FULL') showToast("🔴 Đã đặt chế độ: OFF Cả Ngày (1.0)");
+      else if (mode === 'HALF') showToast("🌓 Đã đặt chế độ: OFF Nửa Ngày (0.5)");
+      else showToast("❓ Đã đặt chế độ: Hỏi mỗi ô khi bấm");
+    }
+    window.setQuickLeaveMode = setQuickLeaveMode;
+
+    function toggleQuickLeaveModeDropdown(event) {
+      if (event) event.stopPropagation();
+      const dd = document.getElementById('qlmDropdown');
+      if (dd) dd.classList.toggle('show');
+    }
+    window.toggleQuickLeaveModeDropdown = toggleQuickLeaveModeDropdown;
+
+    function updateQuickLeaveModeUI() {
+      const box = document.getElementById('quickLeaveModeBox');
+      const icon = document.getElementById('qlmIcon');
+      const text = document.getElementById('qlmText');
+      if (!box || !icon || !text) return;
+
+      box.classList.remove('mode-full', 'mode-half', 'mode-ask');
+      if (quickLeaveMode === 'FULL') {
+        box.classList.add('mode-full');
+        icon.innerText = '🔴';
+        text.innerText = 'OFF Cả Ngày';
+      } else if (quickLeaveMode === 'HALF') {
+        box.classList.add('mode-half');
+        icon.innerText = '🌓';
+        text.innerText = 'OFF Nửa Ngày';
+      } else {
+        box.classList.add('mode-ask');
+        icon.innerText = '❓';
+        text.innerText = 'Hỏi Mỗi Ô';
+      }
+    }
+    window.updateQuickLeaveModeUI = updateQuickLeaveModeUI;
 
     function updateSaveButtonUI() {
       const btnSave = document.getElementById('btnSaveChanges');
@@ -4700,7 +4749,7 @@
       };
 
       let countAll = emps.length;
-      let countAngelik = 0, countOrion = 0, countFashion = 0, countRoyen = 0, countDino = 0, countMedia = 0;
+      let countAngelik = 0, countOrion = 0, countFashion = 0, countRoyen = 0, countDino = 0, countBee = 0, countBnart = 0, countMedia = 0;
       let otherDepts = {};
 
       emps.forEach(emp => {
@@ -4711,7 +4760,8 @@
         else if (g.includes('ORION')) countOrion++;
         else if (g.includes('FASHION')) countFashion++;
         else if (g.includes('ROYEN')) countRoyen++;
-        else if (g.includes('DINO') || g.includes('BEE') || g.includes('BNART')) countDino++;
+        else if (g.includes('BNART')) { countBnart++; countDino++; }
+        else if (g.includes('BEE') || g.includes('DINO')) { countBee++; countDino++; }
         else if (r === 'MEDIA' || g.includes('GIMBAL') || g.includes('MEDIA')) countMedia++;
         else {
           if (r && r !== 'LIVESTREAM' && r !== 'LIVESTEAM' && r !== 'MEDIA') {
@@ -4728,6 +4778,8 @@
       setBadgeText('sideBadge-FASHION', countFashion);
       setBadgeText('sideBadge-ROYENONE', countRoyen);
       setBadgeText('sideBadge-DINO', countDino);
+      setBadgeText('sideBadge-BEE', countBee);
+      setBadgeText('sideBadge-BNART', countBnart);
       setBadgeText('sideBadge-DINOSUB', countDino);
       setBadgeText('sideBadge-MEDIA', countMedia);
 
@@ -4928,6 +4980,10 @@
     function selectLeaveTypeChoice(offType) {
       if (!pendingLeaveSelectTarget) return;
       let t = pendingLeaveSelectTarget;
+      const chk = document.getElementById('chkRememberLeaveType');
+      if (chk && chk.checked) {
+        setQuickLeaveMode(offType);
+      }
       document.getElementById('leaveTypeModal').classList.remove('active');
       pendingLeaveSelectTarget = null;
       commitAddLeaveDraft(t.role, t.name, t.checkDate, offType, t.element);
@@ -5681,7 +5737,11 @@ function initMobileCalSwipeGesture() {
         }
       } else {
         if (action === 'THÊM') {
-          promptSelectLeaveType({ role: role, name: name, checkDate: checkDate, element: element });
+          if (quickLeaveMode === 'FULL' || quickLeaveMode === 'HALF') {
+            commitAddLeaveDraft(role, name, checkDate, quickLeaveMode, element);
+          } else {
+            promptSelectLeaveType({ role: role, name: name, checkDate: checkDate, element: element });
+          }
           return;
         }
         draftQueue.push({ role: role, name: name, date: checkDate, action: action });
