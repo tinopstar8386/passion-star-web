@@ -136,6 +136,14 @@
             height: 100%;
         }
 
+        /* VÔ HIỆU HÓA RESIZER TRÊN MOBILE ĐỂ KHÔNG CHẶN VUỐT CHẠM CỦA NGƯỜI DÙNG IPHONE */
+        @media (max-width: 768px) {
+            .col-resizer {
+                display: none !important;
+                pointer-events: none !important;
+            }
+        }
+
         .shadow-2xs {
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
         }
@@ -282,7 +290,7 @@
     </header>
 
     <!-- Main Container -->
-    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5">
+    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5 pb-24 md:pb-8">
 
         <!-- Top Overview Stats (4 Thẻ KPI Tồn kho Chuyên nghiệp) -->
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 no-print">
@@ -355,7 +363,7 @@
                         id="search-input"
                         type="text"
                         oninput="handleSearchAndFilter()"
-                        placeholder="Tìm mã SKU, tên vật liệu, vị trí kho..."
+                        placeholder="Tìm tên vật liệu, danh mục, vị trí kho..."
                         class="w-full h-full pl-9 pr-8 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
                     />
                     <button
@@ -491,13 +499,23 @@
                 </div>
             </div>
 
-            <!-- Table Wrapper (FREEZE THEAD CHUẨN XÁC KHI CUỘN TRANG) -->
-            <div class="w-full">
-                <table id="main-spreadsheet-table" class="sheet-table w-full text-left">
+            <!-- Mobile Swipe Hint Bar (Chỉ hiển thị trên di động / iPhone để người dùng biết có thể vuốt ngang xem đủ bảng) -->
+            <div class="flex items-center justify-between px-4 py-2 bg-teal-50/70 border-b border-teal-100 text-xs text-teal-900 md:hidden no-print">
+                <span class="inline-flex items-center gap-1.5 font-bold">
+                    <i data-lucide="chevrons-left-right" class="w-4 h-4 text-teal-600 animate-pulse"></i>
+                    <span>Vuốt ngang để xem đủ 10 cột</span>
+                </span>
+                <span class="text-[11px] font-semibold text-teal-700 bg-white px-2 py-0.5 rounded-md border border-teal-200">
+                    Bảng đầy đủ
+                </span>
+            </div>
+
+            <!-- Table Wrapper (CHO PHÉP VUỐT NGANG MƯỢT MÀ TRÊN IPHONE & CỐ ĐỊNH TIÊU ĐỀ KHI CUỘN) -->
+            <div class="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-140px)] touch-pan-x" style="-webkit-overflow-scrolling: touch;">
+                <table id="main-spreadsheet-table" class="sheet-table w-full text-left min-w-[960px]">
                     <colgroup>
                         <col id="col-idx" style="width: 45px;">
-                        <col id="col-sku" style="width: 110px;">
-                        <col id="col-product-name" style="width: 280px;">
+                        <col id="col-product-name" style="width: 290px;">
                         <col id="col-image" style="width: 120px;">
                         <col id="col-category" style="width: 165px;">
                         <col id="col-unit" style="width: 60px;">
@@ -514,39 +532,33 @@
                                 <span>#</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
-                            
-                            <!-- MÃ SKU -->
-                            <th id="th-sku" data-col="1" class="py-3 px-2.5 bg-teal-50" style="width: 110px;">
-                                <span>MÃ SKU</span>
-                                <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
-                            </th>
 
                             <!-- TÊN VẬT LIỆU -->
-                            <th id="th-product-name" data-col="2" class="py-3 px-3 bg-teal-50" style="width: 280px;">
+                            <th id="th-product-name" data-col="1" class="py-3 px-3 bg-teal-50" style="width: 290px;">
                                 <span>TÊN VẬT LIỆU</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
                             
                             <!-- HÌNH ẢNH -->
-                            <th id="th-image" data-col="3" class="py-3 px-1 text-center bg-teal-50" style="width: 120px;">
+                            <th id="th-image" data-col="2" class="py-3 px-1 text-center bg-teal-50" style="width: 120px;">
                                 <span>HÌNH</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
                             
                             <!-- DANH MỤC -->
-                            <th id="th-category" data-col="4" class="py-3 px-2.5 bg-teal-50" style="width: 165px;">
+                            <th id="th-category" data-col="3" class="py-3 px-2.5 bg-teal-50" style="width: 165px;">
                                 <span>DANH MỤC</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
 
                             <!-- ĐVT -->
-                            <th id="th-unit" data-col="5" class="py-3 px-2 text-center bg-teal-50" style="width: 60px;">
+                            <th id="th-unit" data-col="4" class="py-3 px-2 text-center bg-teal-50" style="width: 60px;">
                                 <span>ĐVT</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
 
                             <!-- TỒN THỰC TẾ -->
-                            <th id="th-stock" data-col="6" class="py-3 px-2 text-center bg-teal-50" style="width: 120px;">
+                            <th id="th-stock" data-col="5" class="py-3 px-2 text-center bg-teal-50" style="width: 120px;">
                                 <div class="inline-flex items-center justify-center gap-1 cursor-pointer hover:text-teal-700" onclick="toggleSort('stock')">
                                     <span>TỒN HIỆN TẠI</span>
                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-teal-600"></i>
@@ -555,19 +567,19 @@
                             </th>
 
                             <!-- TỒN TỐI THIỂU -->
-                            <th id="th-min-stock" data-col="7" class="py-3 px-2 text-center bg-teal-50" style="width: 70px;">
+                            <th id="th-min-stock" data-col="6" class="py-3 px-2 text-center bg-teal-50" style="width: 70px;">
                                 <span>TỒN MIN</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
 
                             <!-- TRẠNG THÁI -->
-                            <th id="th-status" data-col="8" class="py-3 px-2 text-center bg-teal-50" style="width: 115px;">
+                            <th id="th-status" data-col="7" class="py-3 px-2 text-center bg-teal-50" style="width: 115px;">
                                 <span>TRẠNG THÁI</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
 
                             <!-- GIÁ VỐN -->
-                            <th id="th-price" data-col="9" class="py-3 px-3 text-right bg-teal-50" style="width: 130px;">
+                            <th id="th-price" data-col="8" class="py-3 px-3 text-right bg-teal-50" style="width: 130px;">
                                 <div class="inline-flex items-center justify-end gap-1 cursor-pointer hover:text-teal-700" onclick="toggleSort('costPrice')">
                                     <span>GIÁ VỐN</span>
                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-teal-600"></i>
@@ -576,7 +588,7 @@
                             </th>
 
                             <!-- THAO TÁC (ĐẢM BẢO 100% ĐỦ CHỖ CHO 4 NÚT: NHẬP, XUẤT, SỬA, XÓA) -->
-                            <th id="th-actions" data-col="10" class="py-3 px-2 text-center bg-teal-50 no-print" style="width: 155px;">
+                            <th id="th-actions" data-col="9" class="py-3 px-2 text-center bg-teal-50 no-print" style="width: 155px;">
                                 <span>THAO TÁC</span>
                             </th>
                         </tr>
@@ -588,7 +600,7 @@
                     <!-- Table Footer: Add Button Row & Total Row -->
                     <tfoot>
                         <tr class="bg-teal-50/50 no-print">
-                            <td colspan="11" class="px-4 py-2.5">
+                            <td colspan="10" class="px-4 py-2.5">
                                 <div class="flex flex-wrap items-center justify-between gap-2.5">
                                     <div class="flex items-center gap-2">
                                         <button
@@ -622,7 +634,7 @@
 
                         <!-- Grand Total Summary Row -->
                         <tr class="footer-total-row text-slate-900 font-extrabold text-xs sm:text-sm">
-                            <td colspan="6" class="py-3.5 px-4 text-right uppercase tracking-wider text-teal-950 font-black">
+                            <td colspan="5" class="py-3.5 px-4 text-right uppercase tracking-wider text-teal-950 font-black">
                                 <div class="flex items-center justify-end gap-2">
                                     <i data-lucide="calculator" class="w-4 h-4 text-teal-700 no-print"></i>
                                     <span id="ui-total-footer-label">TỔNG TOÀN KHO</span>
@@ -689,19 +701,7 @@
             <form id="item-form" onsubmit="handleItemFormSubmit(event)" class="p-5 space-y-4">
                 <input type="hidden" id="item-form-id" value="" />
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <!-- Mã SKU -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Mã SKU / Barcode *</label>
-                        <input
-                            type="text"
-                            id="item-form-sku"
-                            required
-                            placeholder="VD: MK-MI-001"
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-teal-500"
-                        />
-                    </div>
-
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <!-- Danh mục -->
                     <div>
                         <div class="flex items-center justify-between mb-1">
@@ -954,7 +954,7 @@
                 <div id="inbound-current-info" class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
                     <div>
                         <p class="text-xs font-semibold text-emerald-900" id="inbound-info-name">Chưa chọn</p>
-                        <p class="text-[11px] text-slate-600" id="inbound-info-sku">SKU: --</p>
+                        <p class="text-[11px] text-slate-600" id="inbound-info-unit">ĐVT: --</p>
                     </div>
                     <div class="text-right">
                         <p class="text-xs font-bold text-slate-500">Tồn hiện có</p>
@@ -1085,7 +1085,7 @@
                 <div id="outbound-current-info" class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between">
                     <div>
                         <p class="text-xs font-semibold text-amber-950" id="outbound-info-name">Chưa chọn</p>
-                        <p class="text-[11px] text-slate-600" id="outbound-info-sku">SKU: --</p>
+                        <p class="text-[11px] text-slate-600" id="outbound-info-unit">ĐVT: --</p>
                     </div>
                     <div class="text-right">
                         <p class="text-xs font-bold text-slate-500">Khả dụng trong kho</p>
@@ -1228,7 +1228,7 @@
                         <tr class="bg-teal-50 text-teal-900 font-bold border-b border-teal-200">
                             <th class="py-2.5 px-3">Thời gian</th>
                             <th class="py-2.5 px-2 text-center">Loại</th>
-                            <th class="py-2.5 px-3">Mã SKU & Vật liệu</th>
+                            <th class="py-2.5 px-3">Tên vật liệu</th>
                             <th class="py-2.5 px-2 text-center">Số lượng</th>
                             <th class="py-2.5 px-2 text-center">Tồn sau GD</th>
                             <th class="py-2.5 px-3">Người thực hiện / Nhận</th>
@@ -1424,9 +1424,6 @@
                         class="w-14 h-14 rounded-lg object-contain border border-slate-300 bg-white p-1 shrink-0"
                     />
                     <div class="min-w-0 flex-1">
-                        <span id="delete-modal-item-sku" class="inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-teal-50 text-teal-800 border border-teal-200 mb-1">
-                            SKU-001
-                        </span>
                         <h4 id="delete-modal-item-name" class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">
                             Tên vật liệu
                         </h4>
@@ -1616,6 +1613,101 @@
             </div>
         </div>
     </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 10: XÓA NHANH VẬT LIỆU CHO MOBILE VIEW                              -->
+    <!-- ========================================================================= -->
+    <div
+        id="quick-delete-modal"
+        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+    >
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl border border-red-200 shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="px-5 py-3.5 bg-red-50/80 border-b border-red-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-lg bg-red-100 border border-red-300 flex items-center justify-center text-red-600 shrink-0">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </span>
+                    <div>
+                        <h3 class="font-bold text-red-950 text-sm sm:text-base">Thao Tác Xóa Nhanh Vật Liệu</h3>
+                        <p class="text-[11px] text-red-700">Chọn vật liệu bạn muốn xóa khỏi kho</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onclick="closeQuickDeleteModal()"
+                    class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Search box in modal -->
+            <div class="p-3 bg-slate-50 border-b border-slate-200 shrink-0">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <input
+                        type="text"
+                        placeholder="Tìm vật liệu cần xóa..."
+                        oninput="renderQuickDeleteList(this.value)"
+                        class="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500"
+                    />
+                </div>
+            </div>
+
+            <!-- List items -->
+            <div id="quick-delete-list" class="flex-1 overflow-y-auto p-3 space-y-2">
+                <!-- Dynamically rendered -->
+            </div>
+
+            <!-- Footer -->
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end shrink-0">
+                <button
+                    type="button"
+                    onclick="closeQuickDeleteModal()"
+                    class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition-all"
+                >
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- THANH THAO TÁC NHANH CỐ ĐỊNH ĐÁY MÀN HÌNH (MOBILE DOCK IPHONE)            -->
+    <!-- ========================================================================= -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 px-3 py-2 flex items-center justify-between gap-2 shadow-lg md:hidden no-print" aria-label="Mobile Quick Actions">
+        <!-- Nút thêm vật liệu nhanh -->
+        <button
+            type="button"
+            onclick="openItemModal()"
+            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-xs shadow-sm transition-all"
+        >
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Thêm vật liệu</span>
+        </button>
+
+        <!-- Nút xoá nhanh vật liệu -->
+        <button
+            type="button"
+            onclick="openQuickDeleteModal()"
+            class="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs shadow-2xs active:scale-95 transition-all"
+            title="Mở danh sách xóa nhanh vật liệu"
+        >
+            <i data-lucide="trash-2" class="w-4 h-4 text-red-600"></i>
+            <span>Xóa hàng</span>
+        </button>
+
+        <!-- Nút chuyển sang Đề xuất mua sắm -->
+        <a
+            href="tonmakeup.html"
+            class="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold text-xs shadow-2xs active:scale-95 transition-all shrink-0"
+            title="Chuyển sang Đề xuất mua đồ makeup"
+        >
+            <i data-lucide="shopping-cart" class="w-4 h-4 text-slate-600"></i>
+            <span>Đề xuất</span>
+        </a>
+    </nav>
 
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
@@ -2536,12 +2628,11 @@
         // ============================================================================
         // 6. COLUMN RESIZING (SAFE PIXEL SYNC & DUAL-BOUND ZERO-JUMP ALGORITHM v7)
         // ============================================================================
-        const STORAGE_COL_WIDTHS_KEY = 'makeup_inv_col_widths_v5';
+        const STORAGE_COL_WIDTHS_KEY = 'makeup_inv_col_widths_v6_nosku';
 
         const DEFAULT_COLUMN_WIDTHS = {
             'th-idx': 45,           // #
-            'th-sku': 110,          // SKU
-            'th-product-name': 275, // Tên vật liệu
+            'th-product-name': 290, // Tên vật liệu
             'th-image': 120,        // Hình (64px + nút [Máy] [Link])
             'th-category': 165,     // Danh mục (không bao giờ bị cắt chữ)
             'th-unit': 60,          // ĐVT
@@ -2554,7 +2645,6 @@
 
         const MIN_COLUMN_WIDTHS = {
             'th-idx': 40,
-            'th-sku': 95,
             'th-product-name': 200,
             'th-image': 115,        // Đủ chỗ cho thumbnail 64px và 2 nút Máy/Link
             'th-category': 145,     // Đủ chỗ cho badge danh mục dài
@@ -2606,15 +2696,13 @@
                 const diff = totalAssigned - tableWidth;
                 const canReduceName = Math.max(0, widths['th-product-name'] - (MIN_COLUMN_WIDTHS['th-product-name'] || 200));
                 const canReduceCat = Math.max(0, widths['th-category'] - (MIN_COLUMN_WIDTHS['th-category'] || 140));
-                const canReduceSku = Math.max(0, widths['th-sku'] - (MIN_COLUMN_WIDTHS['th-sku'] || 95));
                 const canReducePrice = Math.max(0, widths['th-price'] - (MIN_COLUMN_WIDTHS['th-price'] || 115));
-                const totalFlexible = canReduceName + canReduceCat + canReduceSku + canReducePrice;
+                const totalFlexible = canReduceName + canReduceCat + canReducePrice;
 
                 if (totalFlexible > 0) {
                     const ratio = Math.min(1, diff / totalFlexible);
                     widths['th-product-name'] -= Math.floor(canReduceName * ratio);
                     widths['th-category'] -= Math.floor(canReduceCat * ratio);
-                    widths['th-sku'] -= Math.floor(canReduceSku * ratio);
                     widths['th-price'] -= Math.floor(canReducePrice * ratio);
                 }
             }
@@ -2839,11 +2927,10 @@
                 // Search filter
                 if (activeFilter.search) {
                     const q = activeFilter.search.toLowerCase();
-                    const matchSku = (item.sku || '').toLowerCase().includes(q);
                     const matchVi = (item.nameVi || '').toLowerCase().includes(q);
                     const matchZh = (item.nameZh || '').toLowerCase().includes(q);
                     const matchLoc = (item.location || '').toLowerCase().includes(q);
-                    if (!matchSku && !matchVi && !matchZh && !matchLoc) return false;
+                    if (!matchVi && !matchZh && !matchLoc) return false;
                 }
 
                 // Category filter
@@ -2882,7 +2969,7 @@
             if (filtered.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="11" class="py-12 px-4 text-center">
+                        <td colspan="10" class="py-12 px-4 text-center">
                             <div class="inline-flex flex-col items-center justify-center max-w-sm">
                                 <div class="w-12 h-12 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 mb-3">
                                     <i data-lucide="package-search" class="w-6 h-6"></i>
@@ -2918,14 +3005,7 @@
                                 ${idx + 1}
                             </td>
 
-                            <!-- MÃ SKU -->
-                            <td class="py-2.5 px-2.5 font-bold text-xs text-teal-900 whitespace-nowrap overflow-hidden">
-                                <span class="bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded font-mono">
-                                    ${escapeHtml(item.sku || '---')}
-                                </span>
-                            </td>
-
-                            <!-- TÊN VẬT LIỆU: Hiển thị đầy đủ, tự động xuống dòng mọi ký tự dài -->
+                            <!-- TÊN VẬT LIỆU: Hiển thị đầy đủ, tự động xuống dòng, có nút thao tác nhanh cho Mobile -->
                             <td class="py-2.5 px-3 overflow-hidden">
                                 <div class="flex items-start justify-between gap-1.5 w-full min-w-0">
                                     <div 
@@ -2940,14 +3020,25 @@
                                             </span>
                                         ` : ''}
                                     </div>
-                                    <button 
-                                        type="button" 
-                                        onclick="openItemModal('${item.id}')"
-                                        class="no-print opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-teal-700 rounded transition-all shrink-0" 
-                                        title="Chỉnh sửa thông tin"
-                                    >
-                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                    </button>
+                                    <!-- Nút thao tác nhanh trực tiếp (thuận tiện cho mobile iPhone không phải cuộn sang tận mép phải) -->
+                                    <div class="flex items-center gap-0.5 shrink-0 no-print">
+                                        <button 
+                                            type="button" 
+                                            onclick="openItemModal('${item.id}')"
+                                            class="p-1 text-slate-400 hover:text-teal-700 active:text-teal-900 hover:bg-teal-50 rounded transition-all shrink-0" 
+                                            title="Chỉnh sửa thông tin"
+                                        >
+                                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onclick="openConfirmDeleteModal('${item.id}')"
+                                            class="p-1 text-red-500 hover:text-red-700 active:text-red-800 hover:bg-red-50 rounded transition-all shrink-0 sm:hidden" 
+                                            title="Xóa nhanh vật liệu này"
+                                        >
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
 
@@ -3208,7 +3299,7 @@
             select.innerHTML = '<option value="">-- Vui lòng chọn vật liệu --</option>' +
                 inventoryItems.map(item => `
                     <option value="${item.id}" ${item.id === selectedId ? 'selected' : ''}>
-                        [${escapeHtml(item.sku || 'SKU')}] ${escapeHtml(item.nameVi)} (Hiện có: ${item.stock || 0} ${escapeHtml(item.unit || '')})
+                        ${escapeHtml(item.nameVi)} (Hiện có: ${item.stock || 0} ${escapeHtml(item.unit || '')})
                     </option>
                 `).join('');
         }
@@ -3240,12 +3331,14 @@
             const item = inventoryItems.find(i => i.id === itemId);
             if (!item) {
                 document.getElementById('inbound-info-name').textContent = 'Chưa chọn';
-                document.getElementById('inbound-info-sku').textContent = 'SKU: --';
+                const u = document.getElementById('inbound-info-unit');
+                if (u) u.textContent = 'ĐVT: --';
                 document.getElementById('inbound-info-stock').textContent = '0';
                 return;
             }
             document.getElementById('inbound-info-name').textContent = item.nameVi;
-            document.getElementById('inbound-info-sku').textContent = `SKU: ${item.sku || '---'} | ĐVT: ${item.unit || 'cái'}`;
+            const u = document.getElementById('inbound-info-unit');
+            if (u) u.textContent = `ĐVT: ${item.unit || 'cái'}`;
             document.getElementById('inbound-info-stock').textContent = `${item.stock || 0} ${item.unit || ''}`;
             document.getElementById('inbound-price').value = item.costPrice || '';
         }
@@ -3329,12 +3422,14 @@
             const item = inventoryItems.find(i => i.id === itemId);
             if (!item) {
                 document.getElementById('outbound-info-name').textContent = 'Chưa chọn';
-                document.getElementById('outbound-info-sku').textContent = 'SKU: --';
+                const u = document.getElementById('outbound-info-unit');
+                if (u) u.textContent = 'ĐVT: --';
                 document.getElementById('outbound-info-stock').textContent = '0';
                 return;
             }
             document.getElementById('outbound-info-name').textContent = item.nameVi;
-            document.getElementById('outbound-info-sku').textContent = `SKU: ${item.sku || '---'} | ĐVT: ${item.unit || 'cái'}`;
+            const u = document.getElementById('outbound-info-unit');
+            if (u) u.textContent = `ĐVT: ${item.unit || 'cái'}`;
             document.getElementById('outbound-info-stock').textContent = `${item.stock || 0} ${item.unit || ''}`;
         }
 
@@ -3448,7 +3543,6 @@
                         <td class="py-2.5 px-2 text-center">${badge}</td>
                         <td class="py-2.5 px-3">
                             <span class="font-bold text-slate-900">${escapeHtml(tx.itemName || '')}</span>
-                            <span class="text-slate-400 text-[11px] font-mono ml-1">[${escapeHtml(tx.sku || '')}]</span>
                         </td>
                         <td class="py-2.5 px-2 text-center font-black ${isIn ? 'text-emerald-700' : 'text-amber-800'}">
                             ${isIn ? '+' : '-'}${tx.qty || 0} ${escapeHtml(tx.unit || '')}
@@ -3625,7 +3719,6 @@
 
                 titleEl.textContent = 'Chỉnh sửa vật liệu kho';
                 document.getElementById('item-form-id').value = item.id;
-                document.getElementById('item-form-sku').value = item.sku || '';
                 document.getElementById('item-form-category').value = item.category || 'Lông mi & Keo';
                 document.getElementById('item-form-unit').value = item.unit || 'Hộp';
                 document.getElementById('item-form-name-vi').value = item.nameVi || '';
@@ -3642,9 +3735,6 @@
             } else {
                 titleEl.textContent = 'Thêm vật liệu vào kho';
                 document.getElementById('item-form-id').value = '';
-                // Generate next SKU
-                const nextNum = inventoryItems.length + 1;
-                document.getElementById('item-form-sku').value = `MK-VT-${String(nextNum).padStart(3, '0')}`;
                 document.getElementById('item-form-stock').value = '10';
                 document.getElementById('item-form-min-stock').value = '5';
                 document.getElementById('item-form-cost-price').value = '0';
@@ -3697,7 +3787,6 @@
         async function handleItemFormSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('item-form-id').value;
-            const sku = document.getElementById('item-form-sku').value.trim();
             const category = document.getElementById('item-form-category').value;
             const unit = document.getElementById('item-form-unit').value.trim() || 'Cái';
             const nameVi = document.getElementById('item-form-name-vi').value.trim();
@@ -3721,7 +3810,6 @@
             }
 
             const stockBefore = item.stock ?? 0;
-            item.sku = sku;
             item.category = category;
             item.unit = unit;
             item.nameVi = nameVi;
@@ -3788,7 +3876,6 @@
             if (!modal) return;
 
             document.getElementById('delete-modal-item-name').textContent = item.nameVi || 'Vật liệu';
-            document.getElementById('delete-modal-item-sku').textContent = item.sku || 'SKU';
             document.getElementById('delete-modal-item-stock').textContent = `${item.stock ?? 0} ${item.unit || 'cái'}`;
             document.getElementById('delete-modal-item-cat').textContent = item.category || 'Chung';
             document.getElementById('delete-modal-item-img').src = item.image || DEFAULT_MAKEUP_SVG;
@@ -3805,6 +3892,61 @@
                 modal.classList.remove('flex');
             }
             pendingDeleteItemId = null;
+        }
+
+        // ============================================================================
+        // QUICK DELETE MODAL CHO MOBILE
+        // ============================================================================
+        function openQuickDeleteModal() {
+            renderQuickDeleteList();
+            const modal = document.getElementById('quick-delete-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeQuickDeleteModal() {
+            const modal = document.getElementById('quick-delete-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function renderQuickDeleteList(filterText = '') {
+            const listEl = document.getElementById('quick-delete-list');
+            if (!listEl) return;
+            const q = (filterText || '').trim().toLowerCase();
+            const items = inventoryItems.filter(item => {
+                if (!q) return true;
+                return (item.nameVi || '').toLowerCase().includes(q) || (item.category || '').toLowerCase().includes(q);
+            });
+
+            if (items.length === 0) {
+                listEl.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs font-semibold">Không tìm thấy vật liệu nào để xóa</div>';
+                return;
+            }
+
+            listEl.innerHTML = items.map(item => `
+                <div class="flex items-center justify-between gap-3 p-3 bg-white hover:bg-red-50/40 rounded-xl border border-slate-200 transition-colors">
+                    <img src="${item.image || DEFAULT_MAKEUP_SVG}" class="w-10 h-10 rounded-lg object-contain bg-slate-50 border border-slate-200 p-0.5 shrink-0" alt="" />
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-slate-900 text-xs sm:text-sm truncate">${escapeHtml(item.nameVi || '')}</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">Tồn: <strong>${item.stock || 0} ${escapeHtml(item.unit || '')}</strong> • ${escapeHtml(item.category || '')}</div>
+                    </div>
+                    <button
+                        type="button"
+                        onclick="closeQuickDeleteModal(); openConfirmDeleteModal('${item.id}')"
+                        class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-2xs flex items-center gap-1 shrink-0 active:scale-95 transition-all"
+                    >
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <span>Xóa</span>
+                    </button>
+                </div>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
         }
 
         async function confirmExecuteDeleteItem() {
@@ -3859,7 +4001,7 @@
 
             const modal = document.getElementById('lightbox-modal');
             const title = currentLang === 'zh' ? (item.nameZh || item.nameVi) : item.nameVi;
-            document.getElementById('lightbox-title').textContent = `[${item.sku || 'SKU'}] ${title}`;
+            document.getElementById('lightbox-title').textContent = title;
             document.getElementById('lightbox-title').title = title;
             document.getElementById('lightbox-img').src = item.image || DEFAULT_MAKEUP_SVG;
 
@@ -4129,9 +4271,6 @@
                             />
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-white text-slate-800 border border-slate-300">
-                                        ${escapeHtml(item.sku || '---')}
-                                    </span>
                                     <span class="px-2 py-0.2 rounded-full text-[10px] font-bold ${isOutOfStock ? 'bg-red-200 text-red-900' : 'bg-amber-200 text-amber-900'}">
                                         ${isOutOfStock ? 'ĐÃ HẾT HÀNG' : 'SẮP HẾT'}
                                     </span>
@@ -4198,7 +4337,7 @@
                 return;
             }
 
-            const headers = ['STT', 'Mã SKU', 'Tên vật liệu (VI)', 'Tên tiếng Trung (ZH)', 'Danh mục', 'ĐVT', 'Tồn kho', 'Tồn tối thiểu', 'Trạng thái', 'Đơn giá vốn (VNĐ)', 'Tổng giá trị (VNĐ)', 'Vị trí kho', 'Nhà cung cấp', 'Ghi chú'];
+            const headers = ['STT', 'Tên vật liệu (VI)', 'Tên tiếng Trung (ZH)', 'Danh mục', 'ĐVT', 'Tồn kho', 'Tồn tối thiểu', 'Trạng thái', 'Đơn giá vốn (VNĐ)', 'Tổng giá trị (VNĐ)', 'Vị trí kho', 'Nhà cung cấp', 'Ghi chú'];
             const rows = inventoryItems.map((item, idx) => {
                 const stock = Number(item.stock) || 0;
                 const cost = Number(item.costPrice) || 0;
@@ -4208,7 +4347,6 @@
 
                 return [
                     idx + 1,
-                    item.sku || '',
                     item.nameVi || '',
                     item.nameZh || '',
                     item.category || '',
@@ -4304,6 +4442,7 @@
 
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+                closeQuickDeleteModal();
                 closeCategoryManageModal();
                 closeConfirmDeleteModal();
                 closeProposalModal();
@@ -4340,6 +4479,9 @@
         window.openConfirmDeleteModal = openConfirmDeleteModal;
         window.closeConfirmDeleteModal = closeConfirmDeleteModal;
         window.confirmExecuteDeleteItem = confirmExecuteDeleteItem;
+        window.openQuickDeleteModal = openQuickDeleteModal;
+        window.closeQuickDeleteModal = closeQuickDeleteModal;
+        window.renderQuickDeleteList = renderQuickDeleteList;
         window.deleteItem = openConfirmDeleteModal;
         window.stepStock = stepStock;
         window.updateItemStockDirect = updateItemStockDirect;

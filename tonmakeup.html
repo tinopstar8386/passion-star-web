@@ -110,6 +110,9 @@
             border-top: 2px solid #0d9488;
             border-bottom: 1px solid #cbd5e1;
             background-color: #f0fdfa;
+            position: sticky;
+            bottom: 0;
+            z-index: 20;
         }
 
         /* TAY CẦM KÉO CO GIÃN CỘT (COLUMN RESIZER) CHUẨN XÁC & MƯỢT MÀ */
@@ -137,6 +140,14 @@
         .col-resizer:hover::after, .col-resizer.is-resizing::after {
             background-color: #0d9488 !important;
             height: 100%;
+        }
+
+        /* VÔ HIỆU HÓA RESIZER TRÊN MOBILE ĐỂ KHÔNG CHẶN VUỐT CHẠM CỦA NGƯỜI DÙNG IPHONE */
+        @media (max-width: 768px) {
+            .col-resizer {
+                display: none !important;
+                pointer-events: none !important;
+            }
         }
 
         .shadow-2xs {
@@ -321,7 +332,7 @@
     </header>
 
     <!-- Main Content Container -->
-    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5">
+    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5 pb-24 md:pb-8">
 
         <!-- KPI Summary Cards -->
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -504,9 +515,20 @@
                 </div>
             </div>
 
-            <!-- Table Wrapper (FREEZE THEAD CHUẨN XÁC KHI CUỘN) -->
-            <div class="w-full">
-                <table id="main-spreadsheet-table" class="sheet-table w-full text-left">
+            <!-- Mobile Swipe Hint Bar (Chỉ hiển thị trên di động / iPhone để người dùng biết có thể vuốt ngang xem đủ bảng) -->
+            <div class="flex items-center justify-between px-4 py-2 bg-teal-50/70 border-b border-teal-100 text-xs text-teal-900 md:hidden no-print">
+                <span class="inline-flex items-center gap-1.5 font-bold">
+                    <i data-lucide="chevrons-left-right" class="w-4 h-4 text-teal-600 animate-pulse"></i>
+                    <span>Vuốt ngang để xem đủ 8 cột</span>
+                </span>
+                <span class="text-[11px] font-semibold text-teal-700 bg-white px-2 py-0.5 rounded-md border border-teal-200">
+                    Bảng đầy đủ
+                </span>
+            </div>
+
+            <!-- Table Wrapper (CHO PHÉP VUỐT NGANG MƯỢT MÀ TRÊN IPHONE & CỐ ĐỊNH TIÊU ĐỀ KHI CUỘN) -->
+            <div class="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-140px)] touch-pan-x" style="-webkit-overflow-scrolling: touch;">
+                <table id="main-spreadsheet-table" class="sheet-table w-full text-left min-w-[920px]">
                     <colgroup>
                         <col id="col-idx" style="width: 45px;">
                         <col id="col-product-name" style="width: 310px;">
@@ -1141,6 +1163,152 @@
             </div>
         </div>
     </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: XÁC NHẬN XÓA SẢN PHẨM (KHÔNG DÙNG CONFIRM CỦA WEB)                 -->
+    <!-- ========================================================================= -->
+    <div
+        id="confirm-delete-modal"
+        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+    >
+        <div class="bg-white rounded-2xl border border-red-200 shadow-2xl max-w-md w-full overflow-hidden">
+            <div class="p-5 border-b border-red-100 bg-red-50/70 flex items-center gap-3">
+                <span class="w-10 h-10 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
+                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                </span>
+                <div>
+                    <h3 class="font-bold text-red-950 text-base">Xác nhận xóa sản phẩm</h3>
+                    <p class="text-xs text-red-700 mt-0.5">Hành động này sẽ xóa sản phẩm khỏi danh sách đề xuất</p>
+                </div>
+            </div>
+
+            <div class="p-5 space-y-3">
+                <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                    <img id="delete-modal-product-img" src="" alt="" class="w-12 h-12 rounded-lg object-contain bg-white border border-slate-200 p-0.5 shrink-0" />
+                    <div class="min-w-0 flex-1">
+                        <h4 id="delete-modal-product-name" class="font-bold text-slate-900 text-sm leading-snug line-clamp-2">—</h4>
+                        <p class="text-xs text-slate-500 mt-0.5" id="delete-modal-product-detail">Đơn giá: 0 ₫ • SL: 1</p>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500">
+                    Bạn có chắc chắn muốn xóa sản phẩm này không? Dữ liệu trên Firebase sẽ được đồng bộ ngay lập tức.
+                </p>
+            </div>
+
+            <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+                <button
+                    type="button"
+                    onclick="closeConfirmDeleteModal()"
+                    class="h-9 px-4 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 shadow-2xs"
+                >
+                    Hủy bỏ
+                </button>
+                <button
+                    type="button"
+                    onclick="executeConfirmDeleteProduct()"
+                    class="h-9 px-4 rounded-xl text-xs sm:text-sm font-bold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 shadow-xs flex items-center gap-1.5"
+                >
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <span>Xác nhận xóa</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL: XÓA NHANH SẢN PHẨM CHO MOBILE VIEW                                 -->
+    <!-- ========================================================================= -->
+    <div
+        id="quick-delete-modal"
+        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+    >
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl border border-red-200 shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="px-5 py-3.5 bg-red-50/80 border-b border-red-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-lg bg-red-100 border border-red-300 flex items-center justify-center text-red-600 shrink-0">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </span>
+                    <div>
+                        <h3 class="font-bold text-red-950 text-sm sm:text-base">Thao Tác Xóa Nhanh Hàng Hóa</h3>
+                        <p class="text-[11px] text-red-700">Chọn sản phẩm bạn muốn xóa khỏi đề xuất tháng này</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onclick="closeQuickDeleteModal()"
+                    class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Search box in modal -->
+            <div class="p-3 bg-slate-50 border-b border-slate-200 shrink-0">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <input
+                        type="text"
+                        placeholder="Tìm sản phẩm cần xóa..."
+                        oninput="renderQuickDeleteList(this.value)"
+                        class="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-500"
+                    />
+                </div>
+            </div>
+
+            <!-- List items -->
+            <div id="quick-delete-list" class="flex-1 overflow-y-auto p-3 space-y-2">
+                <!-- Dynamically rendered -->
+            </div>
+
+            <!-- Footer -->
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end shrink-0">
+                <button
+                    type="button"
+                    onclick="closeQuickDeleteModal()"
+                    class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition-all"
+                >
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- THANH THAO TÁC NHANH CỐ ĐỊNH ĐÁY MÀN HÌNH (MOBILE DOCK IPHONE)            -->
+    <!-- ========================================================================= -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 px-3 py-2 flex items-center justify-between gap-2 shadow-lg md:hidden no-print" aria-label="Mobile Quick Actions">
+        <!-- Nút thêm sản phẩm nhanh -->
+        <button
+            type="button"
+            onclick="openProductModal()"
+            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-xs shadow-sm transition-all"
+        >
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Thêm sản phẩm</span>
+        </button>
+
+        <!-- Nút xoá nhanh sản phẩm -->
+        <button
+            type="button"
+            onclick="openQuickDeleteModal()"
+            class="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs shadow-2xs active:scale-95 transition-all"
+            title="Mở danh sách xóa nhanh sản phẩm"
+        >
+            <i data-lucide="trash-2" class="w-4 h-4 text-red-600"></i>
+            <span>Xóa hàng</span>
+        </button>
+
+        <!-- Nút chuyển sang Quản lý tồn kho -->
+        <a
+            href="tonkhomakeup.html"
+            class="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold text-xs shadow-2xs active:scale-95 transition-all shrink-0"
+            title="Chuyển sang Quản lý tồn kho vật liệu"
+        >
+            <i data-lucide="boxes" class="w-4 h-4 text-slate-600"></i>
+            <span>Kho tồn</span>
+        </a>
+    </nav>
 
     <!-- Toast Notification -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
@@ -2104,6 +2272,25 @@
                                         <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                     </button>
                                 </div>
+                                <!-- Thao tác nhanh cho màn hình nhỏ / iPhone (Không cần vuốt 1000px sang phải) -->
+                                <div class="flex items-center gap-1.5 mt-1 sm:hidden no-print">
+                                    <button
+                                        type="button"
+                                        onclick="openProductModal('${item.id}')"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 shadow-2xs"
+                                    >
+                                        <i data-lucide="edit-3" class="w-3 h-3"></i>
+                                        <span>Sửa</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onclick="openConfirmDeleteModal('${item.id}')"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 shadow-2xs"
+                                    >
+                                        <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                        <span>Xóa</span>
+                                    </button>
+                                </div>
                             </td>
 
                             <!-- HÌNH ẢNH: THUMBNAIL RÕ RÀNG (64px) & 2 NÚT THAO TÁC ĐỒNG BỘ ĐẸP MẮT -->
@@ -2260,7 +2447,7 @@
                                     </button>
                                     <button
                                         type="button"
-                                        onclick="deleteProduct('${item.id}')"
+                                        onclick="openConfirmDeleteModal('${item.id}')"
                                         class="p-1.5 rounded-md text-slate-500 hover:text-red-600 bg-white hover:bg-red-50 border border-slate-300 hover:border-red-300 transition-all shadow-2xs shrink-0"
                                         title="${t.deleteBtnTitle}"
                                     >
@@ -2512,6 +2699,102 @@
             filterProductsForSelectedMonth();
             await saveProductToFirebase(newItem);
             showToast(I18N[currentLang].toastAddedRow);
+        }
+
+        let pendingDeleteProductId = null;
+
+        function openConfirmDeleteModal(id) {
+            const product = allLoadedProducts.find(p => p.id === id);
+            if (!product) return;
+            pendingDeleteProductId = id;
+
+            const name = currentLang === 'zh' ? (product.nameZh || product.nameVi) : product.nameVi;
+            const price = Number(product.price) || 0;
+            const qty = Number(product.quantity) || 1;
+
+            const modal = document.getElementById('confirm-delete-modal');
+            document.getElementById('delete-modal-product-name').textContent = name || 'Sản phẩm';
+            document.getElementById('delete-modal-product-detail').textContent = `Đơn giá: ${formatVND(price)} • SL: ${qty} • Thành tiền: ${formatVND(price * qty)}`;
+            document.getElementById('delete-modal-product-img').src = product.image || DEFAULT_MAKEUP_SVG;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeConfirmDeleteModal() {
+            const modal = document.getElementById('confirm-delete-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            pendingDeleteProductId = null;
+        }
+
+        async function executeConfirmDeleteProduct() {
+            if (!pendingDeleteProductId) return;
+            const id = pendingDeleteProductId;
+            closeConfirmDeleteModal();
+            closeProductModal();
+            await deleteProduct(id);
+        }
+
+        function openQuickDeleteModal() {
+            renderQuickDeleteList();
+            const modal = document.getElementById('quick-delete-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeQuickDeleteModal() {
+            const modal = document.getElementById('quick-delete-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function renderQuickDeleteList(filterText = '') {
+            const listEl = document.getElementById('quick-delete-list');
+            if (!listEl) return;
+            const q = (filterText || '').trim().toLowerCase();
+            const items = currentMonthProducts.filter(item => {
+                if (!q) return true;
+                const name = (item.nameVi || '') + ' ' + (item.nameZh || '');
+                return name.toLowerCase().includes(q);
+            });
+
+            if (items.length === 0) {
+                listEl.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs font-semibold">Không tìm thấy sản phẩm nào trong tháng này</div>';
+                return;
+            }
+
+            listEl.innerHTML = items.map(item => {
+                const name = currentLang === 'zh' ? (item.nameZh || item.nameVi) : item.nameVi;
+                const price = Number(item.price) || 0;
+                const qty = Number(item.quantity) || 1;
+                return `
+                    <div class="flex items-center justify-between gap-3 p-3 bg-white hover:bg-red-50/40 rounded-xl border border-slate-200 transition-colors">
+                        <img src="${item.image || DEFAULT_MAKEUP_SVG}" class="w-10 h-10 rounded-lg object-contain bg-slate-50 border border-slate-200 p-0.5 shrink-0" alt="" />
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-slate-900 text-xs sm:text-sm truncate">${escapeHtml(name || '')}</div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">Giá: <strong>${formatVND(price)}</strong> • SL: <strong>${qty}</strong></div>
+                        </div>
+                        <button
+                            type="button"
+                            onclick="closeQuickDeleteModal(); openConfirmDeleteModal('${item.id}')"
+                            class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-2xs flex items-center gap-1 shrink-0 active:scale-95 transition-all"
+                        >
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <span>Xóa</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+            if (window.lucide) lucide.createIcons();
         }
 
         async function deleteProduct(id) {
@@ -3211,6 +3494,8 @@
         // ============================================================================
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+                closeQuickDeleteModal();
+                closeConfirmDeleteModal();
                 closeImageLinkModal();
                 closeLightbox();
                 closeProductModal();
@@ -3236,6 +3521,12 @@
             stepQuantity,
             addQuickBlankRow,
             deleteProduct,
+            openConfirmDeleteModal,
+            closeConfirmDeleteModal,
+            executeConfirmDeleteProduct,
+            openQuickDeleteModal,
+            closeQuickDeleteModal,
+            renderQuickDeleteList,
             openLightbox,
             closeLightbox,
             copyProductLink,
