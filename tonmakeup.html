@@ -106,13 +106,26 @@
         .sheet-table tbody tr:hover {
             background-color: #f0fdf4;
         }
-        .sheet-table tfoot tr.footer-total-row td {
-            border-top: 2px solid #0d9488;
-            border-bottom: 1px solid #cbd5e1;
-            background-color: #f0fdfa;
+        .sheet-table tfoot {
             position: sticky;
             bottom: 0;
-            z-index: 20;
+            z-index: 25;
+        }
+        .sheet-table tfoot tr.footer-total-row td {
+            position: sticky;
+            bottom: 0;
+            z-index: 25;
+            border-top: 2px solid #0d9488 !important;
+            border-bottom: 1px solid #cbd5e1 !important;
+            background-color: #f0fdfa !important;
+            box-shadow: 0 -4px 12px -2px rgba(13, 148, 136, 0.22);
+        }
+
+        /* TRIỆT TIÊU CUỘN NGANG TRÊN MÁY TÍNH THEO QUY TẮC SỐNG CÒN */
+        @media (min-width: 1024px) {
+            .table-scroll-wrapper {
+                overflow-x: hidden !important;
+            }
         }
 
         /* TAY CẦM KÉO CO GIÃN CỘT (COLUMN RESIZER) CHUẨN XÁC & MƯỢT MÀ */
@@ -203,8 +216,9 @@
     <input type="file" id="quick-image-upload-input" accept="image/*" class="hidden" onchange="handleQuickUploadFile(event)" />
 
     <!-- Top Navigation Bar (Tông xanh ngọc & xanh lá dịu mắt) -->
-    <header class="sticky top-0 z-30 bg-white border-b border-teal-200/80 shadow-2xs">
-        <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3">
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-teal-200/90 shadow-2xs">
+        <!-- 1. DESKTOP VIEW (>= 768px): Header đầy đủ -->
+        <div class="hidden md:flex w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-20 items-center justify-between gap-3">
             <!-- Brand & Title kèm Tháng hiện tại -->
             <div class="flex items-center gap-3 shrink-0">
                 <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 flex items-center justify-center text-white shadow-xs border border-teal-600/30 shrink-0">
@@ -226,8 +240,8 @@
                 </div>
             </div>
 
-            <!-- Module Navigation Tabs (Chuyển đổi qua lại giữa Đề xuất mua & Quản lý tồn kho) -->
-            <nav class="hidden md:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-300 shadow-2xs no-print shrink-0" aria-label="Module Tabs">
+            <!-- Module Navigation Tabs Desktop -->
+            <nav class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-300 shadow-2xs no-print shrink-0" aria-label="Module Tabs">
                 <a
                     href="tonmakeup.html"
                     class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-teal-800 shadow-xs border border-teal-300"
@@ -318,20 +332,42 @@
             </div>
         </div>
 
-        <!-- Mobile Module Tabs Bar -->
-        <div class="md:hidden border-t border-teal-100 bg-teal-50/50 px-4 py-1.5 flex items-center justify-center gap-2 no-print">
-            <a
-                href="tonmakeup.html"
-                class="flex-1 text-center py-1.5 rounded-lg text-xs font-bold bg-white text-teal-800 border border-teal-300 shadow-2xs"
-            >
-                🛒 Đề xuất mua sắm
-            </a>
-            <a
-                href="tonkhomakeup.html"
-                class="flex-1 text-center py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-teal-100/60"
-            >
-                📦 Quản lý tồn kho
-            </a>
+        <!-- 2. MOBILE VIEW (< 768px): FREEZE CỐ ĐỊNH TRÊN ĐẦU, ẨN HEADER CHÍNH, CHỈ HIỆN 2 TAB & ĐIỀU KHIỂN NHẸ -->
+        <div class="md:hidden px-2.5 py-1.5 flex items-center justify-between gap-1.5 no-print bg-white/95">
+            <!-- 2 Tabs chuyển đổi chính -->
+            <div class="flex-1 flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-300 shadow-2xs gap-1" role="tablist">
+                <a
+                    href="tonmakeup.html"
+                    class="flex-1 py-1.5 px-2 rounded-lg text-xs font-black text-center flex items-center justify-center gap-1 transition-all bg-white text-teal-800 border border-teal-300 shadow-xs"
+                >
+                    <span>🛒</span>
+                    <span class="truncate">Đề xuất mua</span>
+                </a>
+                <a
+                    href="tonkhomakeup.html"
+                    class="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold text-center flex items-center justify-center gap-1 transition-all text-slate-600 hover:text-teal-700"
+                >
+                    <span>📦</span>
+                    <span class="truncate">Quản lý kho</span>
+                </a>
+            </div>
+
+            <!-- Month selector mini for mobile -->
+            <div class="flex items-center bg-teal-50 border border-teal-300 rounded-lg px-1.5 py-1 shrink-0">
+                <input
+                    type="month"
+                    id="month-selector-input-mob"
+                    value="2026-11"
+                    onchange="changeSelectedMonth(this.value)"
+                    class="bg-transparent font-black text-teal-900 border-none focus:outline-none cursor-pointer text-xs w-[84px]"
+                />
+            </div>
+
+            <!-- Language Buttons Mini -->
+            <div class="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-300 shrink-0">
+                <button onclick="setLanguage('vi')" id="btn-lang-vi-mob" class="px-1.5 py-1 text-xs font-bold rounded bg-white text-teal-700 shadow-2xs" title="Tiếng Việt">🇻🇳</button>
+                <button onclick="setLanguage('zh')" id="btn-lang-zh-mob" class="px-1.5 py-1 text-xs font-semibold rounded text-slate-600" title="中文">🇨🇳</button>
+            </div>
         </div>
     </header>
 
@@ -602,41 +638,41 @@
                     </span>
                 </div>
 
-                <!-- Table Wrapper (CHO PHÉP VUỐT NGANG MƯỢT MÀ TRÊN IPHONE & CỐ ĐỊNH TIÊU ĐỀ KHI CUỘN) -->
-                <div class="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-140px)] touch-pan-x" style="-webkit-overflow-scrolling: touch;">
-                    <table id="main-spreadsheet-table" class="sheet-table w-full text-left min-w-[920px]">
+                <!-- Table Wrapper (CHO PHÉP VUỐT NGANG MƯỢT MÀ TRÊN IPHONE & CỐ ĐỊNH TIÊU ĐỀ + TỔNG CỘNG KHI CUỘN) -->
+                <div class="table-scroll-wrapper w-full overflow-x-auto lg:overflow-x-hidden overflow-y-auto max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-140px)] touch-pan-x" style="-webkit-overflow-scrolling: touch;">
+                    <table id="main-spreadsheet-table" class="sheet-table w-full text-left">
                     <colgroup>
-                        <col id="col-idx" style="width: 45px;">
-                        <col id="col-product-name" style="width: 310px;">
-                        <col id="col-image" style="width: 105px;">
-                        <col id="col-price" style="width: 135px;">
-                        <col id="col-link" style="width: 145px;">
-                        <col id="col-quantity" style="width: 105px;">
-                        <col id="col-subtotal" style="width: 150px;">
-                        <col id="col-actions" style="width: 85px;">
+                        <col id="col-idx" style="width: 40px;">
+                        <col id="col-product-name" style="width: 28%; min-width: 190px;">
+                        <col id="col-image" style="width: 75px;">
+                        <col id="col-price" style="width: 115px;">
+                        <col id="col-link" style="width: 110px;">
+                        <col id="col-quantity" style="width: 80px;">
+                        <col id="col-subtotal" style="width: 125px;">
+                        <col id="col-actions" style="width: 75px;">
                     </colgroup>
                     <thead>
                         <tr class="text-teal-900 text-xs font-bold uppercase tracking-wider">
                             <!-- STT -->
-                            <th id="th-idx" data-col="0" class="py-3 px-2 text-center bg-teal-50" style="width: 45px;">
+                            <th id="th-idx" data-col="0" class="py-3 px-2 text-center bg-teal-50" style="width: 40px;">
                                 <span>#</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
                             
                             <!-- TÊN HÀNG: Cân đối, có resizer -->
-                            <th id="th-product-name" data-col="1" class="py-3 px-3 bg-teal-50" style="width: 310px;">
+                            <th id="th-product-name" data-col="1" class="py-3 px-3 bg-teal-50" style="width: 28%; min-width: 190px;">
                                 <span>TÊN HÀNG</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
                             
                             <!-- HÌNH THỂ HIỆN: THUMBNAIL BỰ RÕ & NÚT THAO TÁC ĐỒNG BỘ -->
-                            <th id="th-image" data-col="2" class="py-3 px-1 text-center bg-teal-50" style="width: 105px;">
+                            <th id="th-image" data-col="2" class="py-3 px-1 text-center bg-teal-50" style="width: 75px;">
                                 <span>HÌNH</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
                             
                             <!-- GIÁ TIỀN -->
-                            <th id="th-price" data-col="3" class="py-3 px-3 text-right bg-teal-50 select-none" style="width: 135px;">
+                            <th id="th-price" data-col="3" class="py-3 px-3 text-right bg-teal-50 select-none" style="width: 115px;">
                                 <div class="inline-flex items-center justify-end gap-1 cursor-pointer hover:text-teal-700" onclick="toggleSort('price')">
                                     <span id="th-price-text">ĐƠN GIÁ (VNĐ)</span>
                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-teal-600"></i>
@@ -645,19 +681,19 @@
                             </th>
                             
                             <!-- LINK SẢN PHẨM -->
-                            <th id="th-link" data-col="4" class="py-3 px-2 text-center bg-teal-50" style="width: 145px;">
-                                <span>LINK SẢN PHẨM</span>
+                            <th id="th-link" data-col="4" class="py-3 px-2 text-center bg-teal-50" style="width: 110px;">
+                                <span>LINK NGUỒN</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
                             
                             <!-- SỐ LƯỢNG -->
-                            <th id="th-quantity" data-col="5" class="py-3 px-2 text-center bg-teal-50" style="width: 105px;">
+                            <th id="th-quantity" data-col="5" class="py-3 px-2 text-center bg-teal-50" style="width: 80px;">
                                 <span>SỐ LƯỢNG</span>
                                 <div class="col-resizer" title="Kéo để chỉnh độ rộng cột"></div>
                             </th>
                             
                             <!-- THÀNH TIỀN -->
-                            <th id="th-subtotal" data-col="6" class="py-3 px-3 text-right bg-teal-50 select-none" style="width: 150px;">
+                            <th id="th-subtotal" data-col="6" class="py-3 px-3 text-right bg-teal-50 select-none" style="width: 125px;">
                                 <div class="inline-flex items-center justify-end gap-1 cursor-pointer hover:text-teal-700" onclick="toggleSort('subtotal')">
                                     <span id="th-subtotal-text">THÀNH TIỀN (VNĐ)</span>
                                     <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-teal-600"></i>
@@ -666,7 +702,7 @@
                             </th>
                             
                             <!-- THAO TÁC (Không cần resizer cột cuối cùng) -->
-                            <th id="th-actions" data-col="7" class="py-3 px-2 text-center bg-teal-50 no-print" style="width: 85px;">
+                            <th id="th-actions" data-col="7" class="py-3 px-2 text-center bg-teal-50 no-print" style="width: 75px;">
                                 <span>THAO TÁC</span>
                             </th>
                         </tr>
@@ -1464,62 +1500,52 @@
     <!-- THANH THAO TÁC & TỔNG CỘNG FREEZE CỐ ĐỊNH ĐÁY MÀN HÌNH (MOBILE IPHONE)     -->
     <!-- ========================================================================= -->
     <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 shadow-xl md:hidden no-print flex flex-col" aria-label="Mobile Quick Actions">
-        <!-- DÒNG TỔNG CỘNG FREEZE CỐ ĐỊNH GỌN GÀNG 1 DÒNG DUY NHẤT -->
-        <div id="mobile-freeze-summary" class="h-7 px-3 flex items-center justify-between text-[11px] font-bold bg-slate-900 text-slate-100 border-b border-slate-800 tracking-tight shrink-0 select-none">
+        <!-- DÒNG TỔNG CỘNG FREEZE CỐ ĐỊNH TINH CHỈNH GIAO DIỆN SÁNG ĐẸP HÀI HOÀ -->
+        <div id="mobile-freeze-summary" class="h-7.5 px-3 py-1 flex items-center justify-between text-[11px] font-bold bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 border-b border-teal-200/90 text-teal-950 tracking-tight shrink-0 select-none shadow-2xs">
             <div class="flex items-center gap-1.5 min-w-0">
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                <span class="text-slate-300">Tổng đề xuất:</span>
-                <span id="mobile-sum-qty" class="text-emerald-400 font-extrabold shrink-0">0 món</span>
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                <span class="text-slate-600 font-semibold">Tổng:</span>
+                <span id="mobile-sum-qty" class="text-teal-900 font-extrabold bg-teal-100/80 px-1.5 py-0.5 rounded border border-teal-300/80 shrink-0">0 món</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-                <span id="mobile-sum-vnd" class="text-amber-300 font-black">0 ₫</span>
-                <span id="mobile-sum-cny" class="text-slate-400 font-medium text-[10px]">(≈ ¥ 0)</span>
+                <span id="mobile-sum-vnd" class="text-emerald-700 font-black text-xs">0 ₫</span>
+                <span id="mobile-sum-cny" class="text-teal-700 font-bold text-[10px] bg-white/80 px-1 py-0.5 rounded border border-teal-200">(≈ ¥ 0)</span>
             </div>
         </div>
 
-        <!-- HÀNG 4 NÚT THAO TÁC NHANH -->
-        <div class="px-2 py-1.5 flex items-center justify-between gap-1.5">
-            <!-- Nút thêm sản phẩm nhanh -->
+        <!-- HÀNG 3 NÚT THAO TÁC NHANH: ĐÃ BỎ NÚT CHUYỂN TAB THỪA, GIÚP NÚT DÁN THÔNG MINH HIỆN ĐẦY ĐỦ RỘNG RÃI -->
+        <div class="px-2.5 py-1.5 flex items-center justify-between gap-2">
+            <!-- 1. Nút thêm sản phẩm nhanh -->
             <button
                 type="button"
                 onclick="openProductModal()"
-                class="flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-xs shadow-sm transition-all shrink-0"
+                class="flex items-center justify-center gap-1 py-2 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-xs shadow-sm transition-all shrink-0"
             >
                 <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
                 <span>+ Thêm sản phẩm</span>
             </button>
 
-            <!-- Nút dán thông minh nhanh -->
+            <!-- 2. Nút dán thông minh nhanh rộng rãi, hiện đầy đủ chữ -->
             <button
                 type="button"
                 onclick="openSmartPasteModal()"
-                class="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 hover:from-teal-100 text-teal-900 border border-teal-300 font-bold text-xs shadow-2xs active:scale-95 transition-all truncate"
-                title="Dán nhanh danh sách hàng từ tin nhắn"
+                class="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-gradient-to-r from-teal-100 via-emerald-100 to-teal-100 hover:from-teal-200 hover:to-emerald-200 text-teal-900 border border-teal-300 font-bold text-xs shadow-2xs active:scale-95 transition-all whitespace-nowrap"
+                title="Dán nhanh danh sách hàng từ tin nhắn Zalo/Chat"
             >
-                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-teal-700 shrink-0"></i>
-                <span class="truncate">Dán thông minh</span>
+                <i data-lucide="sparkles" class="w-4 h-4 text-teal-700 shrink-0"></i>
+                <span class="font-extrabold">✨ Dán DS thông minh</span>
             </button>
 
-            <!-- Nút xoá nhanh sản phẩm -->
+            <!-- 3. Nút xoá nhanh sản phẩm -->
             <button
                 type="button"
                 onclick="openQuickDeleteModal()"
-                class="flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs shadow-2xs active:scale-95 transition-all shrink-0"
+                class="flex items-center justify-center gap-1 py-2 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs shadow-2xs active:scale-95 transition-all shrink-0"
                 title="Mở danh sách xóa nhanh sản phẩm"
             >
                 <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-600"></i>
                 <span>Xóa hàng</span>
             </button>
-
-            <!-- Nút chuyển sang Quản lý tồn kho -->
-            <a
-                href="tonkhomakeup.html"
-                class="flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold text-xs shadow-2xs active:scale-95 transition-all shrink-0"
-                title="Chuyển sang Quản lý tồn kho vật liệu"
-            >
-                <i data-lucide="boxes" class="w-3.5 h-3.5 text-slate-600"></i>
-                <span>Kho tồn</span>
-            </a>
         </div>
     </nav>
 
@@ -1856,6 +1882,8 @@
             selectedMonth = newMonth;
             const inputEl = document.getElementById('month-selector-input');
             if (inputEl) inputEl.value = selectedMonth;
+            const mobInputEl = document.getElementById('month-selector-input-mob');
+            if (mobInputEl) mobInputEl.value = selectedMonth;
             updateMonthHeaderUI();
             filterProductsForSelectedMonth();
         }
@@ -2104,13 +2132,19 @@
 
             const btnVi = document.getElementById('btn-lang-vi');
             const btnZh = document.getElementById('btn-lang-zh');
+            const btnViMob = document.getElementById('btn-lang-vi-mob');
+            const btnZhMob = document.getElementById('btn-lang-zh-mob');
 
             if (lang === 'vi') {
-                btnVi.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-teal-700 shadow-xs border border-teal-300';
-                btnZh.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900';
+                if (btnVi) btnVi.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-teal-700 shadow-xs border border-teal-300';
+                if (btnZh) btnZh.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900';
+                if (btnViMob) btnViMob.className = 'px-1.5 py-1 text-xs font-bold rounded bg-white text-teal-700 shadow-2xs border border-teal-200';
+                if (btnZhMob) btnZhMob.className = 'px-1.5 py-1 text-xs font-semibold rounded text-slate-600';
             } else {
-                btnZh.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-teal-700 shadow-xs border border-teal-300';
-                btnVi.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900';
+                if (btnZh) btnZh.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all bg-white text-teal-700 shadow-xs border border-teal-300';
+                if (btnVi) btnVi.className = 'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all text-slate-600 hover:text-slate-900';
+                if (btnZhMob) btnZhMob.className = 'px-1.5 py-1 text-xs font-bold rounded bg-white text-teal-700 shadow-2xs border border-teal-200';
+                if (btnViMob) btnViMob.className = 'px-1.5 py-1 text-xs font-semibold rounded text-slate-600';
             }
 
             document.getElementById('ui-app-title').textContent = t.appTitle;
