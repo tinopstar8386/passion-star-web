@@ -454,6 +454,16 @@
                     <span id="ui-btn-import">Nhập từ Sheet</span>
                 </button>
 
+                <!-- Nút DÁN DANH SÁCH THÔNG MINH -->
+                <button
+                    onclick="openSmartPasteModal()"
+                    class="h-10 inline-flex items-center gap-1.5 px-3.5 rounded-lg text-xs sm:text-sm font-bold text-teal-950 bg-gradient-to-r from-teal-100 via-emerald-100 to-teal-50 hover:from-teal-200 hover:to-emerald-200 border border-teal-300 transition-all shadow-2xs whitespace-nowrap active:scale-95"
+                    title="Dán nhanh danh sách hàng tự do từ tin nhắn, Zalo... tự động nhận diện tên và số lượng"
+                >
+                    <i data-lucide="sparkles" class="w-4 h-4 text-teal-700"></i>
+                    <span>✨ Dán DS thông minh</span>
+                </button>
+
                 <button
                     onclick="copyProposalSummary()"
                     class="h-10 inline-flex items-center gap-1.5 px-3.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-all shadow-2xs whitespace-nowrap"
@@ -1338,37 +1348,157 @@
     </div>
 
     <!-- ========================================================================= -->
+    <!-- MODAL: DÁN DANH SÁCH HÀNG THÔNG MINH (SMART BULK PASTE)                   -->
+    <!-- ========================================================================= -->
+    <div
+        id="smart-paste-modal"
+        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+    >
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl border-2 border-teal-300 shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="px-5 py-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-teal-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                    </span>
+                    <div>
+                        <h3 class="font-extrabold text-teal-950 text-sm sm:text-base">Dán Danh Sách Hàng Thông Minh</h3>
+                        <p class="text-[11px] text-teal-700">Tự động nhận diện Tên hàng, Số lượng & ĐVT từ tin nhắn, Zalo</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onclick="closeSmartPasteModal()"
+                    class="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable Y) -->
+            <div class="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+                <!-- Textarea input & Quick buttons -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between flex-wrap gap-1.5">
+                        <label for="smart-paste-textarea" class="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            Dán nội dung danh sách (Zalo, Tin nhắn, Ghi chú...):
+                        </label>
+                        <div class="flex items-center gap-1.5">
+                            <button
+                                type="button"
+                                onclick="pasteSampleListToSmartInput()"
+                                class="text-[11px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-300 px-2 py-0.5 rounded-lg shadow-2xs transition-all active:scale-95"
+                                title="Điền thử 22 mặt hàng mẫu của bạn để kiểm tra"
+                            >
+                                💡 Dùng mẫu thử (22 món)
+                            </button>
+                            <button
+                                type="button"
+                                onclick="clearSmartPasteInput()"
+                                class="text-[11px] font-semibold text-slate-500 hover:text-red-600 bg-white hover:bg-red-50 border border-slate-300 px-2 py-0.5 rounded-lg shadow-2xs transition-all"
+                            >
+                                Xóa trắng
+                            </button>
+                        </div>
+                    </div>
+
+                    <textarea
+                        id="smart-paste-textarea"
+                        rows="5"
+                        oninput="handleSmartPasteInputChange()"
+                        placeholder="Dán danh sách vào đây, ví dụ:&#10;Keo tóc : 9 chai&#10;Nền sáng maybeline 110 : 5 chai&#10;kích mí mắt : 6 bịch&#10;xịt khoá nền ARMIS : 4 chai ( 2 đen, 2 trắng)..."
+                        class="w-full p-3 text-xs sm:text-sm font-mono bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all resize-y"
+                    ></textarea>
+                </div>
+
+                <!-- Parsed Results Preview Section -->
+                <div id="smart-paste-preview-section" class="space-y-2.5">
+                    <div class="flex items-center justify-between bg-teal-50/80 px-3.5 py-2 rounded-xl border border-teal-200 flex-wrap gap-1">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                            <span class="text-xs font-bold text-teal-950" id="smart-paste-count-badge">
+                                Đã nhận diện: 0 sản phẩm
+                            </span>
+                        </div>
+                        <span class="text-[11px] font-medium text-teal-700">
+                            Có thể sửa trực tiếp số lượng / tên trước khi thêm
+                        </span>
+                    </div>
+
+                    <!-- Filtered Items List (Responsive, only scroll Y) -->
+                    <div id="smart-paste-items-list" class="max-h-[38vh] overflow-y-auto space-y-2 pr-1">
+                        <div class="text-center py-6 text-slate-400 text-xs italic">
+                            Chưa có dữ liệu. Hãy dán danh sách hoặc bấm "💡 Dùng mẫu thử" ở trên.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+                <button
+                    type="button"
+                    onclick="closeSmartPasteModal()"
+                    class="h-9 px-4 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 shadow-2xs"
+                >
+                    Hủy bỏ
+                </button>
+                <button
+                    id="btn-confirm-smart-paste"
+                    type="button"
+                    onclick="confirmExecuteSmartPaste()"
+                    class="h-9 px-5 rounded-xl text-xs sm:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 shadow-sm flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none transition-all"
+                >
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                    <span id="lbl-confirm-smart-paste">Xác nhận thêm hàng</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- THANH THAO TÁC NHANH CỐ ĐỊNH ĐÁY MÀN HÌNH (MOBILE DOCK IPHONE)            -->
     <!-- ========================================================================= -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 px-3 py-2 flex items-center justify-between gap-2 shadow-lg md:hidden no-print" aria-label="Mobile Quick Actions">
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 px-2 py-1.5 flex items-center justify-between gap-1.5 shadow-lg md:hidden no-print" aria-label="Mobile Quick Actions">
         <!-- Nút thêm sản phẩm nhanh -->
         <button
             type="button"
             onclick="openProductModal()"
-            class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-xs shadow-sm transition-all"
+            class="flex items-center justify-center gap-1 py-2 px-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold text-xs shadow-sm transition-all shrink-0"
         >
-            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-            <span>Thêm sản phẩm</span>
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>+ Thêm sản phẩm</span>
+        </button>
+
+        <!-- Nút dán thông minh nhanh -->
+        <button
+            type="button"
+            onclick="openSmartPasteModal()"
+            class="flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 hover:from-teal-100 text-teal-900 border border-teal-300 font-bold text-xs shadow-2xs active:scale-95 transition-all truncate"
+            title="Dán nhanh danh sách hàng từ tin nhắn"
+        >
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-teal-700 shrink-0"></i>
+            <span class="truncate">Dán thông minh</span>
         </button>
 
         <!-- Nút xoá nhanh sản phẩm -->
         <button
             type="button"
             onclick="openQuickDeleteModal()"
-            class="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs shadow-2xs active:scale-95 transition-all"
+            class="flex items-center justify-center gap-1 py-2 px-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs shadow-2xs active:scale-95 transition-all shrink-0"
             title="Mở danh sách xóa nhanh sản phẩm"
         >
-            <i data-lucide="trash-2" class="w-4 h-4 text-red-600"></i>
+            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-600"></i>
             <span>Xóa hàng</span>
         </button>
 
         <!-- Nút chuyển sang Quản lý tồn kho -->
         <a
             href="tonkhomakeup.html"
-            class="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold text-xs shadow-2xs active:scale-95 transition-all shrink-0"
+            class="flex items-center justify-center gap-1 py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-semibold text-xs shadow-2xs active:scale-95 transition-all shrink-0"
             title="Chuyển sang Quản lý tồn kho vật liệu"
         >
-            <i data-lucide="boxes" class="w-4 h-4 text-slate-600"></i>
+            <i data-lucide="boxes" class="w-3.5 h-3.5 text-slate-600"></i>
             <span>Kho tồn</span>
         </a>
     </nav>
@@ -3788,10 +3918,264 @@
         }
 
         // ============================================================================
+        // 14B. DÁN DANH SÁCH HÀNG THÔNG MINH (SMART BULK PASTE)
+        // ============================================================================
+        let smartPasteParsedItems = [];
+
+        const SAMPLE_RAW_MAKEUP_LIST = `Keo tóc : 9 chai 
+Nền sáng maybeline 110 : 5 chai 
+Nền tối maybeline 115 : 5 chai 
+kích mí mắt : 6 bịch 
+kẻ mắt focalluare : 4 cây 
+xịt khoá nền ARMIS : 4 chai ( 2 đen, 2 trắng) 
+keo mi xixi : 5 chai 
+phấn sáng gella's : 6 cái 
+son romand : 5 cây 
+bột chân mày carsla : 3 hộp 
+6 son wodwod : 6 cây 
+nhũ mắt xixi : 4 hộp 
+phấn phủ ARMIS : 4 hộp 
+má hồng MOON EYES : 6 hộp 
+light sư tử : 2 hộp 
+sáp tóc nam OSJO : 4 hủ 
+mút SELF LOVE : 2 hộp hq
+hộp ghim U : 2 hộp 
+hộp ghim i : 2 hộp
+Bảng màu mắt COLOR ME OUT: 2 bảng
+Che khuyết điểm : 4 cây 
+Má hồng : 2 bảng`;
+
+        function openSmartPasteModal() {
+            const modal = document.getElementById('smart-paste-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            const textarea = document.getElementById('smart-paste-textarea');
+            if (textarea && textarea.value.trim().length > 0) {
+                handleSmartPasteInputChange();
+            } else if (textarea) {
+                textarea.focus();
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeSmartPasteModal() {
+            const modal = document.getElementById('smart-paste-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function clearSmartPasteInput() {
+            const textarea = document.getElementById('smart-paste-textarea');
+            if (textarea) textarea.value = '';
+            smartPasteParsedItems = [];
+            renderSmartPasteList();
+        }
+
+        function pasteSampleListToSmartInput() {
+            const textarea = document.getElementById('smart-paste-textarea');
+            if (textarea) {
+                textarea.value = SAMPLE_RAW_MAKEUP_LIST;
+                handleSmartPasteInputChange();
+            }
+        }
+
+        function parseSmartItemList(text) {
+            if (!text || !text.trim()) return [];
+            const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+            const results = [];
+
+            const commonUnits = ['chai', 'bịch', 'cây', 'cái', 'hộp', 'hủ', 'hũ', 'bảng', 'tuýp', 'thỏi', 'gói', 'bộ', 'miếng', 'cặp', 'lọ', 'vỉ', 'cuộn', 'khay', 'tệp'];
+            const unitRegex = new RegExp(`^(\\d+(?:[.,]\\d+)?)\\s*(${commonUnits.join('|')})(?:\\s+(.*))?$`, 'i');
+
+            for (let rawLine of lines) {
+                let line = rawLine.replace(/^[0-9]+[./)\-]\s*/, '').replace(/^[-*•]\s*/, '').trim();
+                if (!line) continue;
+
+                let name = '';
+                let qty = 1;
+                let unit = 'cái';
+
+                const sepMatch = line.match(/^(.+?)\\s*[:\\t—–]\\s*(.+)$/);
+                if (sepMatch) {
+                    name = sepMatch[1].trim();
+                    const right = sepMatch[2].trim();
+
+                    const m = right.match(unitRegex);
+                    if (m) {
+                        qty = parseFloat(m[1].replace(',', '.')) || 1;
+                        unit = m[2].toLowerCase();
+                        if (m[3]) {
+                            name += ' ' + m[3].trim();
+                        }
+                    } else {
+                        const numOnly = right.match(/^(\\d+(?:[.,]\\d+)?)\\s*(.*)$/);
+                        if (numOnly) {
+                            qty = parseFloat(numOnly[1].replace(',', '.')) || 1;
+                            if (numOnly[2]) unit = numOnly[2].trim();
+                        } else {
+                            name = line;
+                        }
+                    }
+                } else {
+                    const dashMatch = line.match(/^(.+?)\\s+-\\s+(\\d+(?:[.,]\\d+)?)\\s*(.*)$/);
+                    if (dashMatch) {
+                        name = dashMatch[1].trim();
+                        qty = parseFloat(dashMatch[2].replace(',', '.')) || 1;
+                        if (dashMatch[3]) unit = dashMatch[3].trim();
+                    } else {
+                        const endUnitMatch = line.match(new RegExp(`^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s*(${commonUnits.join('|')})(?:\\s+(.*))?$`, 'i'));
+                        if (endUnitMatch) {
+                            name = endUnitMatch[1].trim();
+                            qty = parseFloat(endUnitMatch[2].replace(',', '.')) || 1;
+                            unit = endUnitMatch[3].toLowerCase();
+                            if (endUnitMatch[4]) name += ' ' + endUnitMatch[4].trim();
+                        } else {
+                            name = line;
+                        }
+                    }
+                }
+
+                // Loại bỏ số lặp ở đầu tên sản phẩm (VD: '6 son wodwod : 6 cây')
+                name = name.replace(/^(\\d+)\\s+/, (match, num) => {
+                    if (parseInt(num) === qty) return '';
+                    return match;
+                }).trim();
+
+                if (name) {
+                    results.push({ nameVi: name, qty: Math.max(1, qty), unit });
+                }
+            }
+            return results;
+        }
+
+        function handleSmartPasteInputChange() {
+            const textarea = document.getElementById('smart-paste-textarea');
+            if (!textarea) return;
+            smartPasteParsedItems = parseSmartItemList(textarea.value);
+            renderSmartPasteList();
+        }
+
+        function renderSmartPasteList() {
+            const listEl = document.getElementById('smart-paste-items-list');
+            const badgeEl = document.getElementById('smart-paste-count-badge');
+            const confirmBtn = document.getElementById('btn-confirm-smart-paste');
+            const confirmLbl = document.getElementById('lbl-confirm-smart-paste');
+            if (!listEl) return;
+
+            const count = smartPasteParsedItems.length;
+            if (badgeEl) badgeEl.textContent = `Đã nhận diện: ${count} sản phẩm`;
+            if (confirmLbl) confirmLbl.textContent = count > 0 ? `Xác nhận thêm ${count} sản phẩm` : 'Xác nhận thêm hàng';
+            if (confirmBtn) confirmBtn.disabled = count === 0;
+
+            if (count === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-6 text-slate-400 text-xs italic">
+                        Chưa có dữ liệu. Hãy dán danh sách hoặc bấm "💡 Dùng mẫu thử" ở trên.
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = smartPasteParsedItems.map((item, idx) => `
+                <div class="flex items-center gap-2 p-2.5 bg-slate-50 hover:bg-teal-50/50 rounded-xl border border-slate-200 transition-colors">
+                    <span class="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold text-xs flex items-center justify-center shrink-0">
+                        ${idx + 1}
+                    </span>
+                    <input
+                        type="text"
+                        value="${escapeHtml(item.nameVi)}"
+                        onchange="updateSmartPasteItem(${idx}, 'nameVi', this.value)"
+                        class="flex-1 min-w-0 px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        placeholder="Tên sản phẩm..."
+                    />
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button
+                            type="button"
+                            onclick="updateSmartPasteItem(${idx}, 'qty', Math.max(1, ${item.qty} - 1))"
+                            class="w-6 h-6 rounded bg-white hover:bg-slate-200 border border-slate-300 font-bold text-xs flex items-center justify-center"
+                        >-</button>
+                        <input
+                            type="number"
+                            min="1"
+                            value="${item.qty}"
+                            onchange="updateSmartPasteItem(${idx}, 'qty', Math.max(1, parseInt(this.value) || 1))"
+                            class="w-12 text-center py-1 text-xs sm:text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 no-spinners"
+                        />
+                        <button
+                            type="button"
+                            onclick="updateSmartPasteItem(${idx}, 'qty', ${item.qty} + 1)"
+                            class="w-6 h-6 rounded bg-white hover:bg-slate-200 border border-slate-300 font-bold text-xs flex items-center justify-center"
+                        >+</button>
+                    </div>
+                    <span class="px-2 py-1 bg-white border border-slate-300 text-slate-700 font-semibold text-[11px] rounded-lg shrink-0">
+                        ${escapeHtml(item.unit || 'cái')}
+                    </span>
+                    <button
+                        type="button"
+                        onclick="removeSmartPasteItem(${idx})"
+                        class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                        title="Xóa dòng này"
+                    >
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function updateSmartPasteItem(index, field, value) {
+            if (!smartPasteParsedItems[index]) return;
+            smartPasteParsedItems[index][field] = value;
+            renderSmartPasteList();
+        }
+
+        function removeSmartPasteItem(index) {
+            smartPasteParsedItems.splice(index, 1);
+            renderSmartPasteList();
+        }
+
+        async function confirmExecuteSmartPaste() {
+            if (smartPasteParsedItems.length === 0) return;
+            const itemsToAdd = [...smartPasteParsedItems];
+            const addedCount = itemsToAdd.length;
+
+            for (const raw of itemsToAdd) {
+                const autoZh = MAKEUP_DICT_VI_TO_ZH[raw.nameVi.toLowerCase()] || raw.nameVi;
+                const newItem = {
+                    id: 'prod_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                    month: selectedMonth,
+                    nameVi: raw.nameVi,
+                    nameZh: autoZh || raw.nameVi,
+                    image: DEFAULT_MAKEUP_SVG,
+                    price: 0,
+                    link: '',
+                    quantity: raw.qty || 1,
+                    unit: raw.unit || 'cái',
+                    createdAt: Date.now()
+                };
+                allLoadedProducts.push(newItem);
+                await saveProductToFirebase(newItem);
+            }
+
+            filterProductsForSelectedMonth();
+            renderTable();
+            renderCards();
+            clearSmartPasteInput();
+            closeSmartPasteModal();
+            showToast(`🎉 Đã thêm thành công ${addedCount} sản phẩm vào đề xuất tháng!`);
+        }
+
+        // ============================================================================
         // 15. PHÍM ESCAPE (ESC) ĐỂ ĐÓNG XEM ẢNH & TẤT CẢ CÁC MODAL
         // ============================================================================
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' || e.key === 'Esc' || e.keyCode === 27) {
+                closeSmartPasteModal();
                 closeQuickDeleteModal();
                 closeConfirmDeleteModal();
                 closeImageLinkModal();
@@ -3803,6 +4187,14 @@
 
         // Expose functions to global window
         Object.assign(window, {
+            openSmartPasteModal,
+            closeSmartPasteModal,
+            clearSmartPasteInput,
+            pasteSampleListToSmartInput,
+            handleSmartPasteInputChange,
+            updateSmartPasteItem,
+            removeSmartPasteItem,
+            confirmExecuteSmartPaste,
             setLanguage,
             updateExchangeRate,
             handleSearchAndFilter,
