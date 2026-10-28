@@ -498,37 +498,99 @@
                         BẢNG ĐỀ XUẤT ĐỒ MAKE UP - THÁNG 11/2026
                     </h2>
                 </div>
-                <div class="flex items-center gap-2">
-                    <!-- Nút reset kích thước cột về mặc định cân đối -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <!-- Nút Chuyển đổi Chế độ xem: Dạng Thẻ (Chỉ vuốt dọc) vs Dạng Bảng -->
+                    <div class="inline-flex items-center rounded-xl bg-teal-100/80 p-0.5 border border-teal-300 shadow-2xs no-print shrink-0" role="group" aria-label="Chế độ xem">
+                        <button
+                            id="btn-view-cards"
+                            type="button"
+                            onclick="setViewMode('cards')"
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300"
+                            title="Chế độ xem dạng thẻ: Trực quan, chỉ vuốt lên xuống, không cần cuộn ngang"
+                        >
+                            <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-teal-600"></i>
+                            <span>📱 Dạng thẻ (Chỉ vuốt dọc)</span>
+                        </button>
+                        <button
+                            id="btn-view-table"
+                            type="button"
+                            onclick="setViewMode('table')"
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900"
+                            title="Chế độ xem dạng bảng chi tiết (Desktop)"
+                        >
+                            <i data-lucide="table-properties" class="w-3.5 h-3.5"></i>
+                            <span>📊 Dạng bảng</span>
+                        </button>
+                    </div>
+
+                    <!-- Nút reset kích thước cột (chỉ hiện khi xem dạng bảng) -->
                     <button
+                        id="btn-reset-cols"
                         onclick="resetColumnWidths()"
-                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-teal-800 bg-white hover:bg-teal-100/70 border border-teal-300 shadow-2xs transition-all no-print"
+                        class="hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-teal-800 bg-white hover:bg-teal-100/70 border border-teal-300 shadow-2xs transition-all no-print"
                         title="Đặt lại kích thước các cột về tỉ lệ chuẩn cân đối"
                     >
                         <i data-lucide="rotate-ccw" class="w-3 h-3 text-teal-600"></i>
-                        <span>Cân bằng lại cột</span>
+                        <span class="hidden sm:inline">Cân bằng cột</span>
                     </button>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-teal-800 bg-white border border-teal-300 shadow-2xs no-print">
-                        <i data-lucide="move-horizontal" class="w-3.5 h-3.5 text-teal-600"></i>
-                        <span>Kéo mép cột để chỉnh độ rộng</span>
-                    </span>
                 </div>
             </div>
 
-            <!-- Mobile Swipe Hint Bar (Chỉ hiển thị trên di động / iPhone để người dùng biết có thể vuốt ngang xem đủ bảng) -->
-            <div class="flex items-center justify-between px-4 py-2 bg-teal-50/70 border-b border-teal-100 text-xs text-teal-900 md:hidden no-print">
-                <span class="inline-flex items-center gap-1.5 font-bold">
-                    <i data-lucide="chevrons-left-right" class="w-4 h-4 text-teal-600 animate-pulse"></i>
-                    <span>Vuốt ngang để xem đủ 8 cột</span>
-                </span>
-                <span class="text-[11px] font-semibold text-teal-700 bg-white px-2 py-0.5 rounded-md border border-teal-200">
-                    Bảng đầy đủ
-                </span>
+            <!-- ================================================================= -->
+            <!-- 1. CHẾ ĐỘ XEM DẠNG THẺ (100% TRỰC QUAN, CHỈ VUỐT LÊN XUỐNG)       -->
+            <!-- ================================================================= -->
+            <div id="cards-view-container" class="p-3 sm:p-5 space-y-4">
+                <!-- Feed danh sách thẻ sản phẩm -->
+                <div id="cards-feed" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                    <!-- Populated dynamically by renderCards() -->
+                </div>
+
+                <!-- Thẻ Tổng kết tiền & số lượng (Cards View Summary Card) -->
+                <div id="cards-summary-card" class="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-2xl border-2 border-teal-300 p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <span class="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                            <i data-lucide="calculator" class="w-5 h-5"></i>
+                        </span>
+                        <div>
+                            <h4 class="text-xs font-bold text-teal-900 uppercase tracking-wider">TỔNG TIỀN ĐỀ XUẤT THÁNG</h4>
+                            <p class="text-xs text-slate-600 font-medium" id="cards-summary-count">0 mặt hàng đề xuất</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t sm:border-t-0 pt-2.5 sm:pt-0 border-teal-200">
+                        <div class="text-right">
+                            <div id="cards-total-vnd" class="text-lg sm:text-2xl font-black text-teal-950">0 ₫</div>
+                            <div id="cards-total-cny" class="inline-flex items-center text-xs font-bold text-teal-800 bg-white border border-teal-300 px-2 py-0.5 rounded-md mt-0.5 shadow-2xs">≈ ¥ 0</div>
+                        </div>
+                        <button
+                            type="button"
+                            onclick="openProductModal()"
+                            class="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 shadow-xs flex items-center gap-1.5 active:scale-95 transition-all shrink-0"
+                        >
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                            <span>Thêm món</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Table Wrapper (CHO PHÉP VUỐT NGANG MƯỢT MÀ TRÊN IPHONE & CỐ ĐỊNH TIÊU ĐỀ KHI CUỘN) -->
-            <div class="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-140px)] touch-pan-x" style="-webkit-overflow-scrolling: touch;">
-                <table id="main-spreadsheet-table" class="sheet-table w-full text-left min-w-[920px]">
+            <!-- ================================================================= -->
+            <!-- 2. CHẾ ĐỘ XEM DẠNG BẢNG (TABLE SPREADSHEET TRUYỀN THỐNG)          -->
+            <!-- ================================================================= -->
+            <div id="table-view-container" class="hidden">
+                <!-- Mobile Swipe Hint Bar -->
+                <div class="flex items-center justify-between px-4 py-2 bg-teal-50/70 border-b border-teal-100 text-xs text-teal-900 md:hidden no-print">
+                    <span class="inline-flex items-center gap-1.5 font-bold">
+                        <i data-lucide="chevrons-left-right" class="w-4 h-4 text-teal-600 animate-pulse"></i>
+                        <span>Vuốt ngang để xem đủ 8 cột</span>
+                    </span>
+                    <span class="text-[11px] font-semibold text-teal-700 bg-white px-2 py-0.5 rounded-md border border-teal-200">
+                        Bảng đầy đủ
+                    </span>
+                </div>
+
+                <!-- Table Wrapper (CHO PHÉP VUỐT NGANG MƯỢT MÀ TRÊN IPHONE & CỐ ĐỊNH TIÊU ĐỀ KHI CUỘN) -->
+                <div class="w-full overflow-x-auto overflow-y-auto max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-140px)] touch-pan-x" style="-webkit-overflow-scrolling: touch;">
+                    <table id="main-spreadsheet-table" class="sheet-table w-full text-left min-w-[920px]">
                     <colgroup>
                         <col id="col-idx" style="width: 45px;">
                         <col id="col-product-name" style="width: 310px;">
@@ -651,6 +713,7 @@
                         </tr>
                     </tfoot>
                 </table>
+            </div>
             </div>
         </section>
 
@@ -2462,7 +2525,242 @@
 
             document.getElementById('ui-footer-RowCount').textContent = t.showingCount(filtered.length, products.length);
             updateSummaryTotals();
+            renderCards();
             lucide.createIcons();
+        }
+
+        // ============================================================================
+        // 9B. CHẾ ĐỘ XEM DẠNG THẺ (100% TRỰC QUAN, CHỈ VUỐT LÊN XUỐNG, KHÔNG CUỘN NGANG)
+        // ============================================================================
+        let currentViewMode = localStorage.getItem('makeup_view_mode_proposal') || (window.innerWidth <= 768 ? 'cards' : 'table');
+
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            try {
+                localStorage.setItem('makeup_view_mode_proposal', mode);
+            } catch (e) {}
+
+            const btnCards = document.getElementById('btn-view-cards');
+            const btnTable = document.getElementById('btn-view-table');
+            const btnResetCols = document.getElementById('btn-reset-cols');
+            const tableContainer = document.getElementById('table-view-container');
+            const cardsContainer = document.getElementById('cards-view-container');
+
+            if (mode === 'cards') {
+                if (btnCards) {
+                    btnCards.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300';
+                }
+                if (btnTable) {
+                    btnTable.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900';
+                }
+                if (btnResetCols) btnResetCols.classList.add('hidden');
+                if (tableContainer) tableContainer.classList.add('hidden');
+                if (cardsContainer) cardsContainer.classList.remove('hidden');
+                renderCards();
+            } else {
+                if (btnCards) {
+                    btnCards.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900';
+                }
+                if (btnTable) {
+                    btnTable.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300';
+                }
+                if (btnResetCols) btnResetCols.classList.remove('hidden');
+                if (cardsContainer) cardsContainer.classList.add('hidden');
+                if (tableContainer) tableContainer.classList.remove('hidden');
+                renderTable();
+                applySavedColumnWidths();
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function renderCards() {
+            const container = document.getElementById('cards-feed');
+            if (!container) return;
+            const filtered = getFilteredAndSortedProducts();
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-12 px-4 text-center bg-white rounded-2xl border-2 border-dashed border-teal-200">
+                        <div class="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
+                            <div class="w-12 h-12 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
+                                <i data-lucide="package-search" class="w-6 h-6"></i>
+                            </div>
+                            <p class="text-sm font-bold text-slate-800">Không tìm thấy sản phẩm đề xuất nào</p>
+                            <p class="text-xs text-slate-500">Hãy thêm sản phẩm mới hoặc sao chép từ danh sách tháng trước.</p>
+                            <div class="flex items-center gap-2 mt-2 flex-wrap justify-center">
+                                <button onclick="copyFromPreviousMonth()" class="h-9 px-3 rounded-xl text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 shadow-2xs">
+                                    <i data-lucide="copy-plus" class="w-3.5 h-3.5 inline mr-1"></i> Sao chép tháng trước
+                                </button>
+                                <button onclick="openProductModal()" class="h-9 px-3.5 rounded-xl text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 shadow-2xs">
+                                    + Thêm sản phẩm
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                updateCardsSummary(0, 0, 0);
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            let totalQty = 0;
+            let grandTotalVnd = 0;
+
+            container.innerHTML = filtered.map((item, idx) => {
+                const priceVnd = Number(item.price) || 0;
+                const qty = Number(item.quantity) || 0;
+                const subtotalVnd = priceVnd * qty;
+                totalQty += qty;
+                grandTotalVnd += subtotalVnd;
+                const hasLink = Boolean(item.link && item.link.trim());
+                const displayName = currentLang === 'zh' ? (item.nameZh || item.nameVi) : item.nameVi;
+
+                return `
+                    <div class="bg-white rounded-2xl border-2 border-teal-200/90 hover:border-teal-400 shadow-xs hover:shadow-md transition-all p-3.5 sm:p-4 space-y-3 flex flex-col justify-between">
+                        <!-- Top Row: #STT + Tên sản phẩm + Thao tác -->
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-start gap-2.5 min-w-0 flex-1">
+                                <span class="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                    ${idx + 1}
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="font-bold text-slate-900 text-sm leading-snug break-words" style="overflow-wrap: anywhere;" title="${escapeHtml(displayName)}">
+                                        ${escapeHtml(displayName)}
+                                    </h3>
+                                    ${item.nameZh && currentLang !== 'zh' ? `<p class="text-[11px] text-slate-400 mt-0.5 truncate">${escapeHtml(item.nameZh)}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button
+                                    type="button"
+                                    onclick="openProductModal('${item.id}')"
+                                    class="p-1.5 rounded-lg text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 shadow-2xs active:scale-95 transition-all"
+                                    title="Chỉnh sửa sản phẩm"
+                                >
+                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button
+                                    type="button"
+                                    onclick="openConfirmDeleteModal('${item.id}')"
+                                    class="p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 shadow-2xs active:scale-95 transition-all"
+                                    title="Xóa sản phẩm"
+                                >
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Middle Row: Image + Details -->
+                        <div class="flex items-center gap-3">
+                            <!-- Thumbnail 72x72px -->
+                            <div class="flex flex-col items-center gap-1 shrink-0">
+                                <div class="w-[72px] h-[72px] rounded-xl border border-teal-200 bg-white p-1 overflow-hidden shadow-2xs group/img hover:border-teal-400 transition-colors">
+                                    <img
+                                        src="${item.image || DEFAULT_MAKEUP_SVG}"
+                                        alt="${escapeHtml(displayName)}"
+                                        onclick="openLightbox('${item.id}')"
+                                        onerror="this.src='${DEFAULT_MAKEUP_SVG}'"
+                                        class="w-full h-full object-contain cursor-zoom-in"
+                                        title="Bấm để xem ảnh to"
+                                    />
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onclick="triggerQuickUpload('${item.id}')"
+                                        class="px-1.5 py-0.5 rounded text-[10px] font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200"
+                                        title="Tải ảnh từ máy"
+                                    >
+                                        Máy
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onclick="openImageLinkModal('${item.id}')"
+                                        class="px-1.5 py-0.5 rounded text-[10px] font-semibold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200"
+                                        title="Dán link ảnh"
+                                    >
+                                        Link
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Details Column -->
+                            <div class="min-w-0 flex-1 space-y-2">
+                                <!-- Đơn giá -->
+                                <div class="flex items-baseline justify-between gap-1 flex-wrap">
+                                    <span class="text-xs text-slate-500 font-medium">Đơn giá:</span>
+                                    <div class="text-right">
+                                        <span class="text-xs sm:text-sm font-bold text-slate-900">${formatVND(priceVnd)}</span>
+                                        <span class="text-[10px] text-teal-700 bg-teal-50 border border-teal-200 px-1 py-0.2 rounded ml-1 font-semibold">≈ ${formatCNYFromVND(priceVnd)}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Số lượng Stepper (To, Dễ bấm trên iPhone) -->
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs text-slate-500 font-medium">Số lượng:</span>
+                                    <div class="inline-flex items-center rounded-lg border border-slate-300 bg-slate-50 shadow-2xs">
+                                        <button
+                                            type="button"
+                                            onclick="stepQuantity('${item.id}', -1)"
+                                            class="w-8 h-7 flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 font-bold rounded-l-lg transition-all"
+                                        >-</button>
+                                        <span class="w-10 text-center font-black text-xs text-slate-900">${qty}</span>
+                                        <button
+                                            type="button"
+                                            onclick="stepQuantity('${item.id}', 1)"
+                                            class="w-8 h-7 flex items-center justify-center text-slate-700 hover:bg-slate-200 active:scale-90 font-bold rounded-r-lg transition-all"
+                                        >+</button>
+                                    </div>
+                                </div>
+
+                                <!-- Thành tiền -->
+                                <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
+                                    <span class="text-xs font-bold text-teal-950 uppercase">Thành tiền:</span>
+                                    <div class="text-right">
+                                        <span class="text-sm font-black text-teal-900">${formatVND(subtotalVnd)}</span>
+                                        <span class="text-[10px] font-bold text-teal-700 block">≈ ${formatCNYFromVND(subtotalVnd)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Link Row nếu có -->
+                        ${hasLink ? `
+                            <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                                <a
+                                    href="${escapeHtml(item.link)}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 min-w-0 truncate"
+                                >
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-teal-600 shrink-0"></i>
+                                    <span class="truncate">Mở link đặt hàng</span>
+                                </a>
+                                <button
+                                    type="button"
+                                    onclick="copyProductLink('${item.id}')"
+                                    class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 shadow-2xs shrink-0"
+                                    title="Sao chép link"
+                                >
+                                    <i data-lucide="copy" class="w-3.5 h-3.5 inline"></i> Copy link
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            updateCardsSummary(filtered.length, totalQty, grandTotalVnd);
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function updateCardsSummary(itemsCount, totalQty, grandTotalVnd) {
+            const countEl = document.getElementById('cards-summary-count');
+            const totalVndEl = document.getElementById('cards-total-vnd');
+            const totalCnyEl = document.getElementById('cards-total-cny');
+            if (countEl) countEl.textContent = `${itemsCount} sản phẩm (${totalQty} món)`;
+            if (totalVndEl) totalVndEl.textContent = formatVND(grandTotalVnd);
+            if (totalCnyEl) totalCnyEl.textContent = `≈ ${formatCNYFromVND(grandTotalVnd)}`;
         }
 
         function updateSummaryTotals() {
@@ -3553,7 +3851,9 @@
             changeSelectedMonth,
             navigateMonth,
             copyFromPreviousMonth,
-            resetColumnWidths
+            resetColumnWidths,
+            setViewMode,
+            renderCards
         });
 
         // Initialize app & Firebase & Resizable columns
@@ -3561,6 +3861,7 @@
             setLanguage('vi');
             initFirebaseSync();
             initColumnResizers();
+            setViewMode(currentViewMode);
             if (window.lucide && typeof lucide.createIcons === 'function') {
                 lucide.createIcons();
             }
