@@ -372,7 +372,7 @@
     </header>
 
     <!-- Main Content Container -->
-    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5 pt-14 md:pt-5 pb-24 md:pb-8">
+    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5 pt-14 md:pt-5 pb-28 md:pb-24">
 
         <!-- KPI Summary Cards -->
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -494,6 +494,29 @@
                     <span id="ui-btn-import">Nhập từ Sheet</span>
                 </button>
 
+                <!-- Chế độ xem: Dạng thẻ vs Dạng bảng trực quan ngay trên toolbar -->
+                <div class="inline-flex items-center rounded-xl bg-teal-100/80 p-0.5 border border-teal-300 shadow-2xs mr-1" role="group" aria-label="Chế độ xem">
+                    <button
+                        id="top-btn-view-cards"
+                        type="button"
+                        onclick="setViewMode('cards')"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300"
+                        title="Chế độ xem dạng thẻ: Trực quan, chỉ vuốt lên xuống, không cần cuộn ngang"
+                    >
+                        <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-teal-600"></i>
+                        <span>📱 Dạng thẻ (Chỉ vuốt dọc)</span>
+                    </button>
+                    <button
+                        id="top-btn-view-table"
+                        type="button"
+                        onclick="setViewMode('table')"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900"
+                        title="Chế độ xem dạng bảng chi tiết (Desktop)"
+                    >
+                        <i data-lucide="table-properties" class="w-3.5 h-3.5"></i>
+                        <span>📊 Dạng bảng</span>
+                    </button>
+                </div>
                 <!-- Nút DÁN DANH SÁCH THÔNG MINH -->
                 <button
                     onclick="openSmartPasteModal()"
@@ -1499,6 +1522,85 @@
     <!-- ========================================================================= -->
     <!-- THANH THAO TÁC & TỔNG CỘNG FREEZE CỐ ĐỊNH ĐÁY MÀN HÌNH (MOBILE IPHONE)     -->
     <!-- ========================================================================= -->
+    
+    <!-- ========================================================================= -->
+    <!-- PC POS FREEZE BAR: THANH TỔNG TIỀN & ĐỀ XUẤT CỐ ĐỊNH DƯỚI CÙNG (PC VIEW)   -->
+    <!-- THIẾT KẾ DẠNG MÁY POS TÍNH TIỀN CHUYÊN NGHIỆP, CỐ ĐỊNH VĨNH VIỄN KHI CUỘN   -->
+    <!-- ========================================================================= -->
+    <div id="pc-pos-freeze-bar" class="hidden md:flex fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t-2 border-teal-500 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] px-6 py-2.5 items-center justify-between no-print transition-all">
+        <!-- Bên trái: POS Badge & Thống kê tổng quan -->
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 bg-gradient-to-r from-teal-700 to-emerald-800 text-white px-3 py-1.5 rounded-xl shadow-xs font-black text-xs uppercase tracking-wider shrink-0">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-300 ring-4 ring-emerald-400/40 animate-pulse"></span>
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+                <span>POS ĐỀ XUẤT</span>
+            </div>
+            
+            <div class="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-300">
+                    <span id="pos-stat-items" class="font-extrabold text-teal-900">0</span> mặt hàng
+                </span>
+                <span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-300">
+                    Tổng: <span id="pos-stat-qty" class="font-extrabold text-teal-900">0</span> món đề xuất
+                </span>
+            </div>
+        </div>
+
+        <!-- Ở giữa: Tổng tiền đề xuất to rõ ràng, nổi bật kiểu POS -->
+        <div class="flex items-center gap-3 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 px-5 py-1.5 rounded-xl border border-teal-300 shadow-2xs">
+            <span class="text-xs font-extrabold text-teal-900 uppercase tracking-wide">TỔNG TIỀN ĐỀ XUẤT:</span>
+            <span id="pos-total-vnd" class="text-xl lg:text-2xl font-black text-emerald-800 tracking-tight">0 ₫</span>
+            <span id="pos-total-cny" class="text-xs font-bold text-teal-800 bg-white px-2 py-0.5 rounded-md border border-teal-300 shadow-2xs">≈ ¥ 0</span>
+        </div>
+
+        <!-- Bên phải: Các nút thao tác POS nhanh & Nút chuyển chế độ xem bảng / thẻ -->
+        <div class="flex items-center gap-2 shrink-0">
+            <!-- Nút chuyển đổi nhanh chế độ xem Thẻ / Bảng -->
+            <div class="inline-flex items-center rounded-xl bg-teal-100/80 p-0.5 border border-teal-300 shadow-2xs mr-1" role="group" aria-label="POS Chế độ xem">
+                <button
+                    type="button"
+                    onclick="setViewMode('cards')"
+                    id="pos-btn-view-cards"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-teal-800 hover:text-teal-950"
+                    title="Chuyển sang xem Dạng thẻ (Chỉ vuốt dọc)"
+                >
+                    <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-teal-600"></i>
+                    <span>Dạng thẻ</span>
+                </button>
+                <button
+                    type="button"
+                    onclick="setViewMode('table')"
+                    id="pos-btn-view-table"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300"
+                    title="Chuyển sang xem Dạng bảng chi tiết"
+                >
+                    <i data-lucide="table-properties" class="w-3.5 h-3.5"></i>
+                    <span>Dạng bảng</span>
+                </button>
+            </div>
+
+            <!-- Nút Dán DS Thông minh -->
+            <button
+                type="button"
+                onclick="openSmartPasteModal()"
+                class="h-9 inline-flex items-center gap-1.5 px-3 rounded-lg text-xs font-bold text-teal-950 bg-gradient-to-r from-teal-100 via-emerald-100 to-teal-50 hover:from-teal-200 hover:to-emerald-200 border border-teal-300 transition-all shadow-2xs active:scale-95"
+            >
+                <i data-lucide="sparkles" class="w-4 h-4 text-teal-700"></i>
+                <span>✨ Dán DS thông minh</span>
+            </button>
+
+            <!-- Nút Thêm sản phẩm (Primary Teal) -->
+            <button
+                type="button"
+                onclick="openProductModal()"
+                class="h-9 inline-flex items-center gap-1.5 px-3.5 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 border border-teal-700 shadow-xs transition-all active:scale-95"
+            >
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>+ Thêm món</span>
+            </button>
+        </div>
+    </div>
+
     <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 shadow-xl md:hidden no-print flex flex-col" aria-label="Mobile Quick Actions">
         <!-- DÒNG TỔNG CỘNG FREEZE CỐ ĐỊNH TINH CHỈNH GIAO DIỆN SÁNG ĐẸP HÀI HOÀ -->
         <div id="mobile-freeze-summary" class="h-7.5 px-3 py-1 flex items-center justify-between text-[11px] font-bold bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 border-b border-teal-200/90 text-teal-950 tracking-tight shrink-0 select-none shadow-2xs">
@@ -2725,30 +2827,38 @@
                 localStorage.setItem('makeup_view_mode_proposal', mode);
             } catch (e) {}
 
-            const btnCards = document.getElementById('btn-view-cards');
-            const btnTable = document.getElementById('btn-view-table');
+            const cardsBtns = [
+                document.getElementById('btn-view-cards'),
+                document.getElementById('top-btn-view-cards'),
+                document.getElementById('pos-btn-view-cards')
+            ];
+            const tableBtns = [
+                document.getElementById('btn-view-table'),
+                document.getElementById('top-btn-view-table'),
+                document.getElementById('pos-btn-view-table')
+            ];
             const btnResetCols = document.getElementById('btn-reset-cols');
             const tableContainer = document.getElementById('table-view-container');
             const cardsContainer = document.getElementById('cards-view-container');
 
             if (mode === 'cards') {
-                if (btnCards) {
-                    btnCards.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300';
-                }
-                if (btnTable) {
-                    btnTable.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900';
-                }
+                cardsBtns.forEach(btn => {
+                    if (btn) btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300';
+                });
+                tableBtns.forEach(btn => {
+                    if (btn) btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900';
+                });
                 if (btnResetCols) btnResetCols.classList.add('hidden');
                 if (tableContainer) tableContainer.classList.add('hidden');
                 if (cardsContainer) cardsContainer.classList.remove('hidden');
                 renderCards();
             } else {
-                if (btnCards) {
-                    btnCards.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900';
-                }
-                if (btnTable) {
-                    btnTable.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300';
-                }
+                cardsBtns.forEach(btn => {
+                    if (btn) btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900';
+                });
+                tableBtns.forEach(btn => {
+                    if (btn) btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300';
+                });
                 if (btnResetCols) btnResetCols.classList.remove('hidden');
                 if (cardsContainer) cardsContainer.classList.add('hidden');
                 if (tableContainer) tableContainer.classList.remove('hidden');
@@ -2954,6 +3064,16 @@
             if (mobQty) mobQty.textContent = `${totalQty} món`;
             if (mobVnd) mobVnd.textContent = formatVND(grandTotalVnd);
             if (mobCny) mobCny.textContent = `(≈ ${formatCNYFromVND(grandTotalVnd)})`;
+
+            // Cập nhật thanh PC POS Freeze Bar cố định dưới cùng
+            const posItems = document.getElementById('pos-stat-items');
+            const posQty = document.getElementById('pos-stat-qty');
+            const posVnd = document.getElementById('pos-total-vnd');
+            const posCny = document.getElementById('pos-total-cny');
+            if (posItems) posItems.textContent = proposalProducts.length;
+            if (posQty) posQty.textContent = totalQty;
+            if (posVnd) posVnd.textContent = formatVND(grandTotalVnd);
+            if (posCny) posCny.textContent = `≈ ${formatCNYFromVND(grandTotalVnd)}`;
         }
 
         function updateSummaryTotals() {
