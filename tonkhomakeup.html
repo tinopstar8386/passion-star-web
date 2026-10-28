@@ -193,6 +193,19 @@
         input[type="number"]::-webkit-outer-spin-button {
             opacity: 1;
         }
+    
+        /* KHÓA CUỘN TRANG NỀN TUYỆT ĐỐI KHI ĐANG MỞ BẢNG CHI TIẾT / MODAL */
+        html.modal-open,
+        body.modal-open {
+            overflow: hidden !important;
+            overscroll-behavior: none !important;
+        }
+        .modal-scroll-body {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col overflow-x-hidden selection:bg-teal-100 selection:text-teal-900 bg-slate-100/70">
@@ -202,7 +215,7 @@
 
     <!-- Top Navigation Bar (Tông xanh ngọc & xanh lá dịu mắt) -->
     <header class="fixed top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-teal-200/90 shadow-2xs md:sticky md:top-0">
-        <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3">
+        <div class="hidden md:flex w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-20 items-center justify-between gap-3">
             <!-- Brand & Title kèm Tab switch -->
             <div class="flex items-center gap-3 shrink-0">
                 <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-600 flex items-center justify-center text-white shadow-xs border border-teal-600/30 shrink-0">
@@ -290,25 +303,36 @@
             </div>
         </div>
 
-        <!-- Mobile Module Tabs Bar -->
-        <div class="md:hidden border-t border-teal-100 bg-teal-50/50 px-4 py-1.5 flex items-center justify-center gap-2 no-print">
-            <a
-                href="tonmakeup.html"
-                class="flex-1 text-center py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-teal-100/60"
-            >
-                🛒 Đề xuất mua sắm
-            </a>
-            <a
-                href="tonkhomakeup.html"
-                class="flex-1 text-center py-1.5 rounded-lg text-xs font-bold bg-white text-teal-800 border border-teal-300 shadow-2xs"
-            >
-                📦 Quản lý tồn kho
-            </a>
+        <!-- 2. MOBILE VIEW (< 768px): FREEZE CỐ ĐỊNH TRÊN ĐẦU, ẨN HEADER CHÍNH, CHỈ HIỆN 2 TAB & ĐIỀU KHIỂN NHẸ -->
+        <div class="md:hidden px-2.5 py-1.5 flex items-center justify-between gap-1.5 no-print bg-white/95">
+            <!-- 2 Tabs chuyển đổi chính -->
+            <div class="flex-1 flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-300 shadow-2xs gap-1" role="tablist">
+                <a
+                    href="tonmakeup.html"
+                    class="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold text-center flex items-center justify-center gap-1 transition-all text-slate-600 hover:text-teal-700"
+                >
+                    <span>🛒</span>
+                    <span class="truncate">Đề xuất mua</span>
+                </a>
+                <a
+                    href="tonkhomakeup.html"
+                    class="flex-1 py-1.5 px-2 rounded-lg text-xs font-black text-center flex items-center justify-center gap-1 transition-all bg-white text-teal-800 border border-teal-300 shadow-xs"
+                >
+                    <span>📦</span>
+                    <span class="truncate">Quản lý kho</span>
+                </a>
+            </div>
+
+            <!-- Language Buttons Mini -->
+            <div class="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-300 shrink-0">
+                <button onclick="setLanguage('vi')" id="btn-lang-vi-mob" class="px-1.5 py-1 text-xs font-bold rounded bg-white text-teal-700 shadow-2xs" title="Tiếng Việt">🇻🇳</button>
+                <button onclick="setLanguage('zh')" id="btn-lang-zh-mob" class="px-1.5 py-1 text-xs font-semibold rounded text-slate-600" title="中文">🇨🇳</button>
+            </div>
         </div>
     </header>
 
     <!-- Main Container -->
-    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5 pt-14 md:pt-5 pb-28 md:pb-24">
+    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-5 pt-16 md:pt-5 pb-28 md:pb-24">
 
         <!-- Top Overview Stats (4 Thẻ KPI Tồn kho Chuyên nghiệp) -->
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 no-print">
@@ -375,13 +399,13 @@
             <!-- Left: Search & Filter -->
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
                 <!-- Search Input -->
-                <div class="relative flex-1 max-w-md h-10">
+                <div class="relative flex-1 min-w-[200px] max-w-md h-10">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                     <input
                         id="search-input"
                         type="text"
                         oninput="handleSearchAndFilter()"
-                        placeholder="Tìm mã SKU, tên vật liệu, vị trí kho..."
+                        placeholder="Tìm tên vật liệu, danh mục, vị trí kho..."
                         class="w-full h-full pl-9 pr-8 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
                     />
                     <button
@@ -434,30 +458,6 @@
 
             <!-- Right Actions: Nhập kho, Xuất kho, Lịch sử, Thêm mới -->
             <div class="flex flex-wrap items-center gap-2">
-                <!-- Chế độ xem: Dạng thẻ vs Dạng bảng trực quan ngay trên toolbar -->
-                <div class="inline-flex items-center rounded-xl bg-teal-100/80 p-0.5 border border-teal-300 shadow-2xs mr-1" role="group" aria-label="Chế độ xem">
-                    <button
-                        id="top-btn-view-cards"
-                        type="button"
-                        onclick="setViewMode('cards')"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300"
-                        title="Chế độ xem dạng thẻ: Trực quan, chỉ vuốt lên xuống, không cần cuộn ngang"
-                    >
-                        <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-teal-600"></i>
-                        <span>📱 Dạng thẻ (Chỉ vuốt dọc)</span>
-                    </button>
-                    <button
-                        id="top-btn-view-table"
-                        type="button"
-                        onclick="setViewMode('table')"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900"
-                        title="Chế độ xem dạng bảng chi tiết (Desktop)"
-                    >
-                        <i data-lucide="table-properties" class="w-3.5 h-3.5"></i>
-                        <span>📊 Dạng bảng</span>
-                    </button>
-                </div>
-                
                     <!-- Nút NHẬP KHO (+) -->
                 <button
                     onclick="openInboundModal()"
@@ -620,7 +620,7 @@
                 </div>
 
                 <!-- Table Wrapper (KHÔNG TRAP SCROLLBAR, MƯỢT MÀ VĨNH VIỄN) -->
-                <div class="table-scroll-wrapper w-full overflow-x-auto lg:overflow-x-hidden touch-pan-x" style="-webkit-overflow-scrolling: touch;">
+                <div class="table-scroll-wrapper w-full overflow-x-auto lg:overflow-x-hidden" style="-webkit-overflow-scrolling: touch;">
                     <table id="main-spreadsheet-table" class="sheet-table w-full text-left">
                     <colgroup>
                         <col id="col-idx" style="width: 45px;">
@@ -781,23 +781,23 @@
             </div>
             
             <div class="flex items-center gap-2 text-xs font-semibold text-slate-600">
-                <span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-300">
+                <span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-300 whitespace-nowrap shrink-0">
                     <span id="pos-stat-items" class="font-extrabold text-teal-900">0</span> loại vật liệu
                 </span>
-                <span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-300">
+                <span class="bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-300 whitespace-nowrap shrink-0">
                     Tổng tồn: <span id="pos-stat-qty" class="font-extrabold text-teal-900">0</span>
                 </span>
-                <span id="pos-stat-alert-badge" class="bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg border border-amber-300 font-bold hidden">
+                <span id="pos-stat-alert-badge" class="bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg border border-amber-300 font-bold whitespace-nowrap shrink-0 hidden">
                     ⚠️ <span id="pos-stat-alert-count">0</span> cần nhập gấp
                 </span>
             </div>
         </div>
 
         <!-- Ở giữa: Tổng giá trị kho to rõ ràng kiểu POS -->
-        <div class="flex items-center gap-3 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 px-5 py-1.5 rounded-xl border border-teal-300 shadow-2xs">
-            <span class="text-xs font-extrabold text-teal-900 uppercase tracking-wide">TỔNG GIÁ TRỊ TỒN KHO:</span>
-            <span id="pos-total-vnd" class="text-xl lg:text-2xl font-black text-emerald-800 tracking-tight">0 ₫</span>
-            <span id="pos-total-cny" class="text-xs font-bold text-teal-800 bg-white px-2 py-0.5 rounded-md border border-teal-300 shadow-2xs">≈ ¥ 0</span>
+        <div class="flex items-center gap-2.5 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 px-4 py-1.5 rounded-xl border border-teal-300 shadow-2xs whitespace-nowrap shrink-0">
+            <span class="text-xs font-extrabold text-teal-900 uppercase tracking-wide whitespace-nowrap">TỔNG GIÁ TRỊ TỒN KHO:</span>
+            <span id="pos-total-vnd" class="text-lg lg:text-xl font-black text-emerald-800 tracking-tight whitespace-nowrap">0 ₫</span>
+            <span id="pos-total-cny" class="text-xs font-bold text-teal-800 bg-white px-2 py-0.5 rounded-md border border-teal-300 shadow-2xs whitespace-nowrap">≈ ¥ 0</span>
         </div>
 
         <!-- Bên phải: Các nút thao tác POS nhanh & Nút chuyển chế độ xem bảng / thẻ -->
@@ -912,7 +912,8 @@
 
     <div
         id="smart-paste-modal"
-        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+        onclick="closeSmartPasteModal()"
+        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain animate-in fade-in duration-150"
     >
         <div class="bg-white rounded-t-2xl sm:rounded-2xl border-2 border-teal-300 shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
             <!-- Header -->
@@ -936,7 +937,7 @@
             </div>
 
             <!-- Modal Body (Scrollable Y) -->
-            <div class="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+            <div class="modal-scroll-body p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-4 flex-1">
                 <!-- Textarea input & Quick buttons -->
                 <div class="space-y-2">
                     <div class="flex items-center justify-between flex-wrap gap-1.5">
@@ -1021,9 +1022,10 @@
     <!-- ========================================================================= -->
     <div
         id="quick-delete-modal"
-        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+        onclick="closeQuickDeleteModal()"
+        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain animate-in fade-in duration-150"
     >
-        <div class="bg-white rounded-t-2xl sm:rounded-2xl border border-red-200 shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl border border-red-200 shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
             <!-- Header -->
             <div class="px-5 py-3.5 bg-red-50/80 border-b border-red-200 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2">
@@ -1093,248 +1095,247 @@
     </footer>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 1: THÊM / CHỈNH SỬA VẬT LIỆU TỒN KHO                                -->
+    <!-- MODAL 1: THÊM / CHỈNH SỬA VẬT LIỆU (ĐỒNG BỘ TRỰC QUAN GIỐNG BÊN ĐỀ XUẤT, CUỘN MƯỢT 100%) -->
     <!-- ========================================================================= -->
-    <div id="item-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-2xl w-full border-2 border-teal-300 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
-            <!-- Modal Header -->
-            <div class="px-5 py-4 bg-teal-50 border-b border-teal-200 flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center">
+    <div id="item-modal" onclick="closeItemModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-2.5 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-teal-300 shadow-2xl flex flex-col max-h-[86dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
+            <!-- Modal Header (Sticky Top - Không bao giờ bị mất nút tắt) -->
+            <div class="px-4 sm:px-5 py-3.5 bg-teal-50 border-b border-teal-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center shrink-0">
                         <i data-lucide="package-plus" class="w-4 h-4"></i>
                     </div>
-                    <div>
-                        <h3 id="item-modal-title" class="font-bold text-slate-900 text-base">Thêm vật liệu vào kho</h3>
-                        <p class="text-xs text-slate-500">Khai báo mã hàng, đơn vị tính, mức tồn an toàn và giá vốn</p>
+                    <div class="min-w-0">
+                        <h3 id="item-modal-title" class="font-bold text-slate-900 text-sm sm:text-base truncate">Thêm vật liệu vào kho</h3>
+                        <p class="text-[11px] text-slate-500 truncate">Chỉnh sửa thông tin, tồn kho & giá vốn trực quan</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeItemModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+                <button type="button" onclick="closeItemModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors shrink-0" title="Đóng bảng (Esc)">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
-            <!-- Modal Form -->
-            <form id="item-form" onsubmit="handleItemFormSubmit(event)" class="p-5 space-y-4">
+            <!-- Modal Form (Scrollable Body + Sticky Footer) -->
+            <form id="item-form" onsubmit="handleItemFormSubmit(event)" class="flex flex-col flex-1 min-h-0 overflow-hidden">
                 <input type="hidden" id="item-form-id" value="" />
+                <input type="hidden" id="item-form-sku" value="" />
 
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <!-- Mã SKU -->
+                <!-- Vùng cuộn độc lập bên trong bảng chi tiết -->
+                <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-3.5">
+                    <!-- 1. Tên vật liệu (Tiếng Việt) + Bản dịch Tiếng Trung gọn 1 dòng giống bên Đề xuất -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Mã SKU / Barcode *</label>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                            Tên vật liệu (Tự động dịch sang Tiếng Trung) *
+                        </label>
                         <input
                             type="text"
-                            id="item-form-sku"
+                            id="item-form-name-vi"
                             required
-                            placeholder="VD: MK-MI-001"
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-teal-500"
+                            oninput="debounceItemTranslate(this.value)"
+                            placeholder="VD: mút SELF LOVE hq, Keo mi xixi..."
+                            class="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 shadow-2xs"
                         />
-                    </div>
-
-                    <!-- Danh mục -->
-                    <div>
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="text-xs font-bold text-slate-700">Danh mục phân loại *</label>
-                            <button
-                                type="button"
-                                onclick="openCategoryManageModal()"
-                                class="text-[11px] font-bold text-teal-700 hover:text-teal-900 inline-flex items-center gap-1 transition-colors"
-                                title="Mở bảng quản lý thêm, sửa, xóa danh mục"
-                            >
-                                <i data-lucide="folder-cog" class="w-3 h-3 text-teal-600"></i>
-                                <span>Quản lý</span>
-                            </button>
-                        </div>
-                        <select
-                            id="item-form-category"
-                            required
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-teal-500"
-                        >
-                            <option value="Lông mi & Keo">Lông mi & Keo</option>
-                            <option value="Son môi">Son môi</option>
-                            <option value="Cọ & Mút">Cọ & Mút</option>
-                            <option value="Phấn & Má hồng">Phấn & Má hồng</option>
-                            <option value="Kem nền & Che khuyết điểm">Kem nền & Che khuyết điểm</option>
-                            <option value="Tẩy trang & Phụ kiện">Tẩy trang & Phụ kiện</option>
-                            <option value="Dụng cụ khác">Dụng cụ khác</option>
-                        </select>
-                    </div>
-
-                    <!-- Đơn vị tính -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Đơn vị tính (ĐVT) *</label>
-                        <input
-                            type="text"
-                            id="item-form-unit"
-                            required
-                            placeholder="Hộp, Cây, Vỉ, Chai..."
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-teal-500"
-                        />
-                    </div>
-                </div>
-
-                <!-- Tên tiếng Việt -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Tên vật liệu (Tiếng Việt) *</label>
-                    <input
-                        type="text"
-                        id="item-form-name-vi"
-                        required
-                        oninput="debounceItemTranslate(this.value)"
-                        placeholder="VD: Mi Faneves mã SJ122, Son kem lì tone đất..."
-                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-teal-500"
-                    />
-                </div>
-
-                <!-- Tên tiếng Trung (tự động dịch) -->
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label class="text-xs font-bold text-slate-700">Tên tiếng Trung (中文名称)</label>
-                        <div class="flex items-center gap-1.5">
-                            <span id="item-translate-indicator" class="text-[11px] text-teal-600 hidden font-medium">Đang dịch...</span>
-                            <button
-                                type="button"
-                                onclick="triggerManualTranslate()"
-                                class="px-2 py-0.5 text-[11px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-md transition-all inline-flex items-center gap-1 shadow-2xs"
-                                title="Bấm để dịch tự động tên tiếng Việt sang tiếng Trung ngay lập tức"
-                            >
-                                <i data-lucide="languages" class="w-3 h-3 text-teal-600"></i>
-                                <span>⚡ Dịch tự động</span>
-                            </button>
-                        </div>
-                    </div>
-                    <input
-                        type="text"
-                        id="item-form-name-zh"
-                        placeholder="Tự động dịch hoặc nhập tay..."
-                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-teal-500 font-sans"
-                    />
-                </div>
-
-                <!-- Tồn kho & Mức cảnh báo & Giá vốn -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-teal-50/50 p-3 rounded-xl border border-teal-200">
-                    <div>
-                        <label class="block text-xs font-bold text-teal-900 mb-1">Tồn kho hiện tại *</label>
-                        <input
-                            type="number"
-                            id="item-form-stock"
-                            required
-                            min="0"
-                            step="1"
-                            value="0"
-                            class="w-full px-3 py-1.5 bg-white border border-teal-300 rounded-lg text-sm font-black text-slate-900 text-center focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-amber-900 mb-1">Mức tồn tối thiểu (Min) *</label>
-                        <input
-                            type="number"
-                            id="item-form-min-stock"
-                            required
-                            min="0"
-                            step="1"
-                            value="5"
-                            title="Nếu số lượng tồn <= số này, hệ thống sẽ báo động cần nhập thêm"
-                            class="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-sm font-black text-amber-900 text-center focus:outline-none focus:ring-1 focus:ring-amber-500"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-teal-900 mb-1">Giá vốn nhập (VNĐ)</label>
-                        <input
-                            type="number"
-                            id="item-form-cost-price"
-                            min="0"
-                            step="100"
-                            value="0"
-                            placeholder="0 ₫"
-                            class="w-full px-3 py-1.5 bg-white border border-teal-300 rounded-lg text-sm font-black text-slate-900 text-right focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        />
-                    </div>
-                </div>
-
-                <!-- Vị trí kho & Nhà cung cấp -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Vị trí lưu kho</label>
-                        <input
-                            type="text"
-                            id="item-form-location"
-                            placeholder="VD: Kệ A1, Ngăn mi B, Tủ cốp 2..."
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-teal-500"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nguồn hàng / Nhà cung cấp</label>
-                        <input
-                            type="text"
-                            id="item-form-supplier"
-                            placeholder="VD: Taobao Shop, Nhà phân phối X..."
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-teal-500"
-                        />
-                    </div>
-                </div>
-
-                <!-- Hình ảnh & Link -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Hình ảnh vật liệu</label>
-                    <div class="flex items-center gap-3">
-                        <div class="w-14 h-14 rounded-xl border border-teal-300 bg-white p-1 overflow-hidden shrink-0">
-                            <img id="item-form-img-preview" src="" alt="Preview" class="w-full h-full object-contain" />
-                        </div>
-                        <div class="flex-1 space-y-1.5">
-                            <input
-                                type="text"
-                                id="item-form-image"
-                                oninput="updateItemFormImgPreview(this.value)"
-                                placeholder="Dán link ảnh URL..."
-                                class="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:bg-white focus:border-teal-500"
-                            />
-                            <div class="flex items-center gap-2">
-                                <label class="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300">
-                                    <i data-lucide="upload" class="w-3 h-3 text-teal-600"></i>
-                                    <span>Chọn ảnh từ máy</span>
-                                    <input type="file" accept="image/*" class="hidden" onchange="handleItemFormFileUpload(event)" />
-                                </label>
-                                <button type="button" onclick="clearItemFormImage()" class="text-xs text-red-500 hover:text-red-700">Xóa ảnh</button>
+                        <!-- Thanh Bản dịch Tiếng Trung gọn 1 dòng ngay bên dưới -->
+                        <div class="mt-1.5 px-3 py-1.5 rounded-lg bg-teal-50/60 border border-teal-200 flex items-center justify-between gap-2 text-xs">
+                            <span class="text-slate-600 font-semibold flex items-center gap-1 shrink-0">
+                                <i data-lucide="languages" class="w-3.5 h-3.5 text-teal-600"></i>
+                                <span>Tiếng Trung:</span>
+                                <span id="item-translate-indicator" class="text-[10px] text-teal-600 hidden font-medium">(Đang dịch...)</span>
+                            </span>
+                            <div class="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+                                <input
+                                    type="text"
+                                    id="item-form-name-zh"
+                                    placeholder="Tự động dịch..."
+                                    class="bg-transparent font-bold text-slate-900 text-right border-none focus:outline-none text-xs w-full min-w-0 truncate"
+                                />
+                                <button
+                                    type="button"
+                                    onclick="triggerManualTranslate()"
+                                    class="px-1.5 py-0.5 text-[10px] font-bold text-teal-800 bg-white hover:bg-teal-100 border border-teal-300 rounded transition-all shrink-0 shadow-2xs"
+                                    title="Dịch tự động ngay"
+                                >
+                                    ⚡ Dịch
+                                </button>
                             </div>
                         </div>
                     </div>
+
+                    <!-- 2. Danh mục phân loại & Đơn vị tính (2 cột ngang hàng gọn gàng trên cả Mobile & PC) -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-xs font-bold text-slate-700">Danh mục *</label>
+                                <button
+                                    type="button"
+                                    onclick="openCategoryManageModal()"
+                                    class="text-[11px] font-bold text-teal-700 hover:text-teal-900 inline-flex items-center gap-0.5 transition-colors"
+                                    title="Quản lý danh mục"
+                                >
+                                    <i data-lucide="folder-cog" class="w-3 h-3 text-teal-600"></i>
+                                    <span>Quản lý</span>
+                                </button>
+                            </div>
+                            <select
+                                id="item-form-category"
+                                required
+                                class="w-full px-2.5 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:border-teal-500 shadow-2xs"
+                            >
+                                <option value="Lông mi & Keo">Lông mi & Keo</option>
+                                <option value="Son môi">Son môi</option>
+                                <option value="Cọ & Mút">Cọ & Mút</option>
+                                <option value="Phấn & Má hồng">Phấn & Má hồng</option>
+                                <option value="Kem nền & Che khuyết điểm">Kem nền & Che khuyết điểm</option>
+                                <option value="Tẩy trang & Phụ kiện">Tẩy trang & Phụ kiện</option>
+                                <option value="Dụng cụ khác">Dụng cụ khác</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Đơn vị tính (ĐVT) *</label>
+                            <input
+                                type="text"
+                                id="item-form-unit"
+                                required
+                                placeholder="Hộp, Chai, Cây..."
+                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:border-teal-500 shadow-2xs"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- 3. Giá vốn, Tồn hiện tại & Tồn tối thiểu (3 cột trên 1 hàng duy nhất, không kéo dài bảng) -->
+                    <div class="grid grid-cols-3 gap-2.5 bg-teal-50/50 p-2.5 rounded-xl border border-teal-200">
+                        <div>
+                            <label class="block text-[11px] font-bold text-teal-900 mb-1 truncate">Giá vốn (VNĐ)</label>
+                            <input
+                                type="number"
+                                id="item-form-cost-price"
+                                min="0"
+                                step="any"
+                                value="0"
+                                placeholder="0"
+                                oninput="updateItemModalSubtotalPreview()"
+                                class="w-full px-2.5 py-2 bg-white border border-teal-300 rounded-lg text-xs sm:text-sm font-black text-slate-900 text-right focus:outline-none focus:ring-1 focus:ring-teal-500"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-teal-900 mb-1 truncate">Tồn hiện tại *</label>
+                            <input
+                                type="number"
+                                id="item-form-stock"
+                                required
+                                min="0"
+                                step="1"
+                                value="1"
+                                oninput="updateItemModalSubtotalPreview()"
+                                class="w-full px-2.5 py-2 bg-white border border-teal-300 rounded-lg text-xs sm:text-sm font-black text-slate-900 text-center focus:outline-none focus:ring-1 focus:ring-teal-500"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-amber-900 mb-1 truncate" title="Mức cảnh báo sắp hết hàng">Tồn tối thiểu *</label>
+                            <input
+                                type="number"
+                                id="item-form-min-stock"
+                                required
+                                min="0"
+                                step="1"
+                                value="2"
+                                class="w-full px-2.5 py-2 bg-white border border-amber-300 rounded-lg text-xs sm:text-sm font-black text-amber-900 text-center focus:outline-none focus:ring-1 focus:ring-amber-500"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- 4. Thanh Tổng giá trị tồn dự kiến (Giống hệt Thành tiền dự kiến bên Đề xuất) -->
+                    <div class="bg-teal-50 border border-teal-300 rounded-lg px-3.5 py-2 flex items-center justify-between">
+                        <span class="text-xs font-bold text-teal-950 uppercase">Tổng giá trị tồn dự kiến:</span>
+                        <span id="item-modal-subtotal-preview" class="text-sm sm:text-base font-black text-teal-700">0 ₫</span>
+                    </div>
+
+                    <!-- 5. Nguồn hàng / Link mua & Vị trí lưu kho (2 cột ngang hàng) -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1 truncate">Nguồn hàng / Link mua</label>
+                            <input
+                                type="text"
+                                id="item-form-supplier"
+                                placeholder="Taobao, Shopee, NCC..."
+                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-teal-500 shadow-2xs"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1 truncate">Vị trí lưu kho</label>
+                            <input
+                                type="text"
+                                id="item-form-location"
+                                placeholder="VD: Kệ chính, Tủ A..."
+                                class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-teal-500 shadow-2xs"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- 6. Hình ảnh vật liệu (Giống hệt bên Đề xuất) -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Hình ảnh vật liệu (Tải ảnh hoặc dán Link)</label>
+                        <div class="flex items-center gap-3">
+                            <div class="w-14 h-14 rounded-xl border border-teal-300 bg-teal-50/50 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                                <img id="item-form-img-preview" src="" alt="Preview" class="w-full h-full object-contain" />
+                            </div>
+                            <div class="flex-1 space-y-1.5 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <label class="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 shadow-2xs">
+                                        <i data-lucide="upload" class="w-3.5 h-3.5 text-teal-600"></i>
+                                        <span>Tải ảnh từ máy</span>
+                                        <input type="file" accept="image/*" class="hidden" onchange="handleItemFormFileUpload(event)" />
+                                    </label>
+                                    <button type="button" onclick="clearItemFormImage()" class="text-xs font-semibold text-red-500 hover:text-red-700">Xóa ảnh</button>
+                                </div>
+                                <input
+                                    type="text"
+                                    id="item-form-image"
+                                    oninput="updateItemFormImgPreview(this.value)"
+                                    placeholder="Hoặc dán đường dẫn link ảnh (https://...)"
+                                    class="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-teal-500 shadow-2xs"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 7. Ghi chú gọn 1 dòng -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Ghi chú thêm (Mã màu, Tone da, Lưu ý...)</label>
+                        <input
+                            type="text"
+                            id="item-form-note"
+                            placeholder="Nhập ghi chú ngắn gọn..."
+                            class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-teal-500 shadow-2xs"
+                        />
+                    </div>
                 </div>
 
-                <!-- Ghi chú -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Ghi chú (Hạn sử dụng, Tone da, Lưu ý...)</label>
-                    <textarea
-                        id="item-form-note"
-                        rows="2"
-                        placeholder="Nhập ghi chú thêm..."
-                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:bg-white focus:border-teal-500"
-                    ></textarea>
-                </div>
-
-                <!-- Modal Actions -->
-                <div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
+                <!-- Modal Actions (Sticky Bottom Footer - Luôn cố định dưới đáy bảng, bấm Lưu / Hủy mọi lúc) -->
+                <div class="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
                     <div>
                         <button
                             id="item-form-delete-btn"
                             type="button"
                             onclick="handleItemModalDelete()"
-                            class="hidden px-3.5 py-2 rounded-lg text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors inline-flex items-center gap-1.5"
+                            class="hidden px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors inline-flex items-center gap-1"
                         >
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            <span>Xóa vật liệu này</span>
+                            <span>Xóa món</span>
                         </button>
                     </div>
                     <div class="flex items-center gap-2">
                         <button
                             type="button"
                             onclick="closeItemModal()"
-                            class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-slate-300"
+                            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 shadow-2xs"
                         >
-                            Hủy
+                            Hủy / Đóng
                         </button>
                         <button
                             type="submit"
-                            class="px-5 py-2 rounded-lg text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 border border-teal-700 shadow-xs"
+                            class="px-5 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 border border-teal-700 shadow-xs"
                         >
                             Lưu vào kho
                         </button>
@@ -1347,126 +1348,123 @@
     <!-- ========================================================================= -->
     <!-- MODAL 2: PHIẾU NHẬP KHO (INBOUND MODAL)                                     -->
     <!-- ========================================================================= -->
-    <div id="inbound-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-emerald-300 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
-            <div class="px-5 py-4 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between">
+    <div id="inbound-modal" onclick="closeInboundModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-2.5 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-emerald-300 shadow-2xl flex flex-col max-h-[86dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
+            <div class="px-5 py-3.5 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
                         <i data-lucide="arrow-down-to-dot" class="w-4 h-4"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-slate-900 text-base">Tạo Phiếu Nhập Kho</h3>
-                        <p class="text-xs text-slate-500">Cộng thêm số lượng tồn kho và ghi nhật ký giao dịch</p>
+                        <h3 class="font-bold text-slate-900 text-sm sm:text-base">Tạo Phiếu Nhập Kho</h3>
+                        <p class="text-[11px] text-slate-500">Cộng thêm số lượng tồn kho và ghi nhật ký giao dịch</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeInboundModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+                <button type="button" onclick="closeInboundModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors shrink-0">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
-            <form onsubmit="handleInboundSubmit(event)" class="p-5 space-y-4">
-                <!-- Chọn vật liệu -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Chọn vật liệu nhập kho *</label>
-                    <select
-                        id="inbound-item-select"
-                        required
-                        onchange="handleInboundItemChange(this.value)"
-                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-emerald-500"
-                    >
-                        <!-- Populated dynamically -->
-                    </select>
-                </div>
-
-                <!-- Tồn kho hiện tại info card -->
-                <div id="inbound-current-info" class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
+            <form onsubmit="handleInboundSubmit(event)" class="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-3.5">
+                    <!-- Chọn vật liệu -->
                     <div>
-                        <p class="text-xs font-semibold text-emerald-900" id="inbound-info-name">Chưa chọn</p>
-                        <p class="text-[11px] text-slate-600" id="inbound-info-sku">SKU: --</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs font-bold text-slate-500">Tồn hiện có</p>
-                        <p class="text-base font-black text-emerald-800" id="inbound-info-stock">0</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <!-- Số lượng nhập -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Số lượng nhập (+) *</label>
-                        <input
-                            type="number"
-                            id="inbound-qty"
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Chọn vật liệu nhập kho *</label>
+                        <select
+                            id="inbound-item-select"
                             required
-                            min="1"
-                            step="1"
-                            value="1"
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-base font-black text-emerald-800 text-center focus:outline-none focus:bg-white focus:border-emerald-500"
-                        />
+                            onchange="handleInboundItemChange(this.value)"
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-emerald-500"
+                        >
+                            <!-- Populated dynamically -->
+                        </select>
                     </div>
 
-                    <!-- Đơn giá nhập -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Đơn giá nhập (VNĐ)</label>
-                        <input
-                            type="number"
-                            id="inbound-price"
-                            min="0"
-                            step="100"
-                            placeholder="0 ₫"
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold text-right focus:outline-none focus:bg-white focus:border-emerald-500"
-                        />
+                    <!-- Tồn kho hiện tại info card -->
+                    <div id="inbound-current-info" class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-emerald-900" id="inbound-info-name">Chưa chọn</p>
+                            <p class="text-[11px] text-slate-600" id="inbound-info-sku">ĐVT: --</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-slate-500">Tồn hiện có</p>
+                            <p class="text-base font-black text-emerald-800" id="inbound-info-stock">0</p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <!-- Người nhập -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Số lượng nhập (+) *</label>
+                            <input
+                                type="number"
+                                id="inbound-qty"
+                                required
+                                min="1"
+                                step="1"
+                                value="1"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-base font-black text-emerald-800 text-center focus:outline-none focus:bg-white focus:border-emerald-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Đơn giá nhập (VNĐ)</label>
+                            <input
+                                type="number"
+                                id="inbound-price"
+                                min="0"
+                                step="any"
+                                placeholder="0 ₫"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold text-right focus:outline-none focus:bg-white focus:border-emerald-500"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Người thực hiện *</label>
+                            <input
+                                type="text"
+                                id="inbound-operator"
+                                required
+                                value="Quản lý kho"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-emerald-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Nguồn hàng / NCC</label>
+                            <input
+                                type="text"
+                                id="inbound-supplier"
+                                placeholder="Shop / Nhà cung cấp..."
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-emerald-500"
+                            />
+                        </div>
+                    </div>
+
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Người thực hiện *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Ghi chú phiếu nhập</label>
                         <input
                             type="text"
-                            id="inbound-operator"
-                            required
-                            value="Quản lý kho"
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-emerald-500"
-                        />
-                    </div>
-
-                    <!-- Nhà cung cấp / Nguồn -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nguồn hàng / NCC</label>
-                        <input
-                            type="text"
-                            id="inbound-supplier"
-                            placeholder="Shop / Nhà cung cấp..."
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-emerald-500"
+                            id="inbound-note"
+                            placeholder="VD: Nhập bổ sung đồ tháng 11, hàng đợt 1..."
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:bg-white focus:border-emerald-500"
                         />
                     </div>
                 </div>
 
-                <!-- Ghi chú nhập -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Ghi chú phiếu nhập</label>
-                    <input
-                        type="text"
-                        id="inbound-note"
-                        placeholder="VD: Nhập bổ sung đồ tháng 11, hàng đợt 1..."
-                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:bg-white focus:border-emerald-500"
-                    />
-                </div>
-
-                <!-- Actions -->
-                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <!-- Sticky Footer -->
+                <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
                     <button
                         type="button"
                         onclick="closeInboundModal()"
-                        class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-slate-300"
+                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300"
                     >
                         Hủy
                     </button>
                     <button
                         type="submit"
-                        class="px-5 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 shadow-xs"
+                        class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 shadow-xs"
                     >
                         Xác nhận Nhập kho
                     </button>
@@ -1478,130 +1476,125 @@
     <!-- ========================================================================= -->
     <!-- MODAL 3: PHIẾU XUẤT KHO (OUTBOUND MODAL)                                    -->
     <!-- ========================================================================= -->
-    <div id="outbound-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-amber-300 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
-            <div class="px-5 py-4 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
+    <div id="outbound-modal" onclick="closeOutboundModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-2.5 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-amber-300 shadow-2xl flex flex-col max-h-[86dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
+            <div class="px-5 py-3.5 bg-amber-50 border-b border-amber-200 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center">
+                    <div class="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0">
                         <i data-lucide="arrow-up-from-dot" class="w-4 h-4"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-slate-900 text-base">Tạo Phiếu Xuất Kho</h3>
-                        <p class="text-xs text-slate-500">Trừ số lượng tồn và xuất cho ca makeup, thợ nhận hoặc kiểm hao</p>
+                        <h3 class="font-bold text-slate-900 text-sm sm:text-base">Tạo Phiếu Xuất Kho</h3>
+                        <p class="text-[11px] text-slate-500">Trừ số lượng tồn và xuất cho ca makeup, thợ nhận</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeOutboundModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+                <button type="button" onclick="closeOutboundModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors shrink-0">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
-            <form onsubmit="handleOutboundSubmit(event)" class="p-5 space-y-4">
-                <!-- Chọn vật liệu -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Chọn vật liệu xuất kho *</label>
-                    <select
-                        id="outbound-item-select"
-                        required
-                        onchange="handleOutboundItemChange(this.value)"
-                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-amber-500"
-                    >
-                        <!-- Populated dynamically -->
-                    </select>
-                </div>
-
-                <!-- Tồn kho hiện tại info card -->
-                <div id="outbound-current-info" class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between">
+            <form onsubmit="handleOutboundSubmit(event)" class="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-3.5">
                     <div>
-                        <p class="text-xs font-semibold text-amber-950" id="outbound-info-name">Chưa chọn</p>
-                        <p class="text-[11px] text-slate-600" id="outbound-info-sku">SKU: --</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs font-bold text-slate-500">Khả dụng trong kho</p>
-                        <p class="text-base font-black text-amber-900" id="outbound-info-stock">0</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <!-- Số lượng xuất -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Số lượng xuất (-) *</label>
-                        <input
-                            type="number"
-                            id="outbound-qty"
-                            required
-                            min="1"
-                            step="1"
-                            value="1"
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-base font-black text-amber-900 text-center focus:outline-none focus:bg-white focus:border-amber-500"
-                        />
-                    </div>
-
-                    <!-- Mục đích xuất -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Mục đích xuất *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Chọn vật liệu xuất kho *</label>
                         <select
-                            id="outbound-purpose"
+                            id="outbound-item-select"
                             required
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:bg-white focus:border-amber-500"
+                            onchange="handleOutboundItemChange(this.value)"
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-amber-500"
                         >
-                            <option value="Ca makeup sự kiện">Ca makeup sự kiện</option>
-                            <option value="Thợ makeup mượn/nhận">Thợ makeup nhận</option>
-                            <option value="Hàng mẫu / Test">Hàng mẫu / Test</option>
-                            <option value="Tiêu hao định kỳ">Tiêu hao định kỳ</option>
-                            <option value="Hỏng / Hết hạn">Hỏng / Hết hạn</option>
+                            <!-- Populated dynamically -->
                         </select>
                     </div>
-                </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <!-- Người nhận -->
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Người nhận / Thợ nhận *</label>
-                        <input
-                            type="text"
-                            id="outbound-recipient"
-                            required
-                            placeholder="VD: Thợ Mai, Team Sự Kiện..."
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-amber-500"
-                        />
+                    <div id="outbound-current-info" class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold text-amber-950" id="outbound-info-name">Chưa chọn</p>
+                            <p class="text-[11px] text-slate-600" id="outbound-info-sku">ĐVT: --</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-slate-500">Khả dụng trong kho</p>
+                            <p class="text-base font-black text-amber-900" id="outbound-info-stock">0</p>
+                        </div>
                     </div>
 
-                    <!-- Người thực hiện -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Số lượng xuất (-) *</label>
+                            <input
+                                type="number"
+                                id="outbound-qty"
+                                required
+                                min="1"
+                                step="1"
+                                value="1"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-base font-black text-amber-900 text-center focus:outline-none focus:bg-white focus:border-amber-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Mục đích xuất *</label>
+                            <select
+                                id="outbound-purpose"
+                                required
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:bg-white focus:border-amber-500"
+                            >
+                                <option value="Ca makeup sự kiện">Ca makeup sự kiện</option>
+                                <option value="Thợ makeup mượn/nhận">Thợ makeup nhận</option>
+                                <option value="Hàng mẫu / Test">Hàng mẫu / Test</option>
+                                <option value="Tiêu hao định kỳ">Tiêu hao định kỳ</option>
+                                <option value="Hỏng / Hết hạn">Hỏng / Hết hạn</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Người nhận / Thợ nhận *</label>
+                            <input
+                                type="text"
+                                id="outbound-recipient"
+                                required
+                                placeholder="VD: Thợ Mai, Team Sự Kiện..."
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-amber-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Người lập phiếu *</label>
+                            <input
+                                type="text"
+                                id="outbound-operator"
+                                required
+                                value="Quản lý kho"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-amber-500"
+                            />
+                        </div>
+                    </div>
+
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Người lập phiếu *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Ghi chú phiếu xuất</label>
                         <input
                             type="text"
-                            id="outbound-operator"
-                            required
-                            value="Quản lý kho"
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-amber-500"
+                            id="outbound-note"
+                            placeholder="VD: Xuất cho show diễn cuối tuần..."
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:bg-white focus:border-amber-500"
                         />
                     </div>
                 </div>
 
-                <!-- Ghi chú xuất -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Ghi chú phiếu xuất</label>
-                    <input
-                        type="text"
-                        id="outbound-note"
-                        placeholder="VD: Xuất cho show diễn cuối tuần..."
-                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:bg-white focus:border-amber-500"
-                    />
-                </div>
-
-                <!-- Actions -->
-                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <!-- Sticky Footer -->
+                <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
                     <button
                         type="button"
                         onclick="closeOutboundModal()"
-                        class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 border border-slate-300"
+                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300"
                     >
                         Hủy
                     </button>
                     <button
                         type="submit"
-                        class="px-5 py-2 rounded-lg text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 border border-amber-700 shadow-xs"
+                        class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 border border-amber-700 shadow-xs"
                     >
                         Xác nhận Xuất kho
                     </button>
@@ -1613,8 +1606,8 @@
     <!-- ========================================================================= -->
     <!-- MODAL 4: LỊCH SỬ XUẤT - NHẬP KHO (TRANSACTION LOG MODAL)                    -->
     <!-- ========================================================================= -->
-    <div id="history-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-4xl w-full border-2 border-teal-300 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+    <div id="history-modal" onclick="closeHistoryModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-2.5 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-2xl max-w-4xl w-full border-2 border-teal-300 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[86dvh] sm:max-h-[90vh]" onclick="event.stopPropagation()">
             <!-- Header -->
             <div class="px-5 py-4 bg-teal-50 border-b border-teal-200 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2.5">
@@ -1626,7 +1619,7 @@
                         <p class="text-xs text-slate-500">Toàn bộ lịch sử nhập thêm, xuất kho và biến động tồn thực tế</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg">
+                <button type="button" onclick="closeHistoryModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -1650,13 +1643,13 @@
             </div>
 
             <!-- History Table Content -->
-            <div class="flex-1 overflow-y-auto p-4">
+            <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-4">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-teal-50 text-teal-900 font-bold border-b border-teal-200">
                             <th class="py-2.5 px-3">Thời gian</th>
                             <th class="py-2.5 px-2 text-center">Loại</th>
-                            <th class="py-2.5 px-3">Mã SKU & Vật liệu</th>
+                            <th class="py-2.5 px-3">Vật liệu</th>
                             <th class="py-2.5 px-2 text-center">Số lượng</th>
                             <th class="py-2.5 px-2 text-center">Tồn sau GD</th>
                             <th class="py-2.5 px-3">Người thực hiện / Nhận</th>
@@ -1932,7 +1925,7 @@
             </div>
 
             <!-- Body List -->
-            <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3" id="proposal-items-list-container">
+            <div class="modal-scroll-body p-4 sm:p-5 overflow-y-auto overscroll-contain flex-1 space-y-3" id="proposal-items-list-container">
                 <!-- Danh sách mặt hàng thiếu hụt được render động -->
             </div>
 
@@ -2964,28 +2957,28 @@
         // ============================================================================
         // 6. COLUMN RESIZING (SAFE PIXEL SYNC & DUAL-BOUND ZERO-JUMP ALGORITHM v7)
         // ============================================================================
-        const STORAGE_COL_WIDTHS_KEY = 'makeup_inv_col_widths_v6';
+        const STORAGE_COL_WIDTHS_KEY = 'makeup_inv_col_widths_v7';
 
         const DEFAULT_COLUMN_WIDTHS = {
             'th-idx': 45,           // #
-            'th-product-name': 310, // Tên vật liệu + Danh mục & Vị trí kho
-            'th-image': 95,         // Hình (64px + nút Upload/Link)
-            'th-price': 130,        // Giá vốn & quy đổi CNY
+            'th-product-name': 285, // Tên vật liệu + Danh mục & Vị trí kho
+            'th-image': 92,         // Hình (64px + nút Upload/Link)
+            'th-price': 125,        // Giá vốn & quy đổi CNY
             'th-stock': 115,        // Tồn kho (+/- stepper & ĐVT)
-            'th-status': 120,       // Trạng thái badge & Tồn min
-            'th-subtotal': 140,     // Tổng giá trị tồn kho
-            'th-actions': 90        // Thao tác (+, -, sửa, xóa)
+            'th-status': 118,       // Trạng thái badge & Tồn min
+            'th-subtotal': 135,     // Tổng giá trị tồn kho
+            'th-actions': 155       // Thao tác (+, -, sửa, xóa) hiển thị trọn vẹn 4 nút
         };
 
         const MIN_COLUMN_WIDTHS = {
             'th-idx': 40,
-            'th-product-name': 200,
+            'th-product-name': 185,
             'th-image': 80,
             'th-price': 100,
             'th-stock': 100,
             'th-status': 100,
-            'th-subtotal': 115,
-            'th-actions': 80
+            'th-subtotal': 110,
+            'th-actions': 148
         };
 
         function applySavedColumnWidths() {
@@ -3016,28 +3009,24 @@
             // Triệt tiêu khoảng trống thừa một cách hài hòa cân xứng, không dồn hết vào 1 cột tạo khoảng trắng vô nghĩa
             if (tableWidth > totalAssigned) {
                 const excess = tableWidth - totalAssigned;
-                // Phân bổ 50% cho Tên vật liệu, 25% cho Danh mục, 25% cho Giá vốn
-                const addName = Math.floor(excess * 0.50);
-                const addCat = Math.floor(excess * 0.25);
-                const addPrice = excess - addName - addCat;
-                widths['th-product-name'] += addName;
-                widths['th-category'] += addCat;
-                widths['th-price'] += addPrice;
+                const addName = Math.floor(excess * 0.60);
+                const addPrice = Math.floor(excess * 0.20);
+                const addSub = excess - addName - addPrice;
+                if (widths['th-product-name']) widths['th-product-name'] += addName;
+                if (widths['th-price']) widths['th-price'] += addPrice;
+                if (widths['th-subtotal']) widths['th-subtotal'] += addSub;
             } else if (tableWidth < totalAssigned && tableWidth > 0) {
-                // Co giãn an toàn: giảm trước ở Tên vật liệu & Danh mục, bảo vệ tuyệt đối các cột có nút (Thao tác >= 145, Hình >= 115, Tồn kho >= 110)
                 const diff = totalAssigned - tableWidth;
-                const canReduceName = Math.max(0, widths['th-product-name'] - (MIN_COLUMN_WIDTHS['th-product-name'] || 200));
-                const canReduceCat = Math.max(0, widths['th-category'] - (MIN_COLUMN_WIDTHS['th-category'] || 140));
-                const canReduceSku = Math.max(0, widths['th-sku'] - (MIN_COLUMN_WIDTHS['th-sku'] || 95));
-                const canReducePrice = Math.max(0, widths['th-price'] - (MIN_COLUMN_WIDTHS['th-price'] || 115));
-                const totalFlexible = canReduceName + canReduceCat + canReduceSku + canReducePrice;
+                const canReduceName = Math.max(0, (widths['th-product-name'] || 300) - (MIN_COLUMN_WIDTHS['th-product-name'] || 200));
+                const canReducePrice = Math.max(0, (widths['th-price'] || 130) - (MIN_COLUMN_WIDTHS['th-price'] || 100));
+                const canReduceSub = Math.max(0, (widths['th-subtotal'] || 145) - (MIN_COLUMN_WIDTHS['th-subtotal'] || 115));
+                const totalFlexible = canReduceName + canReducePrice + canReduceSub;
 
                 if (totalFlexible > 0) {
                     const ratio = Math.min(1, diff / totalFlexible);
-                    widths['th-product-name'] -= Math.floor(canReduceName * ratio);
-                    widths['th-category'] -= Math.floor(canReduceCat * ratio);
-                    widths['th-sku'] -= Math.floor(canReduceSku * ratio);
-                    widths['th-price'] -= Math.floor(canReducePrice * ratio);
+                    if (widths['th-product-name']) widths['th-product-name'] -= Math.floor(canReduceName * ratio);
+                    if (widths['th-price']) widths['th-price'] -= Math.floor(canReducePrice * ratio);
+                    if (widths['th-subtotal']) widths['th-subtotal'] -= Math.floor(canReduceSub * ratio);
                 }
             }
 
@@ -3834,17 +3823,58 @@
                 if (item.category) categories.add(item.category);
             });
 
-            document.getElementById('stat-total-items').textContent = inventoryItems.length;
-            document.getElementById('stat-categories-count').textContent = `${categories.size} danh mục phân loại`;
-            document.getElementById('stat-total-qty').textContent = formatNumber(totalStock);
-            document.getElementById('stat-alert-count').textContent = alertCount;
-            document.getElementById('stat-total-value').textContent = formatVND(totalValueVnd);
-            document.getElementById('stat-total-value-cny').textContent = formatCNYFromVND(totalValueVnd);
+            const elTotalItems = document.getElementById('stat-total-items');
+            const elCatCount = document.getElementById('stat-categories-count');
+            const elTotalQty = document.getElementById('stat-total-qty');
+            const elAlertCount = document.getElementById('stat-alert-count');
+            const elTotalVal = document.getElementById('stat-total-value');
+            const elTotalValCny = document.getElementById('stat-total-value-cny');
 
-            document.getElementById('footer-total-stock').textContent = formatNumber(totalStock);
-            document.getElementById('footer-alert-summary').textContent = `${alertCount} mặt hàng cần nhập gấp`;
-            document.getElementById('footer-grand-value').textContent = formatVND(totalValueVnd);
-            document.getElementById('footer-grand-value-cny').textContent = formatCNYFromVND(totalValueVnd);
+            if (elTotalItems) elTotalItems.textContent = inventoryItems.length;
+            if (elCatCount) elCatCount.textContent = `${categories.size} danh mục phân loại`;
+            if (elTotalQty) elTotalQty.textContent = formatNumber(totalStock);
+            if (elAlertCount) elAlertCount.textContent = alertCount;
+            if (elTotalVal) elTotalVal.textContent = formatVND(totalValueVnd);
+            if (elTotalValCny) elTotalValCny.textContent = formatCNYFromVND(totalValueVnd);
+
+            const fStock = document.getElementById('footer-total-stock');
+            const fAlert = document.getElementById('footer-alert-summary');
+            const fVal = document.getElementById('footer-grand-value');
+            const fValCny = document.getElementById('footer-grand-value-cny');
+
+            if (fStock) fStock.textContent = formatNumber(totalStock);
+            if (fAlert) fAlert.textContent = `${alertCount} mặt hàng cần nhập gấp`;
+            if (fVal) fVal.textContent = formatVND(totalValueVnd);
+            if (fValCny) fValCny.textContent = formatCNYFromVND(totalValueVnd);
+
+            // Cập nhật thanh Mobile Freeze Summary ở đáy điện thoại
+            const mobTypes = document.getElementById('mobile-sum-types');
+            const mobStock = document.getElementById('mobile-sum-stock');
+            const mobVal = document.getElementById('mobile-sum-val');
+            if (mobTypes) mobTypes.textContent = `${inventoryItems.length} loại`;
+            if (mobStock) mobStock.textContent = formatNumber(totalStock);
+            if (mobVal) mobVal.textContent = formatVND(totalValueVnd);
+
+            // Cập nhật thanh PC POS Freeze Bar cố định dưới cùng
+            const posItems = document.getElementById('pos-stat-items');
+            const posQty = document.getElementById('pos-stat-qty');
+            const posVnd = document.getElementById('pos-total-vnd');
+            const posCny = document.getElementById('pos-total-cny');
+            const posAlertBadge = document.getElementById('pos-stat-alert-badge');
+            const posAlert = document.getElementById('pos-stat-alert-count') || document.getElementById('pos-stat-alert');
+            if (posItems) posItems.textContent = inventoryItems.length;
+            if (posQty) posQty.textContent = formatNumber(totalStock);
+            if (posVnd) posVnd.textContent = formatVND(totalValueVnd);
+            if (posCny) posCny.textContent = formatCNYFromVND(totalValueVnd);
+            if (posAlert) posAlert.textContent = alertCount;
+            if (posAlertBadge) {
+                if (alertCount > 0) posAlertBadge.classList.remove('hidden');
+                else posAlertBadge.classList.add('hidden');
+            }
+
+            if (typeof updateCardsSummary === 'function') {
+                updateCardsSummary(inventoryItems.length, totalStock, totalValueVnd);
+            }
         }
 
         // ============================================================================
@@ -4324,6 +4354,14 @@
             }
         }
 
+        function updateItemModalSubtotalPreview() {
+            const stock = Math.max(0, parseFloat(document.getElementById('item-form-stock')?.value) || 0);
+            const price = Math.max(0, parseFloat(document.getElementById('item-form-cost-price')?.value) || 0);
+            const total = stock * price;
+            const el = document.getElementById('item-modal-subtotal-preview');
+            if (el) el.textContent = formatVND(total);
+        }
+
         function openItemModal(itemId = null) {
             const modal = document.getElementById('item-modal');
             const titleEl = document.getElementById('item-modal-title');
@@ -4343,7 +4381,7 @@
                 document.getElementById('item-form-name-vi').value = item.nameVi || '';
                 document.getElementById('item-form-name-zh').value = item.nameZh || '';
                 document.getElementById('item-form-stock').value = item.stock ?? 0;
-                document.getElementById('item-form-min-stock').value = item.minStock ?? 5;
+                document.getElementById('item-form-min-stock').value = item.minStock ?? 2;
                 document.getElementById('item-form-cost-price').value = item.costPrice ?? 0;
                 document.getElementById('item-form-location').value = item.location || '';
                 document.getElementById('item-form-supplier').value = item.supplier || '';
@@ -4354,25 +4392,29 @@
             } else {
                 titleEl.textContent = 'Thêm vật liệu vào kho';
                 document.getElementById('item-form-id').value = '';
-                // Generate next SKU
                 const nextNum = inventoryItems.length + 1;
                 document.getElementById('item-form-sku').value = `MK-VT-${String(nextNum).padStart(3, '0')}`;
-                document.getElementById('item-form-stock').value = '10';
-                document.getElementById('item-form-min-stock').value = '5';
+                document.getElementById('item-form-stock').value = '1';
+                document.getElementById('item-form-min-stock').value = '2';
                 document.getElementById('item-form-cost-price').value = '0';
                 document.getElementById('item-form-unit').value = 'Hộp';
                 updateItemFormImgPreview(DEFAULT_MAKEUP_SVG);
                 if (delBtn) delBtn.classList.add('hidden');
             }
 
+            updateItemModalSubtotalPreview();
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            lucide.createIcons();
+            const scrollBody = modal.querySelector('.modal-scroll-body');
+            if (scrollBody) scrollBody.scrollTop = 0;
+            if (typeof syncBodyScrollLock === 'function') syncBodyScrollLock();
+            if (window.lucide) lucide.createIcons();
         }
 
         function handleItemModalDelete() {
             const itemId = document.getElementById('item-form-id').value;
             if (itemId) {
+                closeItemModal();
                 openConfirmDeleteModal(itemId);
             }
         }
@@ -4381,6 +4423,7 @@
             const modal = document.getElementById('item-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            if (typeof syncBodyScrollLock === 'function') syncBodyScrollLock();
         }
 
         function updateItemFormImgPreview(src) {
@@ -5227,6 +5270,31 @@ Má hồng : 2 bảng`;
             }
         }
 
+        function detectCategoryFromKeywords(name) {
+            const availCats = (typeof categoriesList !== 'undefined' && Array.isArray(categoriesList) && categoriesList.length > 0)
+                ? categoriesList
+                : ['Lông mi & Keo', 'Son môi', 'Cọ & Mút', 'Phấn & Má hồng', 'Kem nền & Che khuyết điểm', 'Tẩy trang & Phụ kiện', 'Dụng cụ khác'];
+            const lower = (name || '').toLowerCase();
+
+            const rules = [
+                { keywords: ['mi ', 'lông mi', 'keo mi', 'kích mí', 'nhíp'], target: 'Lông mi & Keo' },
+                { keywords: ['son', 'môi', 'dưỡng môi', 'chì viền môi', 'romand', 'wodwod'], target: 'Son môi' },
+                { keywords: ['cọ', 'mút', 'bông phấn', 'bông mút', 'self love'], target: 'Cọ & Mút' },
+                { keywords: ['phấn', 'má hồng', 'bắt sáng', 'highlight', 'light', 'tạo khối', 'contour', 'màu mắt', 'nhũ mắt', 'bảng mắt', 'chân mày', 'kẻ mày', 'kẻ mắt', 'eyeliner', 'mascara', 'carsla', 'moon eyes', 'color me out', 'gella', 'focalluare'], target: 'Phấn & Má hồng' },
+                { keywords: ['nền', 'kem nền', 'cushion', 'che khuyết điểm', 'ckd', 'kem lót', 'primer', 'xịt khoá nền', 'khoá nền', 'maybeline', 'maybelline', 'armis'], target: 'Kem nền & Che khuyết điểm' },
+                { keywords: ['tẩy trang', 'bông tẩy trang', 'nước tẩy trang', 'khăn giấy', 'tăm bông', 'cồn', 'vệ sinh'], target: 'Tẩy trang & Phụ kiện' },
+                { keywords: ['tóc', 'keo tóc', 'sáp tóc', 'ghim', 'kẹp', 'lược', 'máy uốn', 'máy sấy', 'osjo'], target: 'Dụng cụ khác' }
+            ];
+
+            for (const rule of rules) {
+                if (rule.keywords.some(k => lower.includes(k))) {
+                    const matched = availCats.find(c => c.toLowerCase() === rule.target.toLowerCase()) || rule.target;
+                    return matched;
+                }
+            }
+            return availCats[availCats.length - 1] || 'Dụng cụ khác';
+        }
+
         function parseSmartItemList(text) {
             if (!text || !text.trim()) return [];
             const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
@@ -5283,17 +5351,20 @@ Má hồng : 2 bảng`;
                     }
                 }
 
-                // Loại bỏ số lặp ở đầu tên sản phẩm (VD: '6 son wodwod : 6 cây' -> 'son wodwod')
                 name = name.replace(/^(\d+)\s+/, (match, num) => {
                     if (parseInt(num) === qty) return '';
                     return match;
                 }).trim();
 
-                // Triệt tiêu dấu hai chấm ':' hoặc dấu gạch '-' dính ở đầu hoặc cuối tên hàng
                 name = name.replace(/^[:—–\-,;.\s]+|[:—–\-,;.\s]+$/g, '').trim();
 
                 if (name) {
-                    results.push({ nameVi: name, qty: Math.max(1, qty), unit });
+                    results.push({
+                        nameVi: name,
+                        qty: Math.max(1, qty),
+                        unit,
+                        category: detectCategoryFromKeywords(name)
+                    });
                 }
             }
             return results;
@@ -5314,8 +5385,8 @@ Má hồng : 2 bảng`;
             if (!listEl) return;
 
             const count = smartPasteParsedItems.length;
-            if (badgeEl) badgeEl.textContent = `Đã nhận diện: ${count} sản phẩm`;
-            if (confirmLbl) confirmLbl.textContent = count > 0 ? `Xác nhận thêm ${count} sản phẩm` : 'Xác nhận thêm hàng';
+            if (badgeEl) badgeEl.textContent = `Đã nhận diện: ${count} vật liệu`;
+            if (confirmLbl) confirmLbl.textContent = count > 0 ? `Xác nhận thêm ${count} món vào kho` : 'Xác nhận thêm hàng';
             if (confirmBtn) confirmBtn.disabled = count === 0;
 
             if (count === 0) {
@@ -5327,8 +5398,12 @@ Má hồng : 2 bảng`;
                 return;
             }
 
+            const availCats = (typeof categoriesList !== 'undefined' && Array.isArray(categoriesList) && categoriesList.length > 0)
+                ? categoriesList
+                : ['Lông mi & Keo', 'Son môi', 'Cọ & Mút', 'Phấn & Má hồng', 'Kem nền & Che khuyết điểm', 'Tẩy trang & Phụ kiện', 'Dụng cụ khác'];
+
             listEl.innerHTML = smartPasteParsedItems.map((item, idx) => `
-                <div class="flex items-center gap-2 p-2.5 bg-slate-50 hover:bg-teal-50/50 rounded-xl border border-slate-200 transition-colors">
+                <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 p-2.5 bg-slate-50 hover:bg-teal-50/50 rounded-xl border border-slate-200 transition-colors">
                     <span class="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold text-xs flex items-center justify-center shrink-0">
                         ${idx + 1}
                     </span>
@@ -5336,9 +5411,16 @@ Má hồng : 2 bảng`;
                         type="text"
                         value="${escapeHtml(item.nameVi)}"
                         onchange="updateSmartPasteItem(${idx}, 'nameVi', this.value)"
-                        class="flex-1 min-w-0 px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        placeholder="Tên sản phẩm..."
+                        class="flex-1 min-w-[140px] px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        placeholder="Tên vật liệu..."
                     />
+                    <select
+                        onchange="updateSmartPasteItem(${idx}, 'category', this.value)"
+                        class="px-2 py-1.5 text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-300 rounded-lg focus:outline-none shrink-0 max-w-[140px] truncate"
+                        title="Danh mục tự nhận diện"
+                    >
+                        ${availCats.map(c => `<option value="${escapeHtml(c)}" ${c === item.category ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+                    </select>
                     <div class="flex items-center gap-1 shrink-0">
                         <button
                             type="button"
@@ -5378,6 +5460,9 @@ Má hồng : 2 bảng`;
         function updateSmartPasteItem(index, field, value) {
             if (!smartPasteParsedItems[index]) return;
             smartPasteParsedItems[index][field] = value;
+            if (field === 'nameVi') {
+                smartPasteParsedItems[index].category = detectCategoryFromKeywords(value);
+            }
             renderSmartPasteList();
         }
 
@@ -5397,20 +5482,22 @@ Má hồng : 2 bảng`;
 
             let addedCount = 0;
             for (let item of smartPasteParsedItems) {
+                const qtyVal = Math.max(1, Number(item.qty ?? item.quantity) || 1);
                 const newItem = {
-                    id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+                    id: 'inv-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6),
+                    sku: 'MK-VT-' + String(inventoryItems.length + 1).padStart(3, '0'),
                     nameVi: item.nameVi || 'Vật tư chưa đặt tên',
                     nameZh: item.nameZh || '',
-                    category: item.category || 'Dụng cụ khác',
-                    unit: item.unit || 'món',
-                    stock: Number(item.quantity) || 1,
-                    minStock: 5,
+                    category: item.category || detectCategoryFromKeywords(item.nameVi),
+                    unit: item.unit || 'hộp',
+                    stock: qtyVal,
+                    minStock: Math.min(2, qtyVal),
                     costPrice: 0,
-                    location: 'Kệ chính',
+                    location: 'Kệ kho',
+                    supplier: '',
                     image: '',
-                    link: '',
-                    notes: 'Nhập thông minh',
-                    updatedAt: new Date().toISOString()
+                    note: 'Nhập thông minh',
+                    createdAt: Date.now()
                 };
 
                 inventoryItems.unshift(newItem);
@@ -5419,7 +5506,6 @@ Má hồng : 2 bảng`;
             }
 
             renderTable();
-            renderCards();
             updateOverviewStats();
             clearSmartPasteInput();
             closeSmartPasteModal();
@@ -5431,16 +5517,48 @@ Má hồng : 2 bảng`;
             }
         }
 
-        // ============================================================================
-        
+        // Quản lý khóa cuộn trang nền tự động khi bất kỳ Modal nào đang mở
+        function syncBodyScrollLock() {
+            const anyOpen = Array.from(document.querySelectorAll('.fixed.inset-0.z-50')).some(
+                el => !el.classList.contains('hidden')
+            );
+            if (anyOpen) {
+                document.body.classList.add('modal-open');
+                document.documentElement.classList.add('modal-open');
+            } else {
+                document.body.classList.remove('modal-open');
+                document.documentElement.classList.remove('modal-open');
+            }
+        }
+
+        function initModalScrollLockObserver() {
+            const modals = document.querySelectorAll('.fixed.inset-0.z-50');
+            const observer = new MutationObserver(() => syncBodyScrollLock());
+            modals.forEach(m => observer.observe(m, { attributes: true, attributeFilter: ['class'] }));
+
+            document.addEventListener('touchmove', function(e) {
+                if (!document.body.classList.contains('modal-open')) return;
+                const scrollBody = e.target.closest('.modal-scroll-body');
+                if (!scrollBody) {
+                    e.preventDefault();
+                    return;
+                }
+                if (scrollBody.scrollHeight <= scrollBody.clientHeight) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+
         window.openSmartPasteModal = openSmartPasteModal;
         window.closeSmartPasteModal = closeSmartPasteModal;
         window.confirmExecuteSmartPaste = confirmExecuteSmartPaste;
         window.parseSmartItemList = parseSmartItemList;
+        window.detectCategoryFromKeywords = detectCategoryFromKeywords;
         window.openQuickDeleteModal = openQuickDeleteModal;
         window.closeQuickDeleteModal = closeQuickDeleteModal;
         window.renderQuickDeleteList = renderQuickDeleteList;
         window.setViewMode = setViewMode;
+        window.updateItemModalSubtotalPreview = updateItemModalSubtotalPreview;
 
 
         function startApp() {
@@ -5475,10 +5593,12 @@ Má hồng : 2 bảng`;
                 inventoryItems = [...SEED_INVENTORY_ITEMS];
             }
 
+            setViewMode(currentViewMode);
             renderTable();
             updateOverviewStats();
             applySavedColumnWidths();
             initColumnResizers();
+            initModalScrollLockObserver();
 
             if (window.lucide && typeof lucide.createIcons === 'function') {
                 lucide.createIcons();

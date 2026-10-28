@@ -208,6 +208,19 @@
         input[type="number"]::-webkit-outer-spin-button {
             opacity: 1;
         }
+    
+        /* KHÓA CUỘN TRANG NỀN TUYỆT ĐỐI KHI ĐANG MỞ BẢNG CHI TIẾT / MODAL */
+        html.modal-open,
+        body.modal-open {
+            overflow: hidden !important;
+            overscroll-behavior: none !important;
+        }
+        .modal-scroll-body {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-teal-100 selection:text-teal-900 bg-slate-100/70">
@@ -372,7 +385,7 @@
     </header>
 
     <!-- Main Content Container -->
-    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5 pt-14 md:pt-5 pb-28 md:pb-24">
+    <main class="flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 space-y-4 sm:space-y-5 pt-16 md:pt-5 pb-28 md:pb-24">
 
         <!-- KPI Summary Cards -->
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -432,7 +445,7 @@
             <!-- Left: Search & Filter -->
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
                 <!-- Search Input -->
-                <div class="relative flex-1 max-w-md h-10">
+                <div class="relative flex-1 min-w-[200px] max-w-md h-10">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                     <input
                         id="search-input"
@@ -494,29 +507,6 @@
                     <span id="ui-btn-import">Nhập từ Sheet</span>
                 </button>
 
-                <!-- Chế độ xem: Dạng thẻ vs Dạng bảng trực quan ngay trên toolbar -->
-                <div class="inline-flex items-center rounded-xl bg-teal-100/80 p-0.5 border border-teal-300 shadow-2xs mr-1" role="group" aria-label="Chế độ xem">
-                    <button
-                        id="top-btn-view-cards"
-                        type="button"
-                        onclick="setViewMode('cards')"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-teal-900 shadow-xs border border-teal-300"
-                        title="Chế độ xem dạng thẻ: Trực quan, chỉ vuốt lên xuống, không cần cuộn ngang"
-                    >
-                        <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-teal-600"></i>
-                        <span>📱 Dạng thẻ (Chỉ vuốt dọc)</span>
-                    </button>
-                    <button
-                        id="top-btn-view-table"
-                        type="button"
-                        onclick="setViewMode('table')"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-teal-700 hover:text-teal-900"
-                        title="Chế độ xem dạng bảng chi tiết (Desktop)"
-                    >
-                        <i data-lucide="table-properties" class="w-3.5 h-3.5"></i>
-                        <span>📊 Dạng bảng</span>
-                    </button>
-                </div>
                 <!-- Nút DÁN DANH SÁCH THÔNG MINH -->
                 <button
                     onclick="openSmartPasteModal()"
@@ -662,7 +652,7 @@
                 </div>
 
                 <!-- Table Wrapper (CHO PHÉP VUỐT NGANG MƯỢT MÀ TRÊN IPHONE & CỐ ĐỊNH TIÊU ĐỀ + TỔNG CỘNG KHI CUỘN) -->
-                <div class="table-scroll-wrapper w-full overflow-x-auto lg:overflow-x-hidden overflow-y-auto max-h-[calc(100vh-170px)] sm:max-h-[calc(100vh-140px)] touch-pan-x" style="-webkit-overflow-scrolling: touch;">
+                <div class="table-scroll-wrapper w-full overflow-x-auto lg:overflow-x-hidden" style="-webkit-overflow-scrolling: touch;">
                     <table id="main-spreadsheet-table" class="sheet-table w-full text-left">
                     <colgroup>
                         <col id="col-idx" style="width: 40px;">
@@ -800,8 +790,8 @@
     <!-- ========================================================================= -->
     <!-- MODAL 1: NHẬP DỮ LIỆU TỪ SHEET / EXCEL THEO THÁNG                          -->
     <!-- ========================================================================= -->
-    <div id="import-sheet-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-3xl w-full border-2 border-teal-300 shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
+    <div id="import-sheet-modal" onclick="closeImportModal()" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2.5 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-2xl max-w-3xl w-full border-2 border-teal-300 shadow-2xl flex flex-col max-h-[86dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200" onclick="event.stopPropagation()">
             <!-- Modal Header -->
             <div class="px-6 py-4 bg-teal-50 border-b border-teal-200 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
@@ -824,7 +814,7 @@
             </div>
 
             <!-- Modal Content -->
-            <div class="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+            <div class="modal-scroll-body p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto overscroll-contain">
                 <!-- Hướng dẫn cột -->
                 <div class="bg-teal-50/70 border border-teal-200 rounded-xl p-4 text-xs space-y-2">
                     <div class="flex items-center gap-2 font-bold text-teal-900 text-sm">
@@ -973,26 +963,27 @@
     <!-- ========================================================================= -->
     <!-- MODAL 2: THÊM / SỬA CHI TIẾT SẢN PHẨM                                    -->
     <!-- ========================================================================= -->
-    <div id="product-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-teal-300 shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
-            <!-- Modal Header -->
-            <div class="px-6 py-4 bg-teal-50 border-b border-teal-200 flex items-center justify-between">
+    <div id="product-modal" onclick="closeProductModal()" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-2.5 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-teal-300 shadow-2xl flex flex-col max-h-[86dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200" onclick="event.stopPropagation()">
+            <!-- Modal Header (Sticky Top) -->
+            <div class="px-5 py-3.5 bg-teal-50 border-b border-teal-200 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-teal-100 border border-teal-300 text-teal-700 flex items-center justify-center">
+                    <div class="w-8 h-8 rounded-lg bg-teal-100 border border-teal-300 text-teal-700 flex items-center justify-center shrink-0">
                         <i data-lucide="package-plus" class="w-4 h-4"></i>
                     </div>
-                    <h3 id="modal-title" class="text-base font-bold text-slate-900">Thêm sản phẩm đề xuất</h3>
+                    <h3 id="modal-title" class="text-sm sm:text-base font-bold text-slate-900">Thêm sản phẩm đề xuất</h3>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="text-[11px] text-slate-400 hidden sm:inline">Phím Esc để đóng</span>
-                    <button onclick="closeProductModal()" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200 transition-colors">
+                    <button type="button" onclick="closeProductModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Modal Form -->
-            <form id="product-form" onsubmit="saveProductFromModal(event)" class="p-6 space-y-4">
+            <form id="product-form" onsubmit="saveProductFromModal(event)" class="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-3.5">
                 <input type="hidden" id="modal-product-id" value="" />
                 <input type="hidden" id="modal-auto-zh" value="" />
 
@@ -1107,20 +1098,21 @@
                     </div>
                 </div>
 
-                <!-- Modal Actions -->
-                <div class="pt-3 border-t border-slate-300 flex items-center justify-end gap-2.5">
+                </div>
+                <!-- Modal Actions (Sticky Bottom Footer) -->
+                <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0">
                     <button
                         type="button"
                         onclick="closeProductModal()"
                         id="btn-modal-cancel"
-                        class="px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-all shadow-2xs"
+                        class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-all shadow-2xs"
                     >
-                        Hủy
+                        Hủy / Đóng
                     </button>
                     <button
                         type="submit"
                         id="btn-modal-save"
-                        class="px-5 py-2.5 rounded-lg text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 border border-teal-700 shadow-xs transition-all"
+                        class="px-5 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 border border-teal-700 shadow-xs transition-all"
                     >
                         Lưu sản phẩm
                     </button>
@@ -1356,9 +1348,10 @@
     <!-- ========================================================================= -->
     <div
         id="quick-delete-modal"
-        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+        onclick="closeQuickDeleteModal()"
+        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain animate-in fade-in duration-150"
     >
-        <div class="bg-white rounded-t-2xl sm:rounded-2xl border border-red-200 shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl border border-red-200 shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
             <!-- Header -->
             <div class="px-5 py-3.5 bg-red-50/80 border-b border-red-200 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2">
@@ -1415,7 +1408,8 @@
     <!-- ========================================================================= -->
     <div
         id="smart-paste-modal"
-        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+        onclick="closeSmartPasteModal()"
+        class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain animate-in fade-in duration-150"
     >
         <div class="bg-white rounded-t-2xl sm:rounded-2xl border-2 border-teal-300 shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
             <!-- Header -->
@@ -1439,7 +1433,7 @@
             </div>
 
             <!-- Modal Body (Scrollable Y) -->
-            <div class="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+            <div class="modal-scroll-body p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-4 flex-1">
                 <!-- Textarea input & Quick buttons -->
                 <div class="space-y-2">
                     <div class="flex items-center justify-between flex-wrap gap-1.5">
@@ -1547,10 +1541,10 @@
         </div>
 
         <!-- Ở giữa: Tổng tiền đề xuất to rõ ràng, nổi bật kiểu POS -->
-        <div class="flex items-center gap-3 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 px-5 py-1.5 rounded-xl border border-teal-300 shadow-2xs">
-            <span class="text-xs font-extrabold text-teal-900 uppercase tracking-wide">TỔNG TIỀN ĐỀ XUẤT:</span>
-            <span id="pos-total-vnd" class="text-xl lg:text-2xl font-black text-emerald-800 tracking-tight">0 ₫</span>
-            <span id="pos-total-cny" class="text-xs font-bold text-teal-800 bg-white px-2 py-0.5 rounded-md border border-teal-300 shadow-2xs">≈ ¥ 0</span>
+        <div class="flex items-center gap-2.5 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 px-4 py-1.5 rounded-xl border border-teal-300 shadow-2xs whitespace-nowrap shrink-0">
+            <span class="text-xs font-extrabold text-teal-900 uppercase tracking-wide whitespace-nowrap">TỔNG TIỀN ĐỀ XUẤT:</span>
+            <span id="pos-total-vnd" class="text-lg lg:text-xl font-black text-emerald-800 tracking-tight whitespace-nowrap">0 ₫</span>
+            <span id="pos-total-cny" class="text-xs font-bold text-teal-800 bg-white px-2 py-0.5 rounded-md border border-teal-300 shadow-2xs whitespace-nowrap">≈ ¥ 0</span>
         </div>
 
         <!-- Bên phải: Các nút thao tác POS nhanh & Nút chuyển chế độ xem bảng / thẻ -->
@@ -3070,7 +3064,7 @@
             const posQty = document.getElementById('pos-stat-qty');
             const posVnd = document.getElementById('pos-total-vnd');
             const posCny = document.getElementById('pos-total-cny');
-            if (posItems) posItems.textContent = proposalProducts.length;
+            if (posItems) posItems.textContent = products.length;
             if (posQty) posQty.textContent = totalQty;
             if (posVnd) posVnd.textContent = formatVND(grandTotalVnd);
             if (posCny) posCny.textContent = `≈ ${formatCNYFromVND(grandTotalVnd)}`;
@@ -3108,6 +3102,16 @@
             if (mobQty) mobQty.textContent = `${totalQty} món`;
             if (mobVnd) mobVnd.textContent = formatVND(grandTotalVnd);
             if (mobCny) mobCny.textContent = `(≈ ${formatCNYFromVND(grandTotalVnd)})`;
+
+            // Cập nhật thanh PC POS Freeze Bar cố định dưới cùng
+            const posItems = document.getElementById('pos-stat-items');
+            const posQty = document.getElementById('pos-stat-qty');
+            const posVnd = document.getElementById('pos-total-vnd');
+            const posCny = document.getElementById('pos-total-cny');
+            if (posItems) posItems.textContent = products.length;
+            if (posQty) posQty.textContent = totalQty;
+            if (posVnd) posVnd.textContent = formatVND(grandTotalVnd);
+            if (posCny) posCny.textContent = `≈ ${formatCNYFromVND(grandTotalVnd)}`;
         }
 
         // ============================================================================
@@ -3488,6 +3492,7 @@
             updateModalSubtotalPreview();
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            if (typeof syncBodyScrollLock === 'function') syncBodyScrollLock();
             lucide.createIcons();
         }
 
@@ -3495,6 +3500,7 @@
             const modal = document.getElementById('product-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            if (typeof syncBodyScrollLock === 'function') syncBodyScrollLock();
         }
 
         function updateModalSubtotalPreview() {
@@ -4443,11 +4449,45 @@ Má hồng : 2 bảng`;
         });
 
         // Initialize app & Firebase & Resizable columns
+        
+        // Quản lý khóa cuộn trang nền tự động khi bất kỳ Modal nào đang mở
+        function syncBodyScrollLock() {
+            const anyOpen = Array.from(document.querySelectorAll('.fixed.inset-0.z-50')).some(
+                el => !el.classList.contains('hidden')
+            );
+            if (anyOpen) {
+                document.body.classList.add('modal-open');
+                document.documentElement.classList.add('modal-open');
+            } else {
+                document.body.classList.remove('modal-open');
+                document.documentElement.classList.remove('modal-open');
+            }
+        }
+
+        function initModalScrollLockObserver() {
+            const modals = document.querySelectorAll('.fixed.inset-0.z-50');
+            const observer = new MutationObserver(() => syncBodyScrollLock());
+            modals.forEach(m => observer.observe(m, { attributes: true, attributeFilter: ['class'] }));
+
+            document.addEventListener('touchmove', function(e) {
+                if (!document.body.classList.contains('modal-open')) return;
+                const scrollBody = e.target.closest('.modal-scroll-body');
+                if (!scrollBody) {
+                    e.preventDefault();
+                    return;
+                }
+                if (scrollBody.scrollHeight <= scrollBody.clientHeight) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+
         function startApp() {
             setLanguage('vi');
             initFirebaseSync();
             initColumnResizers();
             setViewMode(currentViewMode);
+            initModalScrollLockObserver();
             if (window.lucide && typeof lucide.createIcons === 'function') {
                 lucide.createIcons();
             }
