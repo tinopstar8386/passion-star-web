@@ -559,12 +559,13 @@
                         </button>
                     </div>
 
-                    <button onclick="jumpToDefaultSampleWeek()" id="btnSampleWeek" class="px-3 py-2 rounded-xl glass-card text-xs font-semibold text-amber-300 border-amber-500/30 hover:bg-amber-500/15 transition">
-                        Tuần 19/10 - 25/10
+                    <button onclick="jumpToCurrentWeek()" id="btnTodayWeek" class="px-3 py-2 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300 hover:bg-cyan-500/25 text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95">
+                        <i data-lucide="calendar-check" class="w-3.5 h-3.5 text-cyan-400"></i>
+                        <span>Hôm nay</span>
                     </button>
 
-                    <button onclick="jumpToCurrentWeek()" id="btnTodayWeek" class="px-3 py-2 rounded-xl glass-card text-xs font-medium text-slate-300 hover:text-white transition">
-                        Tuần Hiện Tại
+                    <button onclick="jumpToDefaultSampleWeek()" id="btnSampleWeek" class="px-2.5 py-2 rounded-xl glass-card text-xs font-medium text-slate-400 hover:text-amber-300 hover:border-amber-500/30 transition">
+                        Tuần mẫu (19/10)
                     </button>
 
                     <button id="toolbarCalendarTrigger" onclick="openFloatingCalendar('toolbar', this, event)" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/95 hover:bg-slate-800 border border-cyan-500/40 text-xs font-mono font-bold text-cyan-300 shadow transition">
@@ -1212,8 +1213,8 @@
                 kpiProgress: "Tiến Độ Hoàn Thành",
                 kpiDoneCount: (d, t) => `(${d}/${t} hoàn thành)`,
                 weekSelectorSub: "LỊCH TUẦN MEDIA",
-                btnSampleWeek: "Tuần 19/10 - 25/10",
-                btnTodayWeek: "Tuần Hiện Tại",
+                btnSampleWeek: "Tuần mẫu (19/10)",
+                btnTodayWeek: "Hôm nay",
                 calTodayBtn: "Hôm nay",
                 months: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"],
                 calWeekdays: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
@@ -1380,8 +1381,8 @@
                 kpiProgress: "任务完成进度",
                 kpiDoneCount: (d, t) => `(已完成 ${d}/${t})`,
                 weekSelectorSub: "媒体部周日程表",
-                btnSampleWeek: "10月19日 - 10月25日周",
-                btnTodayWeek: "返回本周",
+                btnSampleWeek: "示例周 (19/10)",
+                btnTodayWeek: "今日",
                 calTodayBtn: "今天",
                 months: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
                 calWeekdays: ["一", "二", "三", "四", "五", "六", "日"],
@@ -1567,7 +1568,8 @@
         }
 
         function parseISOToDate(isoStr) {
-            const [y, m, d] = (isoStr || '2026-10-19').split('-').map(Number);
+            const fallback = formatDateISO(new Date());
+            const [y, m, d] = (isoStr || fallback).split('-').map(Number);
             return new Date(y, m - 1, d);
         }
 
@@ -1725,11 +1727,12 @@
         let currentRole = (roleParam === 'media' || lockedStaffName) ? 'media' : 'manager';
         let isLockedMediaLink = (roleParam === 'media' || Boolean(lockedStaffName));
         let currentView = 'timeline';
-        let currentWeekMonday = new Date(2026, 9, 19);
-        let selectedToolbarDateISO = '2026-10-19';
+        const todayDateObj = new Date();
+        let currentWeekMonday = getMondayOfDate(todayDateObj);
+        let selectedToolbarDateISO = formatDateISO(todayDateObj);
 
         let calContext = 'toolbar';
-        let calViewingMonth = new Date(2026, 9, 1);
+        let calViewingMonth = new Date(todayDateObj.getFullYear(), todayDateObj.getMonth(), 1);
 
         let db = null;
         let allTasks = [];
@@ -4726,16 +4729,16 @@
             // Không có mã PIN 0908 là khoá hoàn toàn, không cho vào!
             const isPersonalStaffLink = Boolean(lockedStaffName) || (roleParam === 'media');
 
+            if (typeof window.setLanguage === 'function') {
+                window.setLanguage(currentLang, false);
+            }
+            if (typeof window.renderAllViews === 'function') {
+                window.renderAllViews();
+            }
+
             if (!isPersonalStaffLink && !window.isManagerAuthenticated()) {
                 currentRole = 'manager';
                 window.openManagerPinModal();
-            } else {
-                if (typeof window.setLanguage === 'function') {
-                    window.setLanguage(currentLang, false);
-                }
-                if (typeof window.renderAllViews === 'function') {
-                    window.renderAllViews();
-                }
             }
 
             initFirebaseApp();
