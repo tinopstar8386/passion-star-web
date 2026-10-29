@@ -1236,8 +1236,15 @@ window.isTrafficGroup = isTrafficGroup;
       refreshData();
     });
     function generateBadgeHTML(emp) {
-      if (emp.customBadge && badgesData[emp.customBadge]) {
-         return `<span class="vip-badge" style="background: ${badgesData[emp.customBadge]}; border: 1px solid rgba(255,255,255,0.4);">${emp.customBadge}</span>`;
+      const b = emp.customBadge ? String(emp.customBadge).trim().toUpperCase() : '';
+      if (b && badgesData[b]) {
+         return `<span class="vip-badge" style="background: ${badgesData[b]}; border: 1px solid rgba(255,255,255,0.4);">${b}</span>`;
+      }
+      if (b === 'VNART' || b === 'BNART') {
+         return `<span class="vip-badge" style="background: linear-gradient(135deg, hsl(335, 100%, 80%) 0%, hsl(350, 100%, 75%) 100%); color: #831843; border: 1px solid rgba(255,255,255,0.4);">${b}</span>`;
+      }
+      if (b) {
+         return `<span class="vip-badge" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); border: 1px solid rgba(255,255,255,0.4);">${b}</span>`;
       }
       let nUp = String(emp.name).toUpperCase(), rUp = String(emp.role).toUpperCase(), gUp = String(emp.group).toUpperCase();
       let isTeacher = (nUp === "KEN" || nUp === "U" || nUp === "DINO" || nUp.includes("TEACHER"));
@@ -1525,8 +1532,8 @@ window.isTrafficGroup = isTrafficGroup;
       if (g.includes("TEAM U") || b.includes("FASHION") || n.includes("FASHION") || g.includes("FASHION")) {
         return { teamCode: "TEAM_U", sortOrder: 201, groupKey: "TEAM U - FASHION", groupLabel: "Team U - Fashion", isTraffic: isTrafficGroup("TEAM U - FASHION") };
       }
-      if (g.includes("BNART") || g.includes("VNART") || b.includes("BNART") || b.includes("VNART") || n.includes("BNART") || n.includes("VNART")) {
-        return { teamCode: "TEAM_DINO", sortOrder: 302, groupKey: "TEAM DINO - BNART", groupLabel: "Team Dino - Bnart", isTraffic: isTrafficGroup("TEAM DINO - BNART") };
+      if (g.includes("VNART") || g.includes("BNART") || b.includes("VNART") || b.includes("BNART") || n.includes("VNART") || n.includes("BNART")) {
+        return { teamCode: "TEAM_DINO", sortOrder: 302, groupKey: "TEAM DINO - VNART", groupLabel: "Team Dino - Vnart", isTraffic: isTrafficGroup("TEAM DINO - VNART") || isTrafficGroup("TEAM DINO - BNART") };
       }
       if (g.includes("BEE") || b.includes("BEE") || n.includes("BEE")) {
         return { teamCode: "TEAM_DINO", sortOrder: 301, groupKey: "TEAM DINO - BEE", groupLabel: "Team Dino - Bee", isTraffic: isTrafficGroup("TEAM DINO - BEE") };
@@ -1613,9 +1620,9 @@ window.isTrafficGroup = isTrafficGroup;
       if (target.includes("ORION") && (empGroup.includes("ORION") || empName.includes("ORION"))) return true;
       if (target.includes("FASHION") && (empGroup.includes("FASHION") || empName.includes("FASHION"))) return true;
       if (target.includes("ROYEN") && (empGroup.includes("ROYEN") || empName.includes("ROYEN"))) return true;
-      if (target.includes("BNART") && (empGroup.includes("BNART") || empName.includes("BNART"))) return true;
-      if (target.includes("BEE") && (empGroup.includes("BEE") || empName.includes("BEE"))) return true;
-      if (target === "TEAM DINO" && (empGroup.includes("DINO") || empGroup.includes("BEE") || empGroup.includes("BNART") || empName.includes("BEE") || empName.includes("BNART"))) return true;
+      if ((target.includes("VNART") || target.includes("BNART")) && (empGroup.includes("VNART") || empGroup.includes("BNART") || empName.includes("VNART") || empName.includes("BNART") || String(emp.customBadge || '').toUpperCase().includes("VNART") || String(emp.customBadge || '').toUpperCase().includes("BNART"))) return true;
+      if (target.includes("BEE") && (empGroup.includes("BEE") || empName.includes("BEE") || String(emp.customBadge || '').toUpperCase().includes("BEE"))) return true;
+      if (target === "TEAM DINO" && (empGroup.includes("DINO") || empGroup.includes("BEE") || empGroup.includes("VNART") || empGroup.includes("BNART") || empName.includes("BEE") || empName.includes("VNART") || empName.includes("BNART"))) return true;
       if ((target.includes("GIMBAL") || target.includes("MEDIA")) && (empGroup.includes("GIMBAL") || empGroup.includes("MEDIA"))) return true;
 
       let cleanTarget = target.replace(/[^A-Z0-9]/g, '');
@@ -1686,7 +1693,7 @@ window.isTrafficGroup = isTrafficGroup;
         else if (displayTitle.includes("ORION")) displayTitle = "Team Thầy Ken - Nhóm Orion (Lưu lượng)";
         else if (displayTitle.includes("FASHION")) displayTitle = "Team Cô U - Nhóm Fashion";
         else if (displayTitle.includes("ROYEN")) displayTitle = "Team Cô U - Nhóm Royen:One (Lưu lượng)";
-        else if (displayTitle.includes("BNART")) displayTitle = "Team Thầy Dino - Nhóm Bnart";
+        else if (displayTitle.includes("VNART") || displayTitle.includes("BNART")) displayTitle = "Team Thầy Dino - Nhóm Vnart";
         else if (displayTitle.includes("BEE")) displayTitle = "Team Thầy Dino - Nhóm Bee";
         else if (displayTitle.includes("DINO")) displayTitle = "Team Thầy Dino";
         else if (displayTitle.includes("GIMBAL") || displayTitle.includes("MEDIA")) displayTitle = "Gimbal / Media";
