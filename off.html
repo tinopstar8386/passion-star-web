@@ -3571,11 +3571,14 @@
     }
 
     /* ================= GHI CHÚ LÝ DO NGHỈ PHÉP (ĐẶC BIỆT T7 & CN) ================= */
+    td.day-cell, td.cell-off {
+      position: relative !important;
+    }
     .leave-note-indicator {
       position: absolute;
       top: 1px;
       right: 2px;
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       line-height: 1;
       cursor: pointer;
       filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
@@ -3589,26 +3592,36 @@
     .weekend-cell {
       background-color: rgba(254, 243, 199, 0.22) !important;
     }
+    .weekend-off-need-note {
+      background-color: rgba(254, 243, 199, 0.45) !important;
+      box-shadow: inset 0 0 0 1.5px #f59e0b !important;
+    }
     .weekend-add-note-hint {
       position: absolute;
       bottom: 2px;
       right: 2px;
       font-size: 0.58rem;
-      color: #b45309;
-      font-weight: 700;
-      background: rgba(254, 243, 199, 0.9);
+      font-weight: 800;
+      color: #92400e;
+      background: #fde68a;
+      border: 1px solid #f59e0b;
       padding: 1px 3px;
       border-radius: 4px;
       cursor: pointer;
       line-height: 1;
-      z-index: 4;
-      opacity: 0.85;
-      transition: opacity 0.15s ease, transform 0.15s ease;
+      z-index: 5;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+      white-space: nowrap;
+      animation: pulseWeekendNote 2.2s infinite ease-in-out;
+    }
+    @keyframes pulseWeekendNote {
+      0%, 100% { transform: scale(1); box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3); }
+      50% { transform: scale(1.08); box-shadow: 0 2px 6px rgba(245, 158, 11, 0.8); }
     }
     .weekend-add-note-hint:hover {
-      opacity: 1;
-      transform: scale(1.1);
-      background: #fde68a;
+      transform: scale(1.15) !important;
+      background: #f59e0b;
+      color: #ffffff;
     }
 
     /* ================= BADGE LIBRARY MANAGER STYLES ================= */
@@ -5442,7 +5455,34 @@
       showToast(msg);
     };
 
-    // ================= GHI CHÚ LÝ DO NGHỈ PHÉP =================
+    // ================= GHI CHÚ LÝ DO NGHỈ PHÉP (ĐẶC BIỆT T7 & CN CHO LIVESTREAM) =================
+    function isLivestreamMember(emp, deptKey) {
+      const dUpper = String(deptKey || '').toUpperCase();
+      if (dUpper === 'LIVESTEAM' || dUpper === 'LIVESTREAM') return true;
+      const rUpper = String(emp && emp.role || '').toUpperCase();
+      if (rUpper === 'LIVESTEAM' || rUpper === 'LIVESTREAM' || rUpper.includes('LIVE')) return true;
+      const gUpper = String(emp && emp.group || '').toUpperCase();
+      if (gUpper.includes('KEN') || gUpper.includes('ORION') || gUpper.includes('ANGELIK') ||
+          gUpper.includes('DINO') || gUpper.includes('BEE') || gUpper.includes('VNART') || gUpper.includes('BNART') ||
+          gUpper.includes('TEAM U') || gUpper.includes('FASHION') || gUpper.includes('ROYEN')) {
+        return true;
+      }
+      return false;
+    }
+    window.isLivestreamMember = isLivestreamMember;
+
+    function getSpecificLeaveNote(leave) {
+      if (!leave) return '';
+      const note = String(leave.note || '').trim();
+      if (note.length > 0) return note;
+      const reason = String(leave.reason || '').trim();
+      if (reason.length > 0 && reason !== 'Đăng ký nghỉ tháng' && reason !== 'Nghỉ phép') {
+        return reason;
+      }
+      return '';
+    }
+    window.getSpecificLeaveNote = getSpecificLeaveNote;
+
     function openLeaveNoteModal(name, checkDate) {
       const emp = employeesData.find(e => e.name === name);
       const leave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate);
@@ -5452,6 +5492,7 @@
       const dayNames = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
       const dayName = dayNames[dObj.getDay()];
       const isWeekend = (dObj.getDay() === 0 || dObj.getDay() === 6);
+      const isLive = isLivestreamMember(emp, emp && emp.role);
 
       const nameEl = document.getElementById('leaveNoteEmpName');
       const dateEl = document.getElementById('leaveNoteDateText');
@@ -5461,13 +5502,18 @@
 
       if (nameEl) nameEl.innerText = `${name} ${emp ? '[' + (emp.group || '') + ']' : ''}`;
       if (dateEl) {
-        dateEl.innerHTML = `<b>${dayName}</b>, ngày <b>${formattedDate}</b> ${isWeekend ? '<span style="color:#dc2626; font-weight:800; background:#fee2e2; padding:2px 6px; border-radius:4px; margin-left:6px; font-size:0.75rem;">⭐ CUỐI TUẦN ĐẶC BIỆT</span>' : ''}`;
+        let tagHtml = isWeekend ? '<span style="color:#dc2626; font-weight:800; background:#fee2e2; padding:2px 6px; border-radius:4px; margin-left:6px; font-size:0.75rem;">⭐ CUỐI TUẦN ĐẶC BIỆT</span>' : '';
+        let noticeHtml = (isWeekend && isLive) ? '<div style="margin-top:6px; font-size:0.75rem; color:#b45309; background:#fef3c7; padding:4px 8px; border-radius:6px; border:1px solid #fde68a; font-weight:600;">⚠️ Quy định Livestream: Nghỉ Thứ 7 hoặc Chủ Nhật bắt buộc ghi rõ lý do để báo cáo sếp duyệt.</div>' : '';
+        dateEl.innerHTML = `<b>${dayName}</b>, ngày <b>${formattedDate}</b> ${tagHtml}${noticeHtml}`;
       }
       if (targetNameEl) targetNameEl.value = name;
       if (targetDateEl) targetDateEl.value = checkDate;
       
-      const existingNote = (leave ? (leave.note || leave.reason || '') : '');
-      if (inputEl) inputEl.value = existingNote;
+      const existingNote = getSpecificLeaveNote(leave);
+      if (inputEl) {
+        inputEl.value = existingNote;
+        inputEl.placeholder = "Ví dụ: Việc gia đình, Đám cưới, Ốm đau, Sếp duyệt...";
+      }
       
       const modal = document.getElementById('leaveNoteModal');
       if (modal) {
@@ -7422,33 +7468,54 @@
                           let isHalf = isHalfDayLeave(leave);
                           let dCellObj = new Date(displayYear, displayMonth, i);
                           let isWeekendCell = (dCellObj.getDay() === 0 || dCellObj.getDay() === 6);
+                          let isLive = isLivestreamMember(emp, deptKey);
+                          let specificNote = getSpecificLeaveNote(leave);
+                          let hasSpecificNote = Boolean(specificNote && specificNote.length > 0);
+                          let needWeekendReason = isWeekendCell && isLive && !hasSpecificNote;
+
                           let cellClass = isHalf ? 'cell-off cell-half-day' : 'cell-off';
                           if (isWeekendCell) cellClass += ' weekend-cell';
+                          if (needWeekendReason) cellClass += ' weekend-off-need-note';
+
                           let imgIcon = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
                           let leaveTitle = isHalf ? 'OFF Nửa Ngày (0.5 ngày)' : 'OFF Cả Ngày (1.0 ngày)';
 
-                          // GHI CHÚ LÝ DO NGHỈ PHÉP (ĐẶC BIỆT T7 & CN)
-                          let hasLeaveNote = Boolean((leave.note && leave.note.trim()) || (leave.reason && leave.reason.trim()));
-                          let leaveNoteContent = (leave.note || leave.reason || '').trim();
-                          let noteTooltipText = hasLeaveNote ? `📝 Lý do: ${leaveNoteContent}` : (isWeekendCell ? '⭐ Nghỉ cuối tuần (Chưa có ghi chú - Click để thêm lý do)' : '');
-                          let noteIndicatorBadge = hasLeaveNote 
-                            ? `<span class="leave-note-indicator" onclick="event.stopPropagation(); openLeaveNoteModal('${name}', '${checkDate}')" title="${noteTooltipText}">📝</span>` 
-                            : (isWeekendCell ? `<span class="weekend-add-note-hint" onclick="event.stopPropagation(); openLeaveNoteModal('${name}', '${checkDate}')" title="Click để thêm lý do báo sếp">+Note</span>` : '');
+                          let noteIndicatorBadge = '';
+                          if (hasSpecificNote) {
+                            noteIndicatorBadge = `<span class="leave-note-indicator" onclick="event.stopPropagation(); openLeaveNoteModal('${name}', '${checkDate}')" title="📝 Lý do: ${specificNote}">📝</span>`;
+                          } else if (needWeekendReason) {
+                            noteIndicatorBadge = `<span class="weekend-add-note-hint" onclick="event.stopPropagation(); openLeaveNoteModal('${name}', '${checkDate}')" title="⚠️ Nghỉ T7/CN bắt buộc có lý do báo sếp! Bấm để thêm lý do">+Note</span>`;
+                          }
+
+                          let fullTitle = `${leaveTitle}${hasSpecificNote ? ' | 📝 Lý do: ' + specificNote : (needWeekendReason ? ' | ⚠️ Nghỉ T7/CN bắt buộc có lý do báo sếp' : '')}`;
 
                           if (inDraft && inDraft.action === 'XÓA') {
                               tr += `<td data-col="${i}" class="${tdClass} ${cellClass} cell-draft" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')">${noteIndicatorBadge}<div class="draft-remove-wrap" title="Sẽ xóa lịch này"><img src="${imgIcon}" class="cell-leave-img" alt="Del"><span class="draft-badge-del-x">✕</span></div></td>`;
                           } else {
-                              tr += `<td data-col="${i}" class="${tdClass} ${cellClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')">${noteIndicatorBadge}<img src="${imgIcon}" class="cell-leave-img" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" alt="${isHalf ? 'HALFDAY' : 'OFF'}" title="${leaveTitle}${hasLeaveNote ? ' | ' + noteTooltipText : ''}"></td>`;
+                              tr += `<td data-col="${i}" class="${tdClass} ${cellClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')">${noteIndicatorBadge}<img src="${imgIcon}" class="cell-leave-img" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" alt="${isHalf ? 'HALFDAY' : 'OFF'}" title="${fullTitle}"></td>`;
                           }
                       }
                   } else {
+                       let dCellObj = new Date(displayYear, displayMonth, i);
+                       let isWeekendCell = (dCellObj.getDay() === 0 || dCellObj.getDay() === 6);
+                       let isLive = isLivestreamMember(emp, deptKey);
+
                        if (inDraft && inDraft.action === 'THÊM') {
                            let isHalf = (inDraft.offType === 'HALF');
                            let cellClass = isHalf ? 'cell-draft cell-half-day' : 'cell-draft';
+                           if (isWeekendCell) cellClass += ' weekend-cell';
+                           let needDraftReason = isWeekendCell && isLive && !inDraft.note;
+                           if (needDraftReason) cellClass += ' weekend-off-need-note';
+                           let draftNoteBadge = needDraftReason 
+                             ? `<span class="weekend-add-note-hint" onclick="event.stopPropagation(); openLeaveNoteModal('${name}', '${checkDate}')" title="⚠️ Nghỉ T7/CN cần có lý do báo sếp! Bấm để thêm">+Note</span>` 
+                             : (inDraft.note ? `<span class="leave-note-indicator" onclick="event.stopPropagation(); openLeaveNoteModal('${name}', '${checkDate}')" title="📝 Lý do: ${inDraft.note}">📝</span>` : '');
                            let imgIcon = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
-                           tr += `<td data-col="${i}" class="${tdClass} ${cellClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')"><div class="draft-added-wrap" title="Sẽ thêm lịch này (${isHalf ? 'Nửa ngày' : 'Cả ngày'})"><img src="${imgIcon}" class="cell-leave-img draft-pulse" alt="Add"><span class="draft-badge-add-tag">+${isHalf ? 'NỬA' : 'OFF'}</span></div></td>`;
+                           tr += `<td data-col="${i}" class="${tdClass} ${cellClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')">${draftNoteBadge}<div class="draft-added-wrap" title="Sẽ thêm lịch này (${isHalf ? 'Nửa ngày' : 'Cả ngày'})"><img src="${imgIcon}" class="cell-leave-img draft-pulse" alt="Add"><span class="draft-badge-add-tag">+${isHalf ? 'NỬA' : 'OFF'}</span></div></td>`;
                        }
-                       else tr += `<td data-col="${i}" class="${tdClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')"></td>`;
+                       else {
+                           let emptyCellClass = isWeekendCell ? 'weekend-cell' : '';
+                           tr += `<td data-col="${i}" class="${tdClass} ${emptyCellClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')"></td>`;
+                       }
                   }
                 }
                 tbody.innerHTML += tr + `</tr>`;
@@ -7840,6 +7907,9 @@ function initMobileCalSwipeGesture() {
           <div class="context-menu-item" style="background:#fffbeb; color:#d97706; font-weight:700;" id="mCalSwitchTypeBtn">
             ${switchLabel}
           </div>
+          <div class="context-menu-item" style="background:#f0fdf4; color:#16a34a; font-weight:700;" id="mCalNoteBtn">
+            📝 Ghi chú lý do nghỉ (Báo sếp)
+          </div>
           <div class="context-menu-item" style="background:#eff6ff; color:#2563eb; font-weight:700;" id="mCalStartMoveBtn">
             🔄 Dời sang ngày khác trên lịch này
           </div>
@@ -7856,6 +7926,13 @@ function initMobileCalSwipeGesture() {
           closeAllMobileSheets();
           commitAddLeaveDraft(role, name, checkDate, switchTargetType, null);
         };
+        const mNoteBtn = document.getElementById('mCalNoteBtn');
+        if (mNoteBtn) {
+          mNoteBtn.onclick = () => {
+            closeAllMobileSheets();
+            openLeaveNoteModal(name, checkDate);
+          };
+        }
         document.getElementById('mCalStartMoveBtn').onclick = () => {
           closeAllMobileSheets();
           mobileCalMoveOldDate = checkDate;
