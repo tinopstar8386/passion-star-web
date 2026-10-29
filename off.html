@@ -3823,7 +3823,7 @@
 <body>
 
   <!-- MÀN HÌNH BẢO MẬT KHÓA TRANG QUẢN TRỊ (PIN) -->
-  <div id="adminPinLockOverlay" style="position: fixed; inset: 0; z-index: 999999; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(14px); display: none; align-items: center; justify-content: center; font-family: 'Inter', -apple-system, sans-serif;">
+  <div id="adminPinLockOverlay" style="position: fixed; inset: 0; z-index: 999999; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(14px); display: flex; align-items: center; justify-content: center; font-family: 'Inter', -apple-system, sans-serif;">
     <div id="adminPinCard" style="position: relative; background: white; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); padding: 32px 26px 24px; width: 330px; max-width: calc(100vw - 32px); box-sizing: border-box; text-align: center; border: 1px solid rgba(226, 232, 240, 0.8);">
       <button type="button" onclick="closeAdminPinOverlay()" title="Đóng" style="position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%; border: none; background: #f1f5f9; color: #64748b; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; transition: all 0.2s;">✕</button>
       <div style="width: 58px; height: 58px; margin: 0 auto 16px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);">🔒</div>
@@ -3963,10 +3963,15 @@
               <div class="side-sub-action-wrap">
               <span class="sub-badge" id="sideBadge-BEE">0</span></div>
             </div>
-            <div class="sidebar-sub-item" id="sideItem-VNART" onclick="selectSidebarFilter('GROUP:TEAM DINO - VNART')">
+            <div class="sidebar-sub-item" id="sideItem-MIRACLE" onclick="selectSidebarFilter('GROUP:TEAM DINO - MIRACLE')">
+              <span class="sub-label">💃 Miracle</span>
+              <div class="side-sub-action-wrap">
+              <span class="sub-badge" id="sideBadge-MIRACLE">0</span></div>
+            </div>
+            <div class="sidebar-sub-item" id="sideItem-VNART" style="display: none;" onclick="selectSidebarFilter('GROUP:TEAM DINO - VNART')">
               <span class="sub-label">💃 Bnart</span>
               <div class="side-sub-action-wrap">
-              <span class="sub-badge" sideBadge-VNART>0</span></div>
+              <span class="sub-badge" id="sideBadge-VNART">0</span></div>
             </div>
           </div>
         </div>
@@ -4481,8 +4486,8 @@
           <label style="font-weight: 600; font-size: 0.84rem; display: block; margin-bottom: 5px;">💃 Tên Nhóm (Group Name):</label>
           <input type="text" id="newEmpGroupName" placeholder="Vnart, Bee, Orion..." list="newEmpGroupList" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; font-weight: 700; color: #1e293b;" oninput="onGroupNameChanged('new')">
           <datalist id="newEmpGroupList">
-            <option value="Vnart">
             <option value="Bee">
+            <option value="Miracle">
             <option value="Angelik">
             <option value="Orion">
             <option value="Fashion">
@@ -4570,8 +4575,8 @@
           <label style="font-weight: 600; font-size: 0.84rem; display: block; margin-bottom: 5px;">💃 Tên Nhóm (Group Name):</label>
           <input type="text" id="editEmpGroupName" placeholder="Vnart, Bee, Orion..." list="editEmpGroupList" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; font-weight: 700; color: #1e293b;" oninput="onGroupNameChanged('edit')">
           <datalist id="editEmpGroupList">
-            <option value="Vnart">
             <option value="Bee">
+            <option value="Miracle">
             <option value="Angelik">
             <option value="Orion">
             <option value="Fashion">
@@ -5194,7 +5199,7 @@
         // AUTH GUARD: Chặn thao tác ghi/sửa/xóa nếu chưa xác thực PIN Quản trị
         const PUBLIC_ACTIONS = ['getInitialData', 'getLeaveData'];
         if (!PUBLIC_ACTIONS.includes(action)) {
-            const isAuth = (typeof isAdminAuthorized === 'function') ? isAdminAuthorized() : (sessionStorage.getItem("ps_admin_auth") === "true" || localStorage.getItem("ps_admin_auth") === "true");
+            const isAuth = (typeof isAdminAuthorized === 'function') ? isAdminAuthorized() : (sessionStorage.getItem("ps_admin_auth") === "true");
             if (isAuth) {
                 sessionStorage.setItem("ps_admin_auth", "true");
             } else {
@@ -6044,17 +6049,19 @@
     let pendingAdminAction = null;
 
     function isAdminAuthorized() {
-      return sessionStorage.getItem("ps_admin_auth") === "true" || localStorage.getItem("ps_admin_auth") === "true";
+      return sessionStorage.getItem("ps_admin_auth") === "true";
     }
 
     function checkAdminAuthOnLoad() {
-      if (isAdminAuthorized()) {
-        sessionStorage.setItem("ps_admin_auth", "true");
-      }
-      const overlay = document.getElementById("adminPinLockOverlay");
-      if (overlay) {
-        overlay.style.display = "none";
-        document.body.style.overflow = "";
+      try { localStorage.removeItem("ps_admin_auth"); } catch (e) {}
+      if (!isAdminAuthorized()) {
+        openAdminPinOverlay();
+      } else {
+        const overlay = document.getElementById("adminPinLockOverlay");
+        if (overlay) {
+          overlay.style.display = "none";
+          document.body.style.overflow = "";
+        }
       }
     }
 
@@ -6082,7 +6089,6 @@
 
     function grantAdminAuth() {
       sessionStorage.setItem("ps_admin_auth", "true");
-      try { localStorage.setItem("ps_admin_auth", "true"); } catch (e) {}
       closeAdminPinOverlay();
       showToast("🔓 Đã xác thực quyền Quản trị thành công!");
       if (typeof pendingAdminAction === 'function') {
@@ -6655,7 +6661,7 @@
         const isTr = isTrafficGroup("TEAM DINO - MIRACLE");
         return {
           teamCode: "TEAM_DINO",
-          sortOrder: 303,
+          sortOrder: 302,
           groupKey: "TEAM DINO - MIRACLE",
           groupLabel: "Team Dino - Miracle",
           subgroupName: "Miracle",
@@ -6667,7 +6673,7 @@
         const isTr = isTrafficGroup("TEAM DINO - BNART");
         return {
           teamCode: "TEAM_DINO",
-          sortOrder: 302,
+          sortOrder: 303,
           groupKey: "TEAM DINO - BNART",
           groupLabel: "Team Dino - Bnart",
           subgroupName: "Bnart",
@@ -6901,7 +6907,7 @@
         return empNormGroup.includes('ROYEN') || empNormGroup.includes('FASHION') || empNormGroup.includes('TEAM U');
       }
       if (mobileGroupFilter === 'TEAM:DINO') {
-        return empNormGroup.includes('DINO') || empNormGroup.includes('BEE') || empNormGroup.includes('BNART');
+        return empNormGroup.includes('DINO') || empNormGroup.includes('BEE') || empNormGroup.includes('MIRACLE') || empNormGroup.includes('BNART') || empNormGroup.includes('VNART');
       }
       if (mobileGroupFilter === 'DEPT:MEDIA' || mobileGroupFilter === 'GROUP:GIMBAL / MEDIA') {
         const r = String(emp.role || '').toUpperCase();
@@ -6928,6 +6934,7 @@
         { key: 'GROUP:TEAM U - ROYEN:ONE', label: 'U: Royen:One ⚡' },
         { key: 'GROUP:TEAM U - FASHION', label: 'U: Fashion' },
         { key: 'GROUP:TEAM DINO - BEE', label: 'Dino: Bee' },
+        { key: 'GROUP:TEAM DINO - MIRACLE', label: 'Dino: Miracle' },
         { key: 'GROUP:TEAM DINO - VNART', label: 'Dino: Bnart' },
         { key: 'DEPT:MEDIA', label: '🎥 Media / Kỹ thuật' }
       ];
@@ -6961,19 +6968,28 @@
     function isGroupMatchingSidebar(deptKey, groupKey) {
       if (!window.selectedSidebarFilter || window.selectedSidebarFilter === 'ALL') return true;
       const f = window.selectedSidebarFilter;
-      if (f === 'TEAM:KEN') return groupKey === 'TEAM KEN - ANGELIK' || groupKey === 'TEAM KEN - ORION';
-      if (f === 'TEAM:U') return groupKey === 'TEAM U - FASHION' || groupKey === 'TEAM U - ROYEN:ONE';
-      if (f === 'TEAM:DINO') return groupKey === 'TEAM DINO - BEE' || groupKey === 'TEAM DINO - BNART' || groupKey === 'TEAM DINO';
+      const gk = String(groupKey).toUpperCase();
+      if (f === 'TEAM:KEN') return gk === 'TEAM KEN - ANGELIK' || gk === 'TEAM KEN - ORION' || gk.includes('KEN') || gk.includes('ANGELIK') || gk.includes('ORION');
+      if (f === 'TEAM:U') return gk === 'TEAM U - FASHION' || gk === 'TEAM U - ROYEN:ONE' || gk.includes('TEAM U') || gk.includes('FASHION') || gk.includes('ROYEN');
+      if (f === 'TEAM:DINO') return gk === 'TEAM DINO - BEE' || gk === 'TEAM DINO - MIRACLE' || gk === 'TEAM DINO - BNART' || gk === 'TEAM DINO - VNART' || gk.includes('DINO') || gk.includes('BEE') || gk.includes('MIRACLE') || gk.includes('BNART') || gk.includes('VNART');
       if (f === 'DEPT:MEDIA' || f === 'GROUP:GIMBAL / MEDIA') {
         const dk = String(deptKey).toUpperCase();
-        const gk = String(groupKey).toUpperCase();
         return dk === 'MEDIA' || gk.includes('MEDIA') || gk.includes('GIMBAL');
       }
       if (f.startsWith('GROUP:')) {
-        return groupKey === f.replace('GROUP:', '');
+        const targetGroup = f.replace('GROUP:', '').toUpperCase();
+        if (gk === targetGroup) return true;
+        if (targetGroup.includes('MIRACLE') && gk.includes('MIRACLE')) return true;
+        if (targetGroup.includes('BEE') && gk.includes('BEE')) return true;
+        if ((targetGroup.includes('BNART') || targetGroup.includes('VNART')) && (gk.includes('BNART') || gk.includes('VNART'))) return true;
+        if (targetGroup.includes('ANGELIK') && gk.includes('ANGELIK')) return true;
+        if (targetGroup.includes('ORION') && gk.includes('ORION')) return true;
+        if (targetGroup.includes('FASHION') && gk.includes('FASHION')) return true;
+        if (targetGroup.includes('ROYEN') && gk.includes('ROYEN')) return true;
+        return gk.includes(targetGroup) || targetGroup.includes(gk);
       }
       if (f.startsWith('DEPT:')) {
-        return deptKey === f.replace('DEPT:', '');
+        return String(deptKey).toUpperCase() === f.replace('DEPT:', '').toUpperCase();
       }
       return true;
     }
@@ -6999,7 +7015,8 @@
       else if (filterKey === 'GROUP:TEAM U - ROYEN:ONE') activeEl = document.getElementById('sideItem-ROYENONE');
       else if (filterKey === 'TEAM:DINO') activeEl = document.getElementById('sideHead-DINO');
       else if (filterKey === 'GROUP:TEAM DINO - BEE') activeEl = document.getElementById('sideItem-BEE');
-      else if (filterKey === 'GROUP:TEAM DINO - VNART') activeEl = document.getElementById('sideItem-BNART');
+      else if (filterKey === 'GROUP:TEAM DINO - MIRACLE') activeEl = document.getElementById('sideItem-MIRACLE');
+      else if (filterKey === 'GROUP:TEAM DINO - VNART' || filterKey === 'GROUP:TEAM DINO - BNART') activeEl = document.getElementById('sideItem-VNART');
       else if (filterKey === 'GROUP:TEAM DINO') activeEl = document.getElementById('sideHead-DINO');
       else if (filterKey === 'DEPT:MEDIA' || filterKey === 'GROUP:GIMBAL / MEDIA') activeEl = document.getElementById('sideHead-MEDIA');
       else {
@@ -7065,8 +7082,8 @@
       setBadgeText('sideBadge-ROYENONE', countRoyen);
       setBadgeText('sideBadge-DINO', countDino);
       setBadgeText('sideBadge-BEE', countBee);
-      setBadgeText('sideBadge-BNART', countBnart);
-      setBadgeText('sideBadge-DINOSUB', countDino);
+      setBadgeText('sideBadge-MIRACLE', countMiracle);
+      setBadgeText('sideBadge-VNART', countBnart);
       setBadgeText('sideBadge-MEDIA', countMedia);
 
       // Nếu nhóm Bnart không có nhân sự nào trong tháng thì tự động ẩn khỏi sidebar
@@ -7075,25 +7092,10 @@
         itemBnart.style.display = (countBnart > 0) ? '' : 'none';
       }
 
-      // Quản lý hiển thị nhóm Miracle trên sidebar Team Thầy Dino
-      let itemMiracle = document.getElementById('sideItem-MIRACLE');
-      if (!itemMiracle) {
-        const itemBee = document.getElementById('sideItem-BEE');
-        const dinoSubWrap = itemBee ? itemBee.parentElement : null;
-        if (dinoSubWrap) {
-          const div = document.createElement('div');
-          div.className = 'sidebar-sub-item';
-          div.id = 'sideItem-MIRACLE';
-          div.onclick = function() { selectSidebarFilter('GROUP:TEAM DINO - MIRACLE'); };
-          div.innerHTML = '<span class="sub-label">💃 Miracle</span><div class="side-sub-action-wrap"><span class="sub-badge" id="sideBadge-MIRACLE">0</span></div>';
-          dinoSubWrap.appendChild(div);
-          itemMiracle = div;
-        }
-      }
+      // Hiển thị nhóm Miracle trên sidebar Team Thầy Dino
+      const itemMiracle = document.getElementById('sideItem-MIRACLE');
       if (itemMiracle) {
         itemMiracle.style.display = (countMiracle > 0) ? '' : 'none';
-        const badgeM = document.getElementById('sideBadge-MIRACLE');
-        if (badgeM) badgeM.innerText = countMiracle;
       }
 
       // Render other departments if any
@@ -7155,7 +7157,16 @@
         targetLabel = 'Nhóm Royen:one (Lưu lượng)';
       } else if (f === 'TEAM:DINO' || f === 'GROUP:TEAM DINO') {
         deptLabel = 'Bộ Phận Livestream';
-        targetLabel = 'Team Thầy Dino (Bee & Vnart)';
+        targetLabel = 'Team Thầy Dino (Bee & Miracle)';
+      } else if (f === 'GROUP:TEAM DINO - BEE') {
+        deptLabel = 'Team Thầy Dino';
+        targetLabel = 'Nhóm Bee';
+      } else if (f === 'GROUP:TEAM DINO - MIRACLE') {
+        deptLabel = 'Team Thầy Dino';
+        targetLabel = 'Nhóm Miracle';
+      } else if (f === 'GROUP:TEAM DINO - VNART' || f === 'GROUP:TEAM DINO - BNART') {
+        deptLabel = 'Team Thầy Dino';
+        targetLabel = 'Nhóm Bnart';
       } else if (f === 'DEPT:MEDIA' || f === 'GROUP:GIMBAL / MEDIA') {
         deptLabel = 'Bộ Phận Media';
         targetLabel = 'Media & Kỹ Thuật';
@@ -7518,8 +7529,9 @@
           if (groupKey === "TEAM KEN - ORION") return 102;
           if (groupKey === "TEAM U - FASHION") return 201;
           if (groupKey === "TEAM U - ROYEN:ONE") return 202;
-          if (groupKey === "TEAM DINO - BEE") return 301;
-          if (groupKey === "TEAM DINO - BNART") return 302;
+          if (groupKey === "TEAM DINO - BEE" || groupKey.includes("BEE")) return 301;
+          if (groupKey === "TEAM DINO - MIRACLE" || groupKey.includes("MIRACLE")) return 302;
+          if (groupKey === "TEAM DINO - BNART" || groupKey.includes("BNART") || groupKey.includes("VNART")) return 303;
           if (groupKey === "TEAM DINO") return 301;
           return 999;
         }
