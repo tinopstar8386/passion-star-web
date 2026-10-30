@@ -967,6 +967,7 @@
                         id="smart-paste-textarea"
                         rows="5"
                         oninput="handleSmartPasteInputChange()"
+                        onpaste="setTimeout(handleSmartPasteInputChange, 30)"
                         placeholder="Dán danh sách vào đây, ví dụ:&#10;Keo tóc : 9 chai&#10;Nền sáng maybeline 110 : 5 chai&#10;kích mí mắt : 6 bịch&#10;xịt khoá nền ARMIS : 4 chai ( 2 đen, 2 trắng)..."
                         class="w-full p-3 text-xs sm:text-sm font-mono bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all resize-y"
                     ></textarea>
@@ -5270,6 +5271,71 @@ Má hồng : 2 bảng`;
             }
         }
 
+        function stripVietnameseTones(str) {
+            if (!str) return '';
+            return str
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[đĐ]/g, m => m === 'đ' ? 'd' : 'D')
+                .toLowerCase()
+                .trim();
+        }
+
+        function calculateNameSimilarity(name1, name2) {
+            const s1 = stripVietnameseTones(name1).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+            const s2 = stripVietnameseTones(name2).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (!s1 || !s2) return 0;
+            if (s1 === s2) return 1.0;
+
+            if (s1.includes(s2) || s2.includes(s1)) {
+                const ratio = Math.min(s1.length, s2.length) / Math.max(s1.length, s2.length);
+                return Math.max(0.72, ratio);
+            }
+
+            const w1 = s1.split(' ').filter(w => w.length > 0);
+            const w2 = s2.split(' ').filter(w => w.length > 0);
+            if (w1.length === 0 || w2.length === 0) return 0;
+
+            const set1 = new Set(w1);
+            const set2 = new Set(w2);
+            let common = 0;
+            for (let w of set1) {
+                if (set2.has(w)) common++;
+            }
+            const jaccard = common / (set1.size + set2.size - common);
+
+            const n1 = (s1.match(/\d+/g) || []).join('');
+            const n2 = (s2.match(/\d+/g) || []).join('');
+            if (n1 && n2 && n1 !== n2) {
+                return jaccard * 0.5;
+            }
+
+            return jaccard;
+        }
+
+        function findMatchingInventoryCandidates(parsedName) {
+            if (!parsedName || !Array.isArray(inventoryItems) || inventoryItems.length === 0) return [];
+
+            const candidates = [];
+            for (let item of inventoryItems) {
+                const nameVi = item.nameVi || '';
+                const nameZh = item.nameZh || '';
+                const simVi = calculateNameSimilarity(parsedName, nameVi);
+                const simZh = calculateNameSimilarity(parsedName, nameZh);
+                const maxSim = Math.max(simVi, simZh);
+
+                if (maxSim >= 0.40) {
+                    candidates.push({
+                        item,
+                        score: maxSim
+                    });
+                }
+            }
+
+            candidates.sort((a, b) => b.score - a.score);
+            return candidates.slice(0, 3).map(c => c.item);
+        }
+
         function detectCategoryFromKeywords(name) {
             const availCats = (typeof categoriesList !== 'undefined' && Array.isArray(categoriesList) && categoriesList.length > 0)
                 ? categoriesList
@@ -5346,7 +5412,13 @@ Má hồng : 2 bảng`;
                             unit = endUnitMatch[3].toLowerCase();
                             if (endUnitMatch[4]) name += ' ' + endUnitMatch[4].trim();
                         } else {
-                            name = line;
+                            const endNumMatch = line.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)$/);
+                            if (endNumMatch) {
+                                name = endNumMatch[1].trim();
+                                qty = parseFloat(endNumMatch[2].replace(',', '.')) || 1;
+                            } else {
+                                name = line;
+                            }
                         }
                     }
                 }
@@ -5359,11 +5431,16 @@ Má hồng : 2 bảng`;
                 name = name.replace(/^[:—–\-,;.\s]+|[:—–\-,;.\s]+$/g, '').trim();
 
                 if (name) {
+                    const candidates = findMatchingInventoryCandidates(name);
+                    const hasCandidates = candidates.length > 0;
                     results.push({
                         nameVi: name,
                         qty: Math.max(1, qty),
-                        unit,
-                        category: detectCategoryFromKeywords(name)
+                        unit: unit || 'cái',
+                        category: detectCategoryFromKeywords(name),
+                        candidates: candidates,
+                        decision: hasCandidates ? 'merge' : 'create',
+                        targetItemId: hasCandidates ? candidates[0].id : null
                     });
                 }
             }
@@ -5377,6 +5454,13 @@ Má hồng : 2 bảng`;
             renderSmartPasteList();
         }
 
+        function setSmartPasteDecision(index, decision, targetItemId = null) {
+            if (!smartPasteParsedItems[index]) return;
+            smartPasteParsedItems[index].decision = decision;
+            smartPasteParsedItems[index].targetItemId = targetItemId;
+            renderSmartPasteList();
+        }
+
         function renderSmartPasteList() {
             const listEl = document.getElementById('smart-paste-items-list');
             const badgeEl = document.getElementById('smart-paste-count-badge');
@@ -5386,7 +5470,7 @@ Má hồng : 2 bảng`;
 
             const count = smartPasteParsedItems.length;
             if (badgeEl) badgeEl.textContent = `Đã nhận diện: ${count} vật liệu`;
-            if (confirmLbl) confirmLbl.textContent = count > 0 ? `Xác nhận thêm ${count} món vào kho` : 'Xác nhận thêm hàng';
+            if (confirmLbl) confirmLbl.textContent = count > 0 ? `Xác nhận xử lý ${count} món vào kho` : 'Xác nhận thêm hàng';
             if (confirmBtn) confirmBtn.disabled = count === 0;
 
             if (count === 0) {
@@ -5402,57 +5486,120 @@ Má hồng : 2 bảng`;
                 ? categoriesList
                 : ['Lông mi & Keo', 'Son môi', 'Cọ & Mút', 'Phấn & Má hồng', 'Kem nền & Che khuyết điểm', 'Tẩy trang & Phụ kiện', 'Dụng cụ khác'];
 
-            listEl.innerHTML = smartPasteParsedItems.map((item, idx) => `
-                <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 p-2.5 bg-slate-50 hover:bg-teal-50/50 rounded-xl border border-slate-200 transition-colors">
-                    <span class="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold text-xs flex items-center justify-center shrink-0">
-                        ${idx + 1}
-                    </span>
-                    <input
-                        type="text"
-                        value="${escapeHtml(item.nameVi)}"
-                        onchange="updateSmartPasteItem(${idx}, 'nameVi', this.value)"
-                        class="flex-1 min-w-[140px] px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        placeholder="Tên vật liệu..."
-                    />
-                    <select
-                        onchange="updateSmartPasteItem(${idx}, 'category', this.value)"
-                        class="px-2 py-1.5 text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-300 rounded-lg focus:outline-none shrink-0 max-w-[140px] truncate"
-                        title="Danh mục tự nhận diện"
-                    >
-                        ${availCats.map(c => `<option value="${escapeHtml(c)}" ${c === item.category ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
-                    </select>
-                    <div class="flex items-center gap-1 shrink-0">
-                        <button
-                            type="button"
-                            onclick="updateSmartPasteItem(${idx}, 'qty', Math.max(1, ${item.qty} - 1))"
-                            class="w-6 h-6 rounded bg-white hover:bg-slate-200 border border-slate-300 font-bold text-xs flex items-center justify-center"
-                        >-</button>
+            listEl.innerHTML = smartPasteParsedItems.map((item, idx) => {
+                const candidates = item.candidates || [];
+                const hasCandidates = candidates.length > 0;
+                const isMerge = item.decision === 'merge';
+
+                return `
+                <div class="p-3 bg-white rounded-xl border ${hasCandidates ? (isMerge ? 'border-amber-300 bg-amber-50/20' : 'border-teal-300') : 'border-slate-200'} shadow-2xs space-y-2 transition-all">
+                    <!-- Hàng 1: Số thứ tự, Tên hàng, Danh mục, Số lượng, ĐVT, Nút xóa -->
+                    <div class="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                        <span class="w-6 h-6 rounded-lg ${hasCandidates ? 'bg-amber-100 text-amber-900' : 'bg-teal-100 text-teal-800'} font-bold text-xs flex items-center justify-center shrink-0">
+                            ${idx + 1}
+                        </span>
                         <input
-                            type="number"
-                            min="1"
-                            value="${item.qty}"
-                            onchange="updateSmartPasteItem(${idx}, 'qty', Math.max(1, parseInt(this.value) || 1))"
-                            class="w-12 text-center py-1 text-xs sm:text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 no-spinners"
+                            type="text"
+                            value="${escapeHtml(item.nameVi)}"
+                            onchange="updateSmartPasteItem(${idx}, 'nameVi', this.value)"
+                            class="flex-1 min-w-[140px] px-2.5 py-1.5 text-xs sm:text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+                            placeholder="Tên vật liệu..."
                         />
+                        <select
+                            onchange="updateSmartPasteItem(${idx}, 'category', this.value)"
+                            class="px-2 py-1.5 text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-300 rounded-lg focus:outline-none shrink-0 max-w-[130px] truncate"
+                            title="Danh mục tự nhận diện"
+                        >
+                            ${availCats.map(c => `<option value="${escapeHtml(c)}" ${c === item.category ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+                        </select>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button
+                                type="button"
+                                onclick="updateSmartPasteItem(${idx}, 'qty', Math.max(1, ${item.qty} - 1))"
+                                class="w-6 h-6 rounded bg-white hover:bg-slate-200 border border-slate-300 font-bold text-xs flex items-center justify-center"
+                            >-</button>
+                            <input
+                                type="number"
+                                min="1"
+                                value="${item.qty}"
+                                onchange="updateSmartPasteItem(${idx}, 'qty', Math.max(1, parseInt(this.value) || 1))"
+                                class="w-12 text-center py-1 text-xs sm:text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 no-spinners"
+                            />
+                            <button
+                                type="button"
+                                onclick="updateSmartPasteItem(${idx}, 'qty', ${item.qty} + 1)"
+                                class="w-6 h-6 rounded bg-white hover:bg-slate-200 border border-slate-300 font-bold text-xs flex items-center justify-center"
+                            >+</button>
+                        </div>
+                        <span class="px-2 py-1 bg-slate-50 border border-slate-300 text-slate-700 font-semibold text-[11px] rounded-lg shrink-0">
+                            ${escapeHtml(item.unit || 'cái')}
+                        </span>
                         <button
                             type="button"
-                            onclick="updateSmartPasteItem(${idx}, 'qty', ${item.qty} + 1)"
-                            class="w-6 h-6 rounded bg-white hover:bg-slate-200 border border-slate-300 font-bold text-xs flex items-center justify-center"
-                        >+</button>
+                            onclick="removeSmartPasteItem(${idx})"
+                            class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                            title="Xóa dòng này"
+                        >
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
-                    <span class="px-2 py-1 bg-white border border-slate-300 text-slate-700 font-semibold text-[11px] rounded-lg shrink-0">
-                        ${escapeHtml(item.unit || 'cái')}
-                    </span>
-                    <button
-                        type="button"
-                        onclick="removeSmartPasteItem(${idx})"
-                        class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors shrink-0"
-                        title="Xóa dòng này"
-                    >
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </button>
+
+                    <!-- Hàng 2: Trí tuệ nhận diện sản phẩm trùng / gần trùng trong kho -->
+                    ${hasCandidates ? `
+                        <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs space-y-2">
+                            <div class="flex items-center justify-between flex-wrap gap-1">
+                                <div class="flex items-center gap-1.5 font-bold text-amber-900">
+                                    <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                    <span>Phát hiện ${candidates.length} sản phẩm gần giống trong kho:</span>
+                                </div>
+                                <span class="text-[11px] font-semibold text-amber-700">Chọn sản phẩm đúng để cộng dồn hoặc bấm tạo mới</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-${Math.min(candidates.length + 1, 3)} gap-1.5">
+                                ${candidates.map(cand => {
+                                    const isSelected = isMerge && item.targetItemId === cand.id;
+                                    return `
+                                        <button
+                                            type="button"
+                                            onclick="setSmartPasteDecision(${idx}, 'merge', '${cand.id}')"
+                                            class="p-2 rounded-lg border text-left transition-all ${isSelected ? 'bg-amber-100 border-amber-500 ring-2 ring-amber-400/50 shadow-xs' : 'bg-white border-amber-200 hover:bg-amber-50/80 text-slate-700'}"
+                                        >
+                                            <div class="flex items-center justify-between gap-1">
+                                                <span class="font-bold text-xs text-slate-900 truncate" title="${escapeHtml(cand.nameVi)}">
+                                                    ${escapeHtml(cand.nameVi)}
+                                                </span>
+                                                ${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5 text-amber-700 shrink-0"></i>' : ''}
+                                            </div>
+                                            <p class="text-[10px] text-slate-500 mt-0.5">
+                                                Tồn hiện tại: <strong class="text-slate-800">${cand.stock} ${escapeHtml(cand.unit || '')}</strong>
+                                                ${isSelected ? ` ➔ Sau cộng: <strong class="text-emerald-700 font-extrabold">+${item.qty} = ${Number(cand.stock || 0) + Number(item.qty)}</strong>` : ''}
+                                            </p>
+                                        </button>
+                                    `;
+                                }).join('')}
+
+                                <button
+                                    type="button"
+                                    onclick="setSmartPasteDecision(${idx}, 'create', null)"
+                                    class="p-2 rounded-lg border text-left transition-all ${!isMerge ? 'bg-teal-100 border-teal-600 ring-2 ring-teal-400/50 shadow-xs text-teal-950 font-bold' : 'bg-white border-slate-300 hover:bg-slate-50 text-slate-600'}"
+                                >
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="text-xs font-bold">➕ Không trùng, tạo món mới</span>
+                                        ${!isMerge ? '<i data-lucide="check" class="w-3.5 h-3.5 text-teal-700 shrink-0"></i>' : ''}
+                                    </div>
+                                    <p class="text-[10px] text-slate-500 mt-0.5">Tạo sản phẩm riêng biệt vào kho</p>
+                                </button>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="text-[11px] font-medium text-slate-500 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+                            <span>Sản phẩm hoàn toàn mới, sẽ tạo mới vào kho với số lượng: <strong>${item.qty} ${escapeHtml(item.unit || 'cái')}</strong></span>
+                        </div>
+                    `}
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             if (window.lucide) lucide.createIcons();
         }
@@ -5462,6 +5609,15 @@ Má hồng : 2 bảng`;
             smartPasteParsedItems[index][field] = value;
             if (field === 'nameVi') {
                 smartPasteParsedItems[index].category = detectCategoryFromKeywords(value);
+                const candidates = findMatchingInventoryCandidates(value);
+                smartPasteParsedItems[index].candidates = candidates;
+                if (candidates.length > 0) {
+                    smartPasteParsedItems[index].decision = 'merge';
+                    smartPasteParsedItems[index].targetItemId = candidates[0].id;
+                } else {
+                    smartPasteParsedItems[index].decision = 'create';
+                    smartPasteParsedItems[index].targetItemId = null;
+                }
             }
             renderSmartPasteList();
         }
@@ -5477,12 +5633,39 @@ Má hồng : 2 bảng`;
             const btnConfirm = document.getElementById('btn-confirm-smart-paste');
             if (btnConfirm) {
                 btnConfirm.disabled = true;
-                btnConfirm.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline mr-1"></i> Đang thêm vào kho...';
+                btnConfirm.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline mr-1"></i> Đang xử lý vào kho...';
             }
 
-            let addedCount = 0;
+            let mergedCount = 0;
+            let createdCount = 0;
+
             for (let item of smartPasteParsedItems) {
                 const qtyVal = Math.max(1, Number(item.qty ?? item.quantity) || 1);
+
+                if (item.decision === 'merge' && item.targetItemId) {
+                    const existingItem = inventoryItems.find(i => i.id === item.targetItemId);
+                    if (existingItem) {
+                        const oldStock = Number(existingItem.stock) || 0;
+                        existingItem.stock = oldStock + qtyVal;
+                        existingItem.updatedAt = Date.now();
+                        await saveItemToFirebase(existingItem);
+
+                        await saveTransactionToFirebase({
+                            type: 'IN',
+                            itemId: existingItem.id,
+                            itemNameVi: existingItem.nameVi,
+                            quantity: qtyVal,
+                            unitPrice: existingItem.costPrice || 0,
+                            operator: 'Dán thông minh (Cộng dồn)',
+                            purpose: 'Nhập thông minh cộng thêm vào kho',
+                            note: `Cộng thêm ${qtyVal} ${existingItem.unit || ''} (từ ${oldStock} -> ${existingItem.stock})`
+                        });
+
+                        mergedCount++;
+                        continue;
+                    }
+                }
+
                 const newItem = {
                     id: 'inv-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6),
                     sku: 'MK-VT-' + String(inventoryItems.length + 1).padStart(3, '0'),
@@ -5502,14 +5685,35 @@ Má hồng : 2 bảng`;
 
                 inventoryItems.unshift(newItem);
                 await saveItemToFirebase(newItem);
-                addedCount++;
+
+                await saveTransactionToFirebase({
+                    type: 'IN',
+                    itemId: newItem.id,
+                    itemNameVi: newItem.nameVi,
+                    quantity: qtyVal,
+                    unitPrice: 0,
+                    operator: 'Dán thông minh (Tạo mới)',
+                    purpose: 'Nhập thông minh tạo mới',
+                    note: `Khởi tạo số lượng tồn ban đầu: ${qtyVal} ${newItem.unit || ''}`
+                });
+
+                createdCount++;
             }
 
             renderTable();
             updateOverviewStats();
             clearSmartPasteInput();
             closeSmartPasteModal();
-            showToast(`🎉 Đã thêm thành công ${addedCount} mặt hàng vào kho!`, 'success');
+
+            let msg = '🎉 Hoàn thành xử lý!';
+            if (mergedCount > 0 && createdCount > 0) {
+                msg = `🎉 Đã cộng dồn ${mergedCount} mặt hàng trùng và tạo mới ${createdCount} mặt hàng vào kho!`;
+            } else if (mergedCount > 0) {
+                msg = `🎉 Đã cộng dồn số lượng cho ${mergedCount} mặt hàng trong kho!`;
+            } else {
+                msg = `🎉 Đã thêm mới thành công ${createdCount} mặt hàng vào kho!`;
+            }
+            showToast(msg, 'success');
 
             if (btnConfirm) {
                 btnConfirm.disabled = false;
@@ -5554,6 +5758,12 @@ Má hồng : 2 bảng`;
         window.confirmExecuteSmartPaste = confirmExecuteSmartPaste;
         window.parseSmartItemList = parseSmartItemList;
         window.detectCategoryFromKeywords = detectCategoryFromKeywords;
+        window.handleSmartPasteInputChange = handleSmartPasteInputChange;
+        window.updateSmartPasteItem = updateSmartPasteItem;
+        window.removeSmartPasteItem = removeSmartPasteItem;
+        window.clearSmartPasteInput = clearSmartPasteInput;
+        window.pasteSampleListToSmartInput = pasteSampleListToSmartInput;
+        window.setSmartPasteDecision = setSmartPasteDecision;
         window.openQuickDeleteModal = openQuickDeleteModal;
         window.closeQuickDeleteModal = closeQuickDeleteModal;
         window.renderQuickDeleteList = renderQuickDeleteList;
