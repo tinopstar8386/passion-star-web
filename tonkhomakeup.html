@@ -2438,6 +2438,7 @@
         // 4. APPLICATION STATE
         // ============================================================================
         let inventoryItems = [];
+        let smartPasteParsedItems = [];
         let transactionLogs = [];
         let currentLang = 'vi';
         let exchangeRate = 3650;
@@ -5240,10 +5241,17 @@ Má hồng : 2 bảng`;
                 modal.classList.add('flex');
             }
             const textarea = document.getElementById('smart-paste-textarea');
-            if (textarea && textarea.value.trim().length > 0) {
-                handleSmartPasteInputChange();
-            } else if (textarea) {
-                textarea.focus();
+            if (textarea) {
+                textarea.oninput = handleSmartPasteInputChange;
+                textarea.onpaste = () => setTimeout(handleSmartPasteInputChange, 30);
+                textarea.onkeyup = handleSmartPasteInputChange;
+                textarea.onchange = handleSmartPasteInputChange;
+
+                if (textarea.value.trim().length > 0) {
+                    handleSmartPasteInputChange();
+                } else {
+                    textarea.focus();
+                }
             }
             if (window.lucide) lucide.createIcons();
         }
@@ -5282,6 +5290,7 @@ Má hồng : 2 bảng`;
         }
 
         function calculateNameSimilarity(name1, name2) {
+            if (!name1 || !name2) return 0;
             const s1 = stripVietnameseTones(name1).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
             const s2 = stripVietnameseTones(name2).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
             if (!s1 || !s2) return 0;
@@ -5289,7 +5298,7 @@ Má hồng : 2 bảng`;
 
             if (s1.includes(s2) || s2.includes(s1)) {
                 const ratio = Math.min(s1.length, s2.length) / Math.max(s1.length, s2.length);
-                return Math.max(0.72, ratio);
+                return Math.max(0.75, ratio);
             }
 
             const w1 = s1.split(' ').filter(w => w.length > 0);
@@ -5307,7 +5316,7 @@ Má hồng : 2 bảng`;
             const n1 = (s1.match(/\d+/g) || []).join('');
             const n2 = (s2.match(/\d+/g) || []).join('');
             if (n1 && n2 && n1 !== n2) {
-                return jaccard * 0.5;
+                return jaccard * 0.4;
             }
 
             return jaccard;
@@ -5317,14 +5326,33 @@ Má hồng : 2 bảng`;
             if (!parsedName || !Array.isArray(inventoryItems) || inventoryItems.length === 0) return [];
 
             const candidates = [];
+            const cleanParsed = stripVietnameseTones(parsedName).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+            const parsedWords = cleanParsed.split(' ').filter(w => w.length > 1);
+
             for (let item of inventoryItems) {
+                if (!item) continue;
                 const nameVi = item.nameVi || '';
                 const nameZh = item.nameZh || '';
                 const simVi = calculateNameSimilarity(parsedName, nameVi);
                 const simZh = calculateNameSimilarity(parsedName, nameZh);
-                const maxSim = Math.max(simVi, simZh);
+                let maxSim = Math.max(simVi, simZh);
 
-                if (maxSim >= 0.40) {
+                const cleanItemVi = stripVietnameseTones(nameVi).replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+                if (cleanItemVi && cleanParsed) {
+                    if (cleanItemVi.includes(cleanParsed) || cleanParsed.includes(cleanItemVi)) {
+                        maxSim = Math.max(maxSim, 0.75);
+                    } else if (parsedWords.length > 0) {
+                        const matchedWords = parsedWords.filter(w => cleanItemVi.includes(w));
+                        if (matchedWords.length >= 2 || (matchedWords.length === 1 && parsedWords.length === 1)) {
+                            const ratio = matchedWords.length / Math.max(parsedWords.length, 1);
+                            if (ratio >= 0.5) {
+                                maxSim = Math.max(maxSim, 0.50 + ratio * 0.3);
+                            }
+                        }
+                    }
+                }
+
+                if (maxSim >= 0.38) {
                     candidates.push({
                         item,
                         score: maxSim
@@ -5349,7 +5377,7 @@ Má hồng : 2 bảng`;
                 { keywords: ['phấn', 'má hồng', 'bắt sáng', 'highlight', 'light', 'tạo khối', 'contour', 'màu mắt', 'nhũ mắt', 'bảng mắt', 'chân mày', 'kẻ mày', 'kẻ mắt', 'eyeliner', 'mascara', 'carsla', 'moon eyes', 'color me out', 'gella', 'focalluare'], target: 'Phấn & Má hồng' },
                 { keywords: ['nền', 'kem nền', 'cushion', 'che khuyết điểm', 'ckd', 'kem lót', 'primer', 'xịt khoá nền', 'khoá nền', 'maybeline', 'maybelline', 'armis'], target: 'Kem nền & Che khuyết điểm' },
                 { keywords: ['tẩy trang', 'bông tẩy trang', 'nước tẩy trang', 'khăn giấy', 'tăm bông', 'cồn', 'vệ sinh'], target: 'Tẩy trang & Phụ kiện' },
-                { keywords: ['tóc', 'keo tóc', 'sáp tóc', 'ghim', 'kẹp', 'lược', 'máy uốn', 'máy sấy', 'osjo'], target: 'Dụng cụ khác' }
+                { keywords: ['tóc', 'keo tóc', 'sáp tóc', 'ghim', 'kẹp', 'lược', 'máy uốn', 'máy sấy', 'osjo', 'duỗi', 'bấm'], target: 'Dụng cụ khác' }
             ];
 
             for (const rule of rules) {
@@ -5361,13 +5389,33 @@ Má hồng : 2 bảng`;
             return availCats[availCats.length - 1] || 'Dụng cụ khác';
         }
 
+        function normalizeUnit(unitStr) {
+            if (!unitStr) return 'cái';
+            const u = unitStr.toLowerCase().trim();
+            const map = {
+                'hop': 'hộp', 'bich': 'bịch', 'cay': 'cây', 'cai': 'cái',
+                'bang': 'bảng', 'tuyp': 'tuýp', 'thoi': 'thỏi', 'goi': 'gói',
+                'bo': 'bộ', 'mieng': 'miếng', 'cap': 'cặp', 'lo': 'lọ',
+                'vi': 'vỉ', 'cuon': 'cuộn', 'tep': 'tệp', 'ong': 'ống',
+                'binh': 'bình', 'tui': 'túi', 'chiec': 'chiếc', 'hu': 'hũ'
+            };
+            return map[u] || u;
+        }
+
         function parseSmartItemList(text) {
             if (!text || !text.trim()) return [];
             const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
             const results = [];
 
-            const commonUnits = ['chai', 'bịch', 'cây', 'cái', 'hộp', 'hủ', 'hũ', 'bảng', 'tuýp', 'thỏi', 'gói', 'bộ', 'miếng', 'cặp', 'lọ', 'vỉ', 'cuộn', 'khay', 'tệp'];
-            const unitRegex = new RegExp(`^(\\d+(?:[.,]\\d+)?)\\s*(${commonUnits.join('|')})(?:\\s+(.*))?$`, 'i');
+            const commonUnits = [
+                'chai', 'bịch', 'bich', 'cây', 'cay', 'cái', 'cai', 'hộp', 'hop',
+                'hủ', 'hu', 'hũ', 'bảng', 'bang', 'tuýp', 'tuyp', 'thỏi', 'thoi',
+                'gói', 'goi', 'bộ', 'bo', 'miếng', 'mieng', 'cặp', 'cap', 'lọ', 'lo',
+                'vỉ', 'vi', 'cuộn', 'cuon', 'khay', 'tệp', 'tep', 'ống', 'ong',
+                'bình', 'binh', 'ly', 'túi', 'tui', 'chiếc', 'chiec'
+            ];
+            const unitPattern = commonUnits.join('|');
+            const unitRegex = new RegExp(`^(\\d+(?:[.,]\\d+)?)\\s*(${unitPattern})(?:\\s+(.*))?$`, 'i');
 
             for (let rawLine of lines) {
                 let line = rawLine.replace(/^[0-9]+[./)\-]\s*/, '').replace(/^[-*•]\s*/, '').trim();
@@ -5377,6 +5425,7 @@ Má hồng : 2 bảng`;
                 let qty = 1;
                 let unit = 'cái';
 
+                // Check separator with colon or dash, e.g. "Máy duỗi: 3 cây", "Mi vàng : 20hộp"
                 const sepMatch = line.match(/^(.+?)[\s\t]*[:—–\t][\s\t]*(.+)$/);
                 if (sepMatch) {
                     name = sepMatch[1].trim();
@@ -5385,7 +5434,7 @@ Má hồng : 2 bảng`;
                     const m = right.match(unitRegex);
                     if (m) {
                         qty = parseFloat(m[1].replace(',', '.')) || 1;
-                        unit = m[2].toLowerCase();
+                        unit = normalizeUnit(m[2]);
                         if (m[3]) {
                             name += ' ' + m[3].trim();
                         }
@@ -5393,31 +5442,39 @@ Má hồng : 2 bảng`;
                         const numOnly = right.match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/);
                         if (numOnly) {
                             qty = parseFloat(numOnly[1].replace(',', '.')) || 1;
-                            if (numOnly[2]) unit = numOnly[2].trim();
+                            if (numOnly[2]) unit = normalizeUnit(numOnly[2]);
                         } else {
                             name = line;
                         }
                     }
                 } else {
-                    const dashMatch = line.match(/^(.+?)\s+-\s+(\d+(?:[.,]\d+)?)\s*(.*)$/);
-                    if (dashMatch) {
-                        name = dashMatch[1].trim();
-                        qty = parseFloat(dashMatch[2].replace(',', '.')) || 1;
-                        if (dashMatch[3]) unit = dashMatch[3].trim();
+                    // Check if line starts with quantity, e.g. "3 cây máy duỗi" or "20 hộp mi vàng"
+                    const startQtyMatch = line.match(new RegExp(`^(\\d+(?:[.,]\\d+)?)\\s*(${unitPattern})?[\\s*xX:—–\\t]+(.+)$`, 'i'));
+                    if (startQtyMatch) {
+                        qty = parseFloat(startQtyMatch[1].replace(',', '.')) || 1;
+                        if (startQtyMatch[2]) unit = normalizeUnit(startQtyMatch[2]);
+                        name = startQtyMatch[3].trim();
                     } else {
-                        const endUnitMatch = line.match(new RegExp(`^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s*(${commonUnits.join('|')})(?:\\s+(.*))?$`, 'i'));
-                        if (endUnitMatch) {
-                            name = endUnitMatch[1].trim();
-                            qty = parseFloat(endUnitMatch[2].replace(',', '.')) || 1;
-                            unit = endUnitMatch[3].toLowerCase();
-                            if (endUnitMatch[4]) name += ' ' + endUnitMatch[4].trim();
+                        const dashMatch = line.match(/^(.+?)\s+-\s+(\d+(?:[.,]\d+)?)\s*(.*)$/);
+                        if (dashMatch) {
+                            name = dashMatch[1].trim();
+                            qty = parseFloat(dashMatch[2].replace(',', '.')) || 1;
+                            if (dashMatch[3]) unit = normalizeUnit(dashMatch[3]);
                         } else {
-                            const endNumMatch = line.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)$/);
-                            if (endNumMatch) {
-                                name = endNumMatch[1].trim();
-                                qty = parseFloat(endNumMatch[2].replace(',', '.')) || 1;
+                            const endUnitMatch = line.match(new RegExp(`^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s*(${unitPattern})(?:\\s+(.*))?$`, 'i'));
+                            if (endUnitMatch) {
+                                name = endUnitMatch[1].trim();
+                                qty = parseFloat(endUnitMatch[2].replace(',', '.')) || 1;
+                                unit = normalizeUnit(endUnitMatch[3]);
+                                if (endUnitMatch[4]) name += ' ' + endUnitMatch[4].trim();
                             } else {
-                                name = line;
+                                const endNumMatch = line.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)$/);
+                                if (endNumMatch) {
+                                    name = endNumMatch[1].trim();
+                                    qty = parseFloat(endNumMatch[2].replace(',', '.')) || 1;
+                                } else {
+                                    name = line;
+                                }
                             }
                         }
                     }
@@ -5448,14 +5505,19 @@ Má hồng : 2 bảng`;
         }
 
         function handleSmartPasteInputChange() {
-            const textarea = document.getElementById('smart-paste-textarea');
-            if (!textarea) return;
-            smartPasteParsedItems = parseSmartItemList(textarea.value);
-            renderSmartPasteList();
+            try {
+                const textarea = document.getElementById('smart-paste-textarea');
+                if (!textarea) return;
+                const rawText = textarea.value || '';
+                smartPasteParsedItems = parseSmartItemList(rawText);
+                renderSmartPasteList();
+            } catch (err) {
+                console.error("Smart paste error:", err);
+            }
         }
 
         function setSmartPasteDecision(index, decision, targetItemId = null) {
-            if (!smartPasteParsedItems[index]) return;
+            if (!smartPasteParsedItems || !smartPasteParsedItems[index]) return;
             smartPasteParsedItems[index].decision = decision;
             smartPasteParsedItems[index].targetItemId = targetItemId;
             renderSmartPasteList();
@@ -5628,7 +5690,7 @@ Má hồng : 2 bảng`;
         }
 
         async function confirmExecuteSmartPaste() {
-            if (smartPasteParsedItems.length === 0) return;
+            if (!smartPasteParsedItems || smartPasteParsedItems.length === 0) return;
 
             const btnConfirm = document.getElementById('btn-confirm-smart-paste');
             if (btnConfirm) {
@@ -5639,85 +5701,91 @@ Má hồng : 2 bảng`;
             let mergedCount = 0;
             let createdCount = 0;
 
-            for (let item of smartPasteParsedItems) {
-                const qtyVal = Math.max(1, Number(item.qty ?? item.quantity) || 1);
+            try {
+                for (let item of smartPasteParsedItems) {
+                    const qtyVal = Math.max(1, Number(item.qty ?? item.quantity) || 1);
 
-                if (item.decision === 'merge' && item.targetItemId) {
-                    const existingItem = inventoryItems.find(i => i.id === item.targetItemId);
-                    if (existingItem) {
-                        const oldStock = Number(existingItem.stock) || 0;
-                        existingItem.stock = oldStock + qtyVal;
-                        existingItem.updatedAt = Date.now();
-                        await saveItemToFirebase(existingItem);
+                    if (item.decision === 'merge' && item.targetItemId) {
+                        const existingItem = inventoryItems.find(i => i.id === item.targetItemId);
+                        if (existingItem) {
+                            const oldStock = Number(existingItem.stock) || 0;
+                            existingItem.stock = oldStock + qtyVal;
+                            existingItem.updatedAt = Date.now();
+                            await saveItemToFirebase(existingItem);
 
-                        await saveTransactionToFirebase({
-                            type: 'IN',
-                            itemId: existingItem.id,
-                            itemNameVi: existingItem.nameVi,
-                            quantity: qtyVal,
-                            unitPrice: existingItem.costPrice || 0,
-                            operator: 'Dán thông minh (Cộng dồn)',
-                            purpose: 'Nhập thông minh cộng thêm vào kho',
-                            note: `Cộng thêm ${qtyVal} ${existingItem.unit || ''} (từ ${oldStock} -> ${existingItem.stock})`
-                        });
+                            await saveTransactionToFirebase({
+                                type: 'IN',
+                                itemId: existingItem.id,
+                                itemNameVi: existingItem.nameVi,
+                                quantity: qtyVal,
+                                unitPrice: existingItem.costPrice || 0,
+                                operator: 'Dán thông minh (Cộng dồn)',
+                                purpose: 'Nhập thông minh cộng thêm vào kho',
+                                note: `Cộng thêm ${qtyVal} ${existingItem.unit || ''} (từ ${oldStock} -> ${existingItem.stock})`
+                            });
 
-                        mergedCount++;
-                        continue;
+                            mergedCount++;
+                            continue;
+                        }
                     }
+
+                    const newItem = {
+                        id: 'inv-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6),
+                        sku: 'MK-VT-' + String(inventoryItems.length + 1).padStart(3, '0'),
+                        nameVi: item.nameVi || 'Vật tư chưa đặt tên',
+                        nameZh: item.nameZh || '',
+                        category: item.category || detectCategoryFromKeywords(item.nameVi),
+                        unit: item.unit || 'hộp',
+                        stock: qtyVal,
+                        minStock: Math.min(2, qtyVal),
+                        costPrice: 0,
+                        location: 'Kệ kho',
+                        supplier: '',
+                        image: '',
+                        note: 'Nhập thông minh',
+                        createdAt: Date.now()
+                    };
+
+                    inventoryItems.unshift(newItem);
+                    await saveItemToFirebase(newItem);
+
+                    await saveTransactionToFirebase({
+                        type: 'IN',
+                        itemId: newItem.id,
+                        itemNameVi: newItem.nameVi,
+                        quantity: qtyVal,
+                        unitPrice: 0,
+                        operator: 'Dán thông minh (Tạo mới)',
+                        purpose: 'Nhập thông minh tạo mới',
+                        note: `Khởi tạo số lượng tồn ban đầu: ${qtyVal} ${newItem.unit || ''}`
+                    });
+
+                    createdCount++;
                 }
 
-                const newItem = {
-                    id: 'inv-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6),
-                    sku: 'MK-VT-' + String(inventoryItems.length + 1).padStart(3, '0'),
-                    nameVi: item.nameVi || 'Vật tư chưa đặt tên',
-                    nameZh: item.nameZh || '',
-                    category: item.category || detectCategoryFromKeywords(item.nameVi),
-                    unit: item.unit || 'hộp',
-                    stock: qtyVal,
-                    minStock: Math.min(2, qtyVal),
-                    costPrice: 0,
-                    location: 'Kệ kho',
-                    supplier: '',
-                    image: '',
-                    note: 'Nhập thông minh',
-                    createdAt: Date.now()
-                };
+                renderTable();
+                updateOverviewStats();
+                clearSmartPasteInput();
+                closeSmartPasteModal();
 
-                inventoryItems.unshift(newItem);
-                await saveItemToFirebase(newItem);
-
-                await saveTransactionToFirebase({
-                    type: 'IN',
-                    itemId: newItem.id,
-                    itemNameVi: newItem.nameVi,
-                    quantity: qtyVal,
-                    unitPrice: 0,
-                    operator: 'Dán thông minh (Tạo mới)',
-                    purpose: 'Nhập thông minh tạo mới',
-                    note: `Khởi tạo số lượng tồn ban đầu: ${qtyVal} ${newItem.unit || ''}`
-                });
-
-                createdCount++;
-            }
-
-            renderTable();
-            updateOverviewStats();
-            clearSmartPasteInput();
-            closeSmartPasteModal();
-
-            let msg = '🎉 Hoàn thành xử lý!';
-            if (mergedCount > 0 && createdCount > 0) {
-                msg = `🎉 Đã cộng dồn ${mergedCount} mặt hàng trùng và tạo mới ${createdCount} mặt hàng vào kho!`;
-            } else if (mergedCount > 0) {
-                msg = `🎉 Đã cộng dồn số lượng cho ${mergedCount} mặt hàng trong kho!`;
-            } else {
-                msg = `🎉 Đã thêm mới thành công ${createdCount} mặt hàng vào kho!`;
-            }
-            showToast(msg, 'success');
-
-            if (btnConfirm) {
-                btnConfirm.disabled = false;
-                btnConfirm.innerHTML = '<i data-lucide="check" class="w-4 h-4 inline mr-1"></i> Xác nhận thêm hàng';
+                let msg = '🎉 Hoàn thành xử lý!';
+                if (mergedCount > 0 && createdCount > 0) {
+                    msg = `🎉 Đã cộng dồn ${mergedCount} mặt hàng trùng và tạo mới ${createdCount} mặt hàng vào kho!`;
+                } else if (mergedCount > 0) {
+                    msg = `🎉 Đã cộng dồn số lượng cho ${mergedCount} mặt hàng trong kho!`;
+                } else {
+                    msg = `🎉 Đã thêm mới thành công ${createdCount} mặt hàng vào kho!`;
+                }
+                showToast(msg, 'success');
+            } catch (err) {
+                console.error("Lỗi khi xử lý thêm hàng:", err);
+                showToast("Có lỗi khi thêm hàng: " + (err.message || err), "error");
+            } finally {
+                if (btnConfirm) {
+                    btnConfirm.disabled = false;
+                    btnConfirm.innerHTML = '<i data-lucide="check" class="w-4 h-4 inline mr-1"></i> Xác nhận thêm hàng';
+                    if (window.lucide) lucide.createIcons();
+                }
             }
         }
 
@@ -5809,6 +5877,14 @@ Má hồng : 2 bảng`;
             applySavedColumnWidths();
             initColumnResizers();
             initModalScrollLockObserver();
+
+            const smartTextarea = document.getElementById('smart-paste-textarea');
+            if (smartTextarea) {
+                smartTextarea.addEventListener('input', handleSmartPasteInputChange);
+                smartTextarea.addEventListener('paste', () => setTimeout(handleSmartPasteInputChange, 30));
+                smartTextarea.addEventListener('change', handleSmartPasteInputChange);
+                smartTextarea.addEventListener('keyup', handleSmartPasteInputChange);
+            }
 
             if (window.lucide && typeof lucide.createIcons === 'function') {
                 lucide.createIcons();
