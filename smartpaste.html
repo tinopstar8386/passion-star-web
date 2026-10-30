@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Passion Star | Trợ Lý Dán Thông Minh Cho Ô Merge (Smart Paste Studio)</title>
+  <link rel="icon" href="./icon/control.svg" type="image/svg+xml">
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap Icons & FontAwesome 6 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- SheetJS (XLSX) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --bg-base: #050508;
+      --bg-surface: rgba(18, 22, 34, 0.75);
+      --bg-surface-elevated: rgba(28, 35, 52, 0.85);
+      --bg-surface-hover: rgba(36, 46, 68, 0.9);
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      
+      --border-light: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.6);
+      
+      --accent-indigo: #6366f1;
+      --accent-violet: #8b5cf6;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      
+      --grad-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+      --grad-cyan: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+      --grad-emerald: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --grad-sheet: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      
+      --card-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+      --glass-blur: blur(20px);
+      --transition-smooth: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow-x: hidden;
+      padding-bottom: 80px;
+    }
+
+    /* Ambient Background Glow */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background: radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.15) 0%, transparent 45%),
+                  radial-gradient(circle at 90% 20%, rgba(217, 70, 239, 0.12) 0%, transparent 40%),
+                  radial-gradient(circle at 50% 85%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+      filter: blur(70px);
+    }
+
+    /* Container */
+    .app-wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+
+    /* --- TOP NAVBAR --- */
+    .top-navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 22px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      backdrop-filter: var(--glass-blur);
+      box-shadow: var(--card-shadow);
+      margin-bottom: 24px;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .brand-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: var(--grad-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
+    }
+
+    .brand-text h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #a5b4fc;
+    }
+
+    .brand-text p {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-light);
+      transition: var(--transition-smooth);
+      cursor: pointer;
+    }
+    .btn-nav:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* --- HERO BANNER --- */
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.08) 50%, rgba(6, 182, 212, 0.05) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 20px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      backdrop-filter: var(--glass-blur);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .hero-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hero-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      background: var(--grad-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+    }
+
+    .hero-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .hero-desc {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+    .hero-desc strong {
+      color: #38bdf8;
+    }
+
+    .hero-pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    /* --- MAIN WORKSPACE GRID --- */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 1100px) {
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* --- CARDS & PANELS --- */
+    .card-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: 22px;
+      padding: 24px;
+      backdrop-filter: var(--glass-blur);
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+    }
+
+    .panel-title i {
+      font-size: 1.1rem;
+      color: var(--accent-indigo);
+    }
+
+    .stat-pill {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+    }
+    .stat-pill.active {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.35);
+      color: #a5b4fc;
+    }
+
+    /* --- INPUT AREA & TEXTAREA --- */
+    .input-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-tool {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+    .btn-tool:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+    .btn-tool.primary {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: rgba(99, 102, 241, 0.35);
+      color: #a5b4fc;
+    }
+    .btn-tool.primary:hover {
+      background: rgba(99, 102, 241, 0.28);
+      color: #fff;
+    }
+
+    .textarea-wrapper {
+      position: relative;
+    }
+
+    .smart-textarea {
+      width: 100%;
+      height: 230px;
+      background: rgba(11, 15, 25, 0.9);
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      padding: 14px 16px;
+      color: #f1f5f9;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      resize: vertical;
+      transition: var(--transition-smooth);
+    }
+    .smart-textarea:focus {
+      outline: none;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    .smart-textarea::placeholder {
+      color: #475569;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.83rem;
+    }
+
+    /* --- FILTER OPTIONS BOX --- */
+    .filter-section {
+      background: rgba(15, 20, 32, 0.6);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .filter-section-title {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 500px) {
+      .filter-toggle-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .filter-check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      user-select: none;
+    }
+    .filter-check-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    .filter-check-item input[type="checkbox"] {
+      width: 17px;
+      height: 17px;
+      margin-top: 2px;
+      accent-color: var(--accent-indigo);
+      cursor: pointer;
+    }
+    .check-label {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .check-label span {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .check-label small {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    /* Case Pills */
+    .case-pills-row {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-case-pill {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition-smooth);
+    }
+    .btn-case-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+    }
+    .btn-case-pill.active {
+      background: var(--grad-primary);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+
+    /* --- MERGE CONFIG SECTION --- */
+    .merge-config-box {
+      background: rgba(15, 20, 32, 0.6);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .merge-row-selector {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn-merge-row {
+      flex: 1;
+      padding: 9px 8px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition-smooth);
+    }
+    .btn-merge-row:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .btn-merge-row.active {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.45);
+      color: #34d399;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+    }
+
+    /* Extra Column Toggle */
+    .extra-col-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(255, 255, 255, 0.08);
+    }
+
+    .sub-row-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .sub-input {
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 0.78rem;
+      color: #f1f5f9;
+      outline: none;
+    }
+    .sub-input:focus {
+      border-color: var(--border-focus);
+    }
+
+    /* --- RIGHT PANEL: LIVE PREVIEW & ACTIONS --- */
+    .preview-header-stats {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .badge-stat-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-light);
+      font-size: 0.82rem;
+    }
+    .badge-stat-item strong {
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Primary Action Buttons */
+    .copy-actions-bar {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .copy-actions-bar {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .btn-hero-copy {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 24px;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #fff;
+      background: var(--grad-primary);
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+      transition: var(--transition-smooth);
+    }
+    .btn-hero-copy:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(99, 102, 241, 0.55);
+    }
+    .btn-hero-copy:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary-copy {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      white-space: nowrap;
+    }
+    .btn-secondary-copy:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-xlsx {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #34d399;
+    }
+    .btn-xlsx:hover {
+      background: rgba(16, 185, 129, 0.28);
+      color: #fff;
+    }
+
+    /* --- EXCEL / GOOGLE SHEETS LIVE TABLE SIMULATOR --- */
+    .table-container {
+      background: #0f1422;
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      overflow: hidden;
+      max-height: 520px;
+      overflow-y: auto;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .sheet-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      background: #ffffff;
+    }
+
+    /* Style simulate Excel/Sheet */
+    .sheet-table thead th {
+      background: #fdf2f2;
+      color: #1e293b;
+      font-weight: 800;
+      font-size: 0.8rem;
+      padding: 10px 14px;
+      border: 1px solid #000000;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+    .sheet-table thead th.col-row-idx {
+      background: #f1f5f9;
+      color: #64748b;
+      width: 48px;
+      font-weight: 700;
+      border-color: #cbd5e1;
+    }
+    .sheet-table thead th.header-pink {
+      background: #fce8e6;
+      color: #1e293b;
+    }
+
+    .sheet-table tbody td {
+      border: 1px solid #000000;
+      padding: 8px 12px;
+      color: #0f172a;
+      background: #ffffff;
+    }
+
+    .sheet-table tbody td.td-row-idx {
+      background: #f8fafc;
+      color: #94a3b8;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-color: #e2e8f0;
+    }
+
+    .sheet-table tbody td.td-merged-name {
+      font-weight: 800;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+      background: #ffffff;
+      color: #000000;
+    }
+
+    .sheet-table tbody td.td-sub-nhac {
+      background: #ffffff;
+      color: #000000;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .sheet-table tbody td.td-sub-bg {
+      background: #e8f0fe;
+      color: #000000;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    /* Empty State */
+    .empty-preview {
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-dim);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 20, 32, 0.4);
+    }
+    .empty-preview i {
+      font-size: 42px;
+      color: #334155;
+    }
+    .empty-preview p {
+      font-size: 0.9rem;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    /* --- GUIDE STEP CARDS --- */
+    .paste-guide-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .guide-card-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .guide-steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 680px) {
+      .guide-steps-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .guide-step-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .step-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      font-size: 0.75rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-text {
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+    .step-text strong {
+      color: #fff;
+    }
+
+    /* --- TOAST SYSTEM (TUÂN THỦ AGENTS.MD) --- */
+    #toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .custom-toast {
+      pointer-events: auto;
+      min-width: 300px;
+      max-width: 440px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      background: rgba(20, 24, 38, 0.95);
+      border: 1px solid var(--border-light);
+      backdrop-filter: blur(25px);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      color: #fff;
+    }
+
+    .custom-toast.success {
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    .custom-toast.success .toast-icon {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    .custom-toast.info {
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+    .custom-toast.info .toast-icon {
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+    }
+
+    .custom-toast.warning {
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .custom-toast.warning .toast-icon {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    .toast-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .toast-message {
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1.4;
+      flex-grow: 1;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-12px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(-12px) scale(0.95); }
+    }
+
+    /* --- GLASS CONFIRM MODAL (TUÂN THỦ AGENTS.MD) --- */
+    .glass-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(12px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .glass-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .glass-modal-card {
+      width: 100%;
+      max-width: 460px;
+      background: rgba(24, 30, 48, 0.95);
+      border: 1px solid var(--border-light);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      transform: scale(0.92);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-modal-overlay.active .glass-modal-card {
+      transform: scale(1);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .modal-head-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .modal-head-text h3 {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .modal-head-text p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .modal-body-desc {
+      font-size: 0.88rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .btn-modal-cancel {
+      padding: 10px 18px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .btn-modal-confirm {
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: var(--grad-primary);
+      border: none;
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Glow Background -->
+  <div class="ambient-bg"></div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Main Container -->
+  <div class="app-wrapper">
+
+    <!-- Top Navbar -->
+    <header class="top-navbar">
+      <a href="index.html" class="nav-brand">
+        <div class="brand-icon-box">
+          <i class="fa-solid fa-paste"></i>
+        </div>
+        <div class="brand-text">
+          <h1>Smart Paste Studio <span class="brand-badge">PRO v1.0</span></h1>
+          <p>Trợ lý dán thông minh & Tự động lọc cho ô Merge Excel / Google Sheets</p>
+        </div>
+      </a>
+
+      <div class="nav-actions">
+        <a href="index.html" class="btn-nav">
+          <i class="fa-solid fa-house"></i>
+          <span>Workspace Hub</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Hero Banner -->
+    <div class="hero-banner">
+      <div class="hero-info">
+        <div class="hero-icon">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <div>
+          <div class="hero-title">Dán Dãy Tên Riêng Vào Ô Merge 2 Hàng Đều Đặn 100%</div>
+          <div class="hero-desc">
+            Không còn nỗi lo bị lỗi <strong>"Cannot change part of a merged cell"</strong> hay <strong>"All merged cells need to be the same size"</strong> trong Excel & Google Sheets!
+          </div>
+        </div>
+      </div>
+      <div class="hero-pill-badge">
+        <i class="fa-solid fa-check-circle"></i>
+        <span>Hỗ trợ cả Excel Desktop & Google Sheets Web</span>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="workspace-grid">
+
+      <!-- LEFT PANEL: INPUT & SMART FILTERS -->
+      <div class="card-panel">
+        
+        <div class="panel-header">
+          <div class="panel-title">
+            <i class="fa-solid fa-file-lines"></i>
+            <span>Dữ Liệu Đầu Vào</span>
+          </div>
+          <span class="stat-pill active" id="inputCountBadge">0 tên riêng</span>
+        </div>
+
+        <!-- Input Toolbar -->
+        <div class="input-toolbar">
+          <div class="toolbar-left">
+            <button class="btn-tool primary" onclick="pasteFromClipboard()">
+              <i class="fa-solid fa-clipboard"></i>
+              <span>Dán Nhanh</span>
+            </button>
+            <button class="btn-tool" onclick="loadSampleData()">
+              <i class="fa-solid fa-bolt"></i>
+              <span>Nạp Mẫu Ảnh (Christ, Roy...)</span>
+            </button>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn-tool" onclick="clearInput()">
+              <i class="fa-solid fa-trash-can"></i>
+              <span>Xóa</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Textarea -->
+        <div class="textarea-wrapper">
+          <textarea 
+            id="rawInput" 
+            class="smart-textarea" 
+            placeholder="Dán dãy tên riêng từ trên xuống dưới vào đây...&#10;&#10;Ví dụ:&#10;CHRIST&#10;ROY&#10;WREN&#10;KONI&#10;KAI&#10;COBRA&#10;SUGAR&#10;SURI&#10;NEKO&#10;NAUL&#10;DOLIA"
+            oninput="processData()"
+          ></textarea>
+        </div>
+
+        <!-- Smart Filter Controls -->
+        <div class="filter-section">
+          <div class="filter-section-title">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Bộ Lọc Thông Minh Tự Động</span>
+          </div>
+
+          <div class="filter-toggle-grid">
+            <label class="filter-check-item">
+              <input type="checkbox" id="chkCleanPrefix" checked onchange="processData()">
+              <div class="check-label">
+                <span>Gọt số thứ tự & ký tự</span>
+                <small>Bỏ '1.', '1/', '-', '•' ở đầu</small>
+              </div>
+            </label>
+
+            <label class="filter-check-item">
+              <input type="checkbox" id="chkDeduplicate" onchange="processData()">
+              <div class="check-label">
+                <span>Lọc trùng lặp</span>
+                <small>Chỉ giữ các tên duy nhất</small>
+              </div>
+            </label>
+
+            <label class="filter-check-item">
+              <input type="checkbox" id="chkSplitDelimiters" checked onchange="processData()">
+              <div class="check-label">
+                <span>Tách dấu phẩy / chấm</span>
+                <small>Tách nếu dán trên 1 dòng</small>
+              </div>
+            </label>
+
+            <label class="filter-check-item">
+              <input type="checkbox" id="chkTrimLines" checked onchange="processData()">
+              <div class="check-label">
+                <span>Loại bỏ khoảng trắng</span>
+                <small>Xóa dòng trống & cách thừa</small>
+              </div>
+            </label>
+          </div>
+
+          <!-- Text Case Conversion -->
+          <div>
+            <div class="filter-section-title" style="margin-bottom: 8px;">
+              <i class="fa-solid fa-font"></i>
+              <span>Định Dạng Kiểu Chữ</span>
+            </div>
+            <div class="case-pills-row">
+              <button class="btn-case-pill active" id="case-upper" onclick="setTextCase('upper')">IN HOA TOÀN BỘ</button>
+              <button class="btn-case-pill" id="case-title" onclick="setTextCase('title')">Viết Hoa Đầu Từ</button>
+              <button class="btn-case-pill" id="case-raw" onclick="setTextCase('raw')">Giữ Nguyên Gốc</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Merge Settings -->
+        <div class="merge-config-box">
+          <div class="filter-section-title">
+            <i class="fa-solid fa-table-cells-large"></i>
+            <span>Cấu Hình Số Ô Gộp (Merge Rows)</span>
+          </div>
+
+          <div class="merge-row-selector">
+            <button class="btn-merge-row active" id="btnSpan2" onclick="setRowspan(2)">
+              🔥 Merge 2 Ô (Khớp Mẫu Ảnh)
+            </button>
+            <button class="btn-merge-row" id="btnSpan3" onclick="setRowspan(3)">
+              Merge 3 Ô
+            </button>
+            <button class="btn-merge-row" id="btnSpan4" onclick="setRowspan(4)">
+              Merge 4 Ô
+            </button>
+          </div>
+
+          <!-- Extra Columns (Nhạc / Background) -->
+          <div class="extra-col-box">
+            <label class="filter-check-item" style="background: transparent; border: none; padding: 0;">
+              <input type="checkbox" id="chkIncludeExtraCol" checked onchange="processData()">
+              <div class="check-label">
+                <span>Ghép cột phụ kế bên (Nhạc / Background)</span>
+                <small>Tạo sẵn bảng 2 cột chuẩn hệt như ảnh của bạn</small>
+              </div>
+            </label>
+
+            <div class="sub-row-inputs" id="extraColInputsContainer">
+              <div>
+                <small style="color: var(--text-dim); font-size: 0.72rem; display: block; margin-bottom: 3px;">Hàng con 1:</small>
+                <input type="text" id="subRowVal1" class="sub-input" value="LINK NHẠC" oninput="processData()">
+              </div>
+              <div>
+                <small style="color: var(--text-dim); font-size: 0.72rem; display: block; margin-bottom: 3px;">Hàng con 2:</small>
+                <input type="text" id="subRowVal2" class="sub-input" value="LINK BACKGROUND" oninput="processData()">
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- RIGHT PANEL: PREVIEW & EXPORT -->
+      <div class="card-panel">
+        
+        <div class="panel-header">
+          <div class="panel-title">
+            <i class="fa-solid fa-table"></i>
+            <span>Xem Trước Bảng Tính (Live Preview)</span>
+          </div>
+
+          <div class="preview-header-stats">
+            <div class="badge-stat-item">
+              <span>Số Idol:</span>
+              <strong id="statIdolCount">0</strong>
+            </div>
+            <div class="badge-stat-item">
+              <span>Tổng dòng Excel:</span>
+              <strong id="statRowCount">0</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Copy Action Buttons -->
+        <div class="copy-actions-bar">
+          <button class="btn-hero-copy" onclick="copySmartMergeClipboard()">
+            <i class="fa-solid fa-bolt"></i>
+            <span id="btnCopyMainText">⭐ SAO CHÉP CHO Ô MERGE (EXCEL & GG SHEETS)</span>
+          </button>
+
+          <button class="btn-secondary-copy" onclick="copyOnlyNamesMerge()" title="Chỉ sao chép 1 cột tên riêng cho ô merge (không kèm cột Link)">
+            <i class="fa-solid fa-user"></i>
+            <span>Chỉ Cột Tên</span>
+          </button>
+
+          <button class="btn-secondary-copy btn-xlsx" onclick="exportExcelFile()" title="Tải file Excel .xlsx đã gộp sẵn ô">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Xuất .XLSX</span>
+          </button>
+        </div>
+
+        <!-- Live Table Simulator -->
+        <div class="table-container" id="tablePreviewContainer">
+          <div class="empty-preview" id="emptyPreviewNotice">
+            <i class="fa-solid fa-table-list"></i>
+            <p>Chưa có dữ liệu. Hãy dán danh sách tên riêng vào ô bên trái hoặc bấm nút <strong>"Nạp Mẫu Ảnh"</strong> để xem bảng mô phỏng!</p>
+          </div>
+
+          <table class="sheet-table" id="previewTable" style="display: none;">
+            <thead>
+              <tr id="tableHeaderRow">
+                <th class="col-row-idx">#</th>
+                <th id="thCol1Title">TÊN IDOL / NGHỆ SĨ</th>
+                <th id="thCol2Title" class="header-pink">LINK BACKGROUND</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <!-- Render dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Step-by-Step Paste Guide -->
+        <div class="paste-guide-card">
+          <div class="guide-card-title">
+            <i class="fa-solid fa-circle-question"></i>
+            <span>Cách Dán Vào Excel & Google Sheets Không Bị Lỗi:</span>
+          </div>
+          <div class="guide-steps-grid">
+            <div class="guide-step-item">
+              <div class="step-number">1</div>
+              <div class="step-text">
+                Bấm nút <strong>[SAO CHÉP CHO Ô MERGE]</strong> ở trên.
+              </div>
+            </div>
+            <div class="guide-step-item">
+              <div class="step-number">2</div>
+              <div class="step-text">
+                Mở Excel / Sheets, click chọn <strong>ĐÚNG 1 Ô ĐẦU TIÊN</strong> (không quét bôi đen cả cột).
+              </div>
+            </div>
+            <div class="guide-step-item">
+              <div class="step-number">3</div>
+              <div class="step-text">
+                Bấm <strong>Ctrl + V</strong> (hoặc Cmd + V trên Mac). Dữ liệu sẽ tràn đều xuống từng ô merge hoàn hảo!
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Custom Glass Confirm Modal -->
+  <div class="glass-modal-overlay" id="customConfirmModal">
+    <div class="glass-modal-card">
+      <div class="modal-head">
+        <div class="modal-head-icon">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="modal-head-text">
+          <h3 id="modalConfirmTitle">Xác Nhận Thao Tác</h3>
+          <p id="modalConfirmSubtitle">Hệ thống Passion Star Smart Studio</p>
+        </div>
+      </div>
+      <div class="modal-body-desc" id="modalConfirmMessage">
+        Bạn có chắc chắn muốn thực hiện thao tác này không?
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" onclick="closeConfirmModal(false)">Hủy Bỏ</button>
+        <button class="btn-modal-confirm" id="btnModalConfirmOk" onclick="closeConfirmModal(true)">Đồng Ý</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // State
+    let currentCase = 'upper'; // 'upper' | 'title' | 'raw'
+    let currentRowspan = 2;
+    let parsedItems = [];
+    let confirmResolver = null;
+
+    // Toast system
+    function showToast(message, type = 'success', duration = 3000) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `custom-toast ${type}`;
+
+      let iconClass = 'fa-solid fa-check';
+      if (type === 'info') iconClass = 'fa-solid fa-info';
+      if (type === 'warning') iconClass = 'fa-solid fa-triangle-exclamation';
+      if (type === 'error') iconClass = 'fa-solid fa-xmark';
+
+      toast.innerHTML = `
+        <div class="toast-icon">
+          <i class="${iconClass}"></i>
+        </div>
+        <div class="toast-message">${message}</div>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'toastOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    // Glass Confirm Modal
+    function showGlassConfirm(title, message, confirmText = 'Xác Nhận') {
+      return new Promise((resolve) => {
+        confirmResolver = resolve;
+        document.getElementById('modalConfirmTitle').textContent = title;
+        document.getElementById('modalConfirmMessage').textContent = message;
+        document.getElementById('btnModalConfirmOk').textContent = confirmText;
+        document.getElementById('customConfirmModal').classList.add('active');
+      });
+    }
+
+    function closeConfirmModal(result) {
+      document.getElementById('customConfirmModal').classList.remove('active');
+      if (confirmResolver) {
+        confirmResolver(result);
+        confirmResolver = null;
+      }
+    }
+
+    // Load sample data matching user's image
+    function loadSampleData() {
+      const sample = [
+        "CHRIST",
+        "ROY",
+        "WREN",
+        "KONI",
+        "KAI",
+        "COBRA",
+        "SUGAR",
+        "SURI",
+        "NEKO",
+        "NAUL",
+        "DOLIA"
+      ];
+      document.getElementById('rawInput').value = sample.join('\n');
+      processData();
+      showToast("✨ Đã nạp thành công 11 tên riêng mẫu từ ảnh!", "info");
+    }
+
+    // Paste from clipboard
+    async function pasteFromClipboard() {
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+          showToast("Trình duyệt không hỗ trợ đọc clipboard tự động. Vui lòng bấm Ctrl+V vào khung nhập liệu!", "warning");
+          return;
+        }
+        const text = await navigator.clipboard.readText();
+        if (!text || !text.trim()) {
+          showToast("Bộ nhớ tạm (Clipboard) đang trống!", "warning");
+          return;
+        }
+        document.getElementById('rawInput').value = text;
+        processData();
+        showToast("📋 Đã dán nội dung từ Clipboard thành công!", "success");
+      } catch (err) {
+        console.error("Paste error:", err);
+        showToast("Vui lòng cấp quyền truy cập Clipboard hoặc dùng phím tắt Ctrl+V!", "warning");
+      }
+    }
+
+    // Clear input
+    async function clearInput() {
+      const val = document.getElementById('rawInput').value;
+      if (!val.trim()) return;
+
+      const confirmed = await showGlassConfirm(
+        "Xóa Toàn Bộ Dữ Liệu?",
+        "Bạn có chắc muốn xóa sạch danh sách tên riêng đã nhập không?",
+        "Xóa Hết"
+      );
+      if (confirmed) {
+        document.getElementById('rawInput').value = '';
+        processData();
+        showToast("Đã xóa sạch nội dung nhập!", "info");
+      }
+    }
+
+    // Text case handler
+    function setTextCase(mode) {
+      currentCase = mode;
+      document.querySelectorAll('.btn-case-pill').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`case-${mode}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      processData();
+    }
+
+    // Rowspan handler
+    function setRowspan(span) {
+      currentRowspan = span;
+      document.querySelectorAll('.btn-merge-row').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`btnSpan${span}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Update button label
+      const btnMain = document.getElementById('btnCopyMainText');
+      if (btnMain) {
+        btnMain.textContent = `⭐ SAO CHÉP CHO Ô MERGE ${span} HÀNG (EXCEL & GG SHEETS)`;
+      }
+
+      processData();
+    }
+
+    // Clean single name
+    function cleanName(raw, options) {
+      let str = raw.trim();
+      if (!str) return '';
+
+      // Strip numbering / bullet at start: '1.', '1/', '01 - ', '•', '-', '*', '+'
+      if (options.cleanPrefix) {
+        str = str.replace(/^(\d+[\.\/\-\)\:]|\*|\-|\•|\+)\s*/i, '');
+      }
+
+      // Trim extra spaces
+      if (options.trimLines) {
+        str = str.replace(/\s+/g, ' ').trim();
+      }
+
+      if (!str) return '';
+
+      // Case conversion
+      if (options.textCase === 'upper') {
+        str = str.toUpperCase();
+      } else if (options.textCase === 'title') {
+        str = str.toLowerCase().replace(/(?:^|\s)\S/g, a => a.toUpperCase());
+      }
+
+      return str;
+    }
+
+    // Main parsing & filtering logic
+    function processData() {
+      const rawText = document.getElementById('rawInput').value || '';
+      const cleanPrefix = document.getElementById('chkCleanPrefix').checked;
+      const deduplicate = document.getElementById('chkDeduplicate').checked;
+      const splitDelimiters = document.getElementById('chkSplitDelimiters').checked;
+      const trimLines = document.getElementById('chkTrimLines').checked;
+      const includeExtraCol = document.getElementById('chkIncludeExtraCol').checked;
+
+      // Handle splitting
+      let rawLines = [];
+      if (splitDelimiters) {
+        // Split by newlines, commas, semicolons, tabs
+        rawLines = rawText.split(/[\r\n,;\t]+/);
+      } else {
+        rawLines = rawText.split(/\r?\n/);
+      }
+
+      const options = {
+        cleanPrefix,
+        trimLines,
+        textCase: currentCase
+      };
+
+      const result = [];
+      const seen = new Set();
+
+      rawLines.forEach(line => {
+        const cleaned = cleanName(line, options);
+        if (cleaned) {
+          if (deduplicate) {
+            const key = cleaned.toUpperCase();
+            if (!seen.has(key)) {
+              seen.add(key);
+              result.push(cleaned);
+            }
+          } else {
+            result.push(cleaned);
+          }
+        }
+      });
+
+      parsedItems = result;
+
+      // Update UI counts
+      document.getElementById('inputCountBadge').textContent = `${parsedItems.length} tên riêng`;
+      document.getElementById('statIdolCount').textContent = parsedItems.length;
+      document.getElementById('statRowCount').textContent = parsedItems.length * currentRowspan;
+
+      // Toggle extra col inputs visibility
+      const subInputs = document.getElementById('extraColInputsContainer');
+      if (subInputs) {
+        subInputs.style.display = includeExtraCol ? 'grid' : 'none';
+      }
+
+      renderPreviewTable();
+    }
+
+    // Render Live Excel Table
+    function renderPreviewTable() {
+      const table = document.getElementById('previewTable');
+      const emptyNotice = document.getElementById('emptyPreviewNotice');
+      const tbody = document.getElementById('tableBody');
+      const thCol2 = document.getElementById('thCol2Title');
+      const includeExtraCol = document.getElementById('chkIncludeExtraCol').checked;
+
+      if (!parsedItems || parsedItems.length === 0) {
+        table.style.display = 'none';
+        emptyNotice.style.display = 'flex';
+        return;
+      }
+
+      table.style.display = 'table';
+      emptyNotice.style.display = 'none';
+      tbody.innerHTML = '';
+
+      // Header col 2 toggle
+      thCol2.style.display = includeExtraCol ? '' : 'none';
+
+      const val1 = document.getElementById('subRowVal1').value.trim() || 'LINK NHẠC';
+      const val2 = document.getElementById('subRowVal2').value.trim() || 'LINK BACKGROUND';
+      const subLabels = [val1, val2];
+
+      let excelRowIdx = 1;
+
+      parsedItems.forEach((name) => {
+        // First sub-row has merged td
+        const tr1 = document.createElement('tr');
+
+        // Row Index
+        const tdIdx1 = document.createElement('td');
+        tdIdx1.className = 'td-row-idx';
+        tdIdx1.textContent = excelRowIdx;
+        tr1.appendChild(tdIdx1);
+
+        // Merged Name Cell
+        const tdName = document.createElement('td');
+        tdName.className = 'td-merged-name';
+        tdName.rowSpan = currentRowspan;
+        tdName.textContent = name;
+        tr1.appendChild(tdName);
+
+        // Sub Row 1 (Link Nhạc)
+        if (includeExtraCol) {
+          const tdSub1 = document.createElement('td');
+          tdSub1.className = 'td-sub-nhac';
+          tdSub1.textContent = subLabels[0] || '';
+          tr1.appendChild(tdSub1);
+        }
+
+        tbody.appendChild(tr1);
+        excelRowIdx++;
+
+        // Subsequent sub-rows (row 2, 3...)
+        for (let r = 1; r < currentRowspan; r++) {
+          const trNext = document.createElement('tr');
+
+          // Row Index
+          const tdIdxNext = document.createElement('td');
+          tdIdxNext.className = 'td-row-idx';
+          tdIdxNext.textContent = excelRowIdx;
+          trNext.appendChild(tdIdxNext);
+
+          // Sub Row item (Link Background)
+          if (includeExtraCol) {
+            const tdSubNext = document.createElement('td');
+            tdSubNext.className = (r % 2 === 1) ? 'td-sub-bg' : 'td-sub-nhac';
+            tdSubNext.textContent = subLabels[r] || subLabels[1] || '';
+            trNext.appendChild(tdSubNext);
+          }
+
+          tbody.appendChild(trNext);
+          excelRowIdx++;
+        }
+      });
+    }
+
+    // Smart Copy Function for Excel & Google Sheets Merged Cells
+    async function copySmartMergeClipboard(forceOnlyNames = false) {
+      if (!parsedItems || parsedItems.length === 0) {
+        showToast("Chưa có dữ liệu để sao chép. Vui lòng nhập danh sách tên trước!", "warning");
+        return;
+      }
+
+      const includeExtraCol = forceOnlyNames ? false : document.getElementById('chkIncludeExtraCol').checked;
+      const val1 = document.getElementById('subRowVal1').value.trim() || 'LINK NHẠC';
+      const val2 = document.getElementById('subRowVal2').value.trim() || 'LINK BACKGROUND';
+      const subLabels = [val1, val2];
+
+      // 1. Build HTML Table for Clipboard (Excel & Google Sheets parse this perfectly!)
+      let html = '<table border="1" style="border-collapse:collapse; text-align:center; font-family:sans-serif;">';
+      
+      parsedItems.forEach((name) => {
+        // Row 1 with rowspan
+        html += '<tr>';
+        html += `<td rowspan="${currentRowspan}" style="vertical-align:middle; text-align:center; font-weight:bold;">${escapeHtml(name)}</td>`;
+        if (includeExtraCol) {
+          html += `<td style="vertical-align:middle; text-align:center;">${escapeHtml(subLabels[0] || '')}</td>`;
+        }
+        html += '</tr>';
+
+        // Subsequent rows
+        for (let r = 1; r < currentRowspan; r++) {
+          html += '<tr>';
+          if (includeExtraCol) {
+            const bgStyle = (r % 2 === 1) ? 'background-color:#e8f0fe;' : '';
+            html += `<td style="vertical-align:middle; text-align:center; ${bgStyle}">${escapeHtml(subLabels[r] || subLabels[1] || '')}</td>`;
+          }
+          html += '</tr>';
+        }
+      });
+      html += '</table>';
+
+      // 2. Build Plain Text (For text editors / simple paste)
+      let plainLines = [];
+      parsedItems.forEach((name) => {
+        if (includeExtraCol) {
+          plainLines.push(`${name}\t${subLabels[0] || ''}`);
+          for (let r = 1; r < currentRowspan; r++) {
+            plainLines.push(`\t${subLabels[r] || subLabels[1] || ''}`);
+          }
+        } else {
+          plainLines.push(name);
+          for (let r = 1; r < currentRowspan; r++) {
+            plainLines.push(''); // Blank line to align with merged rows
+          }
+        }
+      });
+      const plainText = plainLines.join('\r\n');
+
+      // 3. Write to Modern Clipboard API (Both text/html and text/plain)
+      try {
+        const blobHtml = new Blob([html], { type: 'text/html' });
+        const blobText = new Blob([plainText], { type: 'text/plain' });
+
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'text/html': blobHtml,
+              'text/plain': blobText
+            })
+          ]);
+        } else {
+          // Fallback
+          const ta = document.createElement('textarea');
+          ta.value = plainText;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+
+        // Trigger Confetti
+        if (window.confetti) {
+          confetti({
+            particleCount: 40,
+            spread: 60,
+            origin: { y: 0.8 }
+          });
+        }
+
+        const msgMode = includeExtraCol ? "kèm cột Link" : "chỉ cột Tên riêng";
+        showToast(`🎉 Đã sao chép ${parsedItems.length} tên (${msgMode}) cho ô Merge ${currentRowspan} hàng! Hãy chọn ô đầu tiên trên Excel/Sheets rồi bấm Ctrl+V.`, "success", 4000);
+
+      } catch (err) {
+        console.error("Clipboard write error:", err);
+        showToast("Lỗi khi ghi vào Clipboard. Hãy kiểm tra quyền truy cập của trình duyệt!", "error");
+      }
+    }
+
+    // Copy Only Names
+    function copyOnlyNamesMerge() {
+      copySmartMergeClipboard(true);
+    }
+
+    // Export to Excel (.xlsx) using SheetJS
+    function exportExcelFile() {
+      if (!parsedItems || parsedItems.length === 0) {
+        showToast("Chưa có dữ liệu để xuất file Excel!", "warning");
+        return;
+      }
+
+      if (typeof XLSX === 'undefined') {
+        showToast("Thư viện SheetJS chưa sẵn sàng. Vui lòng thử lại sau vài giây!", "warning");
+        return;
+      }
+
+      const includeExtraCol = document.getElementById('chkIncludeExtraCol').checked;
+      const val1 = document.getElementById('subRowVal1').value.trim() || 'LINK NHẠC';
+      const val2 = document.getElementById('subRowVal2').value.trim() || 'LINK BACKGROUND';
+      const subLabels = [val1, val2];
+
+      const wsData = [];
+      const merges = [];
+
+      // Header row
+      if (includeExtraCol) {
+        wsData.push(["TÊN IDOL / NGHỆ SĨ", "LINK BACKGROUND"]);
+      } else {
+        wsData.push(["TÊN IDOL / NGHỆ SĨ"]);
+      }
+
+      let currentRowIdx = 1; // 0 is header
+
+      parsedItems.forEach((name) => {
+        // Start merge row
+        const startR = currentRowIdx;
+        const endR = currentRowIdx + currentRowspan - 1;
+
+        merges.push({
+          s: { r: startR, c: 0 },
+          e: { r: endR, c: 0 }
+        });
+
+        // Row 1
+        if (includeExtraCol) {
+          wsData.push([name, subLabels[0] || '']);
+        } else {
+          wsData.push([name]);
+        }
+        currentRowIdx++;
+
+        // Subsequent rows
+        for (let r = 1; r < currentRowspan; r++) {
+          if (includeExtraCol) {
+            wsData.push(["", subLabels[r] || subLabels[1] || '']);
+          } else {
+            wsData.push([""]);
+          }
+          currentRowIdx++;
+        }
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!merges'] = merges;
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 22 },
+        { wch: 25 }
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "DanhSachMerge");
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `PassionStar_DanhSach_Merge_${dateStr}.xlsx`);
+
+      showToast(`📥 Đã tải xuống file Excel (${parsedItems.length} tên, gộp ${currentRowspan} hàng)!`, "success");
+    }
+
+    // Helper: Escape HTML
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Auto initialize with sample data on load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSampleData();
+    });
+  </script>
+
+</body>
+</html>
