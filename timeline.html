@@ -865,6 +865,24 @@
             to { opacity: 1; transform: scale(1); }
         }
 
+    
+        .btn-sub-edit-team {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 2px 4px;
+            opacity: 0.65;
+            transition: all 0.15s ease;
+            border-radius: 4px;
+            line-height: 1;
+        }
+        .btn-sub-edit-team:hover {
+            opacity: 1;
+            transform: scale(1.15);
+            background: var(--bg-row);
+        }
+
     </style>
 
     <!-- THÊM FIREBASE VÀO TRƯỚC THẺ </HEAD> -->
@@ -958,7 +976,7 @@
                     
                     <div class="form-group" style="margin-bottom: 8px;">
                         <select id="dailyTimingMode" class="modern-select" onchange="onDailyTimingModeChange()" style="width: 100%; font-weight: 700; font-size: 12px;">
-                            <option value="two_rooms" selected>🏢 2 Phòng Độc Lập (Tầng G & Tầng 2 song song)</option>
+                            <option value="two_rooms" selected>2 Phòng Độc Lập (Tầng G & Tầng 2 song song)</option>
                             <option value="all_parallel">⚡ Tất cả Makeup song song (Cùng 1 giờ)</option>
                             <option value="sequential">🔗 Tuần tự 1 phòng (Cộng tiếp từng nhóm)</option>
                         </select>
@@ -1585,7 +1603,135 @@
             renderToggles();
             renderDailyTable();
             autoSaveDailyTimeline();
-            showToast(`Nhóm ${teams[index].name} chuyển sang ${teams[index].room === '2' ? '🏬 Tầng 2' : '🏢 Tầng G'}`, 'info', 1500);
+            showToast(`Nhóm ${teams[index].name} chuyển sang ${teams[index].room === '2' ? 'Tầng 2' : 'Tầng G'}`, 'info', 1500);
+        };
+
+        
+        // === CHỨC NĂNG ĐỔI TÊN NHÓM VÀ LƯU LÊN FIREBASE CLOUD ===
+        async function updateTeamNameFirebase(index, newName) {
+            newName = String(newName || '').trim();
+            if (!newName) {
+                showToast("Tên nhóm không được để trống!", "error");
+                return;
+            }
+            if (!teams[index]) return;
+            const oldName = teams[index].name;
+            if (oldName === newName) return;
+
+            teams[index].name = newName;
+            renderToggles();
+            renderDailyTable();
+            saveDailyTimelineImmediate();
+            autoSaveDailyTimeline(true);
+
+            // Đồng bộ trực tiếp lên Firebase Firestore collection timeline_teams
+            if (window.db && window.fs) {
+                try {
+                    const oldDocRef = window.fs.doc(window.db, "timeline_teams", oldName);
+                    const newDocRef = window.fs.doc(window.db, "timeline_teams", newName);
+                    
+                    const teamPayload = {
+                        name: newName,
+                        shift: teams[index].shift || "08:00",
+                        duration: Number(teams[index].duration) || 0,
+                        liveDelay: Number(teams[index].liveDelay) || 0,
+                        order: index + 1,
+                        room: teams[index].room || "G",
+                        calcMode: teams[index].calcMode || "auto"
+                    };
+                    
+                    // Lưu document mới với tên nhóm mới
+                    await window.fs.setDoc(newDocRef, teamPayload, { merge: true });
+                    
+                    // Xóa document cũ nếu ID tài liệu thay đổi
+                    if (oldName !== newName) {
+                        try {
+                            await window.fs.deleteDoc(oldDocRef);
+                        } catch(delErr) {
+                            console.warn("Không xóa được doc cũ hoặc doc cũ không tồn tại:", delErr);
+                        }
+                    }
+                    
+                    // Đồng bộ thêm vào timeline_daily config
+                    await syncDailyTimelineToFirestore(getDailyTimelinePayload());
+
+                    showToast(`Đã đổi tên thành "${newName}" và lưu lên Firebase!`, "success", 2200);
+                } catch (err) {
+                    console.error("Lỗi cập nhật tên nhóm lên Firebase:", err);
+                    showToast("Đã lưu trên máy, lỗi đồng bộ Cloud: " + err.message, "error", 3000);
+                }
+            } else {
+                showToast(`Đã đổi tên thành "${newName}" (Đã lưu vào máy)!`, "success", 2000);
+            }
+        }
+
+        window.openEditTeamNameModal = function(index) {
+            if (!teams[index]) return;
+            const team = teams[index];
+            let modal = document.getElementById('ps-edit-team-name-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'ps-edit-team-name-modal';
+                modal.style.cssText = `
+                    position: fixed; inset: 0; z-index: 999999;
+                    background: rgba(15, 23, 42, 0.65);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    display: flex; align-items: center; justify-content: center;
+                    padding: 20px; animation: fadeInModal 0.2s ease-out;
+                `;
+                document.body.appendChild(modal);
+            }
+            modal.innerHTML = `
+                <div style="background: var(--bg-card, #ffffff); border: 1.5px solid var(--border-dark, #cbd5e1); border-radius: 16px; padding: 24px; max-width: 420px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: left; animation: popUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: var(--text-main, #0f172a); display: flex; align-items: center; gap: 8px;">
+                            <span>✏️</span> <span>Đổi Tên Nhóm / Team</span>
+                        </h3>
+                        <button type="button" id="psCloseTeamModalBtn" style="background: transparent; border: none; font-size: 18px; cursor: pointer; color: var(--text-muted); padding: 4px;">✕</button>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: block;">Tên nhóm mới</label>
+                        <input type="text" id="editTeamNameInput" value="${escapeHtml(team.name)}" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid #6366f1; background: var(--bg-input, #f8fafc); color: var(--text-main, #0f172a); font-weight: 800; font-size: 16px; outline: none; box-sizing: border-box;" placeholder="Nhập tên nhóm...">
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 6px 0 0 0;">💡 Tên mới sẽ được cập nhật trên bảng và tự động lưu đồng bộ lên Firebase Cloud.</p>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" id="psCancelTeamNameBtn" style="padding: 9px 16px; border-radius: 8px; border: 1px solid var(--border, #cbd5e1); background: var(--bg-row, #f1f5f9); color: var(--text-main, #0f172a); font-weight: 700; cursor: pointer;">Hủy</button>
+                        <button type="button" id="psSaveTeamNameBtn" style="padding: 9px 18px; border-radius: 8px; border: none; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);">💾 Lưu Lên Firebase</button>
+                    </div>
+                </div>
+            `;
+            modal.style.display = 'flex';
+            const input = document.getElementById('editTeamNameInput');
+            if (input) {
+                input.focus();
+                input.select();
+                input.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        doSave();
+                    } else if (e.key === 'Escape') {
+                        modal.style.display = 'none';
+                    }
+                };
+            }
+            
+            const closeModal = () => { modal.style.display = 'none'; };
+            document.getElementById('psCloseTeamModalBtn').onclick = closeModal;
+            document.getElementById('psCancelTeamNameBtn').onclick = closeModal;
+            
+            const doSave = async () => {
+                const val = input.value.trim();
+                if (!val) {
+                    showToast("Tên nhóm không được để trống!", "error");
+                    return;
+                }
+                closeModal();
+                await updateTeamNameFirebase(index, val);
+            };
+            document.getElementById('psSaveTeamNameBtn').onclick = doSave;
         };
 
         window.cycleTeamCalcMode = function(index) {
@@ -1852,14 +1998,16 @@
                 const calcLabel = calcMode === 'same' ? '⚡ Cùng giờ' : (calcMode === 'next' ? '➕ Cộng tiếp' : '🎯 Tự động');
                 const calcClass = `calc-${calcMode}`;
                 const roomClass = room === '2' ? 'room-2-active' : 'room-g-active';
-                const roomLabel = room === '2' ? '🏬 Tầng 2' : '🏢 Tầng G';
+                const roomLabel = room === '2' ? 'Tầng 2' : 'Tầng G';
 
                 container.innerHTML += `
                     <div class="team-item" style="flex-direction: column; align-items: stretch; gap: 6px; padding: 10px 12px; margin-bottom: 8px;">
                         <div style="display: flex; align-items: center; justify-content: space-between;">
                             <div style="display:flex; align-items:center; gap:6px;">
                                 <label class="switch"><input type="checkbox" ${activeStatus[index] ? 'checked' : ''} onchange="toggleTeam(${index})"><span class="slider"></span></label>
-                                <span style="font-weight:800; font-size:13px; margin-left:4px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${team.name}</span>${team.isTraffic ? '<span style="font-size:10px; color:#7c3aed; font-weight:800; margin-left:2px;" title="Nhóm Lưu Lượng (Luân phiên không nghỉ)">⚡</span>' : ''}
+                                <span onclick="openEditTeamNameModal(${index})" style="font-weight:800; font-size:13px; margin-left:4px; max-width: 75px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; text-decoration: underline dotted var(--border-dark);" title="Nhấp để đổi tên nhóm">${team.name}</span>
+                                <button type="button" class="btn-sub-edit-team" onclick="openEditTeamNameModal(${index})" title="Đổi tên nhóm này">✏️</button>
+                                ${team.isTraffic ? '<span style="font-size:10px; color:#7c3aed; font-weight:800; margin-left:2px;" title="Nhóm Lưu Lượng (Luân phiên không nghỉ)">⚡</span>' : ''}
                             </div>
                             <div style="display: flex; align-items: center; gap: 4px;">
                                 <button type="button" class="btn-room-toggle ${roomClass}" onclick="toggleTeamRoom(${index})" title="Bấm để chuyển giữa Tầng G và Tầng 2">${roomLabel}</button>
@@ -2006,8 +2154,8 @@
                     lastTeamEndTime = endMakeup;
 
                     const roomBadgeHtml = room === '2'
-                        ? `<span class="badge badge-room badge-room-2" title="Makeup tại Tầng 2">🏬 Tầng 2</span>`
-                        : `<span class="badge badge-room badge-room-g" title="Makeup tại Tầng G">🏢 Tầng G</span>`;
+                        ? `<span class="badge badge-room badge-room-2" title="Phòng makeup Tầng 2">Tầng 2</span>`
+                        : `<span class="badge badge-room badge-room-g" title="Phòng makeup Tầng G">Tầng G</span>`;
 
                     tbody.innerHTML += `
                         <tr class="animate-row time-row-daily drag-row" data-start="${startMakeup}" data-end="${endMakeup}" data-live="${liveTime}" style="animation-delay: ${index * 0.05}s" draggable="${draggableFlag}" ondragstart="startDragDailyTable(event, ${index})" ondragover="allowDropDailyTable(event)" ondragleave="dragLeaveDailyTable(event)" ondrop="dropDailyTable(event, ${index})" ondragend="endDragDailyTable(event)">
@@ -2018,7 +2166,7 @@
                                     <button class="btn-m-step" onclick="moveTeamMobile(${index}, 1)">🔽</button>
                                 </div>
                             </td>
-                            <td class="team-name daily-team-name" style="text-align: left; color: var(--text-main); font-weight: 900; padding-left: 20px;">${team.name}</td>
+                            <td class="team-name daily-team-name" ondblclick="openEditTeamNameModal(${index})" title="Nhấp đúp để đổi tên nhóm" style="text-align: left; color: var(--text-main); font-weight: 900; padding-left: 20px; cursor: pointer;">${team.name}</td>
                             <td style="text-align: center;">${roomBadgeHtml}</td>
                             <td><span class="badge badge-shift">${formatTime(displayShiftMinutes)}</span></td>
                             <td><span class="badge badge-makeup">${formatTime(startMakeup)} - ${formatTime(endMakeup)}</span></td>
@@ -2663,34 +2811,48 @@
                             });
                         };
 
+                        // Bảo toàn dữ liệu người dùng đã chỉnh sửa trên máy (Tên nhóm, phòng, quy tắc)
+                        let localDailyTeams = null;
+                        try {
+                            const rawDaily = localStorage.getItem(LOCAL_STORAGE_KEY_DAILY);
+                            if (rawDaily) {
+                                const parsedDaily = JSON.parse(rawDaily);
+                                if (Array.isArray(parsedDaily.teams) && parsedDaily.teams.length > 0) {
+                                    localDailyTeams = parsedDaily.teams;
+                                }
+                            }
+                        } catch(e) {}
+
                         teams = timelineData.map((t, idx) => {
                             let tName = String(t.name || t.id || '').toLowerCase();
                             let isTraffic = isTrafficGroup(t.name) || isTrafficGroup(t.id);
                             let isOffToday = false;
                             let isOffTomorrow = false;
 
-                            // Nhóm lưu lượng (isTraffic) KHÔNG BAO GIỜ NGHỈ vì nhân sự nghỉ luân phiên
                             if (!isTraffic && lsEmps.includes(tName)) {
                                 isOffToday = offLeaves.some(l => l && l.name && String(l.name).toLowerCase() === tName && l.date === todayStr && l.swapFrom !== todayStr && (l.status === 'Approved' || l.status === 'Pending'));
                                 isOffTomorrow = offLeaves.some(l => l && l.name && String(l.name).toLowerCase() === tName && l.date === tomorrowStr && l.swapFrom !== tomorrowStr && (l.status === 'Approved' || l.status === 'Pending'));
                             }
 
-                            // Giữ nguyên phòng và cấu hình người dùng đã lưu (F5 hoặc tùy chỉnh)
+                            // Ưu tiên bảo toàn cấu hình người dùng đã lưu tại vị trí idx
+                            const localTeam = (localDailyTeams && localDailyTeams[idx]) ? localDailyTeams[idx] : null;
                             const existing = teams.find(item => String(item.name || '').toLowerCase() === tName);
-                            const room = existing?.room ? existing.room : (idx % 2 === 0 ? 'G' : '2');
-                            const calcMode = existing?.calcMode ? existing.calcMode : 'auto';
-                            const currentShift = existing?.shift ? existing.shift : (t.shift || '08:00');
-                            const currentDur = (existing && existing.duration !== undefined) ? existing.duration : (Number(t.duration) || 0);
-                            const currentLiveDelay = (existing && existing.liveDelay !== undefined) ? existing.liveDelay : (Number(t.liveDelay) || 0);
+
+                            const finalName = (localTeam && localTeam.name) ? localTeam.name : (t.name || t.id);
+                            const room = (localTeam && localTeam.room) ? localTeam.room : (existing?.room ? existing.room : (idx % 2 === 0 ? 'G' : '2'));
+                            const calcMode = (localTeam && localTeam.calcMode) ? localTeam.calcMode : (existing?.calcMode ? existing.calcMode : 'auto');
+                            const currentShift = (localTeam && localTeam.shift) ? localTeam.shift : (existing?.shift ? existing.shift : (t.shift || '08:00'));
+                            const currentDur = (localTeam && localTeam.duration !== undefined) ? localTeam.duration : ((existing && existing.duration !== undefined) ? existing.duration : (Number(t.duration) || 0));
+                            const currentLiveDelay = (localTeam && localTeam.liveDelay !== undefined) ? localTeam.liveDelay : ((existing && existing.liveDelay !== undefined) ? existing.liveDelay : (Number(t.liveDelay) || 0));
 
                             return {
-                                name: t.name || t.id, 
+                                name: finalName, 
                                 shift: currentShift, 
                                 duration: currentDur, 
                                 liveDelay: currentLiveDelay,
                                 room: room,
                                 calcMode: calcMode,
-                                isActiveOriginal: (existing?.isActiveOriginal !== undefined ? existing.isActiveOriginal : (t.isActiveOriginal !== undefined ? t.isActiveOriginal : (t.isActive !== undefined ? t.isActive : true))),
+                                isActiveOriginal: (localTeam && localTeam.isActiveOriginal !== undefined) ? localTeam.isActiveOriginal : (existing?.isActiveOriginal !== undefined ? existing.isActiveOriginal : (t.isActiveOriginal !== undefined ? t.isActiveOriginal : (t.isActive !== undefined ? t.isActive : true))),
                                 isTraffic: isTraffic,
                                 isOffToday: isOffToday,
                                 isOffTomorrow: isOffTomorrow
