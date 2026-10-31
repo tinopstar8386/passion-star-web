@@ -990,13 +990,21 @@
                     </div>
                 </div>
                 
+                <!-- BẬT / TẮT CỘT PHÒNG MAKEUP (TẦNG G & TẦNG 2) TRÊN DAILY TIMELINE -->
+                <div class="form-group" style="margin-top: 10px; margin-bottom: 12px; background: var(--bg-card); padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border);">
+                    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin: 0; font-weight: 700; font-size: 12px; color: var(--text-main);">
+                        <span>Hiển thị Cột Phòng Makeup (Tầng G / Tầng 2)</span>
+                        <input type="checkbox" id="showDailyMakeupRoom" onchange="toggleDailyMakeupRoom()" style="width: 18px; height: 18px; accent-color: #6366f1;" checked>
+                    </label>
+                </div>
+
                 <div id="togglesContainer"></div>
 
                 <!-- CHẾ ĐỘ TÍNH GIỜ MAKEUP & 2 PHÒNG (TẦNG G & TẦNG 2) -->
                 <div style="background: var(--bg-input); padding: 12px; border-radius: 8px; border: 1px dashed var(--border-dark); margin-top: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <span style="font-size: 11px; font-weight: 800; color: #6366f1; text-transform: uppercase;">⚙️ Chế độ tính giờ Makeup</span>
-                        <span class="badge" style="font-size: 10px; padding: 2px 6px; background: #6366f1; color: white;">2 Phòng Makeup</span>
+                        <span id="badgeDailyRoomMode" class="badge" style="font-size: 10px; padding: 2px 6px; background: #6366f1; color: white;">2 Phòng Makeup</span>
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 8px;">
@@ -1491,6 +1499,7 @@
                 dateSelect: document.getElementById('dailyDateSelect')?.value || 'tomorrow',
                 footer: document.getElementById('dailyFooterInput')?.value || '',
                 pdfOrientation: document.getElementById('pdfOrientationDaily')?.value || 'portrait',
+                showDailyMakeupRoom: document.getElementById('showDailyMakeupRoom')?.checked ?? true,
                 lastUpdated: new Date().toISOString()
             };
         }
@@ -1615,10 +1624,10 @@
                                 footerOut.style.display = data.footer.trim() === '' ? 'none' : 'block';
                             }
                         }
-                        if (data.showMakeupRoom !== undefined) {
-                const el = document.getElementById('showEventMakeupRoom');
-                if (el) el.checked = !!data.showMakeupRoom;
-            }
+                        if (data.showDailyMakeupRoom !== undefined) {
+                            const el = document.getElementById('showDailyMakeupRoom');
+                            if (el) el.checked = !!data.showDailyMakeupRoom;
+                        }
             if (data.pdfOrientation) {
                             const pdfSelect = document.getElementById('pdfOrientationDaily');
                             if (pdfSelect) pdfSelect.value = data.pdfOrientation;
@@ -1908,6 +1917,14 @@
             showToast(`Đã chuyển sang ${idol.room === '2' ? 'TẦNG 2' : 'TẦNG G'}`, 'info', 1200);
         };
 
+        window.toggleDailyMakeupRoom = function() {
+            const isChecked = document.getElementById('showDailyMakeupRoom')?.checked ?? true;
+            renderDailyTable();
+            renderToggles();
+            autoSaveDailyTimeline();
+            showToast(isChecked ? "Đã bật hiển thị Cột Phòng Makeup" : "Đã tắt hiển thị Cột Phòng Makeup", "info", 1500);
+        };
+
         window.toggleEventMakeupRoom = function() {
             generateEventTable();
             autoSaveEventTimeline();
@@ -2057,6 +2074,7 @@
         // === TAB LỊCH HÀNG NGÀY ===
         function renderToggles() {
             const container = document.getElementById('togglesContainer');
+            const showDailyRoom = document.getElementById('showDailyMakeupRoom')?.checked ?? true;
             const shiftContainer = document.getElementById('shiftContainer');
             if (!container || !shiftContainer) return;
             container.innerHTML = ''; shiftContainer.innerHTML = '';
@@ -2082,7 +2100,7 @@
                                 ${team.isTraffic ? '<span style="font-size:10px; color:#7c3aed; font-weight:800; margin-left:2px;" title="Nhóm Lưu Lượng (Luân phiên không nghỉ)">⚡</span>' : ''}
                             </div>
                             <div style="display: flex; align-items: center; gap: 4px;">
-                                <button type="button" class="btn-room-toggle ${roomClass}" onclick="toggleTeamRoom(${index})" title="Bấm để chuyển giữa Tầng G và Tầng 2">${roomLabel}</button>
+                                ${showDailyRoom ? `<button type="button" class="btn-room-toggle ${roomClass}" onclick="toggleTeamRoom(${index})" title="Bấm để chuyển giữa Tầng G và Tầng 2">${roomLabel}</button>` : ''}
                                 <button type="button" class="btn-calc-toggle ${calcClass}" onclick="cycleTeamCalcMode(${index})" title="Bấm để đổi quy tắc: Tự động theo phòng / Cùng giờ / Cộng tiếp">${calcLabel}</button>
                             </div>
                         </div>
@@ -2173,6 +2191,22 @@
             if (!tbody) return;
             tbody.innerHTML = ''; 
             
+            const showDailyRoom = document.getElementById('showDailyMakeupRoom')?.checked ?? true;
+            const thDailyRoom = document.getElementById('thDailyRoom');
+            if (thDailyRoom) {
+                thDailyRoom.style.display = showDailyRoom ? '' : 'none';
+            }
+            const badgeMode = document.getElementById('badgeDailyRoomMode');
+            if (badgeMode) {
+                if (showDailyRoom) {
+                    badgeMode.style.background = '#6366f1';
+                    badgeMode.innerText = '2 Phòng Makeup';
+                } else {
+                    badgeMode.style.background = '#64748b';
+                    badgeMode.innerText = 'Đã tắt cột phòng';
+                }
+            }
+            
             const timingMode = document.getElementById('dailyTimingMode')?.value || 'two_rooms';
             const timeInputAll = document.getElementById('allParallelTime');
             const allParallelMinutes = (timingMode === 'all_parallel' && timeInputAll) ? timeToMinutes(timeInputAll.value) : 0;
@@ -2239,7 +2273,7 @@
                                 </div>
                             </td>
                             <td class="team-name daily-team-name" ondblclick="openEditTeamNameModal(${index})" title="Nhấp đúp để đổi tên nhóm" style="text-align: left; color: var(--text-main); font-weight: 900; padding-left: 20px; cursor: pointer;">${team.name}</td>
-                            <td style="text-align: center;">${roomBadgeHtml}</td>
+                            ${showDailyRoom ? `<td style="text-align: center;">${roomBadgeHtml}</td>` : ''}
                             <td><span class="badge badge-shift">${formatTime(displayShiftMinutes)}</span></td>
                             <td><span class="badge badge-makeup">${formatTime(startMakeup)} - ${formatTime(endMakeup)}</span></td>
                             <td><span class="badge badge-live">${formatTime(liveTime)}</span></td>
@@ -2623,6 +2657,7 @@
             }
 
             clone.querySelectorAll('.hide-on-capture').forEach(el => el.remove());
+            clone.querySelectorAll('[style*="display: none"], [style*="display:none"]').forEach(el => el.remove());
             clone.querySelectorAll('.highlight-makeup, .highlight-live').forEach(el => {
                 el.classList.remove('highlight-makeup', 'highlight-live');
             });
