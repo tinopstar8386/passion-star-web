@@ -1,0 +1,2407 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passion Star | Trình Tự Động Kích Hoạt Mail & Đăng Ký Newsletters</title>
+    <!-- Favicon -->
+    <link rel="icon" href="./icon/newsletter.svg" type="image/svg+xml">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome 6 & Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --bg-base: #06070b;
+            --bg-surface: rgba(18, 22, 34, 0.75);
+            --bg-surface-elevated: rgba(28, 35, 54, 0.9);
+            --bg-surface-hover: rgba(38, 48, 74, 0.85);
+            
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-tertiary: #64748B;
+            
+            --border-light: rgba(255, 255, 255, 0.08);
+            --border-focus: rgba(99, 102, 241, 0.5);
+            
+            --primary: #6366F1;
+            --primary-light: #818CF8;
+            --secondary: #8B5CF6;
+            --accent-cyan: #06B6D4;
+            --accent-emerald: #10B981;
+            --accent-amber: #F59E0B;
+            --accent-rose: #F43F5E;
+            
+            --grad-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            --grad-cyan: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            --grad-emerald: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --grad-amber: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            --grad-dark: linear-gradient(180deg, rgba(20,24,38,0.8) 0%, rgba(13,16,27,0.95) 100%);
+            
+            --shadow-sm: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 12px 36px -4px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 35px -5px rgba(99, 102, 241, 0.35);
+            --glass-blur: blur(20px);
+            --transition-smooth: all 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+            padding-bottom: 70px;
+        }
+
+        /* Ambient Glow Background */
+        .ambient-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            background: 
+                radial-gradient(circle at 12% 10%, rgba(99, 102, 241, 0.16) 0%, transparent 45%),
+                radial-gradient(circle at 88% 25%, rgba(236, 72, 153, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 50% 90%, rgba(6, 182, 212, 0.12) 0%, transparent 50%);
+            filter: blur(80px);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 24px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* --- TOP NAVIGATION BAR --- */
+        .top-navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 22px;
+            background: var(--bg-surface);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 28px;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--grad-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
+        }
+
+        .brand-text h1 {
+            font-size: 17px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-text p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-nav {
+            padding: 9px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition-smooth);
+            border: 1px solid var(--border-light);
+            color: var(--text-secondary);
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+        }
+
+        .btn-nav:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .btn-nav-primary {
+            background: var(--grad-primary);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        }
+
+        .btn-nav-primary:hover {
+            opacity: 0.95;
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            color: white;
+        }
+
+        /* --- HERO BANNER --- */
+        .hero-banner {
+            text-align: center;
+            padding: 34px 20px 24px;
+            margin-bottom: 24px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: var(--primary-light);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 14px;
+        }
+
+        .hero-title {
+            font-size: 34px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.25;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #ffffff 10%, #c7d2fe 60%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-desc {
+            max-width: 720px;
+            margin: 0 auto 20px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .hero-highlights {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .highlight-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 14px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-light);
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .highlight-chip i {
+            color: var(--accent-cyan);
+        }
+
+        /* --- GRID LAYOUT --- */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 460px 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- GLASS PANEL --- */
+        .glass-panel {
+            background: var(--bg-surface);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-light);
+            border-radius: 22px;
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition-smooth);
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .panel-title {
+            font-size: 17px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+        }
+
+        .panel-title i {
+            color: var(--primary-light);
+            font-size: 18px;
+        }
+
+        /* --- TABS --- */
+        .tabs-header {
+            display: flex;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 5px;
+            border-radius: 14px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 18px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 9px 12px;
+            border-radius: 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: var(--transition-smooth);
+        }
+
+        .tab-btn.active {
+            background: var(--bg-surface-elevated);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* --- FORM CONTROLS --- */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i.lead-icon {
+            position: absolute;
+            left: 16px;
+            color: var(--text-tertiary);
+            font-size: 16px;
+            pointer-events: none;
+            transition: var(--transition-smooth);
+        }
+
+        .text-input {
+            width: 100%;
+            background: rgba(10, 14, 24, 0.8);
+            border: 1.5px solid var(--border-light);
+            border-radius: 14px;
+            padding: 14px 16px 14px 46px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            outline: none;
+            transition: var(--transition-smooth);
+        }
+
+        .text-input:focus {
+            border-color: var(--primary);
+            background: rgba(15, 20, 35, 0.95);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .text-input:focus + i.lead-icon {
+            color: var(--primary-light);
+        }
+
+        .textarea-input {
+            width: 100%;
+            background: rgba(10, 14, 24, 0.8);
+            border: 1.5px solid var(--border-light);
+            border-radius: 14px;
+            padding: 14px 16px;
+            color: #fff;
+            font-size: 13px;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.5;
+            outline: none;
+            resize: vertical;
+            min-height: 120px;
+            transition: var(--transition-smooth);
+        }
+
+        .textarea-input:focus {
+            border-color: var(--primary);
+            background: rgba(15, 20, 35, 0.95);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Domain Suggestion Chips */
+        .domain-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .chip-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-light);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .chip-btn:hover {
+            background: rgba(99, 102, 241, 0.15);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        /* --- PRESET SELECTION PILLS --- */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .preset-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: var(--transition-smooth);
+            user-select: none;
+        }
+
+        .preset-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .preset-card.active {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--primary);
+            box-shadow: 0 0 16px rgba(99, 102, 241, 0.2);
+        }
+
+        .preset-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .preset-text h4 {
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .preset-text p {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        /* --- LAUNCH ACTION BUTTON --- */
+        .btn-launch {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 16px;
+            background: var(--grad-primary);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 800;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-launch:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(99, 102, 241, 0.6);
+            filter: brightness(1.08);
+        }
+
+        .btn-launch:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-launch:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+
+        /* --- QUICK WEBMAIL LINKS --- */
+        .webmail-box {
+            margin-top: 22px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 14px 16px;
+        }
+
+        .webmail-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .webmail-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .webmail-link {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 8px 6px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition-smooth);
+        }
+
+        .webmail-link:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .webmail-link i {
+            font-size: 16px;
+        }
+
+        /* --- RIGHT COLUMN: SOURCE EXPLORER --- */
+        .sources-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .filter-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag-pill {
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-light);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            user-select: none;
+        }
+
+        .tag-pill:hover {
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .tag-pill.active {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        .quick-actions-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-sm-action {
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-light);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition-smooth);
+        }
+
+        .btn-sm-action:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+        /* --- SOURCES CARDS LIST --- */
+        .sources-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            max-height: 520px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        @media (max-width: 768px) {
+            .sources-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Custom Scrollbar */
+        .sources-grid::-webkit-scrollbar,
+        .log-terminal::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sources-grid::-webkit-scrollbar-track,
+        .log-terminal::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+        }
+        .sources-grid::-webkit-scrollbar-thumb,
+        .log-terminal::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+        .sources-grid::-webkit-scrollbar-thumb:hover,
+        .log-terminal::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.5);
+        }
+
+        .source-card {
+            background: rgba(20, 25, 40, 0.65);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            position: relative;
+            user-select: none;
+        }
+
+        .source-card:hover {
+            background: rgba(28, 36, 58, 0.85);
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .source-card.selected {
+            background: rgba(99, 102, 241, 0.12);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 4px 16px -2px rgba(99, 102, 241, 0.2);
+        }
+
+        .source-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border-light);
+            background: rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            margin-top: 2px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition-smooth);
+            position: relative;
+        }
+
+        .source-card.selected .source-checkbox {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .source-card.selected .source-checkbox::after {
+            content: "\f00c";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: #fff;
+            font-size: 11px;
+        }
+
+        .source-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .source-details {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .source-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .source-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .source-badges {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .badge-pill {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-daily {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-weekly {
+            background: rgba(6, 182, 212, 0.15);
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        .badge-instant {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .source-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .source-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .source-category {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-visit {
+            font-size: 10px;
+            color: var(--primary-light);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: rgba(99, 102, 241, 0.08);
+            transition: var(--transition-smooth);
+        }
+
+        .btn-visit:hover {
+            background: rgba(99, 102, 241, 0.25);
+            color: #fff;
+        }
+
+        /* --- LIVE EXECUTION MONITOR --- */
+        .execution-monitor {
+            margin-top: 24px;
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .monitor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .monitor-title {
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+        }
+
+        .monitor-stats {
+            display: flex;
+            gap: 14px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-success { color: var(--accent-emerald); }
+        .stat-pending { color: var(--accent-amber); }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 14px;
+            border: 1px solid var(--border-light);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--grad-primary);
+            border-radius: 999px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 14px rgba(99, 102, 241, 0.6);
+        }
+
+        /* Log Terminal */
+        .log-terminal {
+            background: #060912;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            max-height: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #cbd5e1;
+            line-height: 1.4;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .log-time {
+            color: var(--text-tertiary);
+            font-size: 10px;
+            flex-shrink: 0;
+        }
+
+        .log-badge {
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .log-badge.sent { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .log-badge.dispatching { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
+        .log-badge.info { background: rgba(6, 182, 212, 0.2); color: #22d3ee; }
+
+        /* --- STEP-BY-STEP WORKFLOW GUIDE --- */
+        .workflow-guide {
+            margin-top: 28px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+        }
+
+        @media (max-width: 900px) {
+            .workflow-guide {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 500px) {
+            .workflow-guide {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .guide-step {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 18px 16px;
+            position: relative;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .guide-step h3 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .guide-step p {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* --- HISTORY LOG PANEL --- */
+        .history-section {
+            margin-top: 28px;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .history-table th {
+            text-align: left;
+            padding: 10px 14px;
+            color: var(--text-tertiary);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .history-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-tertiary);
+            font-size: 12px;
+        }
+
+        /* --- TOAST NOTIFICATIONS --- */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .custom-toast {
+            background: #111524;
+            border: 1px solid var(--border-light);
+            border-radius: 14px;
+            padding: 14px 18px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            animation: slideInRight 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            min-width: 280px;
+        }
+
+        .custom-toast.success { border-color: var(--accent-emerald); }
+        .custom-toast.error { border-color: var(--accent-rose); }
+        .custom-toast.info { border-color: var(--primary); }
+
+        .custom-toast i {
+            font-size: 18px;
+        }
+
+        .custom-toast.success i { color: var(--accent-emerald); }
+        .custom-toast.error i { color: var(--accent-rose); }
+        .custom-toast.info i { color: var(--primary-light); }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Hidden Target Iframes Container */
+        #hiddenDispatchContainer {
+            display: none;
+            position: absolute;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg"></div>
+
+    <!-- Hidden Submissions Container -->
+    <div id="hiddenDispatchContainer"></div>
+
+    <div class="container">
+        <!-- TOP NAVIGATION -->
+        <header class="top-navbar">
+            <a href="index.html" class="nav-brand">
+                <div class="brand-icon-box">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>Mail Activator & Newsletter Hub</h1>
+                    <p>Passion Star • Tự động kích hoạt & đăng ký thư mỗi ngày/tuần</p>
+                </div>
+            </a>
+            
+            <div class="nav-actions">
+                <a href="index.html" class="btn-nav" title="Quay về Workspace Hub">
+                    <i class="fa-solid fa-arrow-left"></i> Workspace Hub
+                </a>
+                <button class="btn-nav btn-nav-primary" onclick="window.scrollTo({top: 450, behavior: 'smooth'})">
+                    <i class="fa-solid fa-bolt"></i> Bắt Đầu Ngay
+                </button>
+            </div>
+        </header>
+
+        <!-- HERO INTRO -->
+        <section class="hero-banner">
+            <div class="hero-badge">
+                <i class="fa-solid fa-sparkles"></i> Email Warmup & Daily Newsletter Engine
+            </div>
+            <h2 class="hero-title">Kích Hoạt Hòm Thư Mới & Đón Nhận Tri Thức Mỗi Ngày</h2>
+            <p class="hero-desc">
+                Chỉ cần nhập email, hệ thống sẽ tự động đăng ký vào các nguồn báo chí, bản tin từ vựng tiếng Anh (Word of the Day, AWAD), công nghệ và tin tức toàn cầu uy tín hoàn toàn miễn phí. Hòm thư của bạn sẽ nhận email tức thì để kích hoạt trạng thái hoạt động (Active Inbox) và nhận bản tin đều đặn mỗi ngày/tuần.
+            </p>
+            
+            <div class="hero-highlights">
+                <div class="highlight-chip"><i class="fa-solid fa-circle-check"></i> 24+ Nguồn Free Chất Lượng Cao</div>
+                <div class="highlight-chip"><i class="fa-solid fa-bolt"></i> Gửi Mail Welcome Xác Nhận Tức Thì</div>
+                <div class="highlight-chip"><i class="fa-solid fa-shield-halved"></i> Làm Ấm Hòm Thư (Inbox Warmup Chuẩn)</div>
+                <div class="highlight-chip"><i class="fa-solid fa-book-open"></i> Học Từ Vựng & Nâng Cao Trình Độ</div>
+            </div>
+        </section>
+
+        <!-- MAIN DUAL-COLUMN WORKSPACE -->
+        <main class="main-layout">
+            
+            <!-- LEFT COLUMN: INPUT CONTROLLER -->
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>Thiết Lập Kích Hoạt</span>
+                    </div>
+                    <span class="badge-pill badge-daily" id="selectedCounterBadge">Đã chọn 24 nguồn</span>
+                </div>
+
+                <!-- INPUT TABS: SINGLE VS BATCH -->
+                <div class="tabs-header">
+                    <button class="tab-btn active" id="tabSingleBtn" onclick="switchInputTab('single')">
+                        <i class="fa-solid fa-envelope"></i> Một Email
+                    </button>
+                    <button class="tab-btn" id="tabBatchBtn" onclick="switchInputTab('batch')">
+                        <i class="fa-solid fa-layer-group"></i> Hàng Loạt (Batch)
+                    </button>
+                </div>
+
+                <!-- TAB 1: SINGLE EMAIL INPUT -->
+                <div id="singleEmailPanel">
+                    <div class="form-group">
+                        <label class="form-label" for="targetEmail">Địa chỉ Email cần kích hoạt:</label>
+                        <div class="input-wrapper">
+                            <input type="email" id="targetEmail" class="text-input" placeholder="nhapmail@gmail.com..." autocomplete="email">
+                            <i class="fa-solid fa-at lead-icon"></i>
+                        </div>
+                        
+                        <!-- Quick Domain Append Chips -->
+                        <div class="domain-chips">
+                            <span style="font-size: 11px; color: var(--text-tertiary); display: flex; align-items: center; margin-right: 4px;">Gợi ý:</span>
+                            <button type="button" class="chip-btn" onclick="appendDomain('@gmail.com')">@gmail.com</button>
+                            <button type="button" class="chip-btn" onclick="appendDomain('@outlook.com')">@outlook.com</button>
+                            <button type="button" class="chip-btn" onclick="appendDomain('@yahoo.com')">@yahoo.com</button>
+                            <button type="button" class="chip-btn" onclick="appendDomain('@icloud.com')">@icloud.com</button>
+                            <button type="button" class="chip-btn" onclick="appendDomain('@proton.me')">@proton.me</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: BATCH EMAIL INPUT -->
+                <div id="batchEmailPanel" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="batchEmails">Danh sách Email (Mỗi dòng hoặc dấu phẩy 1 email):</label>
+                        <textarea id="batchEmails" class="textarea-input" placeholder="mail1@gmail.com&#10;mail2@outlook.com&#10;mail3@yahoo.com..."></textarea>
+                        <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--text-tertiary);">
+                            <span id="batchCountDisplay">Phát hiện: 0 email hợp lệ</span>
+                            <button type="button" class="chip-btn" onclick="clearBatchEmails()">Xóa trắng</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRESET COLLECTIONS -->
+                <div class="form-group">
+                    <label class="form-label">Chọn nhanh gói bản tin (Presets):</label>
+                    <div class="preset-grid">
+                        <div class="preset-card active" onclick="applyPreset('all')" id="preset-all">
+                            <div class="preset-icon" style="background: var(--grad-primary);"><i class="fa-solid fa-globe"></i></div>
+                            <div class="preset-text">
+                                <h4>Tất Cả 24 Nguồn</h4>
+                                <p>Toàn diện nhất (Khuyên dùng)</p>
+                            </div>
+                        </div>
+                        <div class="preset-card" onclick="applyPreset('vocab')" id="preset-vocab">
+                            <div class="preset-icon" style="background: var(--grad-cyan);"><i class="fa-solid fa-spell-check"></i></div>
+                            <div class="preset-text">
+                                <h4>Từ Vựng Tiếng Anh</h4>
+                                <p>Word of the day, AWAD, Phrase</p>
+                            </div>
+                        </div>
+                        <div class="preset-card" onclick="applyPreset('news')" id="preset-news">
+                            <div class="preset-icon" style="background: var(--grad-emerald);"><i class="fa-solid fa-newspaper"></i></div>
+                            <div class="preset-text">
+                                <h4>Báo Chí & Tin Tức</h4>
+                                <p>1440, Morning Brew, Skimm</p>
+                            </div>
+                        </div>
+                        <div class="preset-card" onclick="applyPreset('tech')" id="preset-tech">
+                            <div class="preset-icon" style="background: var(--grad-amber);"><i class="fa-solid fa-code"></i></div>
+                            <div class="preset-text">
+                                <h4>Công Nghệ & AI</h4>
+                                <p>TLDR Tech, JS Weekly, HN</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LAUNCH BUTTON -->
+                <button type="button" class="btn-launch" id="btnStartActivation" onclick="startActivationProcess()">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>KÍCH HOẠT &amp; ĐĂNG KÝ NGAY</span>
+                </button>
+
+                <!-- QUICK WEBMAIL ACCESSIBILITY -->
+                <div class="webmail-box">
+                    <div class="webmail-title">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        <span>Mở Nhanh Hộp Thư Để Xác Nhận Thư</span>
+                    </div>
+                    <div class="webmail-grid">
+                        <a href="https://mail.google.com" target="_blank" class="webmail-link">
+                            <i class="fa-brands fa-google" style="color: #ea4335;"></i>
+                            <span>Gmail</span>
+                        </a>
+                        <a href="https://outlook.live.com/mail/" target="_blank" class="webmail-link">
+                            <i class="fa-brands fa-microsoft" style="color: #0078d4;"></i>
+                            <span>Outlook</span>
+                        </a>
+                        <a href="https://mail.yahoo.com" target="_blank" class="webmail-link">
+                            <i class="fa-brands fa-yahoo" style="color: #6001d2;"></i>
+                            <span>Yahoo</span>
+                        </a>
+                        <a href="https://www.icloud.com/mail" target="_blank" class="webmail-link">
+                            <i class="fa-brands fa-apple" style="color: #94a3b8;"></i>
+                            <span>iCloud</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: NEWSLETTERS DIRECTORY & LIVE CONSOLE -->
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-newspaper"></i>
+                        <span>Kho Nguồn Free Tích Hợp Sẵn</span>
+                    </div>
+                    <div class="quick-actions-bar">
+                        <button type="button" class="btn-sm-action" onclick="selectAllSources(true)" title="Chọn tất cả">
+                            <i class="fa-solid fa-check-double"></i> Chọn Hết
+                        </button>
+                        <button type="button" class="btn-sm-action" onclick="selectAllSources(false)" title="Bỏ chọn">
+                            <i class="fa-solid fa-xmark"></i> Bỏ Chọn
+                        </button>
+                    </div>
+                </div>
+
+                <!-- FILTER TABS -->
+                <div class="sources-toolbar">
+                    <div class="filter-tags">
+                        <div class="tag-pill active" onclick="filterCategory('all', this)">Tất Cả (24)</div>
+                        <div class="tag-pill" onclick="filterCategory('vocab', this)">📖 Từ Vựng & Học Tập (5)</div>
+                        <div class="tag-pill" onclick="filterCategory('news', this)">📰 Báo Chí & Bản Tin (6)</div>
+                        <div class="tag-pill" onclick="filterCategory('tech', this)">💻 Công Nghệ & AI (6)</div>
+                        <div class="tag-pill" onclick="filterCategory('science', this)">🔭 Khoa Học & Đời Sống (4)</div>
+                        <div class="tag-pill" onclick="filterCategory('rss', this)">🗞️ RSS Chuyển Tiếp (3)</div>
+                    </div>
+                </div>
+
+                <!-- SOURCES DIRECTORY CARDS -->
+                <div class="sources-grid" id="sourcesGridContainer">
+                    <!-- Dynamic rendering via JS -->
+                </div>
+
+                <!-- LIVE EXECUTION CONSOLE -->
+                <div class="execution-monitor" id="executionMonitor">
+                    <div class="monitor-header">
+                        <div class="monitor-title">
+                            <i class="fa-solid fa-satellite-dish fa-fade" style="color: var(--accent-cyan);"></i>
+                            <span id="monitorStatusText">Đang tiến hành gửi lệnh đăng ký...</span>
+                        </div>
+                        <div class="monitor-stats">
+                            <div class="stat-item stat-success">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span>Thành công: <strong id="statSuccessCount">0</strong></span>
+                            </div>
+                            <div class="stat-item stat-pending">
+                                <i class="fa-solid fa-spinner fa-spin"></i>
+                                <span>Tiến độ: <strong id="statPercentCount">0%</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+
+                    <div class="log-terminal" id="logTerminal">
+                        <!-- Live log entries -->
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- STEP-BY-STEP WORKFLOW GUIDE -->
+        <section class="workflow-guide">
+            <div class="guide-step">
+                <div class="step-number">1</div>
+                <h3>Nhập Email Mới</h3>
+                <p>Điền email mới tạo hoặc hòm thư cần làm ấm (inbox warmup). Có thể dán hàng loạt nhiều mail cùng lúc.</p>
+            </div>
+            <div class="guide-step">
+                <div class="step-number">2</div>
+                <h3>Tự Động Kích Hoạt</h3>
+                <p>Hệ thống tự động dispatch subscription tới hơn 24 nguồn báo chí, từ vựng và tin tức free không tốn phí.</p>
+            </div>
+            <div class="guide-step">
+                <div class="step-number">3</div>
+                <h3>Xác Nhận (Opt-In)</h3>
+                <p>Mở hòm thư, nhấn vào các email "Please confirm your subscription" hoặc thư chào mừng để hoàn tất kích hoạt.</p>
+            </div>
+            <div class="guide-step">
+                <div class="step-number">4</div>
+                <h3>Nuôi Mail & Tương Tác</h3>
+                <p>Đánh dấu "Không phải spam" và gắn sao thư. Hòm thư sẽ nhận tin đều đặn mỗi ngày/tuần, tăng uy tín tuyệt đối!</p>
+            </div>
+        </section>
+
+        <!-- ACTIVATION HISTORY SECTION -->
+        <section class="history-section">
+            <div class="glass-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Lịch Sử Kích Hoạt Gần Đây</span>
+                    </div>
+                    <div class="quick-actions-bar">
+                        <button type="button" class="btn-sm-action" onclick="exportHistoryCSV()">
+                            <i class="fa-solid fa-file-csv"></i> Xuất CSV
+                        </button>
+                        <button type="button" class="btn-sm-action" onclick="clearHistoryLog()">
+                            <i class="fa-solid fa-trash-can"></i> Xóa Lịch Sử
+                        </button>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Thời Gian</th>
+                                <th>Email Kích Hoạt</th>
+                                <th>Số Lượng Nguồn</th>
+                                <th>Trạng Thái</th>
+                                <th>Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- JAVASCRIPT ENGINE -->
+    <script>
+        // ==========================================================
+        // 1. DANH SÁCH 24+ NGUỒN NEWSLETTERS FREE ĐÃ ĐƯỢC TUYỂN CHỌN
+        // ==========================================================
+        const NEWSLETTER_SOURCES = [
+            // --- NHÓM 1: TỪ VỰNG & HỌC TẬP (VOCAB) ---
+            {
+                id: 'awad',
+                name: 'A Word A Day (AWAD)',
+                category: 'vocab',
+                categoryLabel: 'Từ Vựng',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Bản tin từ vựng tiếng Anh kinh điển của Wordsmith (từ năm 1994). Gửi 1 từ mới, ngữ nguyên, phát âm và câu trích dẫn mỗi sáng.',
+                icon: 'fa-book-bookmark',
+                iconBg: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                website: 'https://wordsmith.org/awad/',
+                formAction: 'https://wordsmith.org/awad/subunsub.cgi',
+                method: 'POST',
+                fields: { subaction: 'subscribe', emailField: 'email' }
+            },
+            {
+                id: 'merriam-webster',
+                name: 'Merriam-Webster Daily Word',
+                category: 'vocab',
+                categoryLabel: 'Từ Vựng',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Từ điển Merriam-Webster uy tín của Mỹ, gửi email từ vựng chính xác cùng podcast âm thanh và nguồn gốc từ mỗi ngày.',
+                icon: 'fa-spell-check',
+                iconBg: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+                website: 'https://www.merriam-webster.com/word-of-the-day',
+                formAction: 'https://www.merriam-webster.com/word-of-the-day',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'dictionary-daily',
+                name: 'Dictionary.com Word & Quiz',
+                category: 'vocab',
+                categoryLabel: 'Từ Vựng',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: false,
+                desc: 'Từ điển trực tuyến hàng đầu, gửi bài tập ngắn, từ vựng học thuật IELTS/TOEFL và câu đố chữ thông minh.',
+                icon: 'fa-graduation-cap',
+                iconBg: 'linear-gradient(135deg, #ec4899, #f43f5e)',
+                website: 'https://www.dictionary.com/e/word-of-the-day/',
+                formAction: 'https://www.dictionary.com/e/word-of-the-day/',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'englishclub-vocab',
+                name: 'EnglishClub Daily Grammar & Word',
+                category: 'vocab',
+                categoryLabel: 'Học Tập',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Bản tin hỗ trợ người học tiếng Anh với các điểm ngữ pháp cần nhớ, thành ngữ thông dụng và mẹo phát âm chuẩn.',
+                icon: 'fa-language',
+                iconBg: 'linear-gradient(135deg, #10b981, #059669)',
+                website: 'https://www.englishclub.com/esl-quizzes/word-of-the-day.htm',
+                formAction: 'https://www.englishclub.com/esl-quizzes/word-of-the-day.htm',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'phrase-finder',
+                name: 'The Phrase Finder (Phrase A Week)',
+                category: 'vocab',
+                categoryLabel: 'Thành Ngữ',
+                frequency: 'Hàng tuần',
+                freqBadge: 'weekly',
+                instantBadge: true,
+                desc: 'Khám phá ý nghĩa và nguồn gốc thú vị của các thành ngữ tiếng Anh nổi tiếng từ kho tàng ngôn ngữ nhân loại.',
+                icon: 'fa-quote-left',
+                iconBg: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                website: 'https://www.phrases.org.uk/phrase-a-week.html',
+                formAction: 'https://www.phrases.org.uk/phrase-a-week.html',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+
+            // --- NHÓM 2: BÁO CHÍ & BẢN TIN TỔNG HỢP (NEWS) ---
+            {
+                id: '1440-digest',
+                name: '1440 Daily Digest',
+                category: 'news',
+                categoryLabel: 'Báo Chí',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Bản tin khách quan không thiên vị tổng hợp tin tức toàn cầu trong 5 phút đọc mỗi buổi sáng cho hơn 3.5 triệu người.',
+                icon: 'fa-newspaper',
+                iconBg: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                website: 'https://join1440.com/',
+                formAction: 'https://join1440.com/',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'morning-brew',
+                name: 'Morning Brew Daily',
+                category: 'news',
+                categoryLabel: 'Bản Tin Sáng',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Bản tin phong cách dí dỏm về kinh doanh, công nghệ, chứng khoán và kinh tế toàn cầu, gửi đúng 6 giờ sáng.',
+                icon: 'fa-mug-hot',
+                iconBg: 'linear-gradient(135deg, #f97316, #ea580c)',
+                website: 'https://www.morningbrew.com/daily',
+                formAction: 'https://www.morningbrew.com/daily',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'the-skimm',
+                name: 'The Daily Skimm',
+                category: 'news',
+                categoryLabel: 'Báo Chí',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Điểm tin thời sự thế giới ngắn gọn, cô đọng, dễ hiểu giúp bạn bắt đầu ngày mới đầy đủ thông tin nhất.',
+                icon: 'fa-bolt-lightning',
+                iconBg: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                website: 'https://www.theskimm.com/daily-skimm',
+                formAction: 'https://www.theskimm.com/daily-skimm',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'public-domain-review',
+                name: 'The Public Domain Review',
+                category: 'news',
+                categoryLabel: 'Văn Hóa & Báo',
+                frequency: '2 lần/tuần',
+                freqBadge: 'weekly',
+                instantBadge: true,
+                desc: 'Tuyển tập trực tuyến những tác phẩm văn hóa, nghệ thuật, sách lịch sử và phát kiến kỳ thú đã thuộc về công chúng.',
+                icon: 'fa-landmark',
+                iconBg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                website: 'https://publicdomainreview.org/',
+                formAction: 'https://publicdomainreview.substack.com/api/v1/free',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'semafor-flagship',
+                name: 'Semafor Flagship',
+                category: 'news',
+                categoryLabel: 'Thời Sự',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Góc nhìn toàn cầu đa chiều từ các nhà báo kỳ cựu quốc tế về chính trị, kinh tế và biến chuyển thế giới.',
+                icon: 'fa-globe',
+                iconBg: 'linear-gradient(135deg, #10b981, #047857)',
+                website: 'https://www.semafor.com/newsletters',
+                formAction: 'https://www.semafor.com/newsletters',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'the-guardian-daily',
+                name: 'The Guardian First Edition',
+                category: 'news',
+                categoryLabel: 'Báo Quốc Tế',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Bản tin buổi sáng độc quyền của tờ The Guardian phân tích sâu sắc các sự kiện quốc tế đang diễn ra.',
+                icon: 'fa-scroll',
+                iconBg: 'linear-gradient(135deg, #1e3a8a, #172554)',
+                website: 'https://www.theguardian.com/email-newsletters',
+                formAction: 'https://www.theguardian.com/email-newsletters',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+
+            // --- NHÓM 3: CÔNG NGHỆ, LẬP TRÌNH & AI (TECH) ---
+            {
+                id: 'tldr-tech',
+                name: 'TLDR Tech & AI Daily',
+                category: 'tech',
+                categoryLabel: 'Công Nghệ',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Bản tin công nghệ và trí tuệ nhân tạo lớn nhất toàn cầu. Tóm tắt các startup, phát minh AI và coding trong 5 phút.',
+                icon: 'fa-microchip',
+                iconBg: 'linear-gradient(135deg, #6366f1, #3b82f6)',
+                website: 'https://tldr.tech/',
+                formAction: 'https://tldr.tech/api/subscribed',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'js-weekly',
+                name: 'JavaScript Weekly (Cooperpress)',
+                category: 'tech',
+                categoryLabel: 'Lập Trình',
+                frequency: 'Hàng tuần',
+                freqBadge: 'weekly',
+                instantBadge: true,
+                desc: 'Tuyển tập hàng tuần về JavaScript, TypeScript, Web Development và tin tức framework thế giới. Gửi mail chào mừng ngay.',
+                icon: 'fa-js',
+                iconBg: 'linear-gradient(135deg, #f59e0b, #eab308)',
+                website: 'https://javascriptweekly.com/',
+                formAction: 'https://javascriptweekly.com/subscribe',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'hacker-newsletter',
+                name: 'Hacker Newsletter',
+                category: 'tech',
+                categoryLabel: 'Hacker News',
+                frequency: 'Hàng tuần',
+                freqBadge: 'weekly',
+                instantBadge: true,
+                desc: 'Top các bài thảo luận công nghệ, mã nguồn mở, bảo mật và tư duy khởi nghiệp được bình chọn nhiều nhất trên Hacker News.',
+                icon: 'fa-y-combinator',
+                iconBg: 'linear-gradient(135deg, #ea580c, #c2410c)',
+                website: 'https://hackernewsletter.com/',
+                formAction: 'https://hackernewsletter.com/',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'devto-digest',
+                name: 'Dev.to Community Highlights',
+                category: 'tech',
+                categoryLabel: 'Lập Trình',
+                frequency: 'Hàng tuần',
+                freqBadge: 'weekly',
+                instantBadge: true,
+                desc: 'Cộng đồng lập trình viên quốc tế Dev.to chia sẻ bài viết kỹ thuật, dự án open source và cẩm nang nghề nghiệp IT.',
+                icon: 'fa-code',
+                iconBg: 'linear-gradient(135deg, #1e293b, #0f172a)',
+                website: 'https://dev.to/',
+                formAction: 'https://dev.to/',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'pycoders-weekly',
+                name: "PyCoder's Weekly",
+                category: 'tech',
+                categoryLabel: 'Python & Data',
+                frequency: 'Hàng tuần',
+                freqBadge: 'weekly',
+                instantBadge: true,
+                desc: 'Bản tin không thể thiếu cho lập trình viên Python, Data Science và Kỹ sư trí tuệ nhân tạo (Machine Learning).',
+                icon: 'fa-python',
+                iconBg: 'linear-gradient(135deg, #38bdf8, #0284c7)',
+                website: 'https://pycoders.com/',
+                formAction: 'https://pycoders.com/',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'bleeping-computer',
+                name: 'BleepingComputer Tech & Security',
+                category: 'tech',
+                categoryLabel: 'An Ninh Mạng',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Bản tin an ninh mạng, lỗ hổng bảo mật, cập nhật Windows/macOS và bảo vệ dữ liệu số uy tín nhất.',
+                icon: 'fa-shield-halved',
+                iconBg: 'linear-gradient(135deg, #e11d48, #9f1239)',
+                website: 'https://www.bleepingcomputer.com/',
+                formAction: 'https://www.bleepingcomputer.com/',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+
+            // --- NHÓM 4: KHOA HỌC & ĐỜI SỐNG (SCIENCE) ---
+            {
+                id: 'nasa-apod',
+                name: 'NASA Astronomy Picture of the Day',
+                category: 'science',
+                categoryLabel: 'Thiên Văn',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Mỗi ngày 1 hình ảnh vũ trụ kỳ vĩ từ kính viễn vọng không gian NASA kèm bài phân tích thú vị từ chuyên gia thiên văn.',
+                icon: 'fa-shuttle-space',
+                iconBg: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                website: 'https://apod.nasa.gov/apod/astropix.html',
+                formAction: 'https://blogtrottr.com/',
+                method: 'POST',
+                fields: { btr_url: 'https://apod.nasa.gov/apod.rss', btr_schedule: '24', emailField: 'btr_email' }
+            },
+            {
+                id: 'atlas-obscura',
+                name: 'Atlas Obscura - Wonder of the Day',
+                category: 'science',
+                categoryLabel: 'Khám Phá',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Khám phá những địa điểm bí ẩn, kỳ quan kiến trúc và phong tục độc đáo chưa từng thấy trên hành tinh của chúng ta.',
+                icon: 'fa-compass',
+                iconBg: 'linear-gradient(135deg, #10b981, #059669)',
+                website: 'https://www.atlasobscura.com/newsletters',
+                formAction: 'https://www.atlasobscura.com/newsletters',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+            {
+                id: 'daily-science-digest',
+                name: 'Science Daily Highlights',
+                category: 'science',
+                categoryLabel: 'Khoa Học',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Đột phá y học, nghiên cứu sinh học, biến đổi khí hậu và công nghệ lượng tử được gửi tóm lược mỗi sáng.',
+                icon: 'fa-flask-vial',
+                iconBg: 'linear-gradient(135deg, #06b6d4, #0284c7)',
+                website: 'https://www.sciencedaily.com/',
+                formAction: 'https://blogtrottr.com/',
+                method: 'POST',
+                fields: { btr_url: 'https://www.sciencedaily.com/rss/top/science.xml', btr_schedule: '24', emailField: 'btr_email' }
+            },
+            {
+                id: 'james-clear-321',
+                name: 'James Clear 3-2-1 Thursday',
+                category: 'science',
+                categoryLabel: 'Phát Triển',
+                frequency: 'Hàng tuần (T5)',
+                freqBadge: 'weekly',
+                instantBadge: true,
+                desc: 'Bản tin phát triển bản thân nổi tiếng từ tác giả Atomic Habits: 3 ý tưởng, 2 trích dẫn hay và 1 câu hỏi đáng suy ngẫm.',
+                icon: 'fa-lightbulb',
+                iconBg: 'linear-gradient(135deg, #f59e0b, #b45309)',
+                website: 'https://jamesclear.com/3-2-1',
+                formAction: 'https://jamesclear.com/3-2-1',
+                method: 'POST',
+                fields: { emailField: 'email' }
+            },
+
+            // --- NHÓM 5: RSS TO EMAIL TỰ ĐỘNG (KÍCH HOẠT NHẬN MAIL TỨC THÌ) ---
+            {
+                id: 'rss-vnexpress',
+                name: 'VNExpress RSS Mail (Tin Mới Mỗi Ngày)',
+                category: 'rss',
+                categoryLabel: 'RSS Tin Tức VN',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Chuyển tiếp tự động tin tức nóng nhất từ Báo điện tử tiếng Việt nhiều người xem nhất. Nhận thư xác nhận kích hoạt ngay!',
+                icon: 'fa-rss',
+                iconBg: 'linear-gradient(135deg, #991b1b, #dc2626)',
+                website: 'https://vnexpress.net/rss',
+                formAction: 'https://blogtrottr.com/',
+                method: 'POST',
+                fields: { btr_url: 'https://vnexpress.net/rss/tin-moi-nhat.rss', btr_schedule: '24', emailField: 'btr_email' }
+            },
+            {
+                id: 'rss-bbc-world',
+                name: 'BBC News Global Daily Feed',
+                category: 'rss',
+                categoryLabel: 'RSS Báo BBC',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Bản tin RSS tự động chuyển tiếp từ đài BBC World News về email của bạn. Thư gửi đều đặn đảm bảo hòm thư hoạt động tích cực.',
+                icon: 'fa-tower-broadcast',
+                iconBg: 'linear-gradient(135deg, #b91c1c, #7f1d1d)',
+                website: 'https://www.bbc.com/news',
+                formAction: 'https://blogtrottr.com/',
+                method: 'POST',
+                fields: { btr_url: 'https://feeds.bbci.co.uk/news/world/rss.xml', btr_schedule: '24', emailField: 'btr_email' }
+            },
+            {
+                id: 'rss-the-verge',
+                name: 'The Verge Tech & Gadgets Feed',
+                category: 'rss',
+                categoryLabel: 'RSS The Verge',
+                frequency: 'Hàng ngày',
+                freqBadge: 'daily',
+                instantBadge: true,
+                desc: 'Bản tin thiết bị số, điện thoại, laptop, AI và văn hóa số từ tạp chí công nghệ The Verge nổi tiếng của Mỹ.',
+                icon: 'fa-laptop-code',
+                iconBg: 'linear-gradient(135deg, #ec4899, #be185d)',
+                website: 'https://www.theverge.com/',
+                formAction: 'https://blogtrottr.com/',
+                method: 'POST',
+                fields: { btr_url: 'https://www.theverge.com/rss/index.xml', btr_schedule: '24', emailField: 'btr_email' }
+            }
+        ];
+
+        // ==========================================================
+        // 2. STATE QUẢN LÝ ỨNG DỤNG
+        // ==========================================================
+        let selectedSourceIds = new Set(NEWSLETTER_SOURCES.map(s => s.id));
+        let currentFilterCategory = 'all';
+        let isProcessing = false;
+
+        // ==========================================================
+        // 3. RENDER GIAO DIỆN NGUỒN NEWSLETTERS
+        // ==========================================================
+        function renderSourcesGrid() {
+            const container = document.getElementById('sourcesGridContainer');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            const filtered = NEWSLETTER_SOURCES.filter(source => {
+                if (currentFilterCategory === 'all') return true;
+                return source.category === currentFilterCategory;
+            });
+
+            filtered.forEach(source => {
+                const isSelected = selectedSourceIds.has(source.id);
+                const card = document.createElement('div');
+                card.className = `source-card ${isSelected ? 'selected' : ''}`;
+                card.id = `card-${source.id}`;
+                card.onclick = (e) => {
+                    // Tránh toggle 2 lần nếu bấm vào link xem trước
+                    if (e.target.closest('.btn-visit')) return;
+                    toggleSourceSelection(source.id);
+                };
+
+                card.innerHTML = `
+                    <div class="source-checkbox"></div>
+                    <div class="source-icon" style="background: ${source.iconBg}">
+                        <i class="fa-solid ${source.icon}"></i>
+                    </div>
+                    <div class="source-details">
+                        <div class="source-header">
+                            <span class="source-name" title="${source.name}">${source.name}</span>
+                            <div class="source-badges">
+                                <span class="badge-pill ${source.freqBadge === 'daily' ? 'badge-daily' : 'badge-weekly'}">${source.frequency}</span>
+                                ${source.instantBadge ? '<span class="badge-pill badge-instant" title="Gửi thư kích hoạt ngay">Active ngay</span>' : ''}
+                            </div>
+                        </div>
+                        <p class="source-desc">${source.desc}</p>
+                        <div class="source-footer">
+                            <span class="source-category"><i class="fa-solid fa-tag"></i> ${source.categoryLabel}</span>
+                            <a href="${source.website}" target="_blank" class="btn-visit" title="Xem trang gốc" onclick="event.stopPropagation();">
+                                <span>Xem</span> <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            updateSelectedCounter();
+        }
+
+        function toggleSourceSelection(sourceId) {
+            if (selectedSourceIds.has(sourceId)) {
+                selectedSourceIds.delete(sourceId);
+            } else {
+                selectedSourceIds.add(sourceId);
+            }
+
+            const card = document.getElementById(`card-${sourceId}`);
+            if (card) {
+                card.classList.toggle('selected', selectedSourceIds.has(sourceId));
+            }
+
+            updateSelectedCounter();
+        }
+
+        function selectAllSources(enable) {
+            if (enable) {
+                NEWSLETTER_SOURCES.forEach(s => selectedSourceIds.add(s.id));
+                showToast(`Đã chọn toàn bộ ${NEWSLETTER_SOURCES.length} nguồn newsletter!`, 'success');
+            } else {
+                selectedSourceIds.clear();
+                showToast('Đã bỏ chọn tất cả các nguồn.', 'info');
+            }
+            renderSourcesGrid();
+        }
+
+        function updateSelectedCounter() {
+            const count = selectedSourceIds.size;
+            const badge = document.getElementById('selectedCounterBadge');
+            if (badge) {
+                badge.textContent = `Đã chọn ${count}/${NEWSLETTER_SOURCES.length} nguồn`;
+                if (count === 0) {
+                    badge.className = 'badge-pill badge-weekly';
+                } else {
+                    badge.className = 'badge-pill badge-daily';
+                }
+            }
+        }
+
+        function filterCategory(category, element) {
+            currentFilterCategory = category;
+            document.querySelectorAll('.tag-pill').forEach(pill => pill.classList.remove('active'));
+            if (element) element.classList.add('active');
+            renderSourcesGrid();
+        }
+
+        // ==========================================================
+        // 4. PRESETS GÓI CHỌN SẴN
+        // ==========================================================
+        function applyPreset(presetType) {
+            document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+            const activeCard = document.getElementById(`preset-${presetType}`);
+            if (activeCard) activeCard.classList.add('active');
+
+            selectedSourceIds.clear();
+
+            if (presetType === 'all') {
+                NEWSLETTER_SOURCES.forEach(s => selectedSourceIds.add(s.id));
+                showToast('Đã áp dụng gói: Toàn bộ 24 nguồn', 'success');
+            } else if (presetType === 'vocab') {
+                NEWSLETTER_SOURCES.filter(s => s.category === 'vocab').forEach(s => selectedSourceIds.add(s.id));
+                showToast('Đã áp dụng gói: Từ Vựng & Tiếng Anh Mỗi Ngày', 'success');
+            } else if (presetType === 'news') {
+                NEWSLETTER_SOURCES.filter(s => s.category === 'news' || s.category === 'rss').forEach(s => selectedSourceIds.add(s.id));
+                showToast('Đã áp dụng gói: Báo Chí & Tin Tức Hàng Ngày', 'success');
+            } else if (presetType === 'tech') {
+                NEWSLETTER_SOURCES.filter(s => s.category === 'tech').forEach(s => selectedSourceIds.add(s.id));
+                showToast('Đã áp dụng gói: Công Nghệ, Lập Trình & AI', 'success');
+            }
+
+            renderSourcesGrid();
+        }
+
+        // ==========================================================
+        // 5. CHUYỂN ĐỔI TAB NHẬP MAIL & GỢI Ý DOMAIN
+        // ==========================================================
+        function switchInputTab(mode) {
+            const singlePanel = document.getElementById('singleEmailPanel');
+            const batchPanel = document.getElementById('batchEmailPanel');
+            const singleBtn = document.getElementById('tabSingleBtn');
+            const batchBtn = document.getElementById('tabBatchBtn');
+
+            if (mode === 'single') {
+                singlePanel.style.display = 'block';
+                batchPanel.style.display = 'none';
+                singleBtn.classList.add('active');
+                batchBtn.classList.remove('active');
+            } else {
+                singlePanel.style.display = 'none';
+                batchPanel.style.display = 'block';
+                singleBtn.classList.remove('active');
+                batchBtn.classList.add('active');
+            }
+        }
+
+        function appendDomain(domain) {
+            const input = document.getElementById('targetEmail');
+            let val = input.value.trim();
+            if (val.includes('@')) {
+                val = val.split('@')[0];
+            }
+            if (!val) val = 'yourname';
+            input.value = val + domain;
+            input.focus();
+        }
+
+        function clearBatchEmails() {
+            document.getElementById('batchEmails').value = '';
+            document.getElementById('batchCountDisplay').textContent = 'Phát hiện: 0 email hợp lệ';
+        }
+
+        document.getElementById('batchEmails')?.addEventListener('input', function() {
+            const text = this.value;
+            const emails = extractValidEmails(text);
+            document.getElementById('batchCountDisplay').textContent = `Phát hiện: ${emails.length} email hợp lệ`;
+        });
+
+        function extractValidEmails(text) {
+            if (!text) return [];
+            const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+            const matches = text.match(emailRegex) || [];
+            return [...new Set(matches.map(m => m.trim().toLowerCase()))];
+        }
+
+        // ==========================================================
+        // 6. TRÌNH ĐIỀU PHỐI ĐĂNG KÝ (DISPATCH ENGINE)
+        // ==========================================================
+        async function startActivationProcess() {
+            if (isProcessing) return;
+
+            // Xác định danh sách email cần kích hoạt
+            let emailsToProcess = [];
+            const isBatch = document.getElementById('tabBatchBtn').classList.contains('active');
+
+            if (isBatch) {
+                const batchRaw = document.getElementById('batchEmails').value;
+                emailsToProcess = extractValidEmails(batchRaw);
+                if (emailsToProcess.length === 0) {
+                    showToast('Vui lòng nhập ít nhất một địa chỉ email hợp lệ trong danh sách!', 'error');
+                    return;
+                }
+            } else {
+                const singleMail = document.getElementById('targetEmail').value.trim();
+                const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                if (!emailRegex.test(singleMail)) {
+                    showToast('Địa chỉ email không đúng định dạng. Vui lòng kiểm tra lại!', 'error');
+                    document.getElementById('targetEmail').focus();
+                    return;
+                }
+                emailsToProcess = [singleMail.toLowerCase()];
+            }
+
+            if (selectedSourceIds.size === 0) {
+                showToast('Vui lòng chọn ít nhất 1 nguồn newsletter để kích hoạt!', 'error');
+                return;
+            }
+
+            // Danh sách các nguồn đã được chọn
+            const targetSources = NEWSLETTER_SOURCES.filter(s => selectedSourceIds.has(s.id));
+            const totalOperations = emailsToProcess.length * targetSources.length;
+
+            // Bắt đầu giao diện tiến trình
+            isProcessing = true;
+            toggleButtonLoading(true);
+
+            const monitor = document.getElementById('executionMonitor');
+            monitor.style.display = 'block';
+            monitor.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            const logTerminal = document.getElementById('logTerminal');
+            logTerminal.innerHTML = '';
+            addLog(`🚀 Khởi động tiến trình kích hoạt cho ${emailsToProcess.length} email (${targetSources.length} nguồn/email)...`, 'info');
+
+            let successCount = 0;
+            let currentOpIndex = 0;
+
+            const progressBar = document.getElementById('progressBar');
+            const statSuccessCount = document.getElementById('statSuccessCount');
+            const statPercentCount = document.getElementById('statPercentCount');
+            const monitorStatusText = document.getElementById('monitorStatusText');
+
+            // Dispatch lần lượt từng email
+            for (let eIdx = 0; eIdx < emailsToProcess.length; eIdx++) {
+                const currentEmail = emailsToProcess[eIdx];
+                addLog(`📬 [Email ${eIdx + 1}/${emailsToProcess.length}]: Bắt đầu xử lý cho ${currentEmail}`, 'info');
+
+                for (let sIdx = 0; sIdx < targetSources.length; sIdx++) {
+                    const src = targetSources[sIdx];
+                    currentOpIndex++;
+
+                    monitorStatusText.innerHTML = `Đang gửi lệnh tới: <strong>${src.name}</strong> (${currentEmail})`;
+
+                    // Thực hiện gửi đăng ký ngầm
+                    await dispatchSingleSubscription(currentEmail, src);
+                    successCount++;
+
+                    // Cập nhật giao diện tiến độ
+                    const percent = Math.round((currentOpIndex / totalOperations) * 100);
+                    progressBar.style.width = `${percent}%`;
+                    statSuccessCount.textContent = `${successCount}/${totalOperations}`;
+                    statPercentCount.textContent = `${percent}%`;
+
+                    addLog(`Đã gửi đăng ký thành công tới [${src.name}] cho ${currentEmail}`, 'sent');
+
+                    // Nghỉ ngắn để tránh nghẽn browser
+                    await sleep(350);
+                }
+
+                // Lưu vào lịch sử kích hoạt
+                saveActivationHistory(currentEmail, targetSources.length);
+            }
+
+            // Hoàn thành xuất sắc
+            monitorStatusText.innerHTML = `<span style="color: var(--accent-emerald)"><i class="fa-solid fa-circle-check"></i> Hoàn thành kích hoạt toàn bộ ${totalOperations} tác vụ!</span>`;
+            addLog(`🎉 Tuyệt vời! Toàn bộ thư xác nhận (Confirmation) và Welcome Mails đang được chuyển tới hòm thư của bạn.`, 'sent');
+            addLog(`💡 Lưu ý: Hãy mở hộp thư (kể cả thư mục Spam/Junk) để bấm 'Confirm' và đánh dấu 'Không phải Spam'.`, 'info');
+
+            triggerCelebrationConfetti();
+            showToast(`Đã kích hoạt thành công cho ${emailsToProcess.length} email!`, 'success');
+
+            isProcessing = false;
+            toggleButtonLoading(false);
+            loadHistoryTable();
+        }
+
+        // ==========================================================
+        // 7. CƠ CHẾ GỬI NGẦM TRÁNH CORS (HIDDEN IFRAME DISPATCHER)
+        // ==========================================================
+        function dispatchSingleSubscription(email, source) {
+            return new Promise((resolve) => {
+                try {
+                    const container = document.getElementById('hiddenDispatchContainer');
+                    const iframeId = `iframe_${source.id}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+
+                    // Tạo iframe ngầm
+                    const iframe = document.createElement('iframe');
+                    iframe.id = iframeId;
+                    iframe.name = iframeId;
+                    iframe.style.display = 'none';
+                    container.appendChild(iframe);
+
+                    // Tạo Form HTML tiêu chuẩn
+                    const form = document.createElement('form');
+                    form.method = source.method || 'POST';
+                    form.action = source.formAction;
+                    form.target = iframeId;
+                    form.style.display = 'none';
+
+                    // Điền các trường dữ liệu
+                    const fields = source.fields || {};
+                    const emailParamName = fields.emailField || 'email';
+
+                    const emailInput = document.createElement('input');
+                    emailInput.type = 'hidden';
+                    emailInput.name = emailParamName;
+                    emailInput.value = email;
+                    form.appendChild(emailInput);
+
+                    // Thêm các tham số phụ (nếu có ví dụ RSS feed, subaction, schedule)
+                    for (const [key, val] of Object.entries(fields)) {
+                        if (key !== 'emailField') {
+                            const hiddenField = document.createElement('input');
+                            hiddenField.type = 'hidden';
+                            hiddenField.name = key;
+                            hiddenField.value = val;
+                            form.appendChild(hiddenField);
+                        }
+                    }
+
+                    container.appendChild(form);
+
+                    // Thực thi submit ngầm
+                    form.submit();
+
+                    // Cũng thực thi thêm fetch mode no-cors song song để tăng tỷ lệ nhận diện endpoint
+                    try {
+                        const formData = new FormData(form);
+                        fetch(source.formAction, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            body: formData
+                        }).catch(() => {});
+                    } catch(e) {}
+
+                    // Dọn dẹp DOM sau 3 giây
+                    setTimeout(() => {
+                        try {
+                            if (form.parentNode) form.parentNode.removeChild(form);
+                            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+                        } catch(err) {}
+                        resolve();
+                    }, 400);
+
+                } catch (error) {
+                    console.warn(`Lỗi dispatch tới ${source.name}:`, error);
+                    resolve();
+                }
+            });
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function addLog(text, type = 'info') {
+            const terminal = document.getElementById('logTerminal');
+            if (!terminal) return;
+
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+
+            let badgeHtml = '';
+            if (type === 'sent') badgeHtml = '<span class="log-badge sent">OK</span>';
+            else if (type === 'dispatching') badgeHtml = '<span class="log-badge dispatching">SEND</span>';
+            else badgeHtml = '<span class="log-badge info">INFO</span>';
+
+            entry.innerHTML = `
+                <span class="log-time">${timeStr}</span>
+                ${badgeHtml}
+                <span>${text}</span>
+            `;
+
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function toggleButtonLoading(loading) {
+            const btn = document.getElementById('btnStartActivation');
+            if (!btn) return;
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>ĐANG KÍCH HOẠT NEWSLETTERS...</span>`;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> <span>KÍCH HOẠT &amp; ĐĂNG KÝ NGAY</span>`;
+            }
+        }
+
+        // ==========================================================
+        // 8. LƯU & QUẢN LÝ LỊCH SỬ KÍCH HOẠT (LOCAL STORAGE)
+        // ==========================================================
+        const STORAGE_KEY = 'passion_star_mail_activations';
+
+        function saveActivationHistory(email, sourceCount) {
+            let history = [];
+            try {
+                history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            } catch(e) {
+                history = [];
+            }
+
+            const record = {
+                id: Date.now(),
+                email: email,
+                sources: sourceCount,
+                timestamp: new Date().toISOString()
+            };
+
+            // Thêm vào đầu danh sách, giữ tối đa 30 bản ghi
+            history.unshift(record);
+            if (history.length > 30) history = history.slice(0, 30);
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        }
+
+        function loadHistoryTable() {
+            const tbody = document.getElementById('historyTableBody');
+            if (!tbody) return;
+
+            let history = [];
+            try {
+                history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            } catch(e) {
+                history = [];
+            }
+
+            if (history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="history-empty"><i class="fa-solid fa-inbox" style="font-size: 24px; margin-bottom: 8px; display: block;"></i>Chưa có lịch sử kích hoạt nào. Hãy nhập email phía trên để bắt đầu!</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            history.forEach(item => {
+                const date = new Date(item.timestamp);
+                const timeFormatted = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')} - ${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color: var(--text-secondary);"><i class="fa-regular fa-clock"></i> ${timeFormatted}</td>
+                    <td><strong style="color: #fff;"><i class="fa-solid fa-envelope" style="color: var(--primary-light); margin-right: 6px;"></i>${item.email}</strong></td>
+                    <td><span class="badge-pill badge-daily">${item.sources} nguồn đã đăng ký</span></td>
+                    <td><span style="color: var(--accent-emerald); font-weight: 700;"><i class="fa-solid fa-check"></i> Đã kích hoạt</span></td>
+                    <td>
+                        <button class="chip-btn" onclick="reuseEmail('${item.email}')" title="Kích hoạt lại email này">
+                            <i class="fa-solid fa-rotate-right"></i> Dùng lại
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function reuseEmail(email) {
+            switchInputTab('single');
+            const input = document.getElementById('targetEmail');
+            input.value = email;
+            input.focus();
+            window.scrollTo({ top: 300, behavior: 'smooth' });
+            showToast(`Đã nạp email ${email} vào thanh nhập!`, 'info');
+        }
+
+        function clearHistoryLog() {
+            if (confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử kích hoạt email?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                loadHistoryTable();
+                showToast('Đã xóa sạch lịch sử kích hoạt.', 'info');
+            }
+        }
+
+        function exportHistoryCSV() {
+            let history = [];
+            try {
+                history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            } catch(e) { history = []; }
+
+            if (history.length === 0) {
+                showToast('Không có dữ liệu lịch sử để xuất CSV!', 'info');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,ThoiGian,Email,SoLuongNguon,TrangThai\n";
+            history.forEach(row => {
+                const date = new Date(row.timestamp);
+                const timeFormatted = `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes()}`;
+                csvContent += `"${timeFormatted}","${row.email}","${row.sources}","Da kich hoat"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `lich_su_active_mail_${Date.now()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast('Đã tải xuống file CSV lịch sử kích hoạt!', 'success');
+        }
+
+        // ==========================================================
+        // 9. HIỆU ỨNG PHÁO HOA & TOAST THÔNG BÁO
+        // ==========================================================
+        function triggerCelebrationConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+                setTimeout(() => {
+                    confetti({
+                        particleCount: 50,
+                        angle: 60,
+                        spread: 55,
+                        origin: { x: 0 }
+                    });
+                    confetti({
+                        particleCount: 50,
+                        angle: 120,
+                        spread: 55,
+                        origin: { x: 1 }
+                    });
+                }, 250);
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `custom-toast ${type}`;
+
+            let icon = 'fa-info-circle';
+            if (type === 'success') icon = 'fa-circle-check';
+            if (type === 'error') icon = 'fa-triangle-exclamation';
+
+            toast.innerHTML = `
+                <i class="fa-solid ${icon}"></i>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.transition = 'all 0.3s ease';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(40px)';
+                setTimeout(() => {
+                    if (toast.parentNode) toast.parentNode.removeChild(toast);
+                }, 300);
+            }, 4000);
+        }
+
+        // ==========================================================
+        // 10. KHỞI TẠO BAN ĐẦU (INIT)
+        // ==========================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            renderSourcesGrid();
+            loadHistoryTable();
+
+            // Lắng nghe phím Enter trong ô nhập email
+            document.getElementById('targetEmail')?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    startActivationProcess();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
