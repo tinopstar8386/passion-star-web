@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -1697,6 +1697,52 @@
       color: #ffffff;
       border-color: transparent;
       box-shadow: 0 2px 8px -1px rgba(124, 58, 237, 0.4);
+    }
+        .btn-group-rename {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #475569;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      white-space: nowrap;
+    }
+    .btn-group-rename:hover {
+      background: #f1f5f9;
+      border-color: #3b82f6;
+      color: #1d4ed8;
+      transform: translateY(-1px);
+    }
+    .group-mgr-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    .group-mgr-tab-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border: none;
+      background: #f1f5f9;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .group-mgr-tab-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
     }
     .btn-group-traffic-toggle.is-traffic:hover {
       opacity: 0.92;
@@ -4114,6 +4160,13 @@
                   <small>Quản lý huy hiệu & màu sắc</small>
                 </div>
               </div>
+                            <div class="tb-dd-item" onclick="openRenameGroupModal(); closeAllToolDropdowns();">
+                <span class="tb-dd-icon">ðŸ·ï¸</span>
+                <div class="tb-dd-text">
+                  <b>Quáº£n LÃ½ & Äá»•i TÃªn NhÃ³m</b>
+                  <small>ThÃªm nhÃ³m má»›i / Äá»•i tÃªn toÃ n há»‡ thá»‘ng</small>
+                </div>
+              </div>
               <div class="tb-dd-item" onclick="openTrafficManagerModal(); closeAllToolDropdowns();">
                 <span class="tb-dd-icon">⚡</span>
                 <div class="tb-dd-text">
@@ -4453,6 +4506,133 @@
     </div>
   </div>
 
+    <!-- MODAL QUáº¢N LÃ & Äá»”I TÃŠN NHÃ“M (GROUP MANAGER) -->
+  <div class="modal-overlay" id="groupManagerModal">
+    <div class="modal-box" style="width: 520px; max-width: 95vw;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+        <div>
+          <h3 style="margin:0; font-size:1.18rem; font-weight:800; color:#1e293b; display:flex; align-items:center; gap:8px;">
+            <span>ðŸ·ï¸</span> Quáº£n LÃ½ & Äá»•i TÃªn NhÃ³m
+          </h3>
+          <p style="margin:4px 0 0 0; font-size:0.78rem; color:#64748b;">ThÃªm nhÃ³m má»›i hoáº·c Ä‘á»•i tÃªn nhÃ³m Ä‘á»“ng bá»™ toÃ n há»‡ thá»‘ng</p>
+        </div>
+        <button type="button" class="btn-cancel" onclick="closeRenameGroupModal()" style="border:none; background:#f1f5f9; padding:5px 10px; border-radius:8px; font-weight:700; cursor:pointer;">âœ•</button>
+      </div>
+
+      <!-- TABS -->
+      <div class="group-mgr-tabs">
+        <button type="button" class="group-mgr-tab-btn active" id="tabBtnRenameGroup" onclick="switchGroupManagerTab('rename')">âœï¸ Äá»•i TÃªn NhÃ³m</button>
+        <button type="button" class="group-mgr-tab-btn" id="tabBtnAddGroup" onclick="switchGroupManagerTab('add')">âž• ThÃªm NhÃ³m Má»›i</button>
+      </div>
+
+      <!-- TAB 1: Äá»”I TÃŠN NHÃ“M -->
+      <div id="panelRenameGroup">
+        <div style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.82rem; color:#334155;">Chá»n nhÃ³m cáº§n Ä‘á»•i tÃªn:</label>
+          <select id="manageRenameOldGroupSelect" style="width:100%; padding:9px 12px; margin-top:5px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; font-size:0.86rem; background:#ffffff;" onchange="onManageGroupSelectChange()">
+            <!-- JS náº¡p danh sÃ¡ch nhÃ³m -->
+          </select>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.82rem; color:#334155;">TÃªn nhÃ³m má»›i:</label>
+          <input type="text" id="manageRenameNewName" placeholder="VÃ­ dá»¥: Elris, Miracle, Nova..." style="width:100%; padding:9px 12px; margin-top:5px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; font-size:0.86rem; box-sizing:border-box;">
+        </div>
+
+        <div style="margin-bottom:14px; background:#f8fafc; padding:10px 12px; border-radius:10px; border:1px solid #e2e8f0;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:700; color:#1e293b; cursor:pointer;">
+            <input type="checkbox" id="manageRenameUpdateBadge" checked style="accent-color:#2563eb; width:16px; height:16px;">
+            <span>Äá»“ng bá»™ cáº­p nháº­t Huy Hiá»‡u (Badge) tÆ°Æ¡ng á»©ng vá»›i tÃªn nhÃ³m má»›i</span>
+          </label>
+          <div style="margin-top:6px; font-size:0.74rem; color:#64748b; line-height:1.4;">
+            Tá»± Ä‘á»™ng Ä‘á»•i tÃªn huy hiá»‡u (giá»¯ nguyÃªn mÃ u sáº¯c) vÃ  gÃ¡n láº¡i cho táº¥t cáº£ nhÃ¢n sá»± Ä‘ang sá»Ÿ há»¯u huy hiá»‡u cÅ© cá»§a nhÃ³m nÃ y.
+          </div>
+        </div>
+
+        <div style="margin-bottom:16px; background:#f8fafc; padding:10px 12px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:8px;">Pháº¡m vi Ã¡p dá»¥ng Ä‘á»•i tÃªn:</div>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem; color:#475569;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+              <input type="radio" name="manageRenameScope" value="ALL" checked style="accent-color:#2563eb;">
+              <span><b>ToÃ n bá»™ há»‡ thá»‘ng:</b> Táº¥t cáº£ cÃ¡c thÃ¡ng + Danh sÃ¡ch nhÃ¢n sá»± gá»‘c</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+              <input type="radio" name="manageRenameScope" value="FUTURE" style="accent-color:#2563eb;">
+              <span><b>ThÃ¡ng nÃ y & tÆ°Æ¡ng lai:</b> Tá»« thÃ¡ng hiá»‡n táº¡i trá»Ÿ Ä‘i</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+              <input type="radio" name="manageRenameScope" value="CURRENT" style="accent-color:#2563eb;">
+              <span><b>Chá»‰ thÃ¡ng hiá»‡n táº¡i:</b> <span id="manageRenameCurrentMonthLabel"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-actions" style="margin-top:14px; padding-top:12px; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-cancel" onclick="closeRenameGroupModal()">Há»§y</button>
+          <button type="button" class="btn-save" id="btnSubmitRenameGroup" onclick="submitRenameGroup()" style="background:linear-gradient(135deg, #2563eb, #1d4ed8);">ðŸ’¾ LÆ°u & Äá»•i TÃªn ToÃ n Há»‡ Thá»‘ng</button>
+        </div>
+      </div>
+
+      <!-- TAB 2: THÃŠM NHÃ“M Má»šI -->
+      <div id="panelAddGroup" style="display:none;">
+        <div style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.82rem; color:#334155;">Thuá»™c Bá»™ pháº­n / Team giÃ¡o viÃªn:</label>
+          <select id="manageAddDeptSelect" style="width:100%; padding:9px 12px; margin-top:5px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; font-size:0.86rem; background:#ffffff;" onchange="onNewGroupDeptSelectChange()">
+            <option value="LIVESTREAM:KEN">ðŸ’ƒ LIVESTREAM - Team Tháº§y Ken</option>
+            <option value="LIVESTREAM:U">ðŸ’ƒ LIVESTREAM - Team CÃ´ U</option>
+            <option value="LIVESTREAM:DINO">ðŸ’ƒ LIVESTREAM - Team Tháº§y Dino</option>
+            <option value="LIVESTREAM:OTHER">ðŸ’ƒ LIVESTREAM - Team KhÃ¡c</option>
+            <option value="DEPT:MANAGER">ðŸ’¼ Bá»™ Pháº­n Manager</option>
+            <option value="DEPT:ACCOUNTANT">ðŸ’° Bá»™ Pháº­n Accountant</option>
+            <option value="DEPT:OPERATION">âš™ï¸ Bá»™ Pháº­n Operation</option>
+            <option value="DEPT:TECH">ðŸ’» Bá»™ Pháº­n Tech</option>
+            <option value="DEPT:TRANSLATION">ðŸŒ Bá»™ Pháº­n Translation</option>
+            <option value="DEPT:HR">ðŸ‘¥ Bá»™ Pháº­n HR</option>
+            <option value="DEPT:MEDIA">ðŸŽ¥ Bá»™ Pháº­n Media / Ká»¹ Thuáº­t</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="font-weight:700; font-size:0.82rem; color:#334155;">TÃªn nhÃ³m má»›i:</label>
+          <input type="text" id="manageAddNewGroupName" placeholder="VÃ­ dá»¥: Elris, Star, Lisa..." style="width:100%; padding:9px 12px; margin-top:5px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; font-size:0.86rem; box-sizing:border-box;">
+        </div>
+
+        <div style="margin-bottom:12px; background:#f8fafc; padding:10px 12px; border-radius:10px; border:1px solid #e2e8f0;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:700; color:#1e293b; cursor:pointer;">
+            <input type="checkbox" id="manageAddCreateBadge" checked style="accent-color:#2563eb; width:16px; height:16px;">
+            <span>Tá»± Ä‘á»™ng táº¡o Huy Hiá»‡u (Badge) VIP cÃ¹ng tÃªn</span>
+          </label>
+          <div style="margin-top:8px; display:flex; align-items:center; gap:10px;">
+            <span style="font-size:0.76rem; color:#64748b;">Chá»n mÃ u gradient:</span>
+            <select id="manageAddBadgeColor" style="padding:4px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.78rem;">
+              <option value="linear-gradient(135deg, #ec4899, #8b5cf6)">Há»“ng - TÃ­m (Máº·c Ä‘á»‹nh)</option>
+              <option value="linear-gradient(135deg, #3b82f6, #06b6d4)">Xanh DÆ°Æ¡ng - Cyan</option>
+              <option value="linear-gradient(135deg, #10b981, #059669)">Xanh LÃ¡ Ngá»c</option>
+              <option value="linear-gradient(135deg, #f59e0b, #d97706)">VÃ ng - Cam</option>
+              <option value="linear-gradient(135deg, #8b5cf6, #6366f1)">TÃ­m Äáº­m</option>
+              <option value="linear-gradient(135deg, #ef4444, #dc2626)">Äá» Ná»•i Báº­t</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="manageAddTrafficWrap" style="margin-bottom:14px; background:#faf5ff; padding:10px 12px; border-radius:10px; border:1px solid #e9d5ff;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:700; color:#6b21a8; cursor:pointer;">
+            <input type="checkbox" id="manageAddIsTraffic" style="accent-color:#7c3aed; width:16px; height:16px;">
+            <span>âš¡ Äáº·t lÃ m NhÃ³m LÆ°u LÆ°á»£ng (Chá»‰ Ã¡p dá»¥ng cho Livestream)</span>
+          </label>
+          <div style="margin-top:4px; font-size:0.73rem; color:#7e22ce;">
+            NhÃ³m lÆ°u lÆ°á»£ng nghá»‰ xoay ca, khÃ´ng hiá»ƒn thá»‹ nghá»‰ trÃªn báº£ng timeline.
+          </div>
+        </div>
+
+        <div class="modal-actions" style="margin-top:14px; padding-top:12px; border-top:1px solid #f1f5f9; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn-cancel" onclick="closeRenameGroupModal()">Há»§y</button>
+          <button type="button" class="btn-save" id="btnSubmitAddGroup" onclick="submitAddNewGroup()" style="background:linear-gradient(135deg, #10b981, #059669);">âž• ThÃªm NhÃ³m Má»›i</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="addEmployeeModal">
     <div class="modal-box">
       <h3 style="margin-top:0; color: #3b82f6;">➕ Thêm Nhân Sự Mới (<span id="addEmpMonthName" style="color: #2563eb;"></span>)</h3>
@@ -4487,6 +4667,7 @@
           <input type="text" id="newEmpGroupName" placeholder="Vnart, Bee, Orion..." list="newEmpGroupList" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; font-weight: 700; color: #1e293b;" oninput="onGroupNameChanged('new')">
           <datalist id="newEmpGroupList">
             <option value="Elris"></option>
+            <option value="Elris">
             <option value="Bee">
             <option value="Miracle">
             <option value="Angelik">
@@ -4577,6 +4758,7 @@
           <input type="text" id="editEmpGroupName" placeholder="Vnart, Bee, Orion..." list="editEmpGroupList" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; font-weight: 700; color: #1e293b;" oninput="onGroupNameChanged('edit')">
           <datalist id="editEmpGroupList">
             <option value="Elris"></option>
+            <option value="Elris">
             <option value="Bee">
             <option value="Miracle">
             <option value="Angelik">
@@ -4763,6 +4945,13 @@
             <small>Kho nhãn & badge</small>
           </div>
         </div>
+                <div class="m-ash-card" onclick="openRenameGroupModal(); closeMobileAdminSheet();">
+          <span class="m-ash-icon">ðŸ·ï¸</span>
+          <div class="m-ash-card-body">
+            <b>Quáº£n LÃ½ NhÃ³m</b>
+            <small>ThÃªm & Ä‘á»•i tÃªn nhÃ³m</small>
+          </div>
+        </div>
         <div class="m-ash-card" onclick="openTrafficManagerModal(); closeMobileAdminSheet();">
           <span class="m-ash-icon">⚡</span>
           <div class="m-ash-card-body">
@@ -4826,7 +5015,7 @@
 
     let baseEmployeesData = [], monthEmployeesData = {};
     let employeesData = [], leavesData = [], badgesData = {};
-    let trafficGroupsData = ["ORION", "ROYEN:ONE"];
+    let trafficGroupsData = ["ORION", "ROYEN:ONE"], customGroupsData = [];
 
     function isTrafficGroup(groupNameOrKey) {
       if (!groupNameOrKey) return false;
@@ -5217,7 +5406,7 @@
 
         try {
             if (action === 'getInitialData') {
-                let employees = [], leaves = [], badges = {}, quotas = {}, monthEmployees = {}, trafficGroups = ["ORION", "ROYEN:ONE"];
+                let employees = [], leaves = [], badges = {}, quotas = {}, monthEmployees = {}, trafficGroups = ["ORION", "ROYEN:ONE"], customGroups = [];
                 const empSnap = await fs.getDocs(fs.collection(db, "off_employees"));
                 empSnap.forEach(d => employees.push(d.data()));
 
@@ -5237,9 +5426,174 @@
                         if (d.data().trafficGroups && Array.isArray(d.data().trafficGroups)) {
                             trafficGroups = d.data().trafficGroups;
                         }
+                        if (d.data().customGroups && Array.isArray(d.data().customGroups)) {
+                            customGroups = d.data().customGroups;
+                        }
                     }
                 });
-                return { employees, leaves, badges, quotas, monthEmployees, trafficGroups };
+                return { employees, leaves, badges, quotas, monthEmployees, trafficGroups, customGroups };
+            }
+
+            if (action === 'renameGroup') {
+                const { oldGroupKey, newGroupKey, oldSubgroupName, newSubgroupName, updateBadge, oldBadgeKey, newBadgeKey, scope = 'ALL', monthStr } = payload;
+                const normOldG = String(oldGroupKey || '').toUpperCase().trim();
+                const normNewG = String(newGroupKey || '').trim();
+                const normOldSub = String(oldSubgroupName || '').toUpperCase().trim();
+                const normNewSub = String(newSubgroupName || '').trim();
+                const normOldBadge = String(oldBadgeKey || normOldSub).toUpperCase().trim();
+                const normNewBadge = String(newBadgeKey || normNewSub).toUpperCase().trim();
+
+                const isEmpInOldGroup = (e) => {
+                    const g = String(e.group || '').toUpperCase().trim();
+                    return g === normOldG || (normOldSub && g.includes(normOldSub));
+                };
+
+                const updateEmpInList = (list) => {
+                    return (list || []).map(e => {
+                        if (isEmpInOldGroup(e)) {
+                            let updatedBadge = e.customBadge;
+                            if (updateBadge && (String(e.customBadge || '').toUpperCase().trim() === normOldBadge || String(e.customBadge || '').toUpperCase().trim() === normOldSub)) {
+                                updatedBadge = normNewBadge;
+                            }
+                            return { ...e, group: normNewG, customBadge: updatedBadge };
+                        }
+                        return e;
+                    });
+                };
+
+                // 1. Update month employees
+                const monthSnap = await fs.getDocs(fs.collection(db, "off_month_employees"));
+                const monthBatch = fs.writeBatch(db);
+                let monthBatchCount = 0;
+
+                monthSnap.forEach(d => {
+                    const docMonth = d.id;
+                    let shouldUpdate = false;
+                    if (scope === 'CURRENT' && docMonth === monthStr) shouldUpdate = true;
+                    else if (scope === 'FUTURE' && docMonth >= monthStr) shouldUpdate = true;
+                    else if (scope === 'ALL') shouldUpdate = true;
+
+                    if (shouldUpdate) {
+                        const originalList = d.data().employees || [];
+                        const updatedList = updateEmpInList(originalList);
+                        monthBatch.set(d.ref, { employees: updatedList, updatedAt: new Date().toISOString() }, { merge: true });
+                        monthBatchCount++;
+                    }
+                });
+                if (monthBatchCount > 0) {
+                    await monthBatch.commit();
+                }
+
+                // 2. Update master employee list (off_employees)
+                if (scope === 'FUTURE' || scope === 'ALL') {
+                    const empSnap = await fs.getDocs(fs.collection(db, "off_employees"));
+                    const empBatch = fs.writeBatch(db);
+                    let empBatchCount = 0;
+                    empSnap.forEach(d => {
+                        const e = d.data();
+                        if (isEmpInOldGroup(e)) {
+                            let updatedBadge = e.customBadge;
+                            if (updateBadge && (String(e.customBadge || '').toUpperCase().trim() === normOldBadge || String(e.customBadge || '').toUpperCase().trim() === normOldSub)) {
+                                updatedBadge = normNewBadge;
+                            }
+                            empBatch.set(d.ref, { group: normNewG, customBadge: updatedBadge }, { merge: true });
+                            empBatchCount++;
+                        }
+                    });
+                    if (empBatchCount > 0) {
+                        await empBatch.commit();
+                    }
+                }
+
+                // 3. Update system_config/general (badges & trafficGroups & customGroups)
+                const configRef = fs.doc(db, "system_config", "general");
+                const configSnap = await fs.getDoc(configRef);
+                if (configSnap.exists()) {
+                    const conf = configSnap.data() || {};
+                    let cfgUpdates = {};
+                    let hasCfgUpdate = false;
+
+                    if (updateBadge && normOldBadge && normNewBadge && conf.badges) {
+                        let curBadges = { ...conf.badges };
+                        if (curBadges[normOldBadge]) {
+                            curBadges[normNewBadge] = curBadges[normOldBadge];
+                            delete curBadges[normOldBadge];
+                            cfgUpdates.badges = curBadges;
+                            hasCfgUpdate = true;
+                        }
+                    }
+
+                    if (conf.trafficGroups && Array.isArray(conf.trafficGroups)) {
+                        let curTraffic = [...conf.trafficGroups];
+                        let trafficChanged = false;
+                        curTraffic = curTraffic.map(item => {
+                            const itUp = String(item).toUpperCase().trim();
+                            if (itUp === normOldG || itUp === normOldSub) {
+                                trafficChanged = true;
+                                return normNewG;
+                            }
+                            return item;
+                        });
+                        if (trafficChanged) {
+                            cfgUpdates.trafficGroups = curTraffic;
+                            hasCfgUpdate = true;
+                        }
+                    }
+
+                    if (conf.customGroups && Array.isArray(conf.customGroups)) {
+                        let curCust = [...conf.customGroups];
+                        let custChanged = false;
+                        curCust = curCust.map(cg => {
+                            if (String(cg.key).toUpperCase().trim() === normOldG || String(cg.name).toUpperCase().trim() === normOldSub) {
+                                custChanged = true;
+                                return { ...cg, key: normNewG, name: normNewSub };
+                            }
+                            return cg;
+                        });
+                        if (custChanged) {
+                            cfgUpdates.customGroups = curCust;
+                            hasCfgUpdate = true;
+                        }
+                    }
+
+                    if (hasCfgUpdate) {
+                        await fs.setDoc(configRef, cfgUpdates, { merge: true });
+                    }
+                }
+
+                return "SUCCESS";
+            }
+
+            if (action === 'addNewGroup') {
+                const { groupKey, groupName, deptKey, teacher, createBadge, badgeColor, isTraffic } = payload;
+                const configRef = fs.doc(db, "system_config", "general");
+                const configSnap = await fs.getDoc(configRef);
+                const conf = (configSnap.exists() ? configSnap.data() : {}) || {};
+                let cfgUpdates = {};
+
+                let customGroups = conf.customGroups || [];
+                if (!customGroups.some(g => String(g.key).toUpperCase() === String(groupKey).toUpperCase())) {
+                    customGroups.push({ key: groupKey, name: groupName, dept: deptKey, teacher: teacher });
+                    cfgUpdates.customGroups = customGroups;
+                }
+
+                if (createBadge && groupName) {
+                    let badges = conf.badges || {};
+                    const badgeKey = groupName.toUpperCase().trim();
+                    badges[badgeKey] = badgeColor || "linear-gradient(135deg, #ec4899, #8b5cf6)";
+                    cfgUpdates.badges = badges;
+                }
+
+                if (isTraffic) {
+                    let trafficGroups = conf.trafficGroups || ["ORION", "ROYEN:ONE"];
+                    if (!trafficGroups.some(g => String(g).toUpperCase() === String(groupKey).toUpperCase())) {
+                        trafficGroups.push(groupKey);
+                        cfgUpdates.trafficGroups = trafficGroups;
+                    }
+                }
+
+                await fs.setDoc(configRef, cfgUpdates, { merge: true });
+                return "SUCCESS";
             }
 
             if (action === 'saveTrafficGroups') {
@@ -5477,7 +5831,7 @@
             }
 
             if (action === 'editEmployee') {
-                const { oldName, newName, group, role, monthStr, scope = 'CURRENT', currentListSnapshot = [] } = payload;
+                const { oldName, newName, group, role, customBadge, monthStr, scope = 'CURRENT', currentListSnapshot = [] } = payload;
                 const safeOld = safeID(oldName);
                 const safeNew = safeID(newName);
 
@@ -5485,7 +5839,7 @@
                     let res = (list || []).map(e => ({ ...e }));
                     const idx = res.findIndex(e => String(e.name).trim().toUpperCase() === String(oldName).trim().toUpperCase());
                     if (idx > -1) {
-                        res[idx] = { ...res[idx], name: newName, group, role };
+                        res[idx] = { ...res[idx], name: newName, group, role, ...(customBadge !== undefined ? { customBadge } : {}) };
                     }
                     return res;
                 };
@@ -5516,7 +5870,7 @@
                     if (safeOld !== safeNew) {
                         batch.delete(fs.doc(db, "off_employees", safeOld));
                     }
-                    batch.set(fs.doc(db, "off_employees", safeNew), { name: newName, group, role });
+                    batch.set(fs.doc(db, "off_employees", safeNew), { name: newName, group, role, ...(customBadge !== undefined ? { customBadge } : {}) });
                     batch.set(fs.doc(db, "off_month_employees", monthStr), { 
                         employees: targetList, 
                         updatedAt: new Date().toISOString() 
@@ -6709,7 +7063,153 @@
       return 3;
     }
 
+        function getCleanSubgroupName(rawGroup) {
+      if (!rawGroup) return '';
+      let s = String(rawGroup).trim();
+      s = s.replace(/^TEAM\s+(KEN|U|DINO)\s*[-:]\s*/i, '');
+      s = s.replace(/^NhÃ³m\s+/i, '');
+      s = s.trim();
+      if (!s) return '';
+      if (s.toUpperCase() === 'ROYEN:ONE') return 'Royen:one';
+      if (s.length <= 1) return s.toUpperCase();
+      return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+    }
+
+    function parseGroupMeta(groupName, deptKey, empName, empBadge) {
+      const g = normalizeGroupName(groupName).toUpperCase().trim();
+      const n = String(empName || '').toUpperCase().trim();
+      const b = String(empBadge || '').toUpperCase().trim();
+
+      if (deptKey === 'MEDIA' || g.includes('MEDIA') || g.includes('GIMBAL') || b.includes('MEDIA') || b.includes('GIMBAL')) {
+        return {
+          teacher: '',
+          teacherLabel: 'Ká»¸ THUáº¬T',
+          pillClass: 'group-pill-media',
+          sortOrder: 401,
+          cleanSub: 'Gimbal / Media',
+          groupCleanName: 'Gimbal / Media',
+          groupKey: 'GIMBAL / MEDIA',
+          isTraffic: false
+        };
+      }
+
+      let teacher = '';
+      let teacherLabel = '';
+      let pillClass = 'group-pill-media';
+      let sortBase = 500;
+
+      if (g.includes('KEN') || n.includes('KEN') || g.includes('ORION') || b.includes('ORION') || g.includes('ANGELIK') || b.includes('ANGELIK')) {
+        teacher = 'KEN';
+        teacherLabel = 'TEAM KEN';
+        pillClass = 'group-pill-ken';
+        sortBase = 100;
+      } else if (g.includes('TEAM U') || g.includes(' U ') || g === 'U' || n.includes('CO U') || g.includes('ROYEN') || b.includes('ROYEN') || g.includes('FASHION') || b.includes('FASHION')) {
+        teacher = 'U';
+        teacherLabel = 'TEAM U';
+        pillClass = 'group-pill-u';
+        sortBase = 200;
+      } else if (g.includes('DINO') || n.includes('DINO') || g.includes('BEE') || b.includes('BEE') || g.includes('ELRIS') || b.includes('ELRIS') || g.includes('MIRACLE') || b.includes('MIRACLE') || g.includes('BNART') || b.includes('BNART') || g.includes('VNART') || b.includes('VNART')) {
+        teacher = 'DINO';
+        teacherLabel = 'TEAM DINO';
+        pillClass = 'group-pill-dino';
+        sortBase = 300;
+      } else if (deptKey === 'LIVESTREAM' || deptKey === 'LIVESTEAM') {
+        const found = (customGroupsData || []).find(cg => String(cg.key).toUpperCase() === g || String(cg.name).toUpperCase() === g);
+        if (found && found.teacher) {
+          teacher = found.teacher.toUpperCase();
+          teacherLabel = 'TEAM ' + teacher;
+          pillClass = (teacher === 'KEN') ? 'group-pill-ken' : (teacher === 'U' ? 'group-pill-u' : 'group-pill-dino');
+          sortBase = (teacher === 'KEN') ? 100 : (teacher === 'U' ? 200 : 300);
+        }
+      }
+
+      let cleanSub = '';
+      if (g.includes(' - ')) {
+        cleanSub = getCleanSubgroupName(g.split(' - ')[1]);
+      } else if (teacher) {
+        cleanSub = getCleanSubgroupName(groupName);
+      } else {
+        cleanSub = getCleanSubgroupName(groupName) || groupName;
+      }
+
+      if (!cleanSub || cleanSub.toUpperCase() === 'TEAM DINO' || cleanSub.toUpperCase() === 'DINO') {
+        if (g.includes('ELRIS') || b.includes('ELRIS')) cleanSub = 'Elris';
+        else if (g.includes('MIRACLE') || b.includes('MIRACLE')) cleanSub = 'Miracle';
+        else if (g.includes('BNART') || b.includes('BNART') || g.includes('VNART') || b.includes('VNART')) cleanSub = 'Bnart';
+        else if (g.includes('BEE') || b.includes('BEE')) cleanSub = 'Bee';
+        else cleanSub = 'Bee';
+      } else if (cleanSub.toUpperCase() === 'TEAM KEN' || cleanSub.toUpperCase() === 'KEN') {
+        if (g.includes('ORION') || b.includes('ORION')) cleanSub = 'Orion';
+        else cleanSub = 'Angelik';
+      } else if (cleanSub.toUpperCase() === 'TEAM U' || cleanSub.toUpperCase() === 'U') {
+        if (g.includes('ROYEN') || b.includes('ROYEN')) cleanSub = 'Royen:one';
+        else cleanSub = 'Fashion';
+      }
+
+      let standardGroupKey = teacher ? `TEAM ${teacher} - ${cleanSub.toUpperCase()}` : (groupName || 'CHUNG');
+      let isTr = isTrafficGroup(standardGroupKey) || isTrafficGroup(cleanSub);
+
+      let subOrder = 1;
+      const subUp = cleanSub.toUpperCase();
+      if (subUp.includes('ANGELIK') || subUp.includes('FASHION') || subUp.includes('ELRIS') || subUp.includes('BEE')) subOrder = 1;
+      else if (subUp.includes('ORION') || subUp.includes('ROYEN') || subUp.includes('MIRACLE')) subOrder = 2;
+      else if (subUp.includes('BNART') || subUp.includes('VNART')) subOrder = 3;
+      else subOrder = 4;
+
+      return {
+        teacher,
+        teacherLabel: teacherLabel || (deptKey || 'KHÃC'),
+        pillClass,
+        sortOrder: sortBase + subOrder,
+        cleanSub,
+        groupCleanName: teacher ? `NhÃ³m ${cleanSub}` : (cleanSub || groupName),
+        groupKey: standardGroupKey,
+        isTraffic: isTr
+      };
+    }
+
     function getLivestreamGroupMeta(emp) {
+      const g = normalizeGroupName(emp.group).toUpperCase();
+      const n = String(emp.name || '').toUpperCase();
+      const b = String(emp.customBadge || '').toUpperCase();
+
+      if (g.includes("GIMBAL") || g.includes("MEDIA") || b.includes("GIMBAL") || b.includes("MEDIA")) {
+        return {
+          teamCode: "GIMBAL_MEDIA",
+          sortOrder: 401,
+          groupKey: "GIMBAL / MEDIA",
+          groupLabel: "Gimbal / Media",
+          displayHTML: "GIMBAL / MEDIA",
+          isTraffic: false
+        };
+      }
+
+      const meta = parseGroupMeta(emp.group, 'LIVESTREAM', emp.name, emp.customBadge);
+      if (meta.teacher) {
+        return {
+          teamCode: `TEAM_${meta.teacher}`,
+          sortOrder: meta.sortOrder,
+          groupKey: meta.groupKey,
+          groupLabel: `Team ${meta.teacher === 'U' ? 'CÃ´ U' : 'Tháº§y ' + meta.teacher} - ${meta.cleanSub}`,
+          subgroupName: meta.cleanSub,
+          displayHTML: `${meta.teacherLabel}<br><span style='font-size:0.75rem; color:#0284c7; font-weight:700;'>NhÃ³m ${meta.cleanSub}${meta.isTraffic ? '<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(LÆ°u lÆ°á»£ng)</small>' : ''}</span>`,
+          isTraffic: meta.isTraffic
+        };
+      }
+
+      const rawG = normalizeGroupName(emp.group);
+      const isTr = isTrafficGroup(rawG);
+      return {
+        teamCode: "OTHER",
+        sortOrder: 999,
+        groupKey: rawG,
+        groupLabel: rawG,
+        displayHTML: `${rawG}${isTr ? '<br><small style="font-size:0.68rem; color:#9333ea; font-weight:600;">(LÆ°u lÆ°á»£ng)</small>' : ''}`,
+        isTraffic: isTr
+      };
+    }
+
+    function legacy_unused_getLivestreamGroupMeta(emp) {
       const g = normalizeGroupName(emp.group).toUpperCase();
       const n = String(emp.name || '').toUpperCase();
       const b = String(emp.customBadge || '').toUpperCase();
@@ -6907,7 +7407,8 @@
           badgesData = data.badges || {}; 
           if (badgesData['BEE'] && !badgesData['ELRIS']) { badgesData['ELRIS'] = badgesData['BEE']; } 
           quotasData = data.quotas || {};
-          trafficGroupsData = data.trafficGroups || ["ORION", "ROYEN:ONE"];
+                    trafficGroupsData = data.trafficGroups || ["ORION", "ROYEN:ONE"];
+          customGroupsData = data.customGroups || [];
           syncCurrentMonthEmployees();
           renderTable(); 
           populatePersonSelect(); 
@@ -7067,7 +7568,592 @@
     // =========================================================================
     window.selectedSidebarFilter = 'ALL';
 
-    function isGroupMatchingSidebar(deptKey, groupKey) {
+        function isGroupMatchingSidebar(deptKey, groupKey) {
+      if (!window.selectedSidebarFilter || window.selectedSidebarFilter === 'ALL') return true;
+      const f = window.selectedSidebarFilter;
+      const gk = String(groupKey).toUpperCase().trim();
+      const meta = parseGroupMeta(groupKey, deptKey);
+
+      if (f === 'TEAM:KEN') return meta.teacher === 'KEN';
+      if (f === 'TEAM:U') return meta.teacher === 'U';
+      if (f === 'TEAM:DINO') return meta.teacher === 'DINO';
+      if (f === 'DEPT:MEDIA' || f === 'GROUP:GIMBAL / MEDIA') {
+        const dk = String(deptKey).toUpperCase();
+        return dk === 'MEDIA' || gk.includes('MEDIA') || gk.includes('GIMBAL');
+      }
+      if (f.startsWith('GROUP:')) {
+        const targetGroup = f.replace('GROUP:', '').toUpperCase().trim();
+        if (gk === targetGroup) return true;
+        const targetSub = getCleanSubgroupName(targetGroup).toUpperCase();
+        const gkSub = getCleanSubgroupName(gk).toUpperCase();
+        if (targetSub && gkSub && targetSub === gkSub) return true;
+        return gk.includes(targetGroup) || targetGroup.includes(gk);
+      }
+      if (f.startsWith('DEPT:')) {
+        return String(deptKey).toUpperCase() === f.replace('DEPT:', '').toUpperCase();
+      }
+      return true;
+    }
+
+    function selectSidebarFilter(filterKey) {
+      const container = document.getElementById('captureArea');
+      if (container) {
+        container.classList.remove('team-animate-enter');
+        void container.offsetWidth;
+        container.classList.add('team-animate-enter');
+      }
+      window.selectedSidebarFilter = filterKey;
+      
+      document.querySelectorAll('.sidebar-item, .sidebar-teacher-header, .sidebar-sub-item').forEach(el => el.classList.remove('active'));
+      
+      let activeEl = null;
+      if (filterKey === 'ALL') activeEl = document.getElementById('sideItem-ALL');
+      else if (filterKey === 'TEAM:KEN') activeEl = document.getElementById('sideHead-KEN');
+      else if (filterKey === 'TEAM:U') activeEl = document.getElementById('sideHead-U');
+      else if (filterKey === 'TEAM:DINO') activeEl = document.getElementById('sideHead-DINO');
+      else if (filterKey === 'DEPT:MEDIA' || filterKey === 'GROUP:GIMBAL / MEDIA') activeEl = document.getElementById('sideHead-MEDIA');
+      else if (filterKey.startsWith('GROUP:')) {
+        const gKey = filterKey.replace('GROUP:', '');
+        const cleanId = 'sideItem-' + gKey.replace(/[^a-zA-Z0-9]/g, '');
+        activeEl = document.getElementById(cleanId);
+      } else if (filterKey.startsWith('DEPT:')) {
+        const cleanId = 'sideDynamic-' + filterKey.replace('DEPT:', '').replace(/[^a-zA-Z0-9]/g, '');
+        activeEl = document.getElementById(cleanId);
+      }
+
+      if (activeEl) activeEl.classList.add('active');
+
+      renderTable();
+    }
+    window.selectSidebarFilter = selectSidebarFilter;
+
+    function updateSidebarBadges(monthPrefix) {
+      if (!employeesData) return;
+      const emps = employeesData;
+
+      const setBadgeText = (id, count) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = count;
+      };
+
+      let countAll = emps.length;
+      let countMedia = 0;
+      let otherDepts = {};
+
+      const teacherGroups = {
+        KEN: new Map(),
+        U: new Map(),
+        DINO: new Map()
+      };
+
+      // Seed standard groups
+      teacherGroups.KEN.set("TEAM KEN - ANGELIK", { cleanName: "Angelik", count: 0, isTraffic: false });
+      teacherGroups.KEN.set("TEAM KEN - ORION", { cleanName: "Orion", count: 0, isTraffic: true });
+      teacherGroups.U.set("TEAM U - FASHION", { cleanName: "Fashion", count: 0, isTraffic: false });
+      teacherGroups.U.set("TEAM U - ROYEN:ONE", { cleanName: "Royen:one", count: 0, isTraffic: true });
+      teacherGroups.DINO.set("TEAM DINO - MIRACLE", { cleanName: "Miracle", count: 0, isTraffic: false });
+
+      // Custom groups
+      (customGroupsData || []).forEach(cg => {
+        if (cg && cg.teacher && teacherGroups[cg.teacher.toUpperCase()]) {
+          const tMap = teacherGroups[cg.teacher.toUpperCase()];
+          const clean = cg.name || getCleanSubgroupName(cg.key);
+          const isTr = isTrafficGroup(cg.key) || isTrafficGroup(clean);
+          if (!tMap.has(cg.key)) {
+            tMap.set(cg.key, { cleanName: clean, count: 0, isTraffic: isTr });
+          }
+        }
+      });
+
+      // Scan employeesData
+      emps.forEach(emp => {
+        const r = String(emp.role || '').toUpperCase();
+        const g = String(emp.group || '').toUpperCase();
+        const n = String(emp.name || '').toUpperCase();
+
+        if (n === 'KEN' || n === 'U' || n === 'DINO' || n.includes('TEACHER')) {
+          // teacher line
+        } else if (r === 'MEDIA' || g.includes('GIMBAL') || g.includes('MEDIA')) {
+          countMedia++;
+        } else if (r === 'LIVESTREAM' || r === 'LIVESTEAM') {
+          const meta = parseGroupMeta(emp.group, 'LIVESTREAM', emp.name, emp.customBadge);
+          if (meta.teacher && teacherGroups[meta.teacher]) {
+            const tMap = teacherGroups[meta.teacher];
+            let entry = tMap.get(meta.groupKey);
+            if (!entry) {
+              entry = { cleanName: meta.cleanSub, count: 0, isTraffic: meta.isTraffic };
+              tMap.set(meta.groupKey, entry);
+            }
+            entry.count++;
+          }
+        } else {
+          if (r && r !== 'LIVESTREAM' && r !== 'LIVESTEAM') {
+            otherDepts[emp.role] = (otherDepts[emp.role] || 0) + 1;
+          }
+        }
+      });
+
+      // Render dynamic sub-items for each teacher
+      ['KEN', 'U', 'DINO'].forEach(t => {
+        const head = document.getElementById('sideHead-' + t);
+        if (!head) return;
+        const subContainer = head.nextElementSibling;
+        if (!subContainer || !subContainer.classList.contains('sidebar-sub-items')) return;
+
+        let totalTeacherCount = 0;
+        let subHTML = '';
+        const tMap = teacherGroups[t];
+
+        tMap.forEach((info, gKey) => {
+          totalTeacherCount += info.count;
+          if (info.count === 0 && (gKey.includes('VNART') || gKey.includes('BNART'))) return;
+          if (gKey.includes('BEE') && info.count === 0 && (tMap.has('TEAM DINO - ELRIS') || emps.some(e => String(e.group||'').toUpperCase().includes('ELRIS')))) return;
+
+          const cleanId = 'sideItem-' + gKey.replace(/[^a-zA-Z0-9]/g, '');
+          const isCurrentActive = (window.selectedSidebarFilter === 'GROUP:' + gKey);
+          const trLabel = info.isTraffic ? ' (LÆ°u lÆ°á»£ng)' : '';
+
+          subHTML += `
+            <div class="sidebar-sub-item ${isCurrentActive ? 'active' : ''}" id="${cleanId}" onclick="selectSidebarFilter('GROUP:${gKey}')">
+              <span class="sub-label">ðŸ’ƒ ${info.cleanName}${trLabel}</span>
+              <div class="side-sub-action-wrap">
+                <span class="sub-badge" id="sideBadge-${cleanId}">${info.count}</span>
+              </div>
+            </div>
+          `;
+        });
+
+        subContainer.innerHTML = subHTML;
+        setBadgeText('sideBadge-' + t, totalTeacherCount);
+      });
+
+      setBadgeText('sideBadge-ALL', countAll);
+      setBadgeText('sideBadge-MEDIA', countMedia);
+
+      // Render other departments
+      const otherContainer = document.getElementById('sidebarOtherDepts');
+      if (otherContainer) {
+        let otherHTML = '';
+        const deptKeys = Object.keys(otherDepts);
+        if (deptKeys.length > 0) {
+          otherHTML += '<div class="sidebar-section-header"><span>Bá»™ Pháº­n KhÃ¡c</span></div>';
+          deptKeys.forEach(d => {
+            const cleanId = 'sideDynamic-' + d.replace(/[^a-zA-Z0-9]/g, '');
+            const isActive = (window.selectedSidebarFilter === 'DEPT:' + d) ? 'active' : '';
+            otherHTML += `
+              <div class="sidebar-item ${isActive}" id="${cleanId}" onclick="selectSidebarFilter('DEPT:${d}')">
+                <div class="side-left-wrap">
+                  <span class="side-item-icon">ðŸ¢</span>
+                  <span class="side-item-label">${d}</span>
+                </div>
+                <span class="side-item-badge">${otherDepts[d]}</span>
+              </div>
+            `;
+          });
+        }
+        otherContainer.innerHTML = otherHTML;
+      }
+    }
+
+    function updateBreadcrumbStatus(matchedCount) {
+      const bcDept = document.getElementById('bcDeptName');
+      const bcTarget = document.getElementById('bcTargetName');
+      const bcCount = document.getElementById('bcCountBadge');
+      const btnReset = document.getElementById('btnResetView');
+      const statusText = document.getElementById('sidebarStatusText');
+
+      const f = window.selectedSidebarFilter || 'ALL';
+      let deptLabel = 'Bá»™ Pháº­n Livestream';
+      let targetLabel = 'Táº¥t Cáº£ CÃ¡c NhÃ³m';
+
+      const getTeacherSubnames = (teacherName) => {
+        const set = new Set();
+        (employeesData || []).forEach(e => {
+          const m = parseGroupMeta(e.group, 'LIVESTREAM', e.name, e.customBadge);
+          if (m.teacher === teacherName && m.cleanSub) {
+            set.add(m.cleanSub);
+          }
+        });
+        return Array.from(set).join(' & ');
+      };
+
+      if (f === 'ALL') {
+        deptLabel = 'ToÃ n Há»‡ Thá»‘ng';
+        targetLabel = 'Táº¥t Cáº£ CÃ¡c NhÃ³m';
+      } else if (f === 'TEAM:KEN') {
+        deptLabel = 'Bá»™ Pháº­n Livestream';
+        const subs = getTeacherSubnames('KEN') || 'Angelik & Orion';
+        targetLabel = `Team Tháº§y Ken (${subs})`;
+      } else if (f === 'TEAM:U') {
+        deptLabel = 'Bá»™ Pháº­n Livestream';
+        const subs = getTeacherSubnames('U') || 'Fashion & Royen:one';
+        targetLabel = `Team CÃ´ U (${subs})`;
+      } else if (f === 'TEAM:DINO' || f === 'GROUP:TEAM DINO') {
+        deptLabel = 'Bá»™ Pháº­n Livestream';
+        const subs = getTeacherSubnames('DINO') || 'Elris & Miracle';
+        targetLabel = `Team Tháº§y Dino (${subs})`;
+      } else if (f.startsWith('GROUP:')) {
+        const rawGrp = f.replace('GROUP:', '');
+        const meta = parseGroupMeta(rawGrp, 'LIVESTREAM');
+        deptLabel = meta.teacher ? ('Team ' + (meta.teacher === 'U' ? 'CÃ´ U' : 'Tháº§y ' + meta.teacher)) : 'NhÃ³m Bá»™ Pháº­n';
+        targetLabel = meta.groupCleanName + (meta.isTraffic ? ' (LÆ°u lÆ°á»£ng)' : '');
+      } else if (f === 'DEPT:MEDIA') {
+        deptLabel = 'Bá»™ Pháº­n Media';
+        targetLabel = 'Media & Ká»¹ Thuáº­t';
+      } else if (f.startsWith('DEPT:')) {
+        deptLabel = 'Bá»™ Pháº­n';
+        targetLabel = f.replace('DEPT:', '');
+      }
+
+      if (bcDept) bcDept.innerText = deptLabel;
+      if (bcTarget) bcTarget.innerText = targetLabel;
+      if (bcCount) bcCount.innerText = matchedCount + ' nhÃ¢n sá»±';
+      if (statusText) statusText.innerText = 'Äang xem: ' + targetLabel;
+      if (btnReset) {
+        btnReset.style.display = (f === 'ALL') ? 'none' : 'inline-block';
+      }
+      const btnCopyView = document.getElementById('btnCopyViewLink');
+      const btnExportView = document.getElementById('btnExportViewTeam');
+      const wrapPersonDrop = document.getElementById('wrapPersonCopyDropdown');
+      if (btnCopyView) btnCopyView.style.display = (f === 'ALL') ? 'none' : 'inline-flex';
+      if (wrapPersonDrop) wrapPersonDrop.style.display = (f === 'ALL') ? 'none' : 'inline-block';
+      if (btnExportView) btnExportView.style.display = (f === 'ALL') ? 'none' : 'inline-flex';
+    }
+
+    // =========================================================================
+    // QUáº¢N LÃ NHÃ“M (THÃŠM NHÃ“M & Äá»”I TÃŠN NHÃ“M Äá»’NG Bá»˜ TOÃ€N Há»† THá»NG)
+    // =========================================================================
+    function openRenameGroupModal(preselectGroupKey, deptKey) {
+      if (sessionStorage.getItem('ps_admin_auth') !== 'true') {
+        lockAdminDashboard();
+        return showToast('â›” YÃªu cáº§u má»Ÿ khÃ³a PIN Quáº£n trá»‹ Ä‘á»ƒ quáº£n lÃ½ nhÃ³m!');
+      }
+
+      const modal = document.getElementById('groupManagerModal');
+      if (!modal) return;
+
+      const monthPrefix = getMonthPrefix(displayYear, displayMonth);
+      const lbl = document.getElementById('manageRenameCurrentMonthLabel');
+      if (lbl) lbl.innerText = `ThÃ¡ng ${displayMonth + 1}/${displayYear}`;
+
+      populateManageGroupSelect(preselectGroupKey, deptKey);
+      switchGroupManagerTab('rename');
+
+      modal.classList.add('active');
+    }
+    window.openRenameGroupModal = openRenameGroupModal;
+
+    function closeRenameGroupModal() {
+      const modal = document.getElementById('groupManagerModal');
+      if (modal) modal.classList.remove('active');
+    }
+    window.closeRenameGroupModal = closeRenameGroupModal;
+
+    function switchGroupManagerTab(tab) {
+      const btnRename = document.getElementById('tabBtnRenameGroup');
+      const btnAdd = document.getElementById('tabBtnAddGroup');
+      const pnlRename = document.getElementById('panelRenameGroup');
+      const pnlAdd = document.getElementById('panelAddGroup');
+
+      if (tab === 'rename') {
+        if (btnRename) btnRename.classList.add('active');
+        if (btnAdd) btnAdd.classList.remove('active');
+        if (pnlRename) pnlRename.style.display = 'block';
+        if (pnlAdd) pnlAdd.style.display = 'none';
+      } else {
+        if (btnRename) btnRename.classList.remove('active');
+        if (btnAdd) btnAdd.classList.add('active');
+        if (pnlRename) pnlRename.style.display = 'none';
+        if (pnlAdd) pnlAdd.style.display = 'block';
+      }
+    }
+    window.switchGroupManagerTab = switchGroupManagerTab;
+
+    function populateManageGroupSelect(selectedKey, deptKey) {
+      const select = document.getElementById('manageRenameOldGroupSelect');
+      if (!select) return;
+
+      const groupSet = new Map();
+
+      (employeesData || []).forEach(e => {
+        if (e.group) {
+          const norm = normalizeGroupName(e.group);
+          const meta = parseGroupMeta(e.group, e.role || 'LIVESTREAM', e.name, e.customBadge);
+          const key = meta.groupKey || norm;
+          const label = meta.teacher ? `${meta.teacherLabel} - ${meta.groupCleanName}` : (e.role ? `[${e.role}] ${meta.groupCleanName}` : norm);
+          if (!groupSet.has(key)) {
+            groupSet.set(key, { key, label, subName: meta.cleanSub, teacher: meta.teacher });
+          }
+        }
+      });
+
+      (customGroupsData || []).forEach(cg => {
+        if (cg && cg.key && !groupSet.has(cg.key)) {
+          const meta = parseGroupMeta(cg.key, cg.dept || 'LIVESTREAM');
+          groupSet.set(cg.key, { key: cg.key, label: meta.groupCleanName, subName: cg.name || meta.cleanSub, teacher: cg.teacher });
+        }
+      });
+
+      const defaultLivestream = [
+        { key: "TEAM KEN - ANGELIK", label: "TEAM KEN - NhÃ³m Angelik", subName: "Angelik", teacher: "KEN" },
+        { key: "TEAM KEN - ORION", label: "TEAM KEN - NhÃ³m Orion (LÆ°u lÆ°á»£ng)", subName: "Orion", teacher: "KEN" },
+        { key: "TEAM U - FASHION", label: "TEAM U - NhÃ³m Fashion", subName: "Fashion", teacher: "U" },
+        { key: "TEAM U - ROYEN:ONE", label: "TEAM U - NhÃ³m Royen:One (LÆ°u lÆ°á»£ng)", subName: "Royen:one", teacher: "U" },
+        { key: "TEAM DINO - MIRACLE", label: "TEAM DINO - NhÃ³m Miracle", subName: "Miracle", teacher: "DINO" },
+        { key: "TEAM DINO - BEE", label: "TEAM DINO - NhÃ³m Bee", subName: "Bee", teacher: "DINO" },
+        { key: "GIMBAL / MEDIA", label: "Ká»¸ THUáº¬T - Gimbal / Media", subName: "Gimbal / Media", teacher: "" }
+      ];
+      defaultLivestream.forEach(dg => {
+        if (!groupSet.has(dg.key)) {
+          groupSet.set(dg.key, dg);
+        }
+      });
+
+      let optionsHTML = '';
+      groupSet.forEach((item) => {
+        optionsHTML += `<option value="${escapeHTML(item.key)}" data-sub="${escapeHTML(item.subName || '')}">${escapeHTML(item.label)}</option>`;
+      });
+
+      select.innerHTML = optionsHTML;
+
+      if (selectedKey) {
+        for (let i = 0; i < select.options.length; i++) {
+          const opt = select.options[i];
+          if (opt.value === selectedKey || opt.value.toUpperCase() === selectedKey.toUpperCase() || opt.value.includes(selectedKey)) {
+            select.selectedIndex = i;
+            break;
+          }
+        }
+      }
+
+      onManageGroupSelectChange();
+    }
+    window.populateManageGroupSelect = populateManageGroupSelect;
+
+    function onManageGroupSelectChange() {
+      const select = document.getElementById('manageRenameOldGroupSelect');
+      const input = document.getElementById('manageRenameNewName');
+      if (!select || !input) return;
+
+      const opt = select.options[select.selectedIndex];
+      if (opt) {
+        const sub = opt.getAttribute('data-sub') || getCleanSubgroupName(opt.value);
+        input.value = sub;
+      }
+    }
+    window.onManageGroupSelectChange = onManageGroupSelectChange;
+
+    function onNewGroupDeptSelectChange() {
+      const deptSelect = document.getElementById('manageAddDeptSelect');
+      const trafficWrap = document.getElementById('manageAddTrafficWrap');
+      if (!deptSelect || !trafficWrap) return;
+      const isLive = deptSelect.value.startsWith('LIVESTREAM');
+      trafficWrap.style.display = isLive ? 'block' : 'none';
+    }
+    window.onNewGroupDeptSelectChange = onNewGroupDeptSelectChange;
+
+    async function submitRenameGroup() {
+      if (sessionStorage.getItem('ps_admin_auth') !== 'true') {
+        lockAdminDashboard();
+        return showToast('â›” YÃªu cáº§u má»Ÿ khÃ³a PIN Quáº£n trá»‹ Ä‘á»ƒ Ä‘á»•i tÃªn nhÃ³m!');
+      }
+
+      const select = document.getElementById('manageRenameOldGroupSelect');
+      const input = document.getElementById('manageRenameNewName');
+      const updateBadgeCheck = document.getElementById('manageRenameUpdateBadge');
+      const scopeRadio = document.querySelector('input[name="manageRenameScope"]:checked');
+
+      if (!select || !input) return;
+      const oldGroupKey = select.value;
+      const newSubName = input.value.trim();
+      const scope = scopeRadio ? scopeRadio.value : 'ALL';
+      const updateBadge = updateBadgeCheck ? updateBadgeCheck.checked : true;
+
+      if (!newSubName) {
+        return showToast('Vui lÃ²ng nháº­p tÃªn nhÃ³m má»›i!', false, true);
+      }
+
+      const oldMeta = parseGroupMeta(oldGroupKey, 'LIVESTREAM');
+      const oldSubName = oldMeta.cleanSub || getCleanSubgroupName(oldGroupKey);
+
+      if (oldSubName.toUpperCase() === newSubName.toUpperCase()) {
+        return showToast('TÃªn nhÃ³m má»›i pháº£i khÃ¡c tÃªn nhÃ³m hiá»‡n táº¡i!', false, true);
+      }
+
+      let newGroupKey = oldGroupKey;
+      if (oldMeta.teacher) {
+        newGroupKey = `TEAM ${oldMeta.teacher} - ${newSubName.toUpperCase()}`;
+      } else {
+        newGroupKey = newSubName.toUpperCase();
+      }
+
+      const oldBadgeKey = oldSubName.toUpperCase();
+      const newBadgeKey = newSubName.toUpperCase();
+
+      const btn = document.getElementById('btnSubmitRenameGroup');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'â³ Äang Ä‘á»•i tÃªn...';
+      }
+
+      try {
+        const monthPrefix = getMonthPrefix(displayYear, displayMonth);
+        const res = await callAPI('renameGroup', {
+          oldGroupKey,
+          newGroupKey,
+          oldSubgroupName: oldSubName,
+          newSubgroupName: newSubName,
+          updateBadge,
+          oldBadgeKey,
+          newBadgeKey,
+          scope,
+          monthStr: monthPrefix
+        });
+
+        if (res === 'SUCCESS') {
+          (employeesData || []).forEach(e => {
+            const m = parseGroupMeta(e.group, e.role || 'LIVESTREAM', e.name, e.customBadge);
+            if (e.group === oldGroupKey || m.groupKey === oldGroupKey || m.cleanSub.toUpperCase() === oldSubName.toUpperCase()) {
+              e.group = newGroupKey;
+              if (updateBadge && (String(e.customBadge || '').toUpperCase() === oldBadgeKey || !e.customBadge)) {
+                e.customBadge = newBadgeKey;
+              }
+            }
+          });
+
+          if (updateBadge && badgesData[oldBadgeKey]) {
+            badgesData[newBadgeKey] = badgesData[oldBadgeKey];
+            delete badgesData[oldBadgeKey];
+          }
+
+          if (Array.isArray(trafficGroupsData)) {
+            trafficGroupsData = trafficGroupsData.map(tg => {
+              const u = String(tg).toUpperCase().trim();
+              if (u === oldGroupKey || u === oldSubName.toUpperCase()) {
+                return newGroupKey;
+              }
+              return tg;
+            });
+          }
+
+          closeRenameGroupModal();
+          showToast(`âœ… ÄÃ£ Ä‘á»•i tÃªn nhÃ³m tá»« "${oldSubName}" thÃ nh "${newSubName}" thÃ nh cÃ´ng!`);
+          syncCurrentMonthEmployees();
+          renderTable();
+          updateSidebarBadges(monthPrefix);
+          updateBreadcrumbStatus(employeesData.length);
+          populatePersonSelect();
+          populateBadgePresetDropdowns();
+        } else {
+          showToast('Lá»—i: ' + res, false, true);
+        }
+      } catch (err) {
+        console.error('Lá»—i renameGroup:', err);
+        showToast('Lá»—i khi Ä‘á»•i tÃªn: ' + err.message, false, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = 'ðŸ’¾ LÆ°u & Äá»•i TÃªn ToÃ n Há»‡ Thá»‘ng';
+        }
+      }
+    }
+    window.submitRenameGroup = submitRenameGroup;
+
+    async function submitAddNewGroup() {
+      if (sessionStorage.getItem('ps_admin_auth') !== 'true') {
+        lockAdminDashboard();
+        return showToast('â›” YÃªu cáº§u má»Ÿ khÃ³a PIN Quáº£n trá»‹ Ä‘á»ƒ thÃªm nhÃ³m má»›i!');
+      }
+
+      const deptVal = document.getElementById('manageAddDeptSelect')?.value || 'LIVESTREAM:KEN';
+      const nameInput = document.getElementById('manageAddNewGroupName');
+      const createBadgeCheck = document.getElementById('manageAddCreateBadge');
+      const badgeColorSelect = document.getElementById('manageAddBadgeColor');
+      const isTrafficCheck = document.getElementById('manageAddIsTraffic');
+
+      if (!nameInput) return;
+      const groupName = nameInput.value.trim();
+      if (!groupName) {
+        return showToast('Vui lÃ²ng nháº­p tÃªn nhÃ³m má»›i!', false, true);
+      }
+
+      let deptKey = 'LIVESTREAM';
+      let teacher = '';
+
+      if (deptVal.startsWith('LIVESTREAM:')) {
+        deptKey = 'LIVESTREAM';
+        teacher = deptVal.replace('LIVESTREAM:', '');
+      } else if (deptVal.startsWith('DEPT:')) {
+        deptKey = deptVal.replace('DEPT:', '');
+      }
+
+      let groupKey = '';
+      if (teacher && teacher !== 'OTHER') {
+        groupKey = `TEAM ${teacher} - ${groupName.toUpperCase()}`;
+      } else {
+        groupKey = groupName.toUpperCase();
+      }
+
+      const createBadge = createBadgeCheck ? createBadgeCheck.checked : true;
+      const badgeColor = badgeColorSelect ? badgeColorSelect.value : 'linear-gradient(135deg, #ec4899, #8b5cf6)';
+      const isTraffic = (deptKey === 'LIVESTREAM' && isTrafficCheck) ? isTrafficCheck.checked : false;
+
+      const btn = document.getElementById('btnSubmitAddGroup');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'â³ Äang táº¡o...';
+      }
+
+      try {
+        const res = await callAPI('addNewGroup', {
+          groupKey,
+          groupName,
+          deptKey,
+          teacher,
+          createBadge,
+          badgeColor,
+          isTraffic
+        });
+
+        if (res === 'SUCCESS') {
+          if (!customGroupsData) customGroupsData = [];
+          customGroupsData.push({ key: groupKey, name: groupName, dept: deptKey, teacher: teacher });
+
+          if (createBadge) {
+            if (!badgesData) badgesData = {};
+            badgesData[groupName.toUpperCase()] = badgeColor;
+          }
+
+          if (isTraffic) {
+            if (!Array.isArray(trafficGroupsData)) trafficGroupsData = [];
+            if (!trafficGroupsData.includes(groupKey)) trafficGroupsData.push(groupKey);
+          }
+
+          closeRenameGroupModal();
+          showToast(`âœ… ÄÃ£ thÃªm nhÃ³m má»›i "${groupName}" thÃ nh cÃ´ng!`);
+
+          const monthPrefix = getMonthPrefix(displayYear, displayMonth);
+          renderTable();
+          updateSidebarBadges(monthPrefix);
+          populateBadgePresetDropdowns();
+          nameInput.value = '';
+        } else {
+          showToast('Lá»—i: ' + res, false, true);
+        }
+      } catch (err) {
+        console.error('Lá»—i addNewGroup:', err);
+        showToast('Lá»—i khi thÃªm nhÃ³m: ' + err.message, false, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = 'âž• ThÃªm NhÃ³m Má»›i';
+        }
+      }
+    }
+    window.submitAddNewGroup = submitAddNewGroup;
+
+    // Legacy sidebar functions replaced above
+    function legacy_unused_isGroupMatchingSidebar(deptKey, groupKey) {
       if (!window.selectedSidebarFilter || window.selectedSidebarFilter === 'ALL') return true;
       const f = window.selectedSidebarFilter;
       const gk = String(groupKey).toUpperCase();
@@ -7628,19 +8714,8 @@
       const sortedDeptKeys = Object.keys(depts).sort((a, b) => getDeptOrder(a) - getDeptOrder(b));
 
       const getGroupSortOrder = (deptKey, groupKey) => {
-        if (deptKey === "LIVESTEAM" || deptKey === "LIVESTREAM") {
-          if (groupKey === "TEAM KEN - ANGELIK") return 101;
-          if (groupKey === "TEAM KEN - ORION") return 102;
-          if (groupKey === "TEAM U - FASHION") return 201;
-          if (groupKey === "TEAM U - ROYEN:ONE") return 202;
-          if (groupKey === "TEAM DINO - BEE" || groupKey === "TEAM DINO - ELRIS" || groupKey.includes("BEE") || groupKey.includes("ELRIS")) return 301;
-          if (groupKey === "TEAM DINO - MIRACLE" || groupKey.includes("MIRACLE")) return 302;
-          if (groupKey === "TEAM DINO - BNART" || groupKey.includes("BNART") || groupKey.includes("VNART")) return 303;
-          if (groupKey === "TEAM DINO") return 301;
-          return 999;
-        }
-        if (deptKey === "MEDIA") {
-          return 100;
+        if (typeof parseGroupMeta === 'function') {
+          return parseGroupMeta(groupKey, deptKey).sortOrder;
         }
         return 500;
       };
@@ -7694,34 +8769,13 @@
 
              totalMatchedEmployees += depts[deptKey][group].length;
 
-             // Thiết lập nhãn và pill nhóm chuyên nghiệp
-             let pillClass = 'group-pill-ken';
-             let teacherLabel = 'TEAM KEN';
-             let groupCleanName = 'Nhóm Angelik';
+             const isLivestreamDept = (deptKey === "LIVESTREAM" || deptKey.includes("LIVESTREAM"));
+             const groupMeta = parseGroupMeta(group, deptKey);
+             let pillClass = groupMeta.pillClass;
+             let teacherLabel = groupMeta.teacherLabel;
+             let groupCleanName = groupMeta.groupCleanName;
+             let isTrafficActive = (isLivestreamDept && (isTraffic || groupMeta.isTraffic));
 
-             if (group === "TEAM KEN - ANGELIK") {
-               pillClass = 'group-pill-ken'; teacherLabel = 'TEAM KEN'; groupCleanName = 'Nhóm Angelik';
-             } else if (group === "TEAM KEN - ORION") {
-               pillClass = 'group-pill-ken'; teacherLabel = 'TEAM KEN'; groupCleanName = 'Nhóm Orion';
-             } else if (group === "TEAM U - FASHION") {
-               pillClass = 'group-pill-u'; teacherLabel = 'TEAM U'; groupCleanName = 'Nhóm Fashion';
-             } else if (group === "TEAM U - ROYEN:ONE") {
-               pillClass = 'group-pill-u'; teacherLabel = 'TEAM U'; groupCleanName = 'Nhóm Royen:One';
-             } else if (group === "TEAM DINO - MIRACLE" || group.includes("MIRACLE")) {
-               pillClass = 'group-pill-dino'; teacherLabel = 'TEAM DINO'; groupCleanName = 'Nhóm Miracle';
-             } else if (group === "TEAM DINO - BEE" || group === "TEAM DINO - ELRIS" || group.includes("BEE") || group.includes("ELRIS")) {
-               pillClass = 'group-pill-dino'; teacherLabel = 'TEAM DINO'; const hasElris = group.toUpperCase().includes('ELRIS') || (depts[deptKey] && depts[deptKey][group] && depts[deptKey][group].some(e => String(e.name || '').toUpperCase().includes('ELRIS'))); groupCleanName = hasElris ? 'Nhóm Elris' : 'Nhóm Bee';
-             } else if (group === "TEAM DINO - BNART" || group.includes("BNART") || group.includes("VNART")) {
-               pillClass = 'group-pill-dino'; teacherLabel = 'TEAM DINO'; groupCleanName = 'Nhóm Bnart';
-             } else if (group === "TEAM DINO") {
-               pillClass = 'group-pill-dino'; teacherLabel = 'TEAM DINO'; groupCleanName = 'Team Thầy Dino';
-             } else if (group === "GIMBAL / MEDIA") {
-               pillClass = 'group-pill-media'; teacherLabel = 'KỸ THUẬT'; groupCleanName = 'Gimbal / Media';
-             } else {
-               pillClass = 'group-pill-media'; teacherLabel = deptKey; groupCleanName = group;
-             }
-
-             // THANH TIÊU ĐỀ NHÓM TOÀN BẢNG (Không bị co hẹp thành cột 85px)
              tbody.innerHTML += `
                <tr class="group-divider-row">
                  <td colspan="${daysInMonth + 1}" class="group-divider-cell">
@@ -7729,13 +8783,18 @@
                      <div class="group-divider-left">
                        <span class="group-pill ${pillClass}">${teacherLabel}</span>
                        <span class="group-title-text">${groupCleanName}</span>
-                       ${isTraffic ? '<span class="group-tag-traffic">⚡ Lưu Lượng</span>' : ''}
-                       <span class="group-count-text">• ${depts[deptKey][group].length} nhân sự</span>
+                       ${isTrafficActive ? '<span class="group-tag-traffic">âš¡ LÆ°u LÆ°á»£ng</span>' : ''}
+                       <span class="group-count-text">â€¢ ${depts[deptKey][group].length} nhÃ¢n sá»±</span>
                      </div>
-                     <div class="group-divider-right">${isLivestreamDept ? `
-                       <button type="button" class="btn-group-traffic-toggle ${isTraffic ? 'is-traffic' : ''}" onclick="toggleGroupTraffic('${group}')" title="${isTraffic ? 'Nhóm Lưu Lượng (Luân phiên không nghỉ timeline). Bấm để chuyển thành Nhóm Thường' : 'Bấm để gán thành Nhóm Lưu Lượng (Nghỉ luân phiên, nhóm không bao giờ off trên timeline)'}">
-                         ${isTraffic ? '⚡ Lưu Lượng' : '⚪ Đặt Lưu Lượng'}
-                       </button>` : ''}
+                     <div class="group-divider-right">
+                       ${isLivestreamDept ? `
+                         <button type="button" class="btn-group-traffic-toggle ${isTrafficActive ? 'is-traffic' : ''}" onclick="toggleGroupTraffic('${group}')" title="${isTrafficActive ? 'NhÃ³m LÆ°u LÆ°á»£ng (LuÃ¢n phiÃªn khÃ´ng nghá»‰ timeline). Báº¥m Ä‘á»ƒ chuyá»ƒn thÃ nh NhÃ³m ThÆ°á»ng' : 'Báº¥m Ä‘á»ƒ gÃ¡n thÃ nh NhÃ³m LÆ°u LÆ°á»£ng (Nghá»‰ luÃ¢n phiÃªn, nhÃ³m khÃ´ng bao giá» off trÃªn timeline)'}">
+                           ${isTrafficActive ? 'âš¡ LÆ°u LÆ°á»£ng' : 'âšª Äáº·t LÆ°u LÆ°á»£ng'}
+                         </button>
+                       ` : ''}
+                       <button type="button" class="btn-group-rename" onclick="openRenameGroupModal('${group}', '${deptKey}')" title="Äá»•i tÃªn nhÃ³m nÃ y">
+                         âœï¸ Äá»•i tÃªn
+                       </button>
                      </div>
                    </div>
                  </td>
@@ -8876,6 +9935,8 @@ function initMobileCalSwipeGesture() {
         extractedGroupName = preselectGroup.split('-').slice(1).join('-').trim();
       } else if (gUp.includes('VNART') || gUp.includes('BNART')) {
         extractedGroupName = 'Vnart';
+      } else if (gUp.includes('ELRIS')) {
+        extractedGroupName = 'Elris';
       } else if (gUp.includes('BEE')) {
         extractedGroupName = 'Bee';
       } else if (gUp.includes('ORION')) {
