@@ -208,7 +208,14 @@
         
         .header-title { text-align: center; margin-bottom: 15px; }
         .header-title h1 { margin: 0; font-size: 46px !important; font-weight: 900; color: var(--text-main); text-transform: uppercase; letter-spacing: -1px;}
-        .header-title p#display-date, .header-title p.clone-date { margin: 8px 0 0 0; font-size: 22px !important; font-weight: 800; background: var(--bg-input); display: inline-block; padding: 6px 30px; border-radius: 99px; border: 1px solid var(--border); color: var(--text-main);}
+        .header-title p#display-date, .header-title p.clone-date { margin: 8px 0 0 0; font-size: 22px !important; font-weight: 800; background: var(--bg-input); display: inline-block; padding: 6px 30px; border-radius: 99px; border: 1.5px solid var(--border); color: var(--text-main); transition: all 0.2s ease; }
+        .header-title p#display-date { cursor: pointer; user-select: text; }
+        .header-title p#display-date:hover { border-color: #6366f1 !important; background: var(--bg-card) !important; transform: translateY(-1px); }
+        .header-title p#display-date:focus { outline: none !important; border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25) !important; background: var(--bg-card) !important; }
+        @media (max-width: 480px) {
+            #dailyCustomDateWrapper { flex-direction: column !important; align-items: stretch !important; }
+            #dailyDatePicker { width: 100% !important; }
+        }
         
         table { width: 100%; border-collapse: separate; border-spacing: 0 8px !important; }
         th { padding: 12px 10px; font-weight: 900; font-size: 20px !important; color: var(--color-header-blue); text-transform: uppercase; border-bottom: 3px solid var(--border); cursor: text;}
@@ -981,12 +988,26 @@
 
                 <div class="team-list-header">
                     <span>Cấu hình Timeline</span>
-                    <div style="display:flex; gap: 10px;">
-                        <select id="dailyDateSelect" class="modern-select" onchange="updateDailyDateDisplay(); autoSaveDailyTimeline();">
+                    <div style="display:flex; gap: 10px; align-items: center;">
+                        <button class="theme-btn" onclick="toggleTheme()" style="padding: 4px; width: 36px; height: 36px;" title="Chuyển giao diện Sáng / Tối">🌙</button>
+                    </div>
+                </div>
+
+                <!-- CHỌN & TÙY CHỈNH NGÀY TIMELINE HÀNG NGÀY -->
+                <div class="form-group" style="margin-top: 10px; margin-bottom: 10px; background: var(--bg-card); padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="margin: 0; font-weight: 700; font-size: 12px; color: var(--text-main); display: flex; align-items: center; gap: 5px;">
+                            <span>📅 Ngày Timeline</span>
+                        </label>
+                        <select id="dailyDateSelect" class="modern-select" onchange="onDailyDateSelectChange()" style="padding: 3px 24px 3px 8px; font-size: 11px; height: 26px; font-weight: 700;">
                             <option value="tomorrow" selected>Ngày mai</option>
-                            <option value="today">Hôm nay (Có Real-time)</option>
+                            <option value="today">Hôm nay (Real-time)</option>
+                            <option value="custom">Tùy chọn ngày...</option>
                         </select>
-                        <button class="theme-btn" onclick="toggleTheme()" style="padding: 4px; width: 36px; height: 36px;">🌙</button>
+                    </div>
+                    <div id="dailyCustomDateWrapper" style="display: flex; gap: 6px; align-items: center;">
+                        <input type="date" id="dailyDatePicker" onchange="onDailyDatePickerChange(this.value)" style="width: 125px; padding: 6px 8px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--bg-input); color: var(--text-main); font-weight: 700; font-size: 12px; outline: none; cursor: pointer;" title="Chọn ngày trên lịch">
+                        <input type="text" id="dailyCustomDateInput" placeholder="Ví dụ: Ngày 05/11/2026" oninput="onDailyCustomDateTextChange(this.value)" style="flex: 1; min-width: 0; padding: 6px 8px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--bg-input); color: var(--text-main); font-weight: 700; font-size: 12px; outline: none;" title="Sửa chữ hiển thị trên bảng">
                     </div>
                 </div>
                 
@@ -1068,7 +1089,7 @@
                 <div id="capture-wrapper-daily">
                     <div class="header-title">
                         <h1>TIMELINE MAKEUP</h1>
-                        <p id="display-date">Đang tính toán...</p>
+                        <p id="display-date" contenteditable="true" onblur="onDisplayDateBlur(this.innerText)" onkeydown="handleContentEditableKey(event)" title="Nhấp trực tiếp vào đây để sửa ngày">Đang tính toán...</p>
                         <p class="hide-on-capture" style="font-size: 12px; color: #ef4444; background: transparent; border: none; font-style: italic; margin-top: 5px;">* Bạn có thể nắm kéo thả các hàng trong bảng này để sắp xếp.</p>
                     </div>
                     <table>
@@ -1497,6 +1518,8 @@
                 timingMode: document.getElementById('dailyTimingMode')?.value || 'two_rooms',
                 allParallelTime: document.getElementById('allParallelTime')?.value || '8:00',
                 dateSelect: document.getElementById('dailyDateSelect')?.value || 'tomorrow',
+                datePickerVal: document.getElementById('dailyDatePicker')?.value || '',
+                customDateText: document.getElementById('dailyCustomDateInput')?.value || '',
                 footer: document.getElementById('dailyFooterInput')?.value || '',
                 pdfOrientation: document.getElementById('pdfOrientationDaily')?.value || 'portrait',
                 showDailyMakeupRoom: document.getElementById('showDailyMakeupRoom')?.checked ?? true,
@@ -1574,6 +1597,12 @@
                     teams = JSON.parse(JSON.stringify(DEFAULT_DAILY_TEAMS));
                     activeStatus = teams.map(t => t.isActiveOriginal !== undefined ? t.isActiveOriginal : true);
 
+                    const dateSelect = document.getElementById('dailyDateSelect');
+                    if (dateSelect) dateSelect.value = 'tomorrow';
+                    const datePicker = document.getElementById('dailyDatePicker');
+                    if (datePicker) datePicker.value = '';
+                    const dateText = document.getElementById('dailyCustomDateInput');
+                    if (dateText) dateText.value = '';
                     const timingSelect = document.getElementById('dailyTimingMode');
                     if (timingSelect) timingSelect.value = 'two_rooms';
                     const timeContainer = document.getElementById('allParallelTimeContainer');
@@ -1614,6 +1643,16 @@
                         if (data.dateSelect) {
                             const dSelect = document.getElementById('dailyDateSelect');
                             if (dSelect) dSelect.value = data.dateSelect;
+                        }
+                        if (data.datePickerVal) {
+                            const dPicker = document.getElementById('dailyDatePicker');
+                            if (dPicker) dPicker.value = data.datePickerVal;
+                        }
+                        if (data.customDateText) {
+                            const dText = document.getElementById('dailyCustomDateInput');
+                            if (dText) dText.value = data.customDateText;
+                            const disp = document.getElementById('display-date');
+                            if (disp) disp.innerText = data.customDateText;
                         }
                         if (data.footer !== undefined) {
                             const footerInp = document.getElementById('dailyFooterInput');
@@ -2015,39 +2054,179 @@
             else { body.setAttribute('data-theme', 'dark'); showToast("Đã chuyển giao diện Tối", "info", 1500); }
         }
 
-        function updateDailyDateDisplay() {
-            const selection = document.getElementById('dailyDateSelect').value;
-            const dDate = new Date();
-            if (selection === 'tomorrow') dDate.setDate(dDate.getDate() + 1);
+        function checkTeamOffStatusForDate(targetDateStr, mode = 'custom') {
+            if (!teams || teams.length === 0) return;
+            const offLeaves = window.globalOffLeaves || [];
             
-            const d = dDate.getDate().toString().padStart(2, '0');
-            const m = (dDate.getMonth() + 1).toString().padStart(2, '0');
-            const y = dDate.getFullYear();
-            
-            document.getElementById('display-date').innerText = `Ngày ${d}/${m}/${y}`;
-            
-            if (teams.length > 0) {
-                teams.forEach((team, index) => {
-                    let safeName = String(team.name || '').replace(/\s+/g, '').toLowerCase();
-
-                    if (team.isTraffic) {
-                        activeStatus[index] = team.isActiveOriginal;
+            teams.forEach((team, index) => {
+                let tName = String(team.name || '').toLowerCase();
+                let isTraffic = (typeof isTrafficGroup === 'function') ? isTrafficGroup(team.name) : team.isTraffic;
+                
+                if (team.isTraffic || isTraffic) {
+                    activeStatus[index] = team.isActiveOriginal !== undefined ? team.isActiveOriginal : true;
+                } else {
+                    if (offLeaves.length > 0 && targetDateStr) {
+                        const isOff = offLeaves.some(l => l && l.name && String(l.name).toLowerCase() === tName && l.date === targetDateStr && l.swapFrom !== targetDateStr && (l.status === 'Approved' || l.status === 'Pending'));
+                        activeStatus[index] = isOff ? false : (team.isActiveOriginal !== undefined ? team.isActiveOriginal : true);
                     } else {
-                        if (selection === 'today' && team.isOffToday) {
+                        if (mode === 'today' && team.isOffToday) {
                             activeStatus[index] = false;
-                        } else if (selection === 'tomorrow' && team.isOffTomorrow) {
+                        } else if (mode === 'tomorrow' && team.isOffTomorrow) {
                             activeStatus[index] = false;
                         } else {
-                            activeStatus[index] = team.isActiveOriginal;
+                            activeStatus[index] = team.isActiveOriginal !== undefined ? team.isActiveOriginal : true;
                         }
                     }
-                });
-                renderToggles();
-                renderDailyTable();
-            }
+                }
+            });
+            renderToggles();
+            renderDailyTable();
+        }
+
+        function updateDailyDateDisplay() {
+            const selectEl = document.getElementById('dailyDateSelect');
+            const pickerEl = document.getElementById('dailyDatePicker');
+            const textEl = document.getElementById('dailyCustomDateInput');
+            const dispEl = document.getElementById('display-date');
+            if (!selectEl) return;
             
+            const selection = selectEl.value;
+            const now = new Date();
+            
+            if (selection === 'today') {
+                const y = now.getFullYear();
+                const m = (now.getMonth() + 1).toString().padStart(2, '0');
+                const d = now.getDate().toString().padStart(2, '0');
+                const iso = `${y}-${m}-${d}`;
+                const formatted = `Ngày ${d}/${m}/${y}`;
+                if (pickerEl) pickerEl.value = iso;
+                if (textEl) textEl.value = formatted;
+                if (dispEl) dispEl.innerText = formatted;
+                checkTeamOffStatusForDate(iso, 'today');
+            } else if (selection === 'tomorrow') {
+                const tom = new Date();
+                tom.setDate(tom.getDate() + 1);
+                const y = tom.getFullYear();
+                const m = (tom.getMonth() + 1).toString().padStart(2, '0');
+                const d = tom.getDate().toString().padStart(2, '0');
+                const iso = `${y}-${m}-${d}`;
+                const formatted = `Ngày ${d}/${m}/${y}`;
+                if (pickerEl) pickerEl.value = iso;
+                if (textEl) textEl.value = formatted;
+                if (dispEl) dispEl.innerText = formatted;
+                checkTeamOffStatusForDate(iso, 'tomorrow');
+            } else {
+                // custom
+                if (textEl && textEl.value.trim() !== '') {
+                    if (dispEl) dispEl.innerText = textEl.value;
+                    if (pickerEl && pickerEl.value) {
+                        checkTeamOffStatusForDate(pickerEl.value, 'custom');
+                    }
+                } else if (pickerEl && pickerEl.value) {
+                    const parts = pickerEl.value.split('-');
+                    if (parts.length === 3) {
+                        const formatted = `Ngày ${parts[2]}/${parts[1]}/${parts[0]}`;
+                        if (textEl) textEl.value = formatted;
+                        if (dispEl) dispEl.innerText = formatted;
+                        checkTeamOffStatusForDate(pickerEl.value, 'custom');
+                    }
+                } else {
+                    const tom = new Date();
+                    tom.setDate(tom.getDate() + 1);
+                    const y = tom.getFullYear();
+                    const m = (tom.getMonth() + 1).toString().padStart(2, '0');
+                    const d = tom.getDate().toString().padStart(2, '0');
+                    const iso = `${y}-${m}-${d}`;
+                    const formatted = `Ngày ${d}/${m}/${y}`;
+                    if (pickerEl) pickerEl.value = iso;
+                    if (textEl) textEl.value = formatted;
+                    if (dispEl) dispEl.innerText = formatted;
+                    checkTeamOffStatusForDate(iso, 'tomorrow');
+                }
+            }
             checkLiveStatus();
         }
+
+        window.onDailyDateSelectChange = function() {
+            updateDailyDateDisplay();
+            autoSaveDailyTimeline();
+            const mode = document.getElementById('dailyDateSelect')?.value;
+            if (mode === 'custom') {
+                const picker = document.getElementById('dailyDatePicker');
+                if (picker && typeof picker.showPicker === 'function') {
+                    try { picker.showPicker(); } catch(e) {}
+                }
+            }
+        };
+
+        window.onDailyDatePickerChange = function(dateVal) {
+            if (!dateVal) return;
+            const pickerInput = document.getElementById('dailyDatePicker');
+            if (pickerInput && pickerInput.value !== dateVal) pickerInput.value = dateVal;
+            const parts = dateVal.split('-');
+            if (parts.length === 3) {
+                const y = parts[0];
+                const m = parts[1];
+                const d = parts[2];
+                const formatted = `Ngày ${d}/${m}/${y}`;
+                
+                const now = new Date();
+                const todayIso = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${now.getDate().toString().padStart(2,'0')}`;
+                const tom = new Date(); tom.setDate(tom.getDate() + 1);
+                const tomIso = `${tom.getFullYear()}-${(tom.getMonth()+1).toString().padStart(2,'0')}-${tom.getDate().toString().padStart(2,'0')}`;
+
+                const selectEl = document.getElementById('dailyDateSelect');
+                let mode = 'custom';
+                if (dateVal === todayIso) {
+                    mode = 'today';
+                    if (selectEl) selectEl.value = 'today';
+                } else if (dateVal === tomIso) {
+                    mode = 'tomorrow';
+                    if (selectEl) selectEl.value = 'tomorrow';
+                } else {
+                    mode = 'custom';
+                    if (selectEl) selectEl.value = 'custom';
+                }
+
+                const textEl = document.getElementById('dailyCustomDateInput');
+                if (textEl) textEl.value = formatted;
+                const dispEl = document.getElementById('display-date');
+                if (dispEl) dispEl.innerText = formatted;
+
+                checkTeamOffStatusForDate(dateVal, mode);
+                checkLiveStatus();
+                autoSaveDailyTimeline();
+                showToast(`Đã chọn ngày: ${d}/${m}/${y}`, "info", 1500);
+            }
+        };
+
+        window.onDailyCustomDateTextChange = function(textVal) {
+            const dispEl = document.getElementById('display-date');
+            if (dispEl) dispEl.innerText = textVal || 'Chưa đặt ngày';
+            
+            const selectEl = document.getElementById('dailyDateSelect');
+            if (selectEl) selectEl.value = 'custom';
+
+            const match = textVal.match(/(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/);
+            if (match) {
+                const d = match[1].padStart(2, '0');
+                const m = match[2].padStart(2, '0');
+                const y = match[3];
+                const iso = `${y}-${m}-${d}`;
+                const picker = document.getElementById('dailyDatePicker');
+                if (picker) picker.value = iso;
+                checkTeamOffStatusForDate(iso, 'custom');
+            }
+            checkLiveStatus();
+            autoSaveDailyTimeline();
+        };
+
+        window.onDisplayDateBlur = function(val) {
+            const trimmed = (val || '').trim();
+            const textEl = document.getElementById('dailyCustomDateInput');
+            if (textEl) textEl.value = trimmed;
+            window.onDailyCustomDateTextChange(trimmed);
+        };
 
         function formatTime(totalMinutes) {
             if(isNaN(totalMinutes)) return "0:00";
@@ -2607,7 +2786,12 @@
             
             document.querySelectorAll('.highlight-makeup, .highlight-live').forEach(el => { el.classList.remove('highlight-makeup', 'highlight-live'); });
 
-            if (document.getElementById('dailyDateSelect').value === 'today') {
+            const dateSelectVal = document.getElementById('dailyDateSelect')?.value;
+            const pickerVal = document.getElementById('dailyDatePicker')?.value;
+            const nowIso = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${now.getDate().toString().padStart(2,'0')}`;
+            const isToday = (dateSelectVal === 'today') || (pickerVal === nowIso);
+
+            if (isToday) {
                 document.querySelectorAll('.time-row-daily').forEach(row => {
                     const s = parseInt(row.getAttribute('data-start'));
                     const e = parseInt(row.getAttribute('data-end'));
@@ -2639,7 +2823,7 @@
             if (id === 'capture-wrapper-daily') {
                 clone.className = 'pc-daily-clone';
                 const dateP = clone.querySelector('#display-date');
-                if (dateP) { dateP.removeAttribute('id'); dateP.className = 'clone-date'; }
+                if (dateP) { dateP.removeAttribute('id'); dateP.removeAttribute('contenteditable'); dateP.className = 'clone-date'; }
             } else {
                 clone.className = 'pc-event-clone';
                 const tblContainer = clone.querySelector('#tableContainerEvent');
