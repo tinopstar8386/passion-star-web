@@ -5278,10 +5278,103 @@
             }
 
             if (action === 'toggleLeaveAdmin') {
-                const { name, dateStr, actionName } = payload;
-                const leaveRef = fs.doc(db, "off_leaves", safeID(name) + "_" + dateStr);
-                if (actionName === "TỪ CHỐI" || actionName === "TỪ CHỐI ĐỔI") { await fs.deleteDoc(leaveRef); } 
-                else if (actionName === "DUYỆT") { await fs.setDoc(leaveRef, { status: "Approved", swapFrom: "" }, { merge: true }); }
+                const { name, dateStr, actionName, oldDateStr, newDateStr, role } = payload;
+                const safeName = safeID(name);
+                const batch = fs.writeBatch(db);
+
+                if (actionName === "TỪ CHỐI ĐỔI") {
+                    // Từ chối đổi lịch khi bấm vào ô tím "ĐỔI" (ngày gốc: oldDateStr/dateStr)
+                    const fromDate = oldDateStr || dateStr;
+                    let toDate = newDateStr;
+
+                    if (!toDate) {
+                        const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
+                        leaveSnap.forEach(d => {
+                            const data = d.data();
+                            if (String(data.name).trim().toUpperCase() === String(name).trim().toUpperCase() && data.swapFrom === fromDate && data.status === "Pending") {
+                                toDate = data.date;
+                            }
+                        });
+                    }
+
+                    // 1. Xóa đơn đổi lịch tại ngày mới (toDate)
+                    if (toDate) {
+                        batch.delete(fs.doc(db, "off_leaves", safeName + "_" + toDate));
+                    }
+
+                    // 2. Bảo lưu / khôi phục ngày nghỉ gốc tại fromDate thành Approved
+                    const origRef = fs.doc(db, "off_leaves", safeName + "_" + fromDate);
+                    batch.set(origRef, {
+                        name: name,
+                        role: role || 'LIVESTEAM',
+                        date: fromDate,
+                        status: "Approved",
+                        swapFrom: "",
+                        reason: "Giữ ngày nghỉ gốc (Từ chối đổi lịch)"
+                    }, { merge: true });
+
+                    await batch.commit();
+                    return "SUCCESS";
+                }
+
+                if (actionName === "TỪ CHỐI") {
+                    // Từ chối đơn Pending khi bấm vào ô vàng "PEND"
+                    const targetDate = newDateStr || dateStr;
+                    const targetRef = fs.doc(db, "off_leaves", safeName + "_" + targetDate);
+                    
+                    let fromDate = oldDateStr;
+                    if (!fromDate) {
+                        const snap = await fs.getDoc(targetRef);
+                        if (snap.exists() && snap.data().swapFrom) {
+                            fromDate = snap.data().swapFrom;
+                        }
+                    }
+
+                    // 1. Xóa đơn Pending tại targetDate
+                    batch.delete(targetRef);
+
+                    // 2. Nếu đây là đơn đổi ngày, khôi phục ngày nghỉ gốc tại fromDate thành Approved
+                    if (fromDate) {
+                        const origRef = fs.doc(db, "off_leaves", safeName + "_" + fromDate);
+                        batch.set(origRef, {
+                            name: name,
+                            role: role || 'LIVESTEAM',
+                            date: fromDate,
+                            status: "Approved",
+                            swapFrom: "",
+                            reason: "Giữ ngày nghỉ gốc (Từ chối đổi lịch)"
+                        }, { merge: true });
+                    }
+
+                    await batch.commit();
+                    return "SUCCESS";
+                }
+
+                if (actionName === "DUYỆT") {
+                    // Duyệt đơn Pending khi bấm vào ô vàng "PEND"
+                    const targetDate = newDateStr || dateStr;
+                    const targetRef = fs.doc(db, "off_leaves", safeName + "_" + targetDate);
+                    
+                    let fromDate = oldDateStr;
+                    if (!fromDate) {
+                        const snap = await fs.getDoc(targetRef);
+                        if (snap.exists() && snap.data().swapFrom) {
+                            fromDate = snap.data().swapFrom;
+                        }
+                    }
+
+                    // 1. Duyệt ngày mới thành Approved và xóa cờ swapFrom
+                    batch.set(targetRef, { status: "Approved", swapFrom: "" }, { merge: true });
+
+                    // 2. Nếu là đơn đổi ngày, xóa ngày nghỉ cũ tại fromDate
+                    if (fromDate) {
+                        batch.delete(fs.doc(db, "off_leaves", safeName + "_" + fromDate));
+                    }
+
+                    await batch.commit();
+                    return "SUCCESS";
+                }
+
                 return "SUCCESS";
             }
 
@@ -5300,7 +5393,13 @@
                 const batch = fs.writeBatch(db);
                 leaveSnap.forEach(d => {
                     let data = d.data();
-                    if(data.status === "Pending") { batch.set(d.ref, { status: "Approved", swapFrom: "" }, { merge: true }); }
+                    if (data.status === "Pending") { 
+                        batch.set(d.ref, { status: "Approved", swapFrom: "" }, { merge: true }); 
+                        if (data.swapFrom) {
+                            const oldRef = fs.doc(db, "off_leaves", safeID(data.name) + "_" + data.swapFrom);
+                            batch.delete(oldRef);
+                        }
+                    }
                 });
                 await batch.commit(); return "SUCCESS";
             }
@@ -8405,27 +8504,126 @@ function initMobileCalSwipeGesture() {
 
     function approveAll() {
       if(isSyncing) return showToast("Hệ thống đang lưu, vui lòng đợi...", false, true);
-      document.getElementById('modalTitle').innerHTML = "✅ Duyệt Tất Cả"; document.getElementById('modalMsg').innerHTML = "Hành động này sẽ <b>DUYỆT TẤT CẢ</b> các đơn đang Pending. Chắc chắn chứ?";
-      document.getElementById('modalRejectBtn').style.display = 'none'; const btn = document.getElementById('modalOkBtn'); btn.className = "btn-ok"; btn.innerText = "Duyệt Ngay";
+      document.getElementById('modalTitle').innerHTML = "✅ Duyệt Tất Cả"; 
+      document.getElementById('modalMsg').innerHTML = "Hành động này sẽ <b>DUYỆT TẤT CẢ</b> các đơn đang Pending. Chắc chắn chứ?";
+      document.getElementById('modalRejectBtn').style.display = 'none'; 
+      const btn = document.getElementById('modalOkBtn'); 
+      btn.className = "btn-ok"; 
+      btn.innerText = "Duyệt Ngay";
       btn.onclick = () => { 
-        closeModal(); isSyncing = true; leavesData.forEach(l => { if(l.status === "Pending") { l.status = "Approved"; l.swapFrom = ""; } }); renderTable(); showToast("⏳ Đang duyệt toàn bộ ngầm...", true);
+        closeModal(); 
+        isSyncing = true; 
+        leavesData.forEach(l => { 
+          if(l.status === "Pending") { 
+            l.status = "Approved"; 
+            if (l.swapFrom) {
+              let oldIdx = leavesData.findIndex(old => String(old.name).trim() === String(l.name).trim() && old.date === l.swapFrom);
+              if (oldIdx > -1) leavesData.splice(oldIdx, 1);
+            }
+            l.swapFrom = ""; 
+          } 
+        }); 
+        renderTable(); 
+        showToast("⏳ Đang duyệt toàn bộ ngầm...", true);
         
         callAPI('approveAllPendingLeaves')
-            .then(res => { isSyncing = false; if(res === "SUCCESS") showToast("✅ Đã duyệt tất cả!"); else refreshData(); })
-            .catch(err => { isSyncing = false; refreshData(); });
-      }; document.getElementById('customModal').classList.add('active');
+            .then(res => { 
+              isSyncing = false; 
+              if(res === "SUCCESS") showToast("✅ Đã duyệt tất cả!"); 
+              else {
+                showToast("❌ Lỗi: " + res, false, true);
+                refreshData(); 
+              }
+            })
+            .catch(err => { 
+              isSyncing = false; 
+              showToast("❌ Lỗi kết nối: " + (err.message || err), false, true);
+              refreshData(); 
+            });
+      }; 
+      document.getElementById('customModal').classList.add('active');
     }
 
     function adminExecute(role, name, dateStr, action) {
       isSyncing = true;
-      if (action === "TỪ CHỐI") { let idx = leavesData.findIndex(l => l.name === name && l.date === dateStr); if (idx > -1) leavesData.splice(idx, 1); } 
-      else if (action === "DUYỆT") { let idx = leavesData.findIndex(l => l.name === name && l.date === dateStr); if (idx > -1) { leavesData[idx].status = "Approved"; leavesData[idx].swapFrom = ""; } } 
-      else if (action === "TỪ CHỐI ĐỔI") { let idx = leavesData.findIndex(l => l.name === name && l.swapFrom === dateStr && l.status === "Pending"); if(idx > -1) leavesData.splice(idx, 1); }
-      renderTable(); showToast("⏳ Đang xử lý ngầm...", true);
+      let targetLeave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === dateStr);
+      let pendingSwap = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.swapFrom === dateStr && l.status === "Pending");
       
-      callAPI('toggleLeaveAdmin', { role: role, name: name, dateStr: dateStr, actionName: action })
-        .then(res => { isSyncing = false; if (res === "SUCCESS") showToast("✅ Thành công!"); else refreshData(); })
-        .catch(err => { isSyncing = false; refreshData(); });
+      let oldDateStr = null;
+      let newDateStr = null;
+
+      if (action === "TỪ CHỐI ĐỔI") { 
+        oldDateStr = dateStr;
+        if (pendingSwap) {
+          newDateStr = pendingSwap.date;
+          let pIdx = leavesData.indexOf(pendingSwap);
+          if (pIdx > -1) leavesData.splice(pIdx, 1);
+        }
+        // Giữ nguyên ngày gốc dateStr là Approved
+        let origIdx = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === dateStr);
+        if (origIdx > -1) {
+          leavesData[origIdx].status = "Approved";
+          leavesData[origIdx].swapFrom = "";
+        } else {
+          leavesData.push({ name: name, role: role, date: dateStr, status: "Approved", swapFrom: "" });
+        }
+      } 
+      else if (action === "DUYỆT") { 
+        newDateStr = dateStr;
+        if (targetLeave && targetLeave.swapFrom) {
+          oldDateStr = targetLeave.swapFrom;
+          // Xóa ngày cũ
+          let oldIdx = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === oldDateStr);
+          if (oldIdx > -1) leavesData.splice(oldIdx, 1);
+        }
+        let idx = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === dateStr); 
+        if (idx > -1) { 
+          leavesData[idx].status = "Approved"; 
+          leavesData[idx].swapFrom = ""; 
+        } 
+      } 
+      else if (action === "TỪ CHỐI") { 
+        newDateStr = dateStr;
+        if (targetLeave && targetLeave.swapFrom) {
+          oldDateStr = targetLeave.swapFrom;
+          // Khôi phục ngày cũ là Approved
+          let oldIdx = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === oldDateStr);
+          if (oldIdx > -1) {
+            leavesData[oldIdx].status = "Approved";
+            leavesData[oldIdx].swapFrom = "";
+          } else {
+            leavesData.push({ name: name, role: role, date: oldDateStr, status: "Approved", swapFrom: "" });
+          }
+        }
+        let idx = leavesData.findIndex(l => String(l.name).trim() === String(name).trim() && l.date === dateStr); 
+        if (idx > -1) leavesData.splice(idx, 1); 
+      }
+
+      renderTable(); 
+      showToast("⏳ Đang xử lý ngầm...", true);
+      
+      callAPI('toggleLeaveAdmin', { 
+        role: role, 
+        name: name, 
+        dateStr: dateStr, 
+        oldDateStr: oldDateStr, 
+        newDateStr: newDateStr, 
+        actionName: action 
+      })
+        .then(res => { 
+          isSyncing = false; 
+          if (res === "SUCCESS") {
+            showToast("✅ Thành công!"); 
+          } else {
+            showToast("❌ Lỗi: " + res, false, true);
+            refreshData(); 
+          }
+        })
+        .catch(err => { 
+          isSyncing = false; 
+          showToast("❌ Lỗi kết nối: " + (err.message || err), false, true);
+          refreshData(); 
+        });
     }
 
     function closeModal() { document.getElementById('customModal').classList.remove('active'); }
