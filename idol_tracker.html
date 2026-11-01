@@ -1416,7 +1416,7 @@
                             <span id="dirGroupDropdownLabel" class="truncate">🏷️ Tất cả 6 Nhóm</span>
                             <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 dropdown-chevron shrink-0"></i>
                         </button>
-                        <div class="modern-dropdown-menu left-0 w-64 space-y-0.5">
+                        <div class="modern-dropdown-menu left-0 w-64 space-y-0.5" id="dirGroupDropdownMenu">
                             <button type="button" onclick="selectDirectoryGroup('ALL', '🏷️ Tất cả Nhóm')" class="w-full px-3 py-2 rounded-xl hover:bg-slate-100 text-left text-xs font-bold text-slate-800 flex items-center justify-between">
                                 <span id="dirAllBtnText">🏷️ Tất cả 6 Nhóm</span>
                                 <span id="dirAllCountBadge" class="text-[10px] text-slate-400">43 kênh</span>
@@ -3227,14 +3227,21 @@ service cloud.firestore {
 
         function getGroupTheme(groupName) {
             if (!groupName) return GROUP_THEMES['Angelik'];
-            const norm = groupName.toUpperCase();
+            const norm = String(groupName).toUpperCase();
             if (norm.includes('ANGELIK')) return GROUP_THEMES['Angelik'];
             if (norm.includes('FASHION')) return GROUP_THEMES['Fashion'];
             if (norm.includes('ROYEN')) return GROUP_THEMES['Royen:One'];
             if (norm.includes('BNART')) return GROUP_THEMES['Bnart'];
             if (norm.includes('BEE')) return GROUP_THEMES['BEE'];
             if (norm.includes('ORION')) return GROUP_THEMES['Orion'];
-            return GROUP_THEMES['Angelik'];
+            if (norm.includes('MIRACLE')) return { badgeBg: 'bg-rose-100 text-rose-800 border-rose-300', cardAccent: 'border-l-4 border-l-rose-500', icon: '🪄', label: groupName };
+            if (norm.includes('ELRIS')) return { badgeBg: 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300', cardAccent: 'border-l-4 border-l-fuchsia-500', icon: '✨', label: groupName };
+            return {
+                badgeBg: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+                cardAccent: 'border-l-4 border-l-indigo-500',
+                icon: '🌟',
+                label: groupName
+            };
         }
 
         function extractCleanIdolName(acc) {
@@ -3269,6 +3276,8 @@ service cloud.firestore {
                         if (data && typeof data === 'object') {
                             groupAliases = { ...data };
                             localStorage.setItem('ps_group_aliases', JSON.stringify(groupAliases));
+                            populateAccountModalGroupOptions();
+                            populateAccountSelects();
                             renderAllUI();
                         }
                     }
@@ -3303,7 +3312,7 @@ service cloud.firestore {
             const weekMon = targetWeek || (typeof selectedWeekMonday !== 'undefined' && selectedWeekMonday !== 'ALL' ? selectedWeekMonday : currentRealtimeMonday);
 
             // 1. Kiểm tra lịch sử chuyển nhóm theo mốc thời gian tuần (Time-scoped Personnel Transfers)
-            if (acc.groupHistory && typeof acc.groupHistory === 'object') {
+            if (acc.groupHistory && typeof acc.groupHistory === 'object' && Object.keys(acc.groupHistory).length > 0) {
                 const transferWeeks = Object.keys(acc.groupHistory).sort();
                 let activeGrp = null;
                 for (const effWeek of transferWeeks) {
@@ -3314,6 +3323,10 @@ service cloud.firestore {
                 if (activeGrp) {
                     return getGroupNameForDisplay(activeGrp, weekMon);
                 }
+                // Nếu tuần đang xem (weekMon) nhỏ hơn tuần chuyển nhóm sớm nhất,
+                // thì trả về initialGroup để các tuần cũ hoàn toàn không bị ảnh hưởng!
+                const pastGrp = acc.initialGroup || acc.groupName || 'Angelik';
+                return getGroupNameForDisplay(pastGrp, weekMon);
             }
 
             // 2. Tên nhóm hiện tại
@@ -3323,6 +3336,85 @@ service cloud.firestore {
                 rawGrp = (found && found.groupName) ? found.groupName : 'Angelik';
             }
             return getGroupNameForDisplay(rawGrp, weekMon);
+        }
+
+        // Lấy danh sách toàn bộ các nhóm hiện có trong hệ thống (gốc + nhóm mới + nhóm đổi tên)
+        function getAllSystemGroupNames() {
+            const set = new Set();
+            const defaultOrder = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
+            defaultOrder.forEach(g => set.add(g));
+
+            if (Array.isArray(accounts)) {
+                accounts.forEach(a => {
+                    if (a.groupName) set.add(a.groupName);
+                    if (a.initialGroup) set.add(a.initialGroup);
+                    if (a.groupHistory && typeof a.groupHistory === 'object') {
+                        Object.values(a.groupHistory).forEach(g => { if (g) set.add(g); });
+                    }
+                    const clean = extractCleanGroupName(a);
+                    if (clean) set.add(clean);
+                });
+            }
+
+            if (groupAliases && typeof groupAliases === 'object') {
+                Object.entries(groupAliases).forEach(([origGrp, val]) => {
+                    if (origGrp) set.add(origGrp);
+                    if (typeof val === 'string' && val) set.add(val);
+                    else if (typeof val === 'object' && val) {
+                        Object.values(val).forEach(v => { if (v) set.add(v); });
+                    }
+                });
+            }
+
+            const result = [];
+            set.forEach(g => {
+                if (g && !result.some(existing => existing.toUpperCase() === g.toUpperCase())) {
+                    result.push(g);
+                }
+            });
+            return result;
+        }
+
+        // Đồng bộ danh sách nhóm vào thẻ Select của modal Quản lý tài khoản & Đổi tên nhóm
+        function populateAccountModalGroupOptions(selectedGroup = '') {
+            const accGroupEl = document.getElementById('accGroupName');
+            const renameGroupEl = document.getElementById('renameTargetGroup');
+            const allGroups = getAllSystemGroupNames();
+
+            if (accGroupEl) {
+                const curVal = selectedGroup || accGroupEl.value || 'Angelik';
+                let html = '';
+                allGroups.forEach(g => {
+                    const theme = getGroupTheme(g);
+                    html += `<option value="${g}">${theme.icon} ${g}</option>`;
+                });
+                html += `<option value="__NEW__">➕ Nhập nhóm mới...</option>`;
+                accGroupEl.innerHTML = html;
+                if (allGroups.some(g => g.toUpperCase() === curVal.toUpperCase())) {
+                    const matched = allGroups.find(g => g.toUpperCase() === curVal.toUpperCase());
+                    accGroupEl.value = matched;
+                } else if (curVal === '__NEW__') {
+                    accGroupEl.value = '__NEW__';
+                } else if (allGroups.length > 0) {
+                    accGroupEl.selectedIndex = 0;
+                }
+            }
+
+            if (renameGroupEl) {
+                const curVal = renameGroupEl.value || 'Angelik';
+                let html = '';
+                allGroups.forEach(g => {
+                    const theme = getGroupTheme(g);
+                    html += `<option value="${g}">${theme.icon} ${g}</option>`;
+                });
+                renameGroupEl.innerHTML = html;
+                if (allGroups.some(g => g.toUpperCase() === curVal.toUpperCase())) {
+                    const matched = allGroups.find(g => g.toUpperCase() === curVal.toUpperCase());
+                    renameGroupEl.value = matched;
+                } else if (allGroups.length > 0) {
+                    renameGroupEl.selectedIndex = 0;
+                }
+            }
         }
 
         // ============================================================================
@@ -4512,11 +4604,54 @@ service cloud.firestore {
             // 5. Cập nhật nhãn dropdown chọn Idol/Nhóm
             updateCustomAccountDropdownTrigger('filterAccount', 'filterAccountDropdownLabel');
 
-            // 5. Dropdown label & button nếu đang ở ALL
+            // 5. Dropdown menu & select lọc theo nhóm trên thanh công cụ
             const groupSelectEl = document.getElementById('directoryGroupSelect');
-            if (!groupSelectEl || groupSelectEl.value === 'ALL') {
-                const dropLabel = document.getElementById('dirGroupDropdownLabel');
-                if (dropLabel) dropLabel.textContent = `🏷️ Tất cả ${groupCount} Nhóm`;
+            if (groupSelectEl) {
+                const curSelVal = groupSelectEl.value || 'ALL';
+                let selectOptionsHtml = `<option value="ALL">🏷️ Tất cả ${groupCount} Nhóm</option>`;
+                uniqueGroups.forEach(g => {
+                    const theme = getGroupTheme(g);
+                    selectOptionsHtml += `<option value="${g}">${theme.icon} Nhóm ${g}</option>`;
+                });
+                groupSelectEl.innerHTML = selectOptionsHtml;
+                if (uniqueGroups.some(g => g.toUpperCase() === curSelVal.toUpperCase())) {
+                    groupSelectEl.value = curSelVal;
+                } else {
+                    groupSelectEl.value = 'ALL';
+                }
+            }
+
+            const dirMenuEl = document.getElementById('dirGroupDropdownMenu') || (document.getElementById('dirGroupCustomDropdown') ? document.getElementById('dirGroupCustomDropdown').querySelector('.modern-dropdown-menu') : null);
+            if (dirMenuEl) {
+                let menuHtml = `
+                    <button type="button" onclick="selectDirectoryGroup('ALL', '🏷️ Tất cả ${groupCount} Nhóm')" class="w-full px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center justify-between">
+                        <span id="dirAllBtnText">🏷️ Tất cả ${groupCount} Nhóm</span>
+                        <span id="dirAllCountBadge" class="text-[10px] text-slate-400">${totalAccounts} kênh</span>
+                    </button>
+                `;
+                uniqueGroups.forEach(g => {
+                    const theme = getGroupTheme(g);
+                    const grpAccounts = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === g.toUpperCase());
+                    const grpChannels = grpAccounts.filter(a => a.role === 'GROUP').length;
+                    const grpIdols = grpAccounts.filter(a => a.role !== 'GROUP').length;
+                    menuHtml += `
+                        <button type="button" onclick="selectDirectoryGroup('${g}', '${theme.icon} Nhóm ${g}')" class="w-full px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center justify-between">
+                            <span>${theme.icon} Nhóm ${g}</span>
+                            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded-md">${grpChannels} Nhóm + ${grpIdols} Idol</span>
+                        </button>
+                    `;
+                });
+                dirMenuEl.innerHTML = menuHtml;
+            }
+
+            const dropLabel = document.getElementById('dirGroupDropdownLabel');
+            if (dropLabel) {
+                if (!groupSelectEl || groupSelectEl.value === 'ALL') {
+                    dropLabel.textContent = `🏷️ Tất cả ${groupCount} Nhóm`;
+                } else {
+                    const curTheme = getGroupTheme(groupSelectEl.value);
+                    dropLabel.textContent = `${curTheme.icon} Nhóm ${groupSelectEl.value}`;
+                }
             }
 
             const dirAllCountBadge = document.getElementById('dirAllCountBadge');
@@ -6015,27 +6150,60 @@ service cloud.firestore {
             renderWeekCustomDropdown();
         }
 
+        function getWeekMonthLabel(mondayStr) {
+            if (!mondayStr || mondayStr === 'ALL') return '';
+            const found = posts.find(p => p.weekMonday === mondayStr && p.sheet);
+            if (found && found.sheet) return found.sheet;
+
+            try {
+                const parts = mondayStr.split('-').map(Number);
+                const y = parts[0], m = parts[1] - 1, d = parts[2];
+                const monthNum = m + 1;
+                const weekNum = Math.min(5, Math.floor((d - 1) / 7) + 1);
+                return `Tháng ${monthNum} - Tuần ${weekNum}`;
+            } catch (e) {
+                return '';
+            }
+        }
+
         function renderWeekCustomDropdown() {
             const labelEl = document.getElementById('weekDropdownLabel') || document.getElementById('weekCustomDropdownLabel');
             const listEl = document.getElementById('weekDropdownMenu') || document.getElementById('weekCustomDropdownList');
             if (!labelEl || !listEl) return;
 
-            const presetWeeks = [
-                { val: '2026-10-19', title: 'Tuần 19/10 - 25/10/2026', sub: 'Tháng 10 - Tuần 3 • Hiện tại', badge: '59 bài' },
-                { val: '2026-09-14', title: 'Tuần 14/09 - 20/09/2026', sub: 'Tháng 9 - Tuần 3 • Lịch sử', badge: '39 bài' },
-                { val: '2026-09-07', title: 'Tuần 07/09 - 13/09/2026', sub: 'Tháng 9 - Tuần 2 • Lịch sử', badge: '46 bài' },
-                { val: 'ALL', title: 'Xem Tất Cả Các Tuần', sub: 'Toàn bộ lịch sử hệ thống', badge: `${posts.length} bài` }
-            ];
-
-            if (selectedWeekMonday !== 'ALL' && !presetWeeks.some(w => w.val === selectedWeekMonday)) {
-                const sun = addDaysStr(selectedWeekMonday, 6);
-                presetWeeks.unshift({
-                    val: selectedWeekMonday,
-                    title: `Tuần ${formatShortDateVN(selectedWeekMonday)} - ${formatShortDateVN(sun)}/${selectedWeekMonday.slice(0, 4)}`,
-                    sub: `Thứ 2 (${formatDateVN(selectedWeekMonday)}) → CN (${formatDateVN(sun)})`,
-                    badge: `${getPostsForWeek(selectedWeekMonday).length} bài`
-                });
+            // Thu thập toàn bộ các tuần thực tế có trong hệ thống
+            const weekSet = new Set();
+            weekSet.add(currentRealtimeMonday);
+            posts.forEach(p => {
+                const w = getPostWeekMonday(p);
+                if (w && w !== 'ALL') weekSet.add(w);
+            });
+            if (selectedWeekMonday && selectedWeekMonday !== 'ALL') {
+                weekSet.add(selectedWeekMonday);
             }
+
+            const sortedWeeks = Array.from(weekSet).filter(Boolean).sort().reverse();
+
+            const presetWeeks = sortedWeeks.map(w => {
+                const sun = addDaysStr(w, 6);
+                const isCurrent = w === currentRealtimeMonday;
+                const isPast = w < currentRealtimeMonday;
+                const monthWeekStr = getWeekMonthLabel(w);
+                const subStatus = isCurrent ? 'Hiện tại' : (isPast ? 'Lịch sử' : 'Kế hoạch');
+                return {
+                    val: w,
+                    title: `Tuần ${formatShortDateVN(w)} - ${formatShortDateVN(sun)}/${w.slice(0, 4)}`,
+                    sub: `${monthWeekStr} • ${subStatus}`,
+                    badge: `${getPostsForWeek(w).length} bài`
+                };
+            });
+
+            presetWeeks.push({
+                val: 'ALL',
+                title: 'Xem Tất Cả Các Tuần',
+                sub: 'Toàn bộ lịch sử hệ thống',
+                badge: `${posts.length} bài`
+            });
 
             const currentObj = presetWeeks.find(w => w.val === selectedWeekMonday) || presetWeeks[0];
             labelEl.textContent = currentObj.title;
@@ -6093,17 +6261,15 @@ service cloud.firestore {
             }
 
             if (tagEl) {
+                const monthWeekStr = getWeekMonthLabel(selectedWeekMonday);
                 if (selectedWeekMonday === currentRealtimeMonday) {
-                    tagEl.textContent = 'Tuần Hiện Tại • Tháng 10 - Tuần 3';
+                    tagEl.textContent = `Tuần Hiện Tại • ${monthWeekStr}`;
                     tagEl.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0';
-                } else if (selectedWeekMonday === '2026-09-14') {
-                    tagEl.textContent = 'Lịch sử • Tháng 9 - Tuần 3';
-                    tagEl.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap shrink-0';
-                } else if (selectedWeekMonday === '2026-09-07') {
-                    tagEl.textContent = 'Lịch sử • Tháng 9 - Tuần 2';
+                } else if (selectedWeekMonday < currentRealtimeMonday) {
+                    tagEl.textContent = `Lịch sử • ${monthWeekStr}`;
                     tagEl.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap shrink-0';
                 } else {
-                    tagEl.textContent = `Tuần ${formatShortDateVN(selectedWeekMonday)} - ${formatShortDateVN(sunStr)}`;
+                    tagEl.textContent = `Kế hoạch • ${monthWeekStr || `Tuần ${formatShortDateVN(selectedWeekMonday)}`}`;
                     tagEl.className = 'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap shrink-0';
                 }
             }
@@ -9317,7 +9483,10 @@ service cloud.firestore {
 
             document.getElementById('renameNewName').value = '';
             updateGroupRenameHint();
+            populateAccountModalGroupOptions();
+            populateAccountSelects();
             renderAllUI();
+            renderModalAccountsList();
         }
 
         function openAccountModal(editingAccId = null, defaultGroupName = '', defaultRole = 'IDOL') {
@@ -9326,6 +9495,7 @@ service cloud.firestore {
             modal.classList.remove('hidden');
             lockBodyScroll();
             populateEffectiveWeeks();
+            populateAccountModalGroupOptions(defaultGroupName);
 
             if (editingAccId) {
                 editAccountInModal(editingAccId);
@@ -9424,14 +9594,19 @@ service cloud.firestore {
 
             if (effectiveWeek !== 'ALL') {
                 accData.groupHistory[effectiveWeek] = groupName;
+                accData.groupName = groupName;
             } else {
                 accData.groupName = groupName;
+                accData.initialGroup = groupName;
+                accData.groupHistory = {};
             }
 
             const idx = accounts.findIndex(a => a.id === accId);
             if (idx >= 0) accounts[idx] = accData;
             else accounts.push(accData);
 
+            populateAccountModalGroupOptions(groupName);
+            populateAccountSelects();
             renderAllUI();
             renderModalAccountsList();
             resetAccountForm();
@@ -9452,19 +9627,10 @@ service cloud.firestore {
             const acc = getAccountById(accId);
             if (!acc) return;
 
-            const grpName = extractCleanGroupName(acc);
+            const grpName = extractCleanGroupName(acc) || acc.groupName || 'Angelik';
+            populateAccountModalGroupOptions(grpName);
             const accGroupEl = document.getElementById('accGroupName');
             if (accGroupEl) {
-                let foundOpt = false;
-                for (let i = 0; i < accGroupEl.options.length; i++) {
-                    if (accGroupEl.options[i].value === grpName) { foundOpt = true; break; }
-                }
-                if (!foundOpt && grpName && grpName !== '__NEW__') {
-                    const newOpt = document.createElement('option');
-                    newOpt.value = grpName;
-                    newOpt.textContent = '🌟 ' + grpName;
-                    accGroupEl.insertBefore(newOpt, accGroupEl.lastElementChild);
-                }
                 accGroupEl.value = grpName;
             }
             const customWrap = document.getElementById('accCustomGroupWrapper');
@@ -9566,6 +9732,7 @@ service cloud.firestore {
         function resetAccountForm() {
             document.getElementById('editAccountId').value = '';
             document.getElementById('accRole').value = 'IDOL';
+            populateAccountModalGroupOptions();
             const grpEl = document.getElementById('accGroupName');
             if (grpEl && grpEl.options.length > 0) grpEl.selectedIndex = 0;
             const customWrap = document.getElementById('accCustomGroupWrapper');
@@ -12408,7 +12575,7 @@ service cloud.firestore {
             lockBodyScroll, unlockBodyScroll,
             checkAdminAuthRequirement, showPinLockOverlay, hidePinLockOverlay, lockAdminSessionManually,
             handlePinKeyPress, handlePinBackspace, handlePinClear, updatePinDotsUI, verifyPinCode,
-            getUniqueGroupNames, updateDynamicTitlesAndCounts, copyTextRobustly,
+            getUniqueGroupNames, getAllSystemGroupNames, populateAccountModalGroupOptions, getWeekMonthLabel, updateDynamicTitlesAndCounts, copyTextRobustly,
             openKeyboardShortcutsModal, closeKeyboardShortcutsModal, handleGlobalKeydown,
             toggleGroupCardExpand, toggleAllGroupCards,
             getKpiTargetsForWeek, getAccountTargetKpi, applyCustomKpiTargets, syncKpiInputsUI, isWeekOverdueOrExpired,
@@ -12434,6 +12601,7 @@ service cloud.firestore {
             posts = uniquePosts;
             syncWeekDropdownUI();
             initGroupFromUrlQuery();
+            populateAccountModalGroupOptions();
             renderAllUI();
             initFirebaseAndSync();
             setInterval(updateRealtimeDeadlineCounter, 60000);
