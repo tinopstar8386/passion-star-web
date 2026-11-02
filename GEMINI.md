@@ -13,3 +13,7 @@ Mỗi khi tạo mới, chỉnh sửa, gỡ lỗi (debug) hoặc tối ưu code t
 - Mọi tương tác nhập liệu hoặc xác nhận phải sử dụng Modal UI Glassmorphism riêng biệt của hệ thống; thông báo ngắn sử dụng `showToast()`.
 
 Chi tiết hướng dẫn kỹ thuật: Xem thêm tại [AGENTS.md](AGENTS.md).
+
+## 🧭 ĐIỀU HƯỚNG MÃ NGUỒN VỚI CODEGRAPH
+- Dự án đã tích hợp CodeGraph kiến trúc AST & SQLite Knowledge Graph.
+- Ưu tiên sử dụng `codegraph explore`, `codegraph node`, `codegraph callers` và `codegraph affected` trước khi đọc dàn trải các file HTML/JS để tối ưu token và kiểm soát tác động thay đổi code.

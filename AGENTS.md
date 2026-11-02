@@ -40,3 +40,26 @@ Whenever you modify, add, fix, refactor, or delete code in this repository:
    - Tuyệt đối không bao giờ gọi các hàm popup mặc định của trình duyệt (`window.alert`, `window.prompt`, `window.confirm`). Nhìn rất thô sơ, làm gián đoạn trải nghiệm người dùng và không phù hợp với tiêu chuẩn thẩm mỹ cao cấp của Passion Star.
    - Thông báo ngắn: Luôn dùng hệ thống Toast (`showToast`).
    - Yêu cầu nhập liệu (input) hoặc xác nhận (confirm): Luôn dùng Custom Modal Glassmorphism được thiết kế riêng với các nút bấm bo góc, hiệu ứng mượt mà và hỗ trợ cả mobile/desktop touch.
+
+---
+
+<!-- CODEGRAPH_START -->
+## 🧭 CODEGRAPH INTELLIGENCE & NAVIGATION
+
+Dự án hỗ trợ và tích hợp **CodeGraph** (Local-first AST & SQLite Knowledge Graph) nhằm tối ưu hoá token context và tăng tốc độ hiểu quan hệ mã nguồn:
+
+1. **Trước khi duyệt file dàn trải hoặc chạy grep:**
+   - Tận dụng CodeGraph để tra cứu cấu trúc, hàm gọi và quan hệ symbols:
+     - Truy vấn kiến trúc/quan hệ: `codegraph explore "<câu hỏi hoặc symbol>"`
+     - Xem chi tiết node (định nghĩa, dòng code, hàm gọi đi): `codegraph node <symbol-hoặc-file>`
+     - Truy vết hàm gọi đến (Upstream Callers): `codegraph callers <symbol>`
+
+2. **Phân tích ảnh hưởng trước khi Refactor (Blast-Radius):**
+   - Trước khi sửa hàm hoặc cấu trúc dữ liệu dùng chung (vd: Firestore helpers, Toast, Modal, formatters):
+     - Chạy: `codegraph affected` hoặc kết hợp với git: `git diff --name-only | codegraph affected --stdin`
+     - Nhận diện toàn bộ các file view (`.html`), script (`.mjs`, `.js`) bị ảnh hưởng để cập nhật đồng bộ.
+
+3. **Bảo trì chỉ mục:**
+   - Đồng bộ thay đổi mới: `codegraph sync`
+   - Khởi tạo index ban đầu: `codegraph init`
+<!-- CODEGRAPH_END -->
