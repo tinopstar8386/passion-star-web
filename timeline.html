@@ -2065,13 +2065,47 @@
             const tClean = String(teamName).toLowerCase().replace(/[\s:_ -]/g, '');
             
             const aliasSet = new Set([tClean]);
-            if (tClean === 'elris' || tClean === 'bee') {
+            if (tClean === 'elris' || tClean === 'bee' || tClean.includes('elris') || tClean.includes('bee')) {
                 aliasSet.add('elris');
                 aliasSet.add('bee');
+                aliasSet.add('teamdinobee');
             }
-            if (tClean === 'bnart' || tClean === 'vnart') {
+            if (tClean === 'bnart' || tClean === 'vnart' || tClean.includes('bnart') || tClean.includes('vnart')) {
                 aliasSet.add('bnart');
                 aliasSet.add('vnart');
+                aliasSet.add('teamdinovnart');
+            }
+            if (tClean === 'royenone' || tClean === 'royen' || tClean.includes('royen')) {
+                aliasSet.add('royenone');
+                aliasSet.add('royen');
+                aliasSet.add('teamuroyenone');
+            }
+            if (tClean === 'orion' || tClean.includes('orion')) {
+                aliasSet.add('orion');
+                aliasSet.add('teamkenorion');
+            }
+            if (tClean === 'angelik' || tClean.includes('angelik')) {
+                aliasSet.add('angelik');
+                aliasSet.add('teamkenangelik');
+            }
+            if (tClean === 'fashion' || tClean.includes('fashion')) {
+                aliasSet.add('fashion');
+                aliasSet.add('teamufashion');
+            }
+            if (tClean === 'miracle' || tClean.includes('miracle')) {
+                aliasSet.add('miracle');
+                aliasSet.add('teamdinomiracle');
+            }
+
+            // Mở rộng alias từ danh sách nhân sự globalOffEmployees
+            if (Array.isArray(window.globalOffEmployees)) {
+                for (const emp of window.globalOffEmployees) {
+                    const eName = String(emp.name || '').toLowerCase().replace(/[\s:_ -]/g, '');
+                    const eBadge = String(emp.customBadge || '').toLowerCase().replace(/[\s:_ -]/g, '');
+                    if (aliasSet.has(eName) || aliasSet.has(eBadge)) {
+                        if (emp.group) aliasSet.add(String(emp.group).toLowerCase().replace(/[\s:_ -]/g, ''));
+                    }
+                }
             }
 
             return leaves.some(l => {
@@ -2105,20 +2139,22 @@
                 team.isTraffic = !!isTraffic;
                 
                 if (team.isTraffic) {
-                    activeStatus[index] = team.isActiveOriginal !== undefined ? team.isActiveOriginal : true;
+                    // Nhóm lưu lượng (Orion, Royen:One, Bee nếu đặt lưu lượng): xoay ca không nghỉ trên timeline
+                    activeStatus[index] = true;
                 } else {
                     const isOff = isTeamOffOnDate(team.name, targetDateStr, offLeaves);
                     if (isOff) {
                         activeStatus[index] = false;
                     } else if (offLeaves.length > 0) {
-                        activeStatus[index] = team.isActiveOriginal !== undefined ? team.isActiveOriginal : true;
+                        // Ngày không có lịch nghỉ -> bật hoạt động cho idol/nhóm
+                        activeStatus[index] = true;
                     } else {
                         if (mode === 'today' && team.isOffToday) {
                             activeStatus[index] = false;
                         } else if (mode === 'tomorrow' && team.isOffTomorrow) {
                             activeStatus[index] = false;
                         } else {
-                            activeStatus[index] = team.isActiveOriginal !== undefined ? team.isActiveOriginal : true;
+                            activeStatus[index] = true;
                         }
                     }
                 }
@@ -3184,10 +3220,59 @@
                         const isTrafficGroup = (nameOrId) => {
                             if (!nameOrId) return false;
                             const clean = String(nameOrId).toUpperCase().replace(/[\s:_ -]/g, '');
-                            return (window.trafficGroups || trafficGroups).some(item => {
+                            const cleanAliases = new Set([clean]);
+                            if (clean === 'ELRIS' || clean === 'BEE' || clean.includes('ELRIS') || clean.includes('BEE')) {
+                                cleanAliases.add('ELRIS');
+                                cleanAliases.add('BEE');
+                                cleanAliases.add('TEAMDINOBEE');
+                            }
+                            if (clean === 'BNART' || clean === 'VNART' || clean.includes('BNART') || clean.includes('VNART')) {
+                                cleanAliases.add('BNART');
+                                cleanAliases.add('VNART');
+                                cleanAliases.add('TEAMDINOVNART');
+                            }
+                            if (clean === 'ROYENONE' || clean === 'ROYEN' || clean.includes('ROYEN')) {
+                                cleanAliases.add('ROYENONE');
+                                cleanAliases.add('ROYEN');
+                                cleanAliases.add('TEAMUROYENONE');
+                            }
+                            if (clean === 'ORION' || clean.includes('ORION')) {
+                                cleanAliases.add('ORION');
+                                cleanAliases.add('TEAMKENORION');
+                            }
+                            if (clean === 'ANGELIK' || clean.includes('ANGELIK')) {
+                                cleanAliases.add('ANGELIK');
+                                cleanAliases.add('TEAMKENANGELIK');
+                            }
+                            if (clean === 'FASHION' || clean.includes('FASHION')) {
+                                cleanAliases.add('FASHION');
+                                cleanAliases.add('TEAMUFASHION');
+                            }
+                            if (clean === 'MIRACLE' || clean.includes('MIRACLE')) {
+                                cleanAliases.add('MIRACLE');
+                                cleanAliases.add('TEAMDINOMIRACLE');
+                            }
+
+                            if (Array.isArray(window.globalOffEmployees)) {
+                                for (const emp of window.globalOffEmployees) {
+                                    const eName = String(emp.name || '').toUpperCase().replace(/[\s:_ -]/g, '');
+                                    const eBadge = String(emp.customBadge || '').toUpperCase().replace(/[\s:_ -]/g, '');
+                                    if (cleanAliases.has(eName) || cleanAliases.has(eBadge)) {
+                                        if (emp.group) cleanAliases.add(String(emp.group).toUpperCase().replace(/[\s:_ -]/g, ''));
+                                    }
+                                }
+                            }
+
+                            const tList = window.trafficGroups || trafficGroups || [];
+                            for (const item of tList) {
                                 const itClean = String(item).toUpperCase().replace(/[\s:_ -]/g, '');
-                                return clean === itClean || clean.includes(itClean) || itClean.includes(clean);
-                            });
+                                for (const al of cleanAliases) {
+                                    if (al === itClean || (al.length >= 3 && itClean.length >= 3 && (al.includes(itClean) || itClean.includes(al)))) {
+                                        return true;
+                                    }
+                                }
+                            }
+                            return false;
                         };
                         window.isTrafficGroup = isTrafficGroup;
 
@@ -3232,7 +3317,7 @@
                                 liveDelay: currentLiveDelay,
                                 room: room,
                                 calcMode: calcMode,
-                                isActiveOriginal: (localTeam && localTeam.isActiveOriginal !== undefined) ? localTeam.isActiveOriginal : (existing?.isActiveOriginal !== undefined ? existing.isActiveOriginal : (t.isActiveOriginal !== undefined ? t.isActiveOriginal : (t.isActive !== undefined ? t.isActive : true))),
+                                isActiveOriginal: true,
                                 isTraffic: isTraffic,
                                 isOffToday: isOffToday,
                                 isOffTomorrow: isOffTomorrow
@@ -3243,7 +3328,7 @@
                         updateDailyDateDisplay(); 
                         showToast("Đã đồng bộ dữ liệu thành công!", "success", 2000);
 
-                        // Realtime sync từ Firebase collection off_leaves
+                        // Realtime sync từ Firebase collection off_leaves, off_groups, và system_config
                         try {
                             if (window.fs && window.fs.onSnapshot) {
                                 window.fs.onSnapshot(window.fs.collection(window.db, "off_leaves"), (snap) => {
@@ -3251,14 +3336,40 @@
                                     snap.forEach(d => realtimeLeaves.push({ docId: d.id, ...d.data() }));
                                     window.globalOffLeaves = realtimeLeaves;
                                     teams.forEach(t => {
-                                        t.isOffToday = !isTrafficGroup(t.name) && isTeamOffOnDate(t.name, todayStr, realtimeLeaves);
-                                        t.isOffTomorrow = !isTrafficGroup(t.name) && isTeamOffOnDate(t.name, tomorrowStr, realtimeLeaves);
+                                        t.isTraffic = window.isTrafficGroup ? window.isTrafficGroup(t.name) : t.isTraffic;
+                                        t.isOffToday = !t.isTraffic && isTeamOffOnDate(t.name, todayStr, realtimeLeaves);
+                                        t.isOffTomorrow = !t.isTraffic && isTeamOffOnDate(t.name, tomorrowStr, realtimeLeaves);
+                                    });
+                                    updateDailyDateDisplay();
+                                });
+
+                                // Realtime listener khi quản lý đổi trạng thái Nhóm Lưu Lượng trên off.html
+                                window.fs.onSnapshot(window.fs.doc(window.db, "system_config", "general"), (docSnap) => {
+                                    if (docSnap.exists() && docSnap.data()?.trafficGroups) {
+                                        window.trafficGroups = docSnap.data().trafficGroups;
+                                        teams.forEach(t => {
+                                            t.isTraffic = window.isTrafficGroup ? window.isTrafficGroup(t.name) : t.isTraffic;
+                                        });
+                                        updateDailyDateDisplay();
+                                    }
+                                });
+
+                                window.fs.onSnapshot(window.fs.collection(window.db, "off_groups"), (snap) => {
+                                    snap.forEach(d => {
+                                        const gData = d.data();
+                                        if (gData && gData.isTraffic) {
+                                            if (gData.name && !window.trafficGroups.includes(gData.name)) window.trafficGroups.push(gData.name);
+                                            if (!window.trafficGroups.includes(d.id)) window.trafficGroups.push(d.id);
+                                        }
+                                    });
+                                    teams.forEach(t => {
+                                        t.isTraffic = window.isTrafficGroup ? window.isTrafficGroup(t.name) : t.isTraffic;
                                     });
                                     updateDailyDateDisplay();
                                 });
                             }
                         } catch (listenerErr) {
-                            console.warn("Không thể kích hoạt realtime listener off_leaves:", listenerErr);
+                            console.warn("Không thể kích hoạt realtime listeners:", listenerErr);
                         }
 
                     } catch (error) {
