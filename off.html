@@ -5386,6 +5386,15 @@
             if (!str) return 'item_' + Date.now();
             return String(str).trim().replace(/[\\/\s#?\[\]\*]+/g, '_').substring(0, 80);
         };
+        const deleteLeaveBatch = (b, empName, dateStr) => {
+            if (!b || !empName || !dateStr) return;
+            const safeRef = fs.doc(db, 'off_leaves', safeID(empName) + '_' + dateStr);
+            const rawRef = fs.doc(db, 'off_leaves', String(empName).trim() + '_' + dateStr);
+            b.delete(safeRef);
+            if (safeRef.id !== rawRef.id) {
+                b.delete(rawRef);
+            }
+        };
 
         // AUTH GUARD: Chặn thao tác ghi/sửa/xóa nếu chưa xác thực PIN Quản trị
         const PUBLIC_ACTIONS = ['getInitialData', 'getLeaveData'];
@@ -5690,7 +5699,7 @@
                         badgeChanges[d.name] = d.badgeName;
                         batch.set(fs.doc(db, "off_employees", safeID(d.name)), { customBadge: d.badgeName }, { merge: true });
                     } else if(d.action === 'XÓA') {
-                        batch.delete(fs.doc(db, "off_leaves", safeID(d.name) + "_" + d.date));
+                        deleteLeaveBatch(batch, d.name, d.date);
                     } else if(d.action === 'THÊM') {
                         batch.set(fs.doc(db, "off_leaves", safeID(d.name) + "_" + d.date), { name: d.name, role: d.role, date: d.date, status: "Approved", offType: d.offType || 'FULL' });
                     }
@@ -5733,7 +5742,7 @@
 
                     // 1. Xóa đơn đổi lịch tại ngày mới (toDate)
                     if (toDate) {
-                        batch.delete(fs.doc(db, "off_leaves", safeName + "_" + toDate));
+                        deleteLeaveBatch(batch, name, toDate);
                     }
 
                     // 2. Bảo lưu / khôi phục ngày nghỉ gốc tại fromDate thành Approved
@@ -5802,7 +5811,7 @@
 
                     // 2. Nếu là đơn đổi ngày, xóa ngày nghỉ cũ tại fromDate
                     if (fromDate) {
-                        batch.delete(fs.doc(db, "off_leaves", safeName + "_" + fromDate));
+                        deleteLeaveBatch(batch, name, fromDate);
                     }
 
                     await batch.commit();
@@ -5817,7 +5826,7 @@
                 const oldRef = fs.doc(db, "off_leaves", safeID(name) + "_" + oldDateStr); const oldSnap = await fs.getDoc(oldRef); const oldData = oldSnap.exists() ? oldSnap.data() : {};
                 const newRef = fs.doc(db, "off_leaves", safeID(name) + "_" + newDateStr);
                 const batch = fs.writeBatch(db);
-                batch.delete(oldRef);
+                deleteLeaveBatch(batch, name, oldDateStr);
                 batch.set(newRef, { name: name, date: newDateStr, status: "Approved", offType: oldData.offType || 'FULL', role: oldData.role || '' }, { merge: true });
                 await batch.commit(); return "SUCCESS";
             }
@@ -5830,8 +5839,7 @@
                     if (data.status === "Pending") { 
                         batch.set(d.ref, { status: "Approved", swapFrom: "" }, { merge: true }); 
                         if (data.swapFrom) {
-                            const oldRef = fs.doc(db, "off_leaves", safeID(data.name) + "_" + data.swapFrom);
-                            batch.delete(oldRef);
+                            deleteLeaveBatch(batch, data.name, data.swapFrom);
                         }
                     }
                 });
