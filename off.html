@@ -5049,7 +5049,7 @@
         showToast(`⚡ Đã gán ${normalizeGroupName(groupKey)} thành Nhóm Lưu Lượng (Không off trên Timeline)!`);
       }
 
-      callAPI('saveTrafficGroups', { trafficGroups: trafficGroupsData })
+      callAPI('saveTrafficGroups', { trafficGroups: trafficGroupsData, groupKey: groupKey, isTraffic: !isTr })
         .catch(err => console.error("Lỗi lưu trafficGroups:", err));
 
       renderTable();
@@ -5417,6 +5417,25 @@
                 
                 const leaveSnap = await fs.getDocs(fs.collection(db, "off_leaves"));
                 leaveSnap.forEach(d => leaves.push(d.data()));
+
+                try {
+                    const groupSnap = await fs.getDocs(fs.collection(db, "off_groups"));
+                    groupSnap.forEach(d => {
+                        const gData = d.data();
+                        if (gData && gData.key) {
+                            if (!customGroups.some(cg => cg.key === gData.key)) {
+                                customGroups.push(gData);
+                            }
+                            if (gData.isTraffic) {
+                                const kUp = String(gData.key).toUpperCase().trim();
+                                const nUp = String(gData.name || '').toUpperCase().trim();
+                                if (!trafficGroups.some(tg => String(tg).toUpperCase().trim() === kUp || String(tg).toUpperCase().trim() === nUp)) {
+                                    trafficGroups.push(gData.key);
+                                }
+                            }
+                        }
+                    });
+                } catch(e) { console.warn("off_groups load error:", e); }
                 
                 const configSnap = await fs.getDocs(fs.collection(db, "system_config"));
                 configSnap.forEach(d => {
@@ -5445,7 +5464,9 @@
 
                 const isEmpInOldGroup = (e) => {
                     const g = String(e.group || '').toUpperCase().trim();
-                    return g === normOldG || (normOldSub && g.includes(normOldSub));
+                    const b = String(e.customBadge || '').toUpperCase().trim();
+                    const n = String(e.name || '').toUpperCase().trim();
+                    return g === normOldG || (normOldSub && (g.includes(normOldSub) || b === normOldSub || b === normOldBadge || n === normOldSub));
                 };
 
                 const updateEmpInList = (list) => {
@@ -5484,8 +5505,8 @@
                     await monthBatch.commit();
                 }
 
-                // 2. Update master employee list (off_employees)
-                if (scope === 'FUTURE' || scope === 'ALL') {
+                // 2. Update master employee list (off_employees) - Always update so Firebase Console is never out of sync!
+                try {
                     const empSnap = await fs.getDocs(fs.collection(db, "off_employees"));
                     const empBatch = fs.writeBatch(db);
                     let empBatchCount = 0;
@@ -5503,7 +5524,31 @@
                     if (empBatchCount > 0) {
                         await empBatch.commit();
                     }
-                }
+                } catch(e) { console.warn("off_employees rename error:", e); }
+
+                // 2b. Update off_groups collection in Firestore so group edits are visible and persisted in Firebase!
+                try {
+                    const groupSnap = await fs.getDocs(fs.collection(db, "off_groups"));
+                    const grpBatch = fs.writeBatch(db);
+                    let grpBatchCount = 0;
+                    groupSnap.forEach(d => {
+                        const gData = d.data();
+                        const kUp = String(gData.key || '').toUpperCase().trim();
+                        const nUp = String(gData.name || '').toUpperCase().trim();
+                        if (kUp === normOldG || nUp === normOldSub || d.id === safeID(normOldG) || d.id.includes(normOldSub)) {
+                            grpBatch.set(d.ref, {
+                                key: normNewG,
+                                name: normNewSub,
+                                badge: normNewBadge,
+                                updatedAt: new Date().toISOString()
+                            }, { merge: true });
+                            grpBatchCount++;
+                        }
+                    });
+                    if (grpBatchCount > 0) {
+                        await grpBatch.commit();
+                    }
+                } catch(e) { console.warn("off_groups update error:", e); }
 
                 // 3. Update system_config/general (badges & trafficGroups & customGroups)
                 const configRef = fs.doc(db, "system_config", "general");
@@ -5540,21 +5585,20 @@
                         }
                     }
 
-                    if (conf.customGroups && Array.isArray(conf.customGroups)) {
-                        let curCust = [...conf.customGroups];
-                        let custChanged = false;
-                        curCust = curCust.map(cg => {
-                            if (String(cg.key).toUpperCase().trim() === normOldG || String(cg.name).toUpperCase().trim() === normOldSub) {
-                                custChanged = true;
-                                return { ...cg, key: normNewG, name: normNewSub };
-                            }
-                            return cg;
-                        });
-                        if (custChanged) {
-                            cfgUpdates.customGroups = curCust;
-                            hasCfgUpdate = true;
+                    let curCust = Array.isArray(conf.customGroups) ? [...conf.customGroups] : [];
+                    let foundCust = false;
+                    curCust = curCust.map(cg => {
+                        if (String(cg.key).toUpperCase().trim() === normOldG || String(cg.name).toUpperCase().trim() === normOldSub) {
+                            foundCust = true;
+                            return { ...cg, key: normNewG, name: normNewSub, badge: normNewBadge };
                         }
+                        return cg;
+                    });
+                    if (!foundCust) {
+                        curCust.push({ key: normNewG, name: normNewSub, badge: normNewBadge });
                     }
+                    cfgUpdates.customGroups = curCust;
+                    hasCfgUpdate = true;
 
                     if (hasCfgUpdate) {
                         await fs.setDoc(configRef, cfgUpdates, { merge: true });
@@ -5593,11 +5637,45 @@
                 }
 
                 await fs.setDoc(configRef, cfgUpdates, { merge: true });
+
+                try {
+                    const docId = safeID(groupKey);
+                    await fs.setDoc(fs.doc(db, "off_groups", docId), {
+                        key: groupKey,
+                        name: groupName,
+                        dept: deptKey,
+                        teacher: teacher || '',
+                        teacherLabel: teacher ? 'TEAM ' + teacher : (deptKey || 'LIVESTREAM'),
+                        isTraffic: !!isTraffic,
+                        badge: groupName.toUpperCase().trim(),
+                        sortOrder: teacher === 'KEN' ? 150 : (teacher === 'U' ? 250 : 350),
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                } catch(e) { console.warn("off_groups addNewGroup error:", e); }
+
                 return "SUCCESS";
             }
 
             if (action === 'saveTrafficGroups') {
                 await fs.setDoc(fs.doc(db, "system_config", "general"), { trafficGroups: payload.trafficGroups }, { merge: true });
+                if (payload.groupKey) {
+                    try {
+                        const grpSnap = await fs.getDocs(fs.collection(db, "off_groups"));
+                        const grpBatch = fs.writeBatch(db);
+                        let grpBatchCount = 0;
+                        const targetKey = String(payload.groupKey).toUpperCase().trim();
+                        grpSnap.forEach(d => {
+                            const gData = d.data();
+                            const kUp = String(gData.key || '').toUpperCase().trim();
+                            const nUp = String(gData.name || '').toUpperCase().trim();
+                            if (kUp === targetKey || targetKey.includes(nUp) || nUp === targetKey) {
+                                grpBatch.set(d.ref, { isTraffic: !!payload.isTraffic, updatedAt: new Date().toISOString() }, { merge: true });
+                                grpBatchCount++;
+                            }
+                        });
+                        if (grpBatchCount > 0) await grpBatch.commit();
+                    } catch(e) { console.warn("off_groups traffic update error:", e); }
+                }
                 return "SUCCESS";
             }
 
@@ -5827,6 +5905,16 @@
                     await batch.commit();
                 }
 
+                // Always sync to master off_employees collection so Firebase Console reflects changes!
+                try {
+                    await fs.setDoc(fs.doc(db, "off_employees", safeName), { 
+                        name, 
+                        group, 
+                        role, 
+                        customBadge: '' 
+                    }, { merge: true });
+                } catch(e) { console.warn("off_employees master add sync:", e); }
+
                 return "SUCCESS";
             }
 
@@ -5900,6 +5988,19 @@
                         await leaveBatch.commit();
                     }
                 }
+
+                // Always sync to master off_employees collection so Firebase Console reflects changes!
+                try {
+                    await fs.setDoc(fs.doc(db, "off_employees", safeNew), { 
+                        name: newName, 
+                        group, 
+                        role, 
+                        ...(customBadge !== undefined ? { customBadge } : {}) 
+                    }, { merge: true });
+                    if (safeOld !== safeNew) {
+                        await fs.deleteDoc(fs.doc(db, "off_employees", safeOld));
+                    }
+                } catch(e) { console.warn("off_employees master sync:", e); }
 
                 return "SUCCESS";
             }
@@ -8023,9 +8124,52 @@
         });
 
         if (res === 'SUCCESS') {
+          // 1. Update monthEmployeesData in memory across affected months
+          if (monthEmployeesData) {
+            Object.keys(monthEmployeesData).forEach(mStr => {
+              if (scope === 'ALL' || (scope === 'CURRENT' && mStr === monthPrefix) || (scope === 'FUTURE' && mStr >= monthPrefix)) {
+                monthEmployeesData[mStr] = (monthEmployeesData[mStr] || []).map(e => {
+                  const m = parseGroupMeta(e.group, e.role || 'LIVESTREAM', e.name, e.customBadge);
+                  if (e.group === oldGroupKey || m.groupKey === oldGroupKey || m.cleanSub.toUpperCase() === oldSubName.toUpperCase() || String(e.customBadge || '').toUpperCase() === oldBadgeKey) {
+                    return {
+                      ...e,
+                      group: newGroupKey,
+                      customBadge: (updateBadge && (String(e.customBadge || '').toUpperCase() === oldBadgeKey || !e.customBadge)) ? newBadgeKey : e.customBadge
+                    };
+                  }
+                  return e;
+                });
+              }
+            });
+          }
+
+          // 2. Update baseEmployeesData in memory
+          if (baseEmployeesData) {
+            baseEmployeesData = (baseEmployeesData || []).map(e => {
+              const m = parseGroupMeta(e.group, e.role || 'LIVESTREAM', e.name, e.customBadge);
+              if (e.group === oldGroupKey || m.groupKey === oldGroupKey || m.cleanSub.toUpperCase() === oldSubName.toUpperCase() || String(e.customBadge || '').toUpperCase() === oldBadgeKey) {
+                return {
+                  ...e,
+                  group: newGroupKey,
+                  customBadge: (updateBadge && (String(e.customBadge || '').toUpperCase() === oldBadgeKey || !e.customBadge)) ? newBadgeKey : e.customBadge
+                };
+              }
+              return e;
+            });
+          }
+
+          // 3. Update customGroupsData in memory
+          if (!customGroupsData) customGroupsData = [];
+          const existingCgIdx = customGroupsData.findIndex(cg => String(cg.key).toUpperCase() === oldGroupKey.toUpperCase() || String(cg.name).toUpperCase() === oldSubName.toUpperCase());
+          if (existingCgIdx > -1) {
+            customGroupsData[existingCgIdx] = { ...customGroupsData[existingCgIdx], key: newGroupKey, name: newSubName };
+          } else {
+            customGroupsData.push({ key: newGroupKey, name: newSubName, teacher: oldMeta.teacher, dept: 'LIVESTREAM' });
+          }
+
           (employeesData || []).forEach(e => {
             const m = parseGroupMeta(e.group, e.role || 'LIVESTREAM', e.name, e.customBadge);
-            if (e.group === oldGroupKey || m.groupKey === oldGroupKey || m.cleanSub.toUpperCase() === oldSubName.toUpperCase()) {
+            if (e.group === oldGroupKey || m.groupKey === oldGroupKey || m.cleanSub.toUpperCase() === oldSubName.toUpperCase() || String(e.customBadge || '').toUpperCase() === oldBadgeKey) {
               e.group = newGroupKey;
               if (updateBadge && (String(e.customBadge || '').toUpperCase() === oldBadgeKey || !e.customBadge)) {
                 e.customBadge = newBadgeKey;
@@ -8572,12 +8716,12 @@
                        ${isLivestreamDept ? `
                         <button type="button" class="btn-group-traffic-toggle ${isTrafficActive ? 'is-traffic' : ''}" onclick="toggleGroupTraffic('${group}')" title="${isTrafficActive ? 'Nhóm Lưu Lượng (Luân phiên không nghỉ timeline). Bấm để chuyển thành Nhóm Thường' : 'Bấm để gán thành Nhóm Lưu Lượng (Nghỉ luân phiên, nhóm không bao giờ off trên timeline)'}">
                           ${isTrafficActive ? '⚡ Lưu Lượng' : '⚪ Đặt Lưu Lượng'}
-                         </button>
-                       ` : ''}
+                        </button>
+                      ` : ''}
+                      <button type="button" class="btn-group-rename" onclick="openRenameGroupModal('${group}', '${deptKey}')" title="Đổi tên nhóm này">
                         ✏️ Đổi tên
-                        ✏️ Đổi tên
-                       </button>
-                     </div>
+                      </button>
+                    </div>
                    </div>
                  </td>
                </tr>
@@ -9702,15 +9846,20 @@ function initMobileCalSwipeGesture() {
       let customTeacherVal = '';
       let extractedGroupName = '';
 
-      if (gUp.includes('DINO')) {
-        matchedTeacher = 'TEAM DINO';
-      } else if (gUp.includes('KEN')) {
+      if (gUp.includes('KEN') || gUp.includes('ORION') || gUp.includes('ANGELIK')) {
         matchedTeacher = 'TEAM KEN';
-      } else if (gUp.includes('U')) {
+      } else if (gUp.includes('TEAM U') || gUp.includes(' U ') || gUp === 'U' || gUp.includes('ROYEN') || gUp.includes('FASHION')) {
         matchedTeacher = 'TEAM U';
+      } else if (gUp.includes('DINO') || gUp.includes('BEE') || gUp.includes('ELRIS') || gUp.includes('MIRACLE') || gUp.includes('BNART') || gUp.includes('VNART')) {
+        matchedTeacher = 'TEAM DINO';
       } else if (gUp.startsWith('TEAM ')) {
         matchedTeacher = 'CUSTOM';
         customTeacherVal = gUp.split('-')[0].trim();
+      } else {
+        const found = (customGroupsData || []).find(cg => String(cg.key).toUpperCase().includes(gUp) || String(cg.name).toUpperCase() === gUp);
+        if (found && found.teacher) {
+          matchedTeacher = 'TEAM ' + found.teacher.toUpperCase();
+        }
       }
 
       if (preselectGroup && preselectGroup.includes('-')) {
