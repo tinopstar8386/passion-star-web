@@ -1325,6 +1325,11 @@
       border-color: #cbd5e1;
       color: #475569;
     }
+    .quick-leave-mode-box.mode-special {
+      background: #faf5ff;
+      border-color: #d8b4fe;
+      color: #9333ea;
+    }
     .qlm-arrow {
       font-size: 0.65rem;
       color: #94a3b8;
@@ -3208,6 +3213,44 @@
     }
 
     /* CHỮ OFF THEO ĐÚNG HÌNH MẪU CỦA USER: MỀM MẠI, GỌN GÀNG, ĐỎ TƯƠI SANG TRỌNG */
+        /* OFF ĐẶC BIỆT: CHỮ ĐỎ VIỀN TÍM NỀN TRẮNG THEO YÊU CẦU */
+    .day-cell .badge-off-special, .badge-off-special {
+      background-color: #ffffff !important;
+      color: #ef4444 !important;
+      border: 2px solid #8b5cf6 !important;
+      font-weight: 900 !important;
+      font-size: 0.72rem !important;
+      letter-spacing: 0.5px !important;
+      width: 36px !important;
+      height: 22px !important;
+      border-radius: 6px !important;
+      box-shadow: 0 0 8px rgba(139, 92, 246, 0.4), inset 0 0 2px rgba(239, 68, 68, 0.2) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      line-height: 1 !important;
+      margin: 0 auto !important;
+      cursor: grab !important;
+      user-select: none !important;
+      transition: all 0.15s ease !important;
+      box-sizing: border-box !important;
+    }
+    .day-cell .badge-off-special:hover, .badge-off-special:hover {
+      transform: scale(1.12) !important;
+      border-color: #7c3aed !important;
+      box-shadow: 0 0 12px rgba(124, 58, 237, 0.6), inset 0 0 3px rgba(239, 68, 68, 0.3) !important;
+    }
+    .cell-special-off {
+      background-color: rgba(139, 92, 246, 0.06) !important;
+    }
+    .draft-pulse-special {
+      animation: draftPulseSpec 1.2s infinite ease-in-out !important;
+    }
+    @keyframes draftPulseSpec {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 6px rgba(139, 92, 246, 0.4); }
+      50% { transform: scale(1.1); box-shadow: 0 0 14px rgba(139, 92, 246, 0.8), 0 0 4px #ef4444; }
+    }
+
     .day-cell .badge-off, .badge-off {
       background-color: #eb3b5a !important;
       color: #ffffff !important;
@@ -4111,6 +4154,13 @@
                   <small>Tính 0.5 ngày nghỉ</small>
                 </div>
               </div>
+              <div class="qlm-item" onclick="setQuickLeaveMode('SPECIAL', event)">
+                <span class="qlm-item-icon">🟣</span>
+                <div class="qlm-item-text">
+                  <b>OFF Đặc Biệt</b>
+                  <small>Chữ đỏ viền tím, nền trắng</small>
+                </div>
+              </div>
               <div class="qlm-divider"></div>
               <div class="qlm-item" onclick="setQuickLeaveMode('ASK', event)">
                 <span class="qlm-item-icon">❓</span>
@@ -4430,6 +4480,15 @@
           <span class="card-label">OFF Nửa Ngày</span>
           <span class="card-desc">Tính 0.5 ngày nghỉ</span>
           <button type="button" class="card-choose-btn">✓ Chọn HALF</button>
+        </div>
+        <div class="leave-type-card card-special" onclick="selectLeaveTypeChoice('SPECIAL')">
+          <div class="card-img-wrap" style="background: rgba(139, 92, 246, 0.08); display:flex; align-items:center; justify-content:center;">
+            <div class="badge-off-special" style="transform: scale(1.3); pointer-events:none;">OFF</div>
+          </div>
+          <span class="card-tag" style="background:#8b5cf6; color:white;">ĐẶC BIỆT</span>
+          <span class="card-label">OFF Đặc Biệt</span>
+          <span class="card-desc">Chữ đỏ viền tím, nền trắng</span>
+          <button type="button" class="card-choose-btn" style="background:#8b5cf6;">✓ Chọn ĐB</button>
         </div>
       </div>
       <label style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 14px auto 4px auto; font-size: 0.82rem; color: #475569; font-weight: 600; cursor: pointer;">
@@ -7024,6 +7083,7 @@
       if (dd) dd.classList.remove('show');
       if (mode === 'FULL') showToast("🔴 Đã đặt chế độ: OFF Cả Ngày (1.0)");
       else if (mode === 'HALF') showToast("🌓 Đã đặt chế độ: OFF Nửa Ngày (0.5)");
+      else if (mode === 'SPECIAL') showToast("🟣 Đã đặt chế độ: OFF Đặc Biệt (Chữ đỏ viền tím, nền trắng)");
       else showToast("❓ Đã đặt chế độ: Hỏi mỗi ô khi bấm");
     }
     window.setQuickLeaveMode = setQuickLeaveMode;
@@ -7041,7 +7101,7 @@
       const text = document.getElementById('qlmText');
       if (!box || !icon || !text) return;
 
-      box.classList.remove('mode-full', 'mode-half', 'mode-ask');
+      box.classList.remove('mode-full', 'mode-half', 'mode-special', 'mode-ask');
       if (quickLeaveMode === 'FULL') {
         box.classList.add('mode-full');
         icon.innerText = '🔴';
@@ -7050,6 +7110,10 @@
         box.classList.add('mode-half');
         icon.innerText = '🌓';
         text.innerText = 'OFF Nửa Ngày';
+      } else if (quickLeaveMode === 'SPECIAL') {
+        box.classList.add('mode-special');
+        icon.innerText = '🟣';
+        text.innerText = 'OFF Đặc Biệt';
       } else {
         box.classList.add('mode-ask');
         icon.innerText = '❓';
@@ -8527,6 +8591,9 @@
     function isHalfDayLeave(leave) {
       return !!(leave && (leave.offType === 'HALF' || leave.offType === 'HALFDAY'));
     }
+    function isSpecialLeave(leave) {
+      return !!(leave && (leave.offType === 'SPECIAL' || leave.offType === 'VIP'));
+    }
 
     function formatLeaveCount(count) {
       if (count === undefined || count === null || isNaN(count)) return '0';
@@ -8573,14 +8640,22 @@
       updateSaveButtonUI();
 
       let isHalf = (offType === 'HALF');
-      let imgIcon = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
-      let typeLabel = isHalf ? 'Nửa ngày' : 'Cả ngày';
+      let isSpec = (offType === 'SPECIAL');
+      let typeLabel = isSpec ? 'OFF Đặc biệt' : (isHalf ? 'Nửa ngày' : 'Cả ngày');
 
       if (element) {
         element.classList.add('cell-draft');
         if (isHalf) element.classList.add('cell-half-day');
         else element.classList.remove('cell-half-day');
-        element.innerHTML = `<div class="draft-added-wrap" title="Sẽ thêm lịch này (${typeLabel})"><img src="${imgIcon}" class="cell-leave-img draft-pulse" alt="${offType}"><span class="draft-badge-add-tag">+${isHalf ? 'NỬA' : 'OFF'}</span></div>`;
+        if (isSpec) element.classList.add('cell-special-off');
+        else element.classList.remove('cell-special-off');
+
+        if (isSpec) {
+          element.innerHTML = `<div class="draft-added-wrap" title="Sẽ thêm lịch này (${typeLabel})"><div class="badge-off-special draft-pulse-special">OFF</div><span class="draft-badge-add-tag" style="background:#8b5cf6; color:#fff;">+ĐB</span></div>`;
+        } else {
+          let imgIcon = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
+          element.innerHTML = `<div class="draft-added-wrap" title="Sẽ thêm lịch này (${typeLabel})"><img src="${imgIcon}" class="cell-leave-img draft-pulse" alt="${offType}"><span class="draft-badge-add-tag">+${isHalf ? 'NỬA' : 'OFF'}</span></div>`;
+        }
       }
 
       if (isMobileView()) {
@@ -8773,6 +8848,7 @@
                       if (leave.status === "Pending") tr += `<td data-col="${i}" class="${tdClass} cell-pending" onclick="requestAction('${role}', '${name}', '${checkDate}', 'XỬ LÝ PENDING')"><div class="badge badge-pending" title="${tooltip}">PEND</div></td>`;
                       else {
                           let isHalf = isHalfDayLeave(leave);
+                          let isSpec = isSpecialLeave(leave);
                           let dCellObj = new Date(displayYear, displayMonth, i);
                           let isWeekendCell = (dCellObj.getDay() === 0 || dCellObj.getDay() === 6);
                           let isLive = isLivestreamMember(emp, deptKey);
@@ -8780,12 +8856,11 @@
                           let hasSpecificNote = Boolean(specificNote && specificNote.length > 0);
                           let needWeekendReason = isWeekendCell && isLive && !hasSpecificNote;
 
-                          let cellClass = isHalf ? 'cell-off cell-half-day' : 'cell-off';
+                          let cellClass = isSpec ? 'cell-off cell-special-off' : (isHalf ? 'cell-off cell-half-day' : 'cell-off');
                           if (isWeekendCell) cellClass += ' weekend-cell';
                           if (needWeekendReason) cellClass += ' weekend-off-need-note';
 
-                          let imgIcon = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
-                          let leaveTitle = isHalf ? 'OFF Nửa Ngày (0.5 ngày)' : 'OFF Cả Ngày (1.0 ngày)';
+                          let leaveTitle = isSpec ? 'OFF Đặc Biệt (Chữ đỏ viền tím, nền trắng)' : (isHalf ? 'OFF Nửa Ngày (0.5 ngày)' : 'OFF Cả Ngày (1.0 ngày)');
 
                           let noteIndicatorBadge = '';
                           if (hasSpecificNote) {
@@ -8796,10 +8871,17 @@
 
                           let fullTitle = `${leaveTitle}${hasSpecificNote ? ' | 📝 Lý do: ' + specificNote : (needWeekendReason ? ' | ⚠️ Nghỉ T7/CN bắt buộc có lý do báo sếp' : '')}`;
 
+                          let badgeHtml = isSpec
+                            ? `<div class="badge-off-special" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" title="${fullTitle}">OFF</div>`
+                            : `<img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" class="cell-leave-img" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" alt="${isHalf ? 'HALFDAY' : 'OFF'}" title="${fullTitle}">`;
+
                           if (inDraft && inDraft.action === 'XÓA') {
-                              tr += `<td data-col="${i}" class="${tdClass} ${cellClass} cell-draft" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')">${noteIndicatorBadge}<div class="draft-remove-wrap" title="Sẽ xóa lịch này"><img src="${imgIcon}" class="cell-leave-img" alt="Del"><span class="draft-badge-del-x">✕</span></div></td>`;
+                              let delBadge = isSpec 
+                                ? `<div class="badge-off-special">OFF</div>`
+                                : `<img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" class="cell-leave-img" alt="Del">`;
+                              tr += `<td data-col="${i}" class="${tdClass} ${cellClass} cell-draft" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')">${noteIndicatorBadge}<div class="draft-remove-wrap" title="Sẽ xóa lịch này">${delBadge}<span class="draft-badge-del-x">✕</span></div></td>`;
                           } else {
-                              tr += `<td data-col="${i}" class="${tdClass} ${cellClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')">${noteIndicatorBadge}<img src="${imgIcon}" class="cell-leave-img" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" alt="${isHalf ? 'HALFDAY' : 'OFF'}" title="${fullTitle}"></td>`;
+                              tr += `<td data-col="${i}" class="${tdClass} ${cellClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'XÓA')">${noteIndicatorBadge}${badgeHtml}</td>`;
                           }
                       }
                   } else {
@@ -8808,16 +8890,20 @@
                        let isLive = isLivestreamMember(emp, deptKey);
 
                        if (inDraft && inDraft.action === 'THÊM') {
+                           let isSpec = (inDraft.offType === 'SPECIAL');
                            let isHalf = (inDraft.offType === 'HALF');
-                           let cellClass = isHalf ? 'cell-draft cell-half-day' : 'cell-draft';
+                           let cellClass = isSpec ? 'cell-draft cell-special' : (isHalf ? 'cell-draft cell-half-day' : 'cell-draft');
                            if (isWeekendCell) cellClass += ' weekend-cell';
                            let needDraftReason = isWeekendCell && isLive && !inDraft.note;
                            if (needDraftReason) cellClass += ' weekend-off-need-note';
                            let draftNoteBadge = needDraftReason 
                              ? `<span class="weekend-add-note-hint" onclick="event.stopPropagation(); openLeaveNoteModal('${name}', '${checkDate}')" title="⚠️ Nghỉ T7/CN cần có lý do báo sếp! Bấm để thêm">+Note</span>` 
                              : (inDraft.note ? `<span class="leave-note-indicator" onclick="event.stopPropagation(); openLeaveNoteModal('${name}', '${checkDate}')" title="📝 Lý do: ${inDraft.note}">📝</span>` : '');
-                           let imgIcon = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
-                           tr += `<td data-col="${i}" class="${tdClass} ${cellClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')">${draftNoteBadge}<div class="draft-added-wrap" title="Sẽ thêm lịch này (${isHalf ? 'Nửa ngày' : 'Cả ngày'})"><img src="${imgIcon}" class="cell-leave-img draft-pulse" alt="Add"><span class="draft-badge-add-tag">+${isHalf ? 'NỬA' : 'OFF'}</span></div></td>`;
+                           let addBadgeHtml = isSpec
+                             ? `<div class="badge-off-special">OFF</div>`
+                             : `<img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" class="cell-leave-img draft-pulse" alt="Add">`;
+                           let addTagText = isSpec ? '+ĐB' : (isHalf ? '+NỬA' : '+OFF');
+                           tr += `<td data-col="${i}" class="${tdClass} ${cellClass}" ondrop="drop(event, '${name}', '${checkDate}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" onclick="handleCellClick(this, '${role}', '${name}', '${checkDate}', 'THÊM')">${draftNoteBadge}<div class="draft-added-wrap" title="Sẽ thêm lịch này (${isSpec ? 'Đặc Biệt' : (isHalf ? 'Nửa ngày' : 'Cả ngày')})">${addBadgeHtml}<span class="draft-badge-add-tag">${addTagText}</span></div></td>`;
                        }
                        else {
                            let emptyCellClass = isWeekendCell ? 'weekend-cell' : '';
@@ -8891,16 +8977,26 @@
                 if (leave.status === "Pending") {
                   chipsHtml += `<span class="m-date-chip pend" onclick="requestAction('${role}', '${name}', '${checkDate}', 'XỬ LÝ PENDING')">⏳ ${dLabel} • DUYỆT?</span>`;
                 } else {
+                  let isSpec = isSpecialLeave(leave);
                   let isHalf = isHalfDayLeave(leave);
-            if (inDraft && inDraft.action === 'XÓA') {
+                  if (inDraft && inDraft.action === 'XÓA') {
                     chipsHtml += `<span class="m-date-chip draft-del" onclick="openMobileEmpCalendar('${name}')">🗑️ ${dLabel} (Sẽ xóa)</span>`;
                   } else {
-                    let isHalf = isHalfDayLeave(leave);
-                    chipsHtml += `<span class="m-date-chip ${isHalf ? 'half-day' : 'off'}" onclick="openMobileEmpCalendar('${name}')"><img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" style="width:14px; height:14px; object-fit:contain; vertical-align:middle; margin-right:3px;"> ${dLabel}${isHalf ? ' (Nửa)' : ''}</span>`;
+                    let badgeHtml = isSpec
+                      ? `<span class="badge-off-special" style="display:inline-block; transform:scale(0.8); margin-right:3px; vertical-align:middle;">OFF</span>`
+                      : `<img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" style="width:14px; height:14px; object-fit:contain; vertical-align:middle; margin-right:3px;">`;
+                    chipsHtml += `<span class="m-date-chip ${isSpec ? 'special' : (isHalf ? 'half-day' : 'off')}" onclick="openMobileEmpCalendar('${name}')">${badgeHtml} ${dLabel}${isSpec ? ' (ĐB)' : (isHalf ? ' (Nửa)' : '')}</span>`;
                   }
                 }
-              } else if (inDraft && inDraft.action === 'THÊM') { let isHalf = (inDraft.offType === 'HALF');
-                chipsHtml += `<span class="m-date-chip draft-add" onclick="openMobileEmpCalendar('${name}')">➕ ${dLabel} (${isHalf ? 'Nửa' : 'OFF'})</span>`;
+              } else if (inDraft && inDraft.action === 'THÊM') {
+                let isSpec = (inDraft.offType === 'SPECIAL');
+                let isHalf = (inDraft.offType === 'HALF');
+                let chipClass = isSpec ? 'draft-add special' : (isHalf ? 'draft-add half-day' : 'draft-add');
+                let tagText = isSpec ? 'Đặc Biệt' : (isHalf ? 'Nửa' : 'OFF');
+                let badgeHtml = isSpec
+                  ? `<span class="badge-off-special" style="display:inline-block; transform:scale(0.8); margin-right:3px; vertical-align:middle;">OFF</span>`
+                  : '';
+                chipsHtml += `<span class="m-date-chip ${chipClass}" onclick="openMobileEmpCalendar('${name}')">${badgeHtml}➕ ${dLabel} (${tagText})</span>`;
               }
             }
 
@@ -9143,19 +9239,25 @@ function initMobileCalSwipeGesture() {
             cls += ' is-pend';
             tagHtml = `<span class="d-tag">PEND</span>`;
           } else {
+            let isSpec = isSpecialLeave(leave);
             let isHalf = isHalfDayLeave(leave);
             if (inDraft && inDraft.action === 'XÓA') {
               cls += ' is-draft-del';
               tagHtml = `<span class="d-tag">XÓA</span>`;
             } else {
-              cls += isHalf ? ' is-half-day' : ' is-off';
-              tagHtml = `<img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" class="m-cal-badge-img" alt="${isHalf ? 'HALF' : 'OFF'}">`;
+              cls += isSpec ? ' is-special' : (isHalf ? ' is-half-day' : ' is-off');
+              tagHtml = isSpec
+                ? `<div class="badge-off-special" style="transform:scale(0.85);">OFF</div>`
+                : `<img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" class="m-cal-badge-img" alt="${isHalf ? 'HALF' : 'OFF'}">`;
             }
           }
         } else if (inDraft && inDraft.action === 'THÊM') {
+          let isSpec = (inDraft.offType === 'SPECIAL');
           let isHalf = (inDraft.offType === 'HALF');
-          cls += isHalf ? ' is-draft-add is-half-day' : ' is-draft-add is-off';
-          tagHtml = `<img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" class="m-cal-badge-img draft-pulse" alt="ADD">`;
+          cls += isSpec ? ' is-draft-add is-special' : (isHalf ? ' is-draft-add is-half-day' : ' is-draft-add is-off');
+          tagHtml = isSpec
+            ? `<div class="badge-off-special" style="transform:scale(0.85);">OFF</div>`
+            : `<img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" class="m-cal-badge-img draft-pulse" alt="ADD">`;
         }
 
         html += `
@@ -9267,7 +9369,7 @@ function initMobileCalSwipeGesture() {
           renderMobileEmpCalendar();
           renderTable();
         } else {
-          if (quickLeaveMode === 'FULL' || quickLeaveMode === 'HALF') {
+          if (quickLeaveMode === 'FULL' || quickLeaveMode === 'HALF' || quickLeaveMode === 'SPECIAL') {
             commitAddLeaveDraft(role, name, checkDate, quickLeaveMode, null);
           } else {
             promptSelectLeaveType({ role: role, name: name, checkDate: checkDate, element: null });
@@ -9325,21 +9427,27 @@ function initMobileCalSwipeGesture() {
       if (draftIdx > -1) {
         draftQueue.splice(draftIdx, 1);
         if (element) {
-          element.classList.remove('cell-draft', 'cell-half-day');
+          element.classList.remove('cell-draft', 'cell-half-day', 'cell-special');
           if (action === 'XÓA') {
             let origLeave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate);
+            let isSpec = isSpecialLeave(origLeave);
             let isHalf = isHalfDayLeave(origLeave);
-            let imgIcon = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
-            let leaveTitle = isHalf ? 'OFF Nửa Ngày (0.5 ngày)' : 'OFF Cả Ngày (1.0 ngày)';
-            if (isHalf) element.classList.add('cell-half-day');
-            element.innerHTML = `<img src="${imgIcon}" class="cell-leave-img" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" alt="${isHalf ? 'HALFDAY' : 'OFF'}" title="${leaveTitle}">`;
+            let leaveTitle = isSpec ? 'OFF Đặc Biệt (1.0 ngày)' : (isHalf ? 'OFF Nửa Ngày (0.5 ngày)' : 'OFF Cả Ngày (1.0 ngày)');
+            if (isSpec) {
+              element.classList.add('cell-special');
+              element.innerHTML = `<div class="badge-off-special" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" title="${leaveTitle}">OFF</div>`;
+            } else {
+              let imgIcon = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
+              if (isHalf) element.classList.add('cell-half-day');
+              element.innerHTML = `<img src="${imgIcon}" class="cell-leave-img" draggable="true" ondragstart="drag(event, '${name}', '${checkDate}')" alt="${isHalf ? 'HALFDAY' : 'OFF'}" title="${leaveTitle}">`;
+            }
           } else if (action === 'THÊM') {
             element.innerHTML = ``;
           }
         }
       } else {
         if (action === 'THÊM') {
-          if (quickLeaveMode === 'FULL' || quickLeaveMode === 'HALF') {
+          if (quickLeaveMode === 'FULL' || quickLeaveMode === 'HALF' || quickLeaveMode === 'SPECIAL') {
             commitAddLeaveDraft(role, name, checkDate, quickLeaveMode, element);
           } else {
             promptSelectLeaveType({ role: role, name: name, checkDate: checkDate, element: element });
@@ -9350,9 +9458,12 @@ function initMobileCalSwipeGesture() {
         if (element) {
           element.classList.add('cell-draft');
           let origLeave = leavesData.find(l => String(l.name).trim() === String(name).trim() && l.date === checkDate);
+          let isSpec = isSpecialLeave(origLeave);
           let isHalf = isHalfDayLeave(origLeave);
-          let imgIcon = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
-          element.innerHTML = `<div class="draft-remove-wrap" title="Sẽ xóa lịch này"><img src="${imgIcon}" class="cell-leave-img" alt="Del"><span class="draft-badge-del-x">✕</span></div>`;
+          let delBadge = isSpec 
+            ? `<div class="badge-off-special">OFF</div>` 
+            : `<img src="${isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG'}" class="cell-leave-img" alt="Del">`;
+          element.innerHTML = `<div class="draft-remove-wrap" title="Sẽ xóa lịch này">${delBadge}<span class="draft-badge-del-x">✕</span></div>`;
         }
       }
       updateSaveButtonUI();
@@ -10253,9 +10364,14 @@ function initMobileCalSwipeGesture() {
                           if (leave.status === "Pending") {
                               tr += `<td style="${tdStyle}"><div style="display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.65rem; width: 36px; height: 24px; margin: 0 auto; border-radius: 4px; background-color: #f59e0b; box-shadow: 0 1px 2px rgba(245, 158, 11, 0.3);">PEND</div></td>`; 
                           } else {
+                              let isSpec = isSpecialLeave(leave);
                               let isHalf = isHalfDayLeave(leave);
-                              let imgSrc = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
-                              tr += `<td style="${tdStyle}"><img src="${imgSrc}" style="width:30px; height:30px; object-fit:contain; display:block; margin:0 auto;" alt="${isHalf ? 'HALFDAY' : 'OFF'}"></td>`; 
+                              if (isSpec) {
+                                  tr += `<td style="${tdStyle}"><div style="display:inline-flex; align-items:center; justify-content:center; background:#ffffff; border:2px solid #8b5cf6; color:#ef4444; font-weight:900; font-size:11px; padding:3px 7px; border-radius:6px; box-shadow:0 0 8px rgba(139,92,246,0.35); text-transform:uppercase;">OFF</div></td>`;
+                              } else {
+                                  let imgSrc = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
+                                  tr += `<td style="${tdStyle}"><img src="${imgSrc}" style="width:30px; height:30px; object-fit:contain; display:block; margin:0 auto;" alt="${isHalf ? 'HALFDAY' : 'OFF'}"></td>`; 
+                              }
                           }
                       } 
                       else { tr += `<td style="${tdStyle}"></td>`; }
@@ -10353,9 +10469,14 @@ function initMobileCalSwipeGesture() {
                   } else if (leave && leave.status === "Pending") {
                       cellContent += `<div style="width: 60px; height: 28px; font-size: 0.75rem; border-radius: 6px; background-color: #f59e0b; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; letter-spacing: 1px; margin: 0 auto; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">PEND</div>`;
                   } else {
+                      let isSpec = (leave && isSpecialLeave(leave)) || (!leave && draft && draft.offType === 'SPECIAL');
                       let isHalf = (leave && isHalfDayLeave(leave)) || (!leave && draft && draft.offType === 'HALF');
-                      let imgSrc = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
-                      cellContent += `<img src="${imgSrc}" style="width:48px; height:48px; object-fit:contain; display:block; margin:0 auto;" alt="${isHalf ? 'HALFDAY' : 'OFF'}">`;
+                      if (isSpec) {
+                          cellContent += `<div style="width:58px; height:32px; background:#ffffff; border:2.5px solid #8b5cf6; color:#ef4444; font-weight:900; font-size:14px; border-radius:8px; display:flex; align-items:center; justify-content:center; margin:0 auto; box-shadow:0 0 10px rgba(139,92,246,0.4); text-transform:uppercase; letter-spacing:0.5px;">OFF</div>`;
+                      } else {
+                          let imgSrc = isHalf ? 'icon/HALFDAY.PNG' : 'icon/OFFDAY.PNG';
+                          cellContent += `<img src="${imgSrc}" style="width:48px; height:48px; object-fit:contain; display:block; margin:0 auto;" alt="${isHalf ? 'HALFDAY' : 'OFF'}">`;
+                      }
                   }
               } else if (isPendingSwapOut) {
                   cellContent += `<div style="width: 70px; height: 34px; font-size: 0.7rem; border-radius: 6px; background-color: #475569; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1.2;">待调休</div>`;
