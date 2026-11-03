@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Script thiết lập môi trường và đồng bộ toàn diện trên Máy Tính Công Ty (Company PC)
     cho dự án Passion Star Workspace Hub & Bộ 100 Antigravity Skills.
