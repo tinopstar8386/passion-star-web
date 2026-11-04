@@ -121,6 +121,31 @@ function dongBoDashboardChuanDep() {
     ["=\"DATA \" & $B$1", "AR44:AX79", "=MATCH(\"TOTAL\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0), MATCH(\"KPI*\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0))"]
   ]);
 
+  // Ẩn bảng phụ trợ V, W, X, Y (cột 22 đến 25) để bảng tính gọn gàng, trực quan và chống vô tình xóa nhầm
+  // Lưu ý quan trọng: V3:Y9 là động cơ tính toán động, KHÔNG được xóa, chỉ ẩn đi trong nền!
+  dashSheet.hideColumns(22, 4);
+
+  // Chuẩn hóa Header Hàng 1 và Hàng 2:
+  dashSheet.setRowHeight(1, 45);
+  dashSheet.setRowHeight(2, 42);
+
+  // Tiêu đề Hàng 1 (C1:O1) - Bự 20pt bold trực quan, nền xám sang trọng, viền đầy đủ
+  dashSheet.getRange("C1:O1")
+    .setFormula('="KPI OF TEAMS - " & $B$1')
+    .setBackground("#595959")
+    .setFontColor("#FFFFFF")
+    .setFontFamily("Calibri")
+    .setFontSize(20)
+    .setFontWeight("bold")
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setBorder(true, true, true, true, false, false, "#000000", SpreadsheetApp.BorderStyle.SOLID);
+
+  // Tiêu đề Cột Hàng 2 (C2:O2) - Đóng khung đầy đủ từng ô (viền trên, đáy đậm và vách ngăn dọc)
+  let headerRange = dashSheet.getRange(2, 3, 1, 13);
+  headerRange.setBorder(true, true, true, true, true, true, "#000000", SpreadsheetApp.BorderStyle.SOLID);
+  dashSheet.getRange("C2:O2").setBorder(true, true, true, true, null, null, "#000000", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+
   // 2. Unmerge và xóa sạch vùng dữ liệu cũ từ hàng 3 đến hàng 65
   const maxRows = 65;
   dashSheet.getRange(3, 3, maxRows, 13).breakApart();
@@ -383,9 +408,12 @@ function dongBoDashboardChuanDep() {
     dashSheet.getRange("N" + sepRow).setValue("").setBackground(cEval);
     dashSheet.getRange("O" + sepRow).setValue("").setBackground(cWhite);
 
-    // Kẻ viền đóng khung đẹp cho cả nhóm
+    // Kẻ viền đóng khung đẹp cho cả nhóm:
+    // 1. Viền bên trong ô là viền bình thường (SOLID 1px)
     let blockRange = dashSheet.getRange(blockStart, 3, count + 1, 13);
     blockRange.setBorder(true, true, true, true, true, true, "#000000", SpreadsheetApp.BorderStyle.SOLID);
+    // 2. Viền lớn dày hơn bao bọc bên ngoài nhóm (SOLID_MEDIUM 2px)
+    blockRange.setBorder(true, true, true, true, null, null, "#000000", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
     curRow = blockEnd + 1;
   });
