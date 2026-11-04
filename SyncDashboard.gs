@@ -12,6 +12,23 @@ function onOpen() {
 }
 
 /**
+ * TỰ ĐỘNG CHẠY KHI ĐỔI THÁNG TẠI Ô B1 (Không cần bấm nút):
+ * Khi người dùng chọn hoặc sửa ô B1 trên KPI_DASHBOARD (ví dụ sang T12.2026),
+ * hàm onEdit sẽ tự động kích hoạt đồng bộ form nhóm & nhân sự mới ngay lập tức!
+ */
+function onEdit(e) {
+  if (!e || !e.range) return;
+  try {
+    const sheet = e.range.getSheet();
+    if (sheet.getName() === "KPI_DASHBOARD" && e.range.getA1Notation() === "B1") {
+      dongBoDashboardChuanDep(true);
+    }
+  } catch (err) {
+    // Tránh lỗi trigger context
+  }
+}
+
+/**
  * Hàm tự động xác định tên Sheet tháng trước dựa trên ô B1 (ví dụ: T11.2026 -> OCT.2026)
  */
 function getPreviousMonthSheetName(ss, currentMonthVal) {
@@ -82,11 +99,11 @@ function scanIdolsFromDataSheet(dataSheet) {
 /**
  * HÀM CHÍNH: TỰ ĐỘNG ĐỒNG BỘ FORM DASHBOARD ĐẸP 100% CHUẨN GỐC
  */
-function dongBoDashboardChuanDep() {
+function dongBoDashboardChuanDep(isAuto) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const dashSheet = ss.getSheetByName("KPI_DASHBOARD");
   if (!dashSheet) {
-    SpreadsheetApp.getUi().alert("Không tìm thấy trang tính KPI_DASHBOARD!");
+    if (!isAuto) SpreadsheetApp.getUi().alert("Không tìm thấy trang tính KPI_DASHBOARD!");
     return;
   }
   
@@ -95,7 +112,11 @@ function dongBoDashboardChuanDep() {
   const dataSheet = ss.getSheetByName(dataSheetName);
   
   if (!dataSheet) {
-    SpreadsheetApp.getUi().alert("Không tìm thấy trang tính dữ liệu: " + dataSheetName);
+    if (!isAuto) {
+      SpreadsheetApp.getUi().alert("Không tìm thấy trang tính dữ liệu: " + dataSheetName);
+    } else {
+      ss.toast("Chưa tìm thấy sheet dữ liệu " + dataSheetName + " để tự động đồng bộ!", "Lưu ý ⚠️", 5);
+    }
     return;
   }
 
