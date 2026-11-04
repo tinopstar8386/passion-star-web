@@ -104,19 +104,21 @@ function dongBoDashboardChuanDep() {
   // 1. Cấu hình bảng phụ trợ V, W, X, Y (Dynamic Range & Month Length Adaptation)
   // Đảm bảo không bị lệch dòng khi tháng có 28, 29, 30 hay 31 ngày
   dashSheet.getRange("V3:Y3").setValues([["SHEET NAME", "Range Bảng", "Cột tổng", "Cột KPI"]]);
-  dashSheet.getRange("V4:Y9").setFormulas([
+  // Dùng setValues thay vì setFormulas để tránh lỗi cú pháp của Apps Script khi có chuỗi thường "B2:G37"
+  // Tích hợp single quotes "'" & $V$4 & "'!..." chống lỗi khoảng trắng tên sheet
+  dashSheet.getRange("V4:Y9").setValues([
     // Hàng 4: FASHION (B2:G37)
-    ["=\"DATA \" & $B$1", "B2:G37", "=MATCH(\"TOTAL\", INDIRECT($V$4 & \"!$A$2:$A$37\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT($V$4 & \"!$A$2:$A$37\"), 0), MATCH(\"KPI*\", INDIRECT($V$4 & \"!$A$2:$A$37\"), 0))"],
+    ["=\"DATA \" & $B$1", "B2:G37", "=MATCH(\"TOTAL\", INDIRECT(\"'\" & $V$4 & \"'!$A$2:$A$37\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT(\"'\" & $V$4 & \"'!$A$2:$A$37\"), 0), MATCH(\"KPI*\", INDIRECT(\"'\" & $V$4 & \"'!$A$2:$A$37\"), 0))"],
     // Hàng 5: ROYEN:ONE (W2:AD37)
-    ["=\"DATA \" & $B$1", "W2:AD37", "=MATCH(\"TOTAL\", INDIRECT($V$4 & \"!$A$2:$A$37\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT($V$4 & \"!$A$2:$A$37\"), 0), MATCH(\"KPI*\", INDIRECT($V$4 & \"!$A$2:$A$37\"), 0))"],
+    ["=\"DATA \" & $B$1", "W2:AD37", "=MATCH(\"TOTAL\", INDIRECT(\"'\" & $V$4 & \"'!$A$2:$A$37\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT(\"'\" & $V$4 & \"'!$A$2:$A$37\"), 0), MATCH(\"KPI*\", INDIRECT(\"'\" & $V$4 & \"'!$A$2:$A$37\"), 0))"],
     // Hàng 6: ANGELIK (B44:G79)
-    ["=\"DATA \" & $B$1", "B44:G79", "=MATCH(\"TOTAL\", INDIRECT($V$4 & \"!$A$44:$A$79\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT($V$4 & \"!$A$44:$A$79\"), 0), MATCH(\"KPI*\", INDIRECT($V$4 & \"!$A$44:$A$79\"), 0))"],
+    ["=\"DATA \" & $B$1", "B44:G79", "=MATCH(\"TOTAL\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0), MATCH(\"KPI*\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0))"],
     // Hàng 7: MIRACLE (W44:AA79)
-    ["=\"DATA \" & $B$1", "W44:AA79", "=MATCH(\"TOTAL\", INDIRECT($V$4 & \"!$A$44:$A$79\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT($V$4 & \"!$A$44:$A$79\"), 0), MATCH(\"KPI*\", INDIRECT($V$4 & \"!$A$44:$A$79\"), 0))"],
+    ["=\"DATA \" & $B$1", "W44:AA79", "=MATCH(\"TOTAL\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0), MATCH(\"KPI*\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0))"],
     // Hàng 8: ELRIS (AR2:AV37)
-    ["=\"DATA \" & $B$1", "AR2:AV37", "=MATCH(\"TOTAL\", INDIRECT($V$4 & \"!$A$2:$A$37\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT($V$4 & \"!$A$2:$A$37\"), 0), MATCH(\"KPI*\", INDIRECT($V$4 & \"!$A$2:$A$37\"), 0))"],
+    ["=\"DATA \" & $B$1", "AR2:AV37", "=MATCH(\"TOTAL\", INDIRECT(\"'\" & $V$4 & \"'!$A$2:$A$37\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT(\"'\" & $V$4 & \"'!$A$2:$A$37\"), 0), MATCH(\"KPI*\", INDIRECT(\"'\" & $V$4 & \"'!$A$2:$A$37\"), 0))"],
     // Hàng 9: ORION (AR44:AX79)
-    ["=\"DATA \" & $B$1", "AR44:AX79", "=MATCH(\"TOTAL\", INDIRECT($V$4 & \"!$A$44:$A$79\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT($V$4 & \"!$A$44:$A$79\"), 0), MATCH(\"KPI*\", INDIRECT($V$4 & \"!$A$44:$A$79\"), 0))"]
+    ["=\"DATA \" & $B$1", "AR44:AX79", "=MATCH(\"TOTAL\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0)", "=IFERROR(MATCH(\"KPI SALARY*\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0), MATCH(\"KPI*\", INDIRECT(\"'\" & $V$4 & \"'!$A$44:$A$79\"), 0))"]
   ]);
 
   // 2. Unmerge và xóa sạch vùng dữ liệu cũ từ hàng 3 đến hàng 65
@@ -295,9 +297,9 @@ function dongBoDashboardChuanDep() {
         .setHorizontalAlignment("right")
         .setVerticalAlignment("middle");
 
-      // J: Current Coins (HLOOKUP động theo bảng phụ V, W, X)
+      // J: Current Coins (HLOOKUP động theo bảng phụ V, W, X, có single quotes bọc sheet name có space)
       dashSheet.getRange("J" + r)
-        .setFormula("=iferror(hlookup(H" + r + ", INDIRECT($V$" + team.hRow + "&\"!\"&$W$" + team.hRow + "), $X$" + team.hRow + ", 0), 0)")
+        .setFormula("=iferror(hlookup(H" + r + ", INDIRECT(\"'\" & $V$" + team.hRow + " & \"'!\" & $W$" + team.hRow + "), $X$" + team.hRow + ", 0), 0)")
         .setBackground(cCurrCoins)
         .setFontColor("#000000")
         .setFontFamily("Calibri")
@@ -306,9 +308,9 @@ function dongBoDashboardChuanDep() {
         .setHorizontalAlignment("right")
         .setVerticalAlignment("middle");
 
-      // K: KPI Day 10 (HLOOKUP động theo bảng phụ V, W, Y)
+      // K: KPI Day 10 (HLOOKUP động theo bảng phụ V, W, Y, có single quotes bọc sheet name có space)
       dashSheet.getRange("K" + r)
-        .setFormula("=iferror(hlookup(H" + r + ", INDIRECT($V$" + team.hRow + "&\"!\"&$W$" + team.hRow + "), $Y$" + team.hRow + ", 0), 0)")
+        .setFormula("=iferror(hlookup(H" + r + ", INDIRECT(\"'\" & $V$" + team.hRow + " & \"'!\" & $W$" + team.hRow + "), $Y$" + team.hRow + ", 0), 0)")
         .setBackground(cKpiDay10)
         .setFontColor("#000000")
         .setFontFamily("Calibri")
@@ -377,7 +379,8 @@ function dongBoDashboardChuanDep() {
     dashSheet.getRange("K" + sepRow).setValue("-").setBackground(cKpiDay10).setFontColor("#000000").setFontFamily("Calibri").setFontSize(12).setHorizontalAlignment("center").setVerticalAlignment("middle");
     dashSheet.getRange("L" + sepRow).setValue("").setBackground(cKpiSalary);
     dashSheet.getRange("M" + sepRow).setValue("").setBackground(cChange).setNumberFormat(numFmtChange);
-    dashSheet.getRange("N" + sepRow).setValue("").setBackground(cWhite);
+    // CỘT N: ÁP DỤNG MÀU NỀN #D9D9D9 CHO CẢ DÒNG GẠCH NỐI (KHÔNG ĐỂ LỖM TRẮNG)
+    dashSheet.getRange("N" + sepRow).setValue("").setBackground(cEval);
     dashSheet.getRange("O" + sepRow).setValue("").setBackground(cWhite);
 
     // Kẻ viền đóng khung đẹp cho cả nhóm
@@ -387,24 +390,29 @@ function dongBoDashboardChuanDep() {
     curRow = blockEnd + 1;
   });
 
-  // 6. DÒNG TOTAL TỔNG CỘNG - FONT SIZE 16pt, IN ĐẬM, VIỀN ĐẬM ĐẸP CHUẨN GỐC
+  // Đảm bảo toàn bộ Cột N từ hàng 3 đến hàng cuối đều là nền #D9D9D9 (trừ dòng TOTAL)
+  dashSheet.getRange(3, 14, curRow - 3, 1).setBackground(cEval);
+
+  // 6. DÒNG TOTAL TỔNG CỘNG - FONT SIZE 16pt, IN ĐẬM, VIỀN ĐẦY ĐỦ CẢ TRÊN DƯỚI VÀ DỌC!
   let totalRow = curRow;
+  let lastDataRow = totalRow - 1;
   dashSheet.getRange("C" + totalRow).setValue("TOTAL").setBackground(cKpi).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setHorizontalAlignment("center").setVerticalAlignment("middle");
-  dashSheet.getRange("D" + totalRow).setFormula("=SUM(D3:D" + (totalRow - 1) + ")").setBackground(cTeamTotal).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
-  dashSheet.getRange("E" + totalRow).setFormula("=SUM(E3:E" + (totalRow - 1) + ")").setBackground(cKpi).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
-  dashSheet.getRange("F" + totalRow).setFormula("=SUM(F3:F" + (totalRow - 1) + ")").setBackground(cKpi).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
-  dashSheet.getRange("G" + totalRow).setFormula("=SUM(G3:G" + (totalRow - 1) + ")").setBackground(cKpi).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
+  dashSheet.getRange("D" + totalRow).setFormula("=SUM(D3:D" + lastDataRow + ")").setBackground(cTeamTotal).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
+  dashSheet.getRange("E" + totalRow).setFormula("=SUM(E3:E" + lastDataRow + ")").setBackground(cKpi).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
+  dashSheet.getRange("F" + totalRow).setFormula("=SUM(F3:F" + lastDataRow + ")").setBackground(cKpi).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
+  dashSheet.getRange("G" + totalRow).setFormula("=SUM(G3:G" + lastDataRow + ")").setBackground(cKpi).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
   dashSheet.getRange("H" + totalRow).setValue("").setBackground(cName).setFontSize(16);
-  dashSheet.getRange("I" + totalRow).setFormula("=SUM(I3:I" + (totalRow - 1) + ")").setBackground(cPrevCoins).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
-  dashSheet.getRange("J" + totalRow).setFormula("=SUM(J3:J" + (totalRow - 1) + ")").setBackground(cCurrCoins).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
-  dashSheet.getRange("K" + totalRow).setFormula("=SUM(K3:K" + (totalRow - 1) + ")").setBackground(cKpiDay10).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
-  dashSheet.getRange("L" + totalRow).setFormula("=SUM(L3:L" + (totalRow - 1) + ")").setBackground(cKpiSalary).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
+  dashSheet.getRange("I" + totalRow).setFormula("=SUM(I3:I" + lastDataRow + ")").setBackground(cPrevCoins).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
+  dashSheet.getRange("J" + totalRow).setFormula("=SUM(J3:J" + lastDataRow + ")").setBackground(cCurrCoins).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
+  dashSheet.getRange("K" + totalRow).setFormula("=SUM(K3:K" + lastDataRow + ")").setBackground(cKpiDay10).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
+  dashSheet.getRange("L" + totalRow).setFormula("=SUM(L3:L" + lastDataRow + ")").setBackground(cKpiSalary).setFontColor("#000000").setFontFamily("Calibri").setFontSize(16).setFontWeight("bold").setNumberFormat(numFmtTotal).setHorizontalAlignment("center").setVerticalAlignment("middle");
   dashSheet.getRange("M" + totalRow).setValue("").setBackground(cChange);
   dashSheet.getRange("N" + totalRow).setValue("").setBackground(cWhite);
   dashSheet.getRange("O" + totalRow).setValue("").setBackground(cWhite);
 
+  // VIỀN DÒNG CUỐI (TOTAL ROW): Kẻ đầy đủ trên, dưới, trái, phải và từng cột dọc!
   let totalRange = dashSheet.getRange(totalRow, 3, 1, 13);
-  totalRange.setBorder(true, true, true, true, null, true, "#000000", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
+  totalRange.setBorder(true, true, true, true, true, true, "#000000", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
   // 7. Định dạng có điều kiện (PASS: Xanh lá, FAIL: Xám)
   let rulePass = SpreadsheetApp.newConditionalFormatRule()
