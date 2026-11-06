@@ -497,7 +497,12 @@
 
             let paragraphs = coloredHtml.split(/\n\n+/);
             let htmlContent = paragraphs.map(p => {
-              let lines = p.replace(/\n/g, '<br>');
+              let isQuote = p.startsWith('&gt; ') || p.startsWith('>');
+              let cleanP = p.replace(/^(&gt;|>)\s*/gm, '');
+              let lines = cleanP.replace(/\n/g, '<br>');
+              if (isQuote) {
+                return `<blockquote style="margin: 0 0 12px 0; padding: 6px 12px; border-left: 3px solid ${color}; background-color: rgba(59,130,246,0.05); line-height: 1.55;">${lines}</blockquote>`;
+              }
               return `<p style="margin: 0 0 10px 0; line-height: 1.55;">${lines}</p>`;
             }).join('');
 
@@ -815,25 +820,25 @@
       }
 
       // ==========================================
-      // ĐỊNH DẠNG TIN NHẮN CHUẨN ZALO: ĐỔI MÀU & IN ĐẬM TỰ NHIÊN
-      // KHÔNG CHÈN TIÊU ĐỀ RƯỜM RÀ, GIỮ NGUYÊN VẸN CÂU CHÚC GỐC
+      // ĐỊNH DẠNG TIN NHẮN CHUẨN ZALO: KHUNG VIỀN TRÍCH DẪN (CÁCH 1)
+      // DÙNG CÚ PHÁP TRÍCH DẪN (>) ĐỂ TẠO THANH VIỀN THẺ VINH DANH TRÊN ZALO
+      // GIỮ NGUYÊN VĂN PHONG TỰ NHIÊN, KHÔNG LẠM DỤNG SYMBOL HAY CHÈN TIÊU ĐỀ
       // ==========================================
       function formatWishForZalo(template, name, tier, withAssistant) {
-        let st = getTierStyle(tier);
-        let isDefaultTier = tier === "{MOC}" || !tier;
-        let tierBadge = isDefaultTier ? "" : (" " + st.i);
-
         let msg = template || "";
         if (!withAssistant) {
           msg = msg.replace(/( và| cùng) Trợ Lý/g, "");
         }
 
         let boldName = name === "{TEN}" ? "{TEN}" : `*${name}*`;
-        let boldTier = tier === "{MOC}" ? "{MOC}" : `*${tier}*${tierBadge}`;
+        let boldTier = (tier === "{MOC}" || !tier) ? "{MOC}" : `*${tier}*`;
         msg = msg.replace(/{TEN}/g, boldName).replace(/{MOC}/g, boldTier);
         if (withAssistant) {
           msg = msg.replace(/(cùng|và)\s+Trợ Lý/g, "$1 *Trợ Lý*");
         }
+
+        // Xóa khoảng trắng thừa trước dấu câu
+        msg = msg.replace(/\s+([.,!?])/g, '$1');
 
         // Tách câu: Hook mở đầu, Thân vinh danh & Lời chúc kết thúc
         let sentenceRegex = /[^.!?]+[.!?]+[^.!?A-ZÀ-ỸÁ-Ý\r\n]*/gu;
@@ -844,27 +849,38 @@
         }
 
         if (sents.length < 2) {
-          return msg;
+          return `> ${msg}`;
         }
 
         let hook = sents[0];
         let closing = sents[sents.length - 1];
         let mid = sents.slice(1, sents.length - 1);
 
+        let quoteHeader = "";
         // Nếu câu đầu tiên là Hook (không chứa trực tiếp tên Idol)
         if (!hook.includes(boldName)) {
-          let emojiMatch = hook.match(/^([\p{Extended_Pictographic}\u2600-\u27BF\uD800-\uDFFF\s]+)(.*)/u);
+          let emojiMatch = hook.match(/^([\p{Extended_Pictographic}\p{Emoji_Component}\u200D\uFE00-\uFE0F\u2600-\u27BF\s]+)(.*)/u);
+          let cleanHook = "";
           if (emojiMatch && emojiMatch[1].trim().length > 0) {
-            let em = emojiMatch[1].trim();
-            let rest = emojiMatch[2].trim();
-            hook = `${em} *${rest}*`;
+            cleanHook = `${emojiMatch[1].trim()} *${emojiMatch[2].trim()}*`;
           } else {
-            hook = `*${hook}*`;
+            cleanHook = `*${hook}*`;
           }
+
+          // Nếu câu thứ hai chứa tên Idol hoặc mốc, đưa vào khối trích dẫn cùng Hook
+          if (mid.length > 0 && (mid[0].includes(boldName) || mid[0].includes(boldTier))) {
+            quoteHeader = `> ${cleanHook}\n> ${mid[0]}`;
+            mid = mid.slice(1);
+          } else {
+            quoteHeader = `> ${cleanHook}`;
+          }
+        } else {
+          // Câu đầu tiên đã chứa trực tiếp lời chúc mừng tên Idol và mốc
+          quoteHeader = `> ${hook}`;
         }
 
-        // Xử lý câu kết: In đậm truyền cảm hứng
-        let emojiTailMatch = closing.match(/(.*?)([\p{Extended_Pictographic}\u2600-\u27BF\uD800-\uDFFF\s]+)$/u);
+        // Xử lý câu kết: In đậm truyền cảm hứng kèm emoji nguyên bản của template
+        let emojiTailMatch = closing.match(/^(.*?)([\p{Extended_Pictographic}\p{Emoji_Component}\u200D\uFE00-\uFE0F\u2600-\u27BF\s]+)$/u);
         if (emojiTailMatch && emojiTailMatch[2].trim().length > 0) {
           let cText = emojiTailMatch[1].trim();
           let cEm = emojiTailMatch[2].trim();
@@ -874,10 +890,10 @@
         }
 
         let bodyText = mid.join(" ");
-        if (hook.includes(boldName)) {
-          return bodyText.length > 0 ? `${hook}\n\n${bodyText}\n\n${closing}` : `${hook}\n\n${closing}`;
+        if (bodyText.length > 0) {
+          return `${quoteHeader}\n\n${bodyText}\n\n${closing}`;
         } else {
-          return `${hook}\n\n${bodyText}\n\n${closing}`;
+          return `${quoteHeader}\n\n${closing}`;
         }
       }
 
@@ -1256,10 +1272,10 @@
         if (val >= 300) return { a:'#ef4444', b:'rgba(239,68,68,0.15)', c:'epic-300k', i:'🔥' };
         if (val >= 200) return { a:'#a855f7', b:'rgba(168,85,247,0.15)', c:'epic-200k', i:'💎' };
         if (val >= 100) return { a:'#fbbf24', b:'rgba(251,191,36,0.15)', c:'epic-100k', i:'⭐' };
-        if (val >= 60)  return { a:'#0ea5e9', b:'rgba(14,165,233,0.15)', c:'epic-60k', i:'✨' };
-        if (val >= 50)  return { a:'#3b82f6', b:'rgba(59,130,246,0.15)', c:'epic-50k', i:'🚀' };
-        if (val >= 40)  return { a:'#3b82f6', b:'rgba(59,130,246,0.1)', c:'', i:'🚀' };
-        if (val >= 30)  return { a:'#10b981', b:'rgba(16,185,129,0.1)', c:'', i:'🌱' };
+        if (val >= 60)  return { a:'#0ea5e9', b:'rgba(14,165,233,0.15)', c:'epic-60k',  i:'✨' };
+        if (val >= 50)  return { a:'#3b82f6', b:'rgba(59,130,246,0.15)', c:'epic-50k',  i:'🚀' };
+        if (val >= 40)  return { a:'#3b82f6', b:'rgba(59,130,246,0.1)',  c:'',          i:'🚀' };
+        if (val >= 30)  return { a:'#10b981', b:'rgba(16,185,129,0.1)',  c:'',          i:'🌱' };
         
         return { a:'#64748b', b:'rgba(100,116,139,0.1)', c:'', i:'🎯' };
       }
@@ -1286,7 +1302,7 @@
         let html = '';
         let highestAmbient = '#131722'; 
         let delayCounter = 0; 
-
+        
         displayData.forEach((item, idx) => {
           let st = getTierStyle(item.tier);
           let delay = delayCounter * 0.06;
