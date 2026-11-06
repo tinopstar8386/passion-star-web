@@ -8,16 +8,22 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("⭐ KPI PASSION STAR")
     .addItem("🔄 Đồng Bộ Form Nhóm & Nhân Sự Mới", "dongBoDashboardChuanDep")
-    .addItem("💾 Lưu Dữ Liệu KPI Cột F & G (Tháng Hiện Tại)", "luuKpiDashboardThuCong")
     .addSeparator()
+    .addItem("🚀 Chuyển Sang Tháng Mới (Tự Động Clone & Lưu Trữ)", "chuyenSangThangMoiTuDong")
+    .addItem("📦 Lưu Trữ & Đóng Băng Sheet Tháng Hiện Tại", "luuTruDashboardDongBang")
+    .addSeparator()
+    .addItem("💾 Lưu Dữ Liệu KPI Cột F & G (Tháng Hiện Tại)", "luuKpiDashboardThuCong")
     .addItem("👁️ Hiện / Ẩn Sheet Lưu Trữ KPI (_KPI_TARGET_DB)", "toggleDbSheetVisibility")
     .addToUi();
 }
 
 /**
  * TỰ ĐỘNG CHẠY KHI NGƯỜI DÙNG THAO TÁC TRÊN KPI_DASHBOARD:
- * 1. Đổi tháng tại ô B1 (ví dụ sang T12.2026): Tự động sao lưu dữ liệu tháng cũ (nếu có)
- *    và kích hoạt đồng bộ hiển thị form nhóm, idol và Target/Basic của tháng mới.
+ * 1. Đổi tháng tại ô B1 (ví dụ từ T11.2026 sang T12.2026):
+ *    - Tự động lưu cấu hình Target & Basic của tháng cũ vào database ngầm.
+ *    - Tự động lưu trữ / đóng băng (Paste Values) KPI_DASHBOARD tháng cũ thành sheet riêng (ví dụ NOV.2026).
+ *    - Tự động nhân bản (clone) sheet DATA mới (ví dụ DATA T12.2026) từ DATA tháng cũ nếu chưa có.
+ *    - Kích hoạt đồng bộ form nhóm, nhân sự và chỉ tiêu cho tháng mới.
  * 2. Nhập hoặc sửa Target (Cột F) / Basic (Cột G): Tự động lưu giá trị vào database
  *    ngầm _KPI_TARGET_DB tương ứng với tháng đang chọn ở ô B1!
  */
@@ -31,9 +37,28 @@ function onEdit(e) {
 
     // 1. Thay đổi tháng tại ô B1
     if (a1 === "B1") {
-      if (e.oldValue && typeof e.oldValue === "string" && e.oldValue.trim()) {
-        saveAllCurrentDashboardKpi(sheet.getParent(), sheet, e.oldValue.trim());
+      const oldMonthVal = (e.oldValue && typeof e.oldValue === "string") ? e.oldValue.trim() : "";
+      const newMonthVal = (e.value && typeof e.value === "string") ? e.value.trim() : (sheet.getRange("B1").getValue() || "").toString().trim();
+
+      if (oldMonthVal && newMonthVal && oldMonthVal !== newMonthVal) {
+        // A. Lưu trữ Target & Basic của tháng cũ vào database
+        saveAllCurrentDashboardKpi(sheet.getParent(), sheet, oldMonthVal);
+
+        // B. Tự động lưu trữ / đóng băng KPI_DASHBOARD của tháng cũ thành sheet riêng (Paste Values)
+        try {
+          archiveDashboardSheet(sheet.getParent(), oldMonthVal);
+        } catch (errArch) {}
+
+        // C. Tự động clone sheet DATA cho tháng mới nếu chưa có
+        try {
+          const newDataSheetName = "DATA " + newMonthVal;
+          if (!sheet.getParent().getSheetByName(newDataSheetName)) {
+            cloneDataSheetForNewMonth(sheet.getParent(), oldMonthVal, newMonthVal);
+            sheet.getParent().toast("Đã tự động khởi tạo sheet " + newDataSheetName + " cho tháng mới!", "Tự Động Clone ✨", 5);
+          }
+        } catch (errClone) {}
       }
+
       dongBoDashboardChuanDep(true);
       return;
     }
@@ -620,10 +645,21 @@ function dongBoDashboardChuanDep(isAuto) {
     return;
   }
   
-  const selectedMonth = dashSheet.getRange("B1").getValue() || "T11.2026";
+  const selectedMonth = (dashSheet.getRange("B1").getValue() || "T11.2026").toString().trim();
   const dataSheetName = "DATA " + selectedMonth;
-  const dataSheet = ss.getSheetByName(dataSheetName);
+  let dataSheet = ss.getSheetByName(dataSheetName);
   
+  if (!dataSheet) {
+    // Tự động kiểm tra và clone tạo sheet DATA mới từ tháng trước nếu chưa có!
+    try {
+      const prevMonthSheetName = getPreviousMonthSheetName(ss, selectedMonth);
+      dataSheet = cloneDataSheetForNewMonth(ss, prevMonthSheetName, selectedMonth);
+      if (dataSheet) {
+        ss.toast("Đã tự động khởi tạo sheet dữ liệu " + dataSheetName + " từ tháng trước!", "Tự Động Clone ✨", 5);
+      }
+    } catch (eClone) {}
+  }
+
   if (!dataSheet) {
     if (!isAuto) {
       SpreadsheetApp.getUi().alert("Không tìm thấy trang tính dữ liệu: " + dataSheetName);
