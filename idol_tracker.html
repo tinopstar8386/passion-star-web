@@ -2445,23 +2445,31 @@
             <div class="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-slate-50/50 dark:bg-slate-950/40">
                 <!-- 1. Thanh Quản Lý 3 Tài Khoản Apify (Tự động xoay vòng khi hết quota) -->
                 <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between gap-2">
                         <span class="text-xs font-black text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                             <i class="fa-solid fa-key text-amber-500"></i>
                             <span>Tài Khoản Apify Đang Dùng:</span>
                         </span>
-                        <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                            <i class="fa-solid fa-circle-check text-[10px]"></i>
-                            <span>Tự xoay vòng khi hết quota</span>
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="refreshApifyAccountsQuota(true)" 
+                                class="px-2.5 py-1 rounded-xl text-[10px] font-extrabold text-slate-700 dark:text-slate-200 hover:text-cyan-600 dark:hover:text-cyan-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                title="Bấm để kiểm tra và cập nhật quota mới nhất từ máy chủ Apify">
+                                <i id="refreshQuotaIcon" class="fa-solid fa-arrows-rotate text-[10px] text-cyan-500"></i>
+                                <span>Làm mới Quota</span>
+                            </button>
+                            <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hidden sm:flex items-center gap-1">
+                                <i class="fa-solid fa-circle-check text-[10px]"></i>
+                                <span>Tự xoay vòng</span>
+                            </span>
+                        </div>
                     </div>
 
-                    <div id="apifyAccountsPills" class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                    <div id="apifyAccountsPills" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
                         <!-- Populated dynamically via JS -->
                     </div>
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400">
-                        💡 <em>Hệ thống có sẵn 3 tài khoản Apify dự phòng ($15 quota/tháng). Nếu tài khoản đang dùng hết quota hoặc bị giới hạn, hệ thống sẽ tự động xoay sang tài khoản kế tiếp ngay lập tức!</em>
-                    </p>
+                    <div id="apifyTotalQuotaNotice" class="text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
+                        💡 <em>Hệ thống có sẵn 3 tài khoản Apify dự phòng ($15 quota/tháng). Tự động kiểm tra và chuyển sang tài khoản kế tiếp khi hết quota!</em>
+                    </div>
                 </div>
 
                 <!-- 2. Tuần Cần Dò Bài -->
@@ -10659,6 +10667,87 @@ service cloud.firestore {
                 renderApifyAccountsPills();
                 showToast(`Đã chuyển sang sử dụng ${APIFY_ACCOUNTS[activeApifyIndex].name}!`, 'success');
             }
+        }        let apifyQuotaCache = {};
+        try {
+            apifyQuotaCache = JSON.parse(localStorage.getItem('ps_apify_quota_cache') || '{}');
+        } catch (e) {}
+
+        let isRefreshingApifyQuota = false;
+
+        async function fetchApifyAccountQuota(acc) {
+            try {
+                const uUsage = `https://api.apify.com/v2/users/me/usage/monthly?token=${encodeURIComponent(acc.token)}`;
+                const resUsage = await fetch(uUsage);
+                if (!resUsage.ok) return { ok: false, error: `HTTP ${resUsage.status}` };
+                const dataUsage = await resUsage.json();
+                const usedUsd = Number(dataUsage.data?.totalUsageCreditsUsdAfterVolumeDiscount || 0);
+
+                let maxUsd = 5.0;
+                try {
+                    const uUser = `https://api.apify.com/v2/users/me?token=${encodeURIComponent(acc.token)}`;
+                    const resUser = await fetch(uUser);
+                    if (resUser.ok) {
+                        const dataUser = await resUser.json();
+                        maxUsd = Number(dataUser.data?.plan?.maxMonthlyUsageUsd || dataUser.data?.plan?.monthlyUsageCreditsUsd || 5.0);
+                    }
+                } catch (e) {}
+
+                const remainingUsd = Math.max(0, maxUsd - usedUsd);
+                const percentUsed = Math.min(100, (usedUsd / maxUsd) * 100);
+                const percentRemaining = Math.max(0, 100 - percentUsed);
+
+                return {
+                    ok: true,
+                    maxUsd,
+                    usedUsd,
+                    remainingUsd,
+                    percentUsed,
+                    percentRemaining,
+                    cycleStart: dataUsage.data?.usageCycle?.startAt || '',
+                    cycleEnd: dataUsage.data?.usageCycle?.endAt || '',
+                    updatedAt: Date.now()
+                };
+            } catch (err) {
+                return { ok: false, error: err.message };
+            }
+        }
+
+        async function refreshApifyAccountsQuota(isUserInitiated = false) {
+            if (isRefreshingApifyQuota) return;
+            isRefreshingApifyQuota = true;
+
+            const icon = document.getElementById('refreshQuotaIcon');
+            if (icon) icon.classList.add('fa-spin');
+
+            if (isUserInitiated) {
+                showToast('🔄 Đang kiểm tra số dư Quota của 3 tài khoản Apify...', 'info');
+            }
+
+            try {
+                const results = await Promise.all(APIFY_ACCOUNTS.map(acc => fetchApifyAccountQuota(acc)));
+                results.forEach((q, idx) => {
+                    if (q.ok) {
+                        apifyQuotaCache[APIFY_ACCOUNTS[idx].id] = q;
+                    }
+                });
+                try {
+                    localStorage.setItem('ps_apify_quota_cache', JSON.stringify(apifyQuotaCache));
+                } catch (e) {}
+
+                renderApifyAccountsPills();
+
+                if (isUserInitiated) {
+                    showToast('✅ Đã cập nhật chính xác số dư Quota của cả 3 tài khoản Apify!', 'success');
+                }
+            } catch (err) {
+                console.error('Lỗi kiểm tra quota Apify:', err);
+                if (isUserInitiated) {
+                    showToast('⚠️ Không thể kiểm tra quota: ' + err.message, 'error');
+                }
+            } finally {
+                isRefreshingApifyQuota = false;
+                if (icon) icon.classList.remove('fa-spin');
+            }
         }
 
         function renderApifyAccountsPills() {
@@ -10669,25 +10758,92 @@ service cloud.firestore {
             }
             if (!container) return;
 
+            let totalRemaining = 0;
+            let totalMax = 0;
+            let hasValidQuotaData = false;
+
             container.innerHTML = APIFY_ACCOUNTS.map((acc, idx) => {
                 const isActive = idx === activeApifyIndex;
+                const quota = apifyQuotaCache[acc.id];
+
+                let usedText = '---';
+                let remainingText = 'Đang tải...';
+                let percentUsed = 0;
+                let statusBadge = '<span class="text-slate-400">---</span>';
+                let barClass = 'bg-cyan-500';
+                let remainingColor = 'text-slate-700 dark:text-slate-200';
+
+                if (quota && quota.ok) {
+                    hasValidQuotaData = true;
+                    totalRemaining += quota.remainingUsd;
+                    totalMax += quota.maxUsd;
+
+                    usedText = '$' + quota.usedUsd.toFixed(2);
+                    remainingText = '$' + quota.remainingUsd.toFixed(2);
+                    percentUsed = Math.min(100, Math.max(3, Math.round(quota.percentUsed)));
+
+                    if (quota.remainingUsd <= 0.1) {
+                        barClass = 'bg-rose-600';
+                        remainingColor = 'text-rose-600 dark:text-rose-400';
+                        statusBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300">HẾT QUOTA</span>';
+                    } else if (quota.remainingUsd <= 1.0) {
+                        barClass = 'bg-amber-500';
+                        remainingColor = 'text-amber-600 dark:text-amber-400';
+                        statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300">CÒN ${quota.percentRemaining.toFixed(0)}%</span>`;
+                    } else {
+                        barClass = 'bg-emerald-500';
+                        remainingColor = 'text-emerald-600 dark:text-emerald-400';
+                        statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">CÒN ${quota.percentRemaining.toFixed(0)}%</span>`;
+                    }
+                }
+
                 return `
                     <button type="button" onclick="switchManualApifyAccount(${idx})"
-                        class="p-2.5 rounded-xl border text-left transition flex items-center justify-between gap-1.5 cursor-pointer ${
+                        class="p-2.5 sm:p-3 rounded-2xl border text-left transition flex flex-col justify-between gap-2 cursor-pointer relative overflow-hidden ${
                             isActive
-                                ? 'bg-cyan-50 dark:bg-cyan-950/60 border-cyan-400 dark:border-cyan-600 text-cyan-900 dark:text-cyan-200 ring-2 ring-cyan-400/30 font-bold'
-                                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-cyan-300 text-slate-600 dark:text-slate-300'
+                                ? 'bg-cyan-50/90 dark:bg-cyan-950/70 border-cyan-400 dark:border-cyan-500 text-cyan-950 dark:text-cyan-100 ring-2 ring-cyan-400/40 shadow-xs'
+                                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-cyan-300 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300'
                         }">
-                        <div class="min-w-0">
-                            <div class="text-xs font-black truncate">${acc.name}</div>
-                            <div class="text-[10px] text-slate-400 font-mono truncate">${acc.token.slice(0, 14)}...</div>
+                        <!-- Hàng 1: Tên Acc + Badge ĐANG DÙNG / CHỌN -->
+                        <div class="flex items-center justify-between gap-1.5 w-full">
+                            <div class="min-w-0">
+                                <div class="text-xs font-black truncate">${acc.name}</div>
+                                <div class="text-[10px] text-slate-400 font-mono truncate">${acc.token.slice(0, 14)}...</div>
+                            </div>
+                            <span class="text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                                isActive ? 'bg-cyan-500 text-white shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            }">${isActive ? 'ĐANG DÙNG' : 'CHỌN'}</span>
                         </div>
-                        <span class="text-[9px] font-black px-1.5 py-0.2 rounded shrink-0 ${
-                            isActive ? 'bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                        }">${isActive ? 'ĐANG DÙNG' : 'CHỌN'}</span>
+
+                        <!-- Hàng 2: Thông tin Quota rõ ràng từng số liệu -->
+                        <div class="w-full pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="text-slate-500 dark:text-slate-400">Còn: <strong class="${remainingColor}">${remainingText}</strong></span>
+                                <span class="text-[10px] text-slate-400 font-mono">Dùng: ${usedText}</span>
+                            </div>
+
+                            <!-- Progress bar -->
+                            <div class="w-full h-1.5 rounded-full bg-slate-200/80 dark:bg-slate-700 overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-500 ${barClass}" style="width: ${percentUsed}%"></div>
+                            </div>
+
+                            <!-- Trạng thái badge -->
+                            <div class="flex items-center justify-between text-[10px] pt-0.5">
+                                <span class="text-[9px] text-slate-400 font-medium">Hạn mức $5.00</span>
+                                <div>${statusBadge}</div>
+                            </div>
+                        </div>
                     </button>
                 `;
             }).join('');
+
+            // Cập nhật tổng quota
+            const totalEl = document.getElementById('apifyTotalQuotaNotice');
+            if (totalEl && hasValidQuotaData) {
+                totalEl.innerHTML = `
+                    <span>💡 <em>Hệ thống có 3 tài khoản: <strong>Tổng còn $${totalRemaining.toFixed(2)} / $${totalMax.toFixed(2)}</strong> (${((totalRemaining/totalMax)*100).toFixed(0)}%). Tự động xoay sang tài khoản kế tiếp khi hết quota!</em></span>
+                `;
+            }
         }
 
         // Gọi Apify Actor 'clockworks~tiktok-profile-scraper' (ID 0FXVyOXXEmdGcV88a)
@@ -11312,13 +11468,12 @@ service cloud.firestore {
                 cur = addDaysStr(cur, -7);
             }
             return list;
-        }
-
-        function openApifyScanModal(preselectedGroup = null) {
+        }        function openApifyScanModal(preselectedGroup = null) {
             const modal = document.getElementById('apifyScanModal');
             if (!modal) return;
 
             renderApifyAccountsPills();
+            refreshApifyAccountsQuota(false);
 
             // Populate target week dropdown
             const weekSelect = document.getElementById('apifyScanWeekSelect');
