@@ -1014,3 +1014,354 @@ function dongBoDashboardChuanDep(isAuto) {
 
   SpreadsheetApp.getActiveSpreadsheet().toast("Đã hoàn tất đồng bộ Dashboard chuẩn đẹp 100%!", "Thành Công ⭐", 4);
 }
+
+// =====================================================================
+// BỘ TỰ ĐỘNG HÓA CHUYỂN THÁNG, CLONE DATA VÀ ĐÓNG BĂNG LƯU TRỮ
+// =====================================================================
+
+/**
+ * Phân tích chuỗi tháng (ví dụ: "T11.2026", "11.2026", "NOV.2026") thành { month, year, formatted }
+ */
+function parseMonthYear(monthStr) {
+  const m = String(monthStr || "").match(/T?(\d{1,2})\.(\d{4})/i);
+  if (m) {
+    const mm = parseInt(m[1], 10);
+    const yy = parseInt(m[2], 10);
+    return {
+      month: mm,
+      year: yy,
+      formatted: "T" + mm + "." + yy
+    };
+  }
+  const abbr = ["", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JULY", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  const mEn = String(monthStr || "").match(/([A-Z]{3,4})\.(\d{4})/i);
+  if (mEn) {
+    const idx = abbr.indexOf(mEn[1].toUpperCase());
+    if (idx !== -1) {
+      return {
+        month: idx,
+        year: parseInt(mEn[2], 10),
+        formatted: "T" + idx + "." + mEn[2]
+      };
+    }
+  }
+  return { month: 11, year: 2026, formatted: "T11.2026" };
+}
+
+/**
+ * Lấy tên viết tắt tiếng Anh của tháng (ví dụ: month=11, year=2026 -> "NOV.2026")
+ */
+function getMonthAbbrName(month, year) {
+  const abbr = ["", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JULY", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  return (abbr[month] || "M" + month) + "." + year;
+}
+
+/**
+ * Lấy thông tin chi tiết tháng tiếp theo
+ */
+function getNextMonthInfo(monthStr) {
+  const cur = parseMonthYear(monthStr);
+  let nextM = cur.month + 1;
+  let nextY = cur.year;
+  if (nextM > 12) {
+    nextM = 1;
+    nextY += 1;
+  }
+  return {
+    curMonth: cur.month,
+    curYear: cur.year,
+    curFormatted: cur.formatted,
+    curAbbrName: getMonthAbbrName(cur.month, cur.year),
+    month: nextM,
+    year: nextY,
+    formatted: "T" + nextM + "." + nextY,
+    abbrName: getMonthAbbrName(nextM, nextY),
+    dataSheetName: "DATA T" + nextM + "." + nextY
+  };
+}
+
+/**
+ * Tự động nhân bản (clone) sheet KPI_DASHBOARD thành sheet lưu trữ độc lập cho tháng đó
+ * và khóa giá trị (Paste Values) để lưu giữ lịch sử vĩnh viễn không bị thay đổi số liệu.
+ */
+function archiveDashboardSheet(ss, monthStr) {
+  const parsed = parseMonthYear(monthStr);
+  const abbrName = getMonthAbbrName(parsed.month, parsed.year); // ví dụ: "NOV.2026"
+  const altName = "KPI_" + parsed.formatted; // ví dụ: "KPI_T11.2026"
+
+  // Kiểm tra xem sheet lưu trữ đã tồn tại chưa
+  let targetName = abbrName;
+  if (ss.getSheetByName(targetName)) {
+    targetName = altName;
+  }
+  if (ss.getSheetByName(targetName)) {
+    // Đã có bản lưu trữ, không tạo thêm để tránh trùng lặp
+    return ss.getSheetByName(targetName);
+  }
+
+  const dashSheet = ss.getSheetByName("KPI_DASHBOARD");
+  if (!dashSheet) return null;
+
+  // Clone sheet KPI_DASHBOARD
+  const clonedSheet = dashSheet.copyTo(ss);
+  clonedSheet.setName(targetName);
+
+  // Đóng băng toàn bộ công thức thành giá trị cố định (Paste Values)
+  // để vĩnh viễn không bị thay đổi khi số liệu tháng mới cập nhật
+  const dataRange = clonedSheet.getDataRange();
+  const values = dataRange.getValues();
+  dataRange.setValues(values);
+
+  // Bỏ ẩn các cột phụ trợ V..Y nếu có và làm sạch
+  try {
+    clonedSheet.showColumns(22, 4);
+    clonedSheet.getRange("V1:Y100").clear();
+  } catch (eClean) {}
+
+  // Đặt màu tab xám để phân biệt với sheet đang hoạt động
+  try {
+    clonedSheet.setTabColor("#708090");
+  } catch (eColor) {}
+
+  // Đưa sheet lưu trữ về sau KPI_DASHBOARD
+  try {
+    ss.setActiveSheet(clonedSheet);
+    ss.moveActiveSheet(dashSheet.getIndex() + 1);
+  } catch (eMove) {}
+
+  return clonedSheet;
+}
+
+/**
+ * Tự động clone sheet DATA của tháng cũ sang tháng mới:
+ * - Clone nguyên vẹn cấu trúc bảng (Idols, Teams, công thức TOTAL, KPI, KPI SALARY, format, màu sắc, viền)
+ * - Tự động cập nhật cột Ngày tháng (Cột A) sang ngày của tháng mới
+ * - Xóa sạch vùng nhập liệu số coins hàng ngày để sẵn sàng nhập liệu tháng mới
+ */
+function cloneDataSheetForNewMonth(ss, oldMonthStr, newMonthStr) {
+  const oldParsed = parseMonthYear(oldMonthStr);
+  const newParsed = parseMonthYear(newMonthStr);
+
+  const oldDataSheetName = "DATA " + oldParsed.formatted; // ví dụ: "DATA T11.2026"
+  const newDataSheetName = "DATA " + newParsed.formatted; // ví dụ: "DATA T12.2026"
+
+  // Nếu sheet mới đã tồn tại, trả về sheet đó và không ghi đè
+  let existingNewSheet = ss.getSheetByName(newDataSheetName);
+  if (existingNewSheet) {
+    return existingNewSheet;
+  }
+
+  // Tìm sheet DATA nguồn để clone
+  let sourceSheet = ss.getSheetByName(oldDataSheetName);
+  if (!sourceSheet) {
+    const altOldName = "DATA " + getMonthAbbrName(oldParsed.month, oldParsed.year);
+    sourceSheet = ss.getSheetByName(altOldName);
+  }
+  if (!sourceSheet) {
+    // Tìm bất kỳ sheet DATA nào gần nhất
+    const allSheets = ss.getSheets();
+    for (let i = 0; i < allSheets.length; i++) {
+      if (allSheets[i].getName().indexOf("DATA ") === 0) {
+        sourceSheet = allSheets[i];
+        break;
+      }
+    }
+  }
+
+  if (!sourceSheet) {
+    throw new Error("Không tìm thấy sheet DATA nguồn (" + oldDataSheetName + ") để nhân bản!");
+  }
+
+  // 1. Nhân bản sheet DATA (copyTo giữ nguyên 100% định dạng, merge, màu sắc và công thức)
+  const newSheet = sourceSheet.copyTo(ss);
+  newSheet.setName(newDataSheetName);
+
+  // Số ngày của tháng mới (28, 29, 30 hoặc 31)
+  const daysInNewMonth = new Date(newParsed.year, newParsed.month, 0).getDate();
+
+  // 2. Cập nhật Cột A (Ngày tháng) cho cả 2 tầng Top & Bottom:
+  // Top teams: hàng 3 đến hàng 3+daysInNewMonth-1
+  // Bottom teams: hàng 45 đến hàng 45+daysInNewMonth-1
+  const dateRanges = [
+    { startRow: 3, maxRows: 31 },
+    { startRow: 45, maxRows: 31 }
+  ];
+
+  dateRanges.forEach(function(dr) {
+    for (let d = 1; d <= dr.maxRows; d++) {
+      const curRow = dr.startRow + d - 1;
+      const cell = newSheet.getRange(curRow, 1);
+      if (d <= daysInNewMonth) {
+        const dateObj = new Date(newParsed.year, newParsed.month - 1, d, 0, 0, 0);
+        cell.setValue(dateObj);
+      } else {
+        cell.setValue("");
+      }
+    }
+  });
+
+  // 3. Quét động danh sách các nhóm và xóa sạch vùng nhập coin của idol:
+  // Giữ nguyên 100% công thức TOTAL, KPI, KPI SALARY và tên Idol!
+  try {
+    const dynamicTeams = scanAllTeamsDynamic(newSheet);
+    Object.keys(dynamicTeams).forEach(function(tKey) {
+      const tInfo = dynamicTeams[tKey];
+      if (tInfo && tInfo.firstCol && tInfo.lastIdolCol && tInfo.lastIdolCol >= tInfo.firstCol) {
+        const sRow = tInfo.isTop ? 3 : 45;
+        const numCols = tInfo.lastIdolCol - tInfo.firstCol + 1;
+        // Xóa nội dung coins 31 ngày (clearContent giữ nguyên viền, format số và màu nền)
+        newSheet.getRange(sRow, tInfo.firstCol, 31, numCols).clearContent();
+      }
+    });
+  } catch (errScan) {
+    // Dự phòng an toàn theo TEAM_ANCHORS
+    TEAM_ANCHORS.forEach(function(anchor) {
+      const sRow = anchor.isTop ? 3 : 45;
+      newSheet.getRange(sRow, anchor.startCol, 31, 8).clearContent();
+    });
+  }
+
+  // 4. Cập nhật tiêu đề nhóm nếu có chứa tên tháng cũ (ví dụ: T11 -> T12)
+  try {
+    const oldStr = "T" + oldParsed.month;
+    const newStr = "T" + newParsed.month;
+    const headerRows = [1, 43];
+    headerRows.forEach(function(r) {
+      const rowRange = newSheet.getRange(r, 1, 1, 60);
+      const rowVals = rowRange.getValues()[0];
+      for (let c = 0; c < rowVals.length; c++) {
+        if (typeof rowVals[c] === "string" && rowVals[c].indexOf(oldStr) !== -1) {
+          rowRange.getCell(1, c + 1).setValue(rowVals[c].replace(oldStr, newStr));
+        }
+      }
+    });
+  } catch (errTitle) {}
+
+  // Đặt sheet mới kế tiếp sheet nguồn
+  try {
+    ss.setActiveSheet(newSheet);
+    ss.moveActiveSheet(sourceSheet.getIndex() + 1);
+  } catch (eMove) {}
+
+  return newSheet;
+}
+
+/**
+ * TÍNH NĂNG CHUYỂN SANG THÁNG MỚI (1-CLICK MỚI):
+ * 1. Hỏi người dùng tháng muốn chuyển sang (gợi ý tự động, ví dụ T12.2026).
+ * 2. Lưu trữ Target & Basic của tháng cũ vào _KPI_TARGET_DB.
+ * 3. Clone sheet KPI_DASHBOARD thành sheet lưu trữ tháng cũ (ví dụ NOV.2026 / KPI_T11.2026)
+ *    và đóng băng (Paste Values) toàn bộ số liệu để lưu giữ lịch sử vĩnh viễn.
+ * 4. Tự động clone sheet DATA cũ (ví dụ DATA T11.2026) thành sheet DATA mới (DATA T12.2026):
+ *    - Cập nhật tự động toàn bộ 31 ngày của tháng mới ở Cột A.
+ *    - Xóa sạch dữ liệu coins cũ để sẵn sàng nhập liệu tháng mới.
+ *    - Giữ nguyên 100% tên idol, công thức TOTAL, KPI, KPI SALARY và format viền màu.
+ * 5. Cập nhật ô B1 = T12.2026 trên KPI_DASHBOARD và kích hoạt đồng bộ toàn diện!
+ */
+function chuyenSangThangMoiTuDong() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dashSheet = ss.getSheetByName("KPI_DASHBOARD");
+  if (!dashSheet) {
+    SpreadsheetApp.getUi().alert("Không tìm thấy trang tính KPI_DASHBOARD!");
+    return;
+  }
+
+  const curMonth = String(dashSheet.getRange("B1").getValue() || "T11.2026").trim();
+  const nextInfo = getNextMonthInfo(curMonth);
+  const ui = SpreadsheetApp.getUi();
+
+  const promptResult = ui.prompt(
+    "🚀 CHUYỂN SANG THÁNG MỚI & TỰ ĐỘNG CLONE SHEET",
+    "Tháng hiện tại trên Dashboard: " + curMonth + "\n\n" +
+    "Hệ thống sẽ tự động thực hiện 3 bước:\n" +
+    "1. Đóng băng & lưu trữ Dashboard Tháng cũ (" + curMonth + ") thành sheet độc lập (" + nextInfo.curAbbrName + ").\n" +
+    "2. Nhân bản sheet dữ liệu mới (" + nextInfo.dataSheetName + ") từ " + ("DATA " + curMonth) + " với ngày tháng mới và làm sạch ô nhập liệu.\n" +
+    "3. Cập nhật ô B1 sang tháng mới và kích hoạt đồng bộ Dashboard.\n\n" +
+    "Nhập tên tháng mới bạn muốn chuyển sang (hoặc giữ nguyên mặc định):",
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (promptResult.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  let newMonthInput = promptResult.getResponseText().trim();
+  if (!newMonthInput) {
+    newMonthInput = nextInfo.formatted;
+  }
+
+  // Chuẩn hóa định dạng nếu người dùng nhập không có chữ T (ví dụ: 12.2026 -> T12.2026)
+  if (/^\d{1,2}\.\d{4}$/.test(newMonthInput)) {
+    newMonthInput = "T" + newMonthInput;
+  }
+
+  try {
+    ss.toast("Đang tiến hành lưu trữ tháng cũ và clone dữ liệu tháng mới...", "Vui lòng chờ ⏳", 10);
+
+    // 1. Lưu Target & Basic tháng cũ vào _KPI_TARGET_DB
+    saveAllCurrentDashboardKpi(ss, dashSheet, curMonth);
+
+    // 2. Clone và đóng băng KPI_DASHBOARD tháng cũ
+    const archivedDash = archiveDashboardSheet(ss, curMonth);
+
+    // 3. Clone sheet DATA tháng mới từ DATA tháng cũ
+    const newDataSheet = cloneDataSheetForNewMonth(ss, curMonth, newMonthInput);
+
+    // 4. Cập nhật ô B1 = newMonthInput
+    dashSheet.getRange("B1").setValue(newMonthInput);
+
+    // 5. Đồng bộ Dashboard cho tháng mới
+    dongBoDashboardChuanDep(false);
+
+    let archivedName = archivedDash ? archivedDash.getName() : "Đã lưu";
+    let dataName = newDataSheet ? newDataSheet.getName() : ("DATA " + newMonthInput);
+
+    ui.alert(
+      "🎉 CHUYỂN THÁNG MỚI THÀNH CÔNG 100%!",
+      "✅ Đã lưu trữ Dashboard tháng cũ (" + curMonth + ") vào sheet: " + archivedName + "\n" +
+      "✅ Đã khởi tạo sheet dữ liệu tháng mới: " + dataName + " (Ngày tháng mới đã sẵn sàng, số liệu coins đã được dọn sạch để nhập mới!)\n" +
+      "✅ Ô B1 đã chuyển sang: " + newMonthInput + "\n\n" +
+      "Chúc bạn một tháng mới vận hành bùng nổ KPI! 🚀",
+      ui.ButtonSet.OK
+    );
+  } catch (err) {
+    ui.alert("Lỗi khi chuyển tháng: " + err.message);
+  }
+}
+
+/**
+ * ĐÓNG BĂNG & LƯU TRỮ DASHBOARD HIỆN TẠI RA SHEET ĐỘC LẬP
+ * (Cho phép quản lý lưu trữ bất kỳ lúc nào mà không cần đổi ô B1)
+ */
+function luuTruDashboardDongBang() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dashSheet = ss.getSheetByName("KPI_DASHBOARD");
+  if (!dashSheet) {
+    SpreadsheetApp.getUi().alert("Không tìm thấy trang tính KPI_DASHBOARD!");
+    return;
+  }
+  const curMonth = String(dashSheet.getRange("B1").getValue() || "T11.2026").trim();
+  const ui = SpreadsheetApp.getUi();
+
+  const confirm = ui.alert(
+    "📦 LƯU TRỮ & ĐÓNG BĂNG SHEET THÁNG " + curMonth,
+    "Hệ thống sẽ tạo một bản sao độc lập của KPI_DASHBOARD tháng " + curMonth + 
+    ", khóa toàn bộ công thức thành giá trị cố định (Paste Values) để lưu trữ vĩnh viễn không bao giờ bị thay đổi số liệu.\n\n" +
+    "Bạn có muốn tiếp tục?",
+    ui.ButtonSet.YES_NO
+  );
+
+  if (confirm !== ui.Button.YES) return;
+
+  try {
+    saveAllCurrentDashboardKpi(ss, dashSheet, curMonth);
+    const archived = archiveDashboardSheet(ss, curMonth);
+    if (archived) {
+      ui.alert("✅ Đã lưu trữ thành công vào trang tính: " + archived.getName());
+    } else {
+      ui.alert("⚠️ Bản lưu trữ của tháng " + curMonth + " dường như đã tồn tại!");
+    }
+  } catch (e) {
+    ui.alert("Lỗi khi lưu trữ: " + e.message);
+  }
+}
