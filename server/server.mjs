@@ -81,7 +81,8 @@ const server = http.createServer(async (req, res) => {
         safePath = '/mail_activator.html';
     }
 
-    const filePath = path.join(__dirname, safePath);
+    const rootDir = path.resolve(__dirname, '..');
+    const filePath = path.join(rootDir, safePath);
 
     fs.stat(filePath, (err, stats) => {
         if (err || !stats.isFile()) {

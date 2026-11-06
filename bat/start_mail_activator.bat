@@ -14,9 +14,9 @@ echo.
 start "" "http://localhost:3000/mail_activator.html"
 
 if exist "%APPDATA%\Antigravity\bin\agy-node.cmd" (
-    "%APPDATA%\Antigravity\bin\agy-node.cmd" server.mjs
+    "%APPDATA%\Antigravity\bin\agy-node.cmd" server\server.mjs
 ) else (
-    node server.mjs
+    node server\server.mjs
 )
 
 pause
