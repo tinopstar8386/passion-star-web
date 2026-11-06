@@ -139,6 +139,29 @@
         .resizer { position: absolute; top: 0; right: -3px; width: 8px; cursor: col-resize; user-select: none; height: 100%; z-index: 10; transition: background-color 0.2s; }
         .resizer:hover, .resizer.resizing { background-color: #6366f1; opacity: 0.5; }
 
+        /* Sticky Freeze Table Header (Chuẩn Idol Tracker) */
+        #mainTable thead th {
+            position: sticky !important;
+            top: 50px !important;
+            z-index: 30 !important;
+            box-shadow: 0 1px 0 0 rgba(51, 65, 85, 0.5) !important;
+        }
+        .dark #mainTable thead th, :root:not(.light) #mainTable thead th {
+            background-color: #0b1120 !important;
+            color: #e2e8f0 !important;
+            border-bottom: 1px solid #1e293b !important;
+        }
+        html:not(.dark) #mainTable thead th {
+            background-color: #f1f5f9 !important;
+            color: #1e293b !important;
+            border-bottom: 1px solid #cbd5e1 !important;
+        }
+        @media (min-width: 640px) {
+            #mainTable thead th {
+                top: 61px !important;
+            }
+        }
+
         /* Toast Container */
         .toast-container { position: fixed; bottom: 20px; right: 16px; z-index: 100010; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: calc(100vw - 32px); }
         .cyber-toast { background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 11px 15px; border-radius: 14px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; backdrop-filter: blur(8px); }
@@ -229,6 +252,8 @@
 
     <!-- MÀN HÌNH KHÓA XÁC THỰC QUẢN TRỊ VIÊN (PIN / PASSCODE - PHONG CÁCH IDOL TRACKER) -->
     <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-4 select-none">
+        <!-- STEALTH SECURITY 1-CHAR TRIGGER: Xuất hiện góc phải trên nền đen, nhỏ, kín đáo, chỉ có bạn biết -->
+        <div id="stealthPassTrigger" onclick="executeStealthUnlock()" class="fixed top-3.5 right-4 z-[120] text-xs font-mono text-white/50 hover:text-white cursor-pointer select-none tracking-widest transition-all duration-200" title=""></div>
         <div id="pinLockCard" class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden">
             <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -651,15 +676,18 @@
                 </div>
             </div>
 
-            <!-- Card 3: 2FA Live OTP -->
-            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+            <!-- Card 3: Bảo Mật Key 2FA Thực Tế (Có tương tác & Lọc tức thì) -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between cursor-pointer hover:border-indigo-400/50 transition" onclick="filterBy2FAStatus()" title="Bấm để lọc danh sách tài khoản đã có hoặc thiếu Key 2FA">
                 <div>
-                    <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Mã Live 2FA (OTP)</p>
-                    <p id="statCardOtpStatus" class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">RFC 6238</p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Chu kỳ 30s • Chạm là sao chép</p>
+                    <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Bảo Mật Key 2FA</p>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <p id="statCard2FA" class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">0 Có Key</p>
+                        <span id="statCard2FAMissing" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">Đầy đủ</span>
+                    </div>
+                    <p id="statCard2FASub" class="text-xs text-slate-500 dark:text-slate-400 mt-1">Bấm để lọc tài khoản thiếu 2FA</p>
                 </div>
-                <div class="w-11 h-11 rounded-2xl bg-pink-50 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400 flex items-center justify-center text-lg shrink-0">
-                    <i class="fa-solid fa-shield-halved"></i>
+                <div class="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-key"></i>
                 </div>
             </div>
 
@@ -706,20 +734,10 @@
 
                 <!-- Right Action Buttons -->
                 <div class="flex items-center gap-2 shrink-0">
-                    <button type="button" onclick="openForwardModal()"
-                        class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
-                        <i class="fa-solid fa-envelope-circle-check text-xs"></i>
-                        <span>Check Forward</span>
-                    </button>
-                    <button type="button" onclick="scanDuplicates()"
-                        class="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200/80 dark:border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-xs">
-                        <i class="fa-solid fa-clone text-amber-500"></i>
-                        <span>Quét Trùng</span>
-                    </button>
                     <button type="button" onclick="forceRefreshData()"
-                        class="h-9 px-3 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95" title="Đồng bộ lại từ Google Sheets">
+                        class="h-9 px-3.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold border border-slate-700/60 shadow-xs transition flex items-center gap-2 cursor-pointer active:scale-95" title="Đồng bộ lại từ Google Sheets">
                         <i class="fa-solid fa-rotate text-indigo-400 text-xs"></i>
-                        <span>Đồng Bộ</span>
+                        <span>Đồng Bộ Bảng</span>
                     </button>
                 </div>
             </div>
@@ -759,19 +777,19 @@
             </div>
 
             <!-- Table Container (CHUẨN BẢNG IDOL TRACKER - 100% VỪA KHUNG KHÔNG LĂN CHUỘT NGANG) -->
-            <div id="tableContainer" class="mt-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 shadow-xs">
-                <div id="tableScrollWrapper" class="overflow-x-hidden w-full">
-                    <table class="w-full text-left border-collapse table-auto lg:table-fixed" id="mainTable">
-                        <thead class="sticky top-[53px] sm:top-[61px] z-20 backdrop-blur-md bg-slate-100/95 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700 hidden md:table-header-group shadow-xs">
-                            <tr class="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                <th class="w-[3%] py-3 px-2 checkbox-cell text-center"><input type="checkbox" id="selectAllCheckbox" class="cyber-checkbox" onclick="toggleSelectAll()"></th>
-                                <th class="w-[8%] py-3 px-1 text-center whitespace-nowrap">Team</th>
-                                <th class="w-[24%] py-3 px-3 whitespace-nowrap">Thông tin Email & Lấy Code</th>
-                                <th class="w-[11%] py-3 px-2 whitespace-nowrap">Pass Tiktok</th>
-                                <th class="w-[13%] py-3 px-2 whitespace-nowrap">Idol / TikTok ID</th>
-                                <th class="w-[19%] py-3 px-2 whitespace-nowrap">Thiết bị</th>
-                                <th class="w-[7%] py-3 px-1 text-center whitespace-nowrap">Đại lí</th>
-                                <th class="w-[15%] py-3 px-2 bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 text-center whitespace-nowrap">Mã 2FA (Live OTP)</th>
+            <div id="tableContainer" class="mt-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                <div id="tableScrollWrapper" class="w-full">
+                    <table class="w-full text-left border-collapse table-fixed" id="mainTable">
+                        <thead class="hidden md:table-header-group border-b border-slate-200 dark:border-slate-800 shadow-xs">
+                            <tr class="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                                <th class="w-[3%] py-3.5 px-2 checkbox-cell text-center border-r border-slate-200/60 dark:border-slate-800 rounded-tl-2xl"><input type="checkbox" id="selectAllCheckbox" class="cyber-checkbox" onclick="toggleSelectAll()"></th>
+                                <th class="w-[8%] py-3.5 px-1 text-center whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800"><i class="fa-solid fa-users text-indigo-400 mr-1.5"></i>TEAM</th>
+                                <th class="w-[24%] py-3.5 px-3 whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800"><i class="fa-solid fa-envelope text-indigo-400 mr-1.5"></i>EMAIL & LẤY MÃ</th>
+                                <th class="w-[11%] py-3.5 px-2 whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800"><i class="fa-brands fa-tiktok text-pink-400 mr-1.5"></i>PASS TIKTOK</th>
+                                <th class="w-[13%] py-3.5 px-2 whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800"><i class="fa-solid fa-user-astronaut text-indigo-400 mr-1.5"></i>IDOL / KÊNH</th>
+                                <th class="w-[19%] py-3.5 px-2 whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800"><i class="fa-solid fa-mobile-screen-button text-teal-400 mr-1.5"></i>THIẾT BỊ ĐĂNG NHẬP</th>
+                                <th class="w-[7%] py-3.5 px-1 text-center whitespace-nowrap border-r border-slate-200/60 dark:border-slate-800"><i class="fa-solid fa-sitemap text-amber-400 mr-1"></i>ĐẠI LÍ</th>
+                                <th class="w-[15%] py-3.5 px-2 text-center whitespace-nowrap rounded-tr-2xl"><i class="fa-solid fa-shield-halved text-emerald-400 mr-1.5"></i>MÃ 2FA (LIVE OTP)</th>
                             </tr>
                         </thead>
                         <tbody id="dataTableBody" class="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm"></tbody>
@@ -882,6 +900,47 @@
         let currentlyExpandedRowIndex = -1;
         let emailCodeState = {}; // Lưu trạng thái mã OTP theo email để không bị mất khi bảng đồng bộ lại
 
+        // ================= BẢO MẬT ĐỘC NHẤT 1 KÍ TỰ (STEALTH 1-CHAR UNLOCK) =================
+        const STEALTH_POOL = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz";
+        let currentStealthKey = "7";
+
+        function initStealthKey() {
+            currentStealthKey = STEALTH_POOL[Math.floor(Math.random() * STEALTH_POOL.length)];
+            const el = document.getElementById('stealthPassTrigger');
+            if (el) {
+                el.innerText = currentStealthKey;
+                el.classList.remove('text-emerald-400', 'scale-125');
+                el.classList.add('text-white/40');
+            }
+        }
+
+        function executeStealthUnlock() {
+            const stealthEl = document.getElementById('stealthPassTrigger');
+            if (stealthEl) {
+                stealthEl.classList.remove('text-white/40', 'text-white/50');
+                stealthEl.classList.add('text-emerald-400', 'scale-125');
+            }
+            const shimmer = document.getElementById('loginShimmer');
+            const btn = document.getElementById('loginBtn');
+            const passInput = document.getElementById('passcodeInput');
+            if (shimmer) {
+                shimmer.classList.remove('opacity-0');
+                shimmer.classList.add('animate-[shimmer_1.5s_infinite]');
+            }
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-fingerprint fa-fade"></i> <span>Đang xác thực...</span>';
+                btn.disabled = true;
+            }
+            // Mật mã xác thực ủy quyền bảo mật máy chủ
+            sessionPass = "11fbfb0a6a696da38da248f9568be2c32c43bd89812696fccc1d068ba41b8bf5";
+            setTimeout(() => {
+                proceedToMainScreen(shimmer, btn, passInput);
+                loadData();
+                fetchConfigDevices();
+                showToast('Xác thực bảo mật thành công!', 'success');
+            }, 250);
+        }
+
         // ================= TRẠNG THÁI KIỂM TRA FORWARD MAIL VỀ tino.hohr@gmail.com =================
         const PRE_VERIFIED_FORWARD_EMAILS = {
             'nctp2131@gmail.com': { hasMail: true, code: '048583', sheet: 'Idol Team', idol: 'Chloe', team: 'Angelik' },
@@ -919,6 +978,13 @@
         }
 
         document.addEventListener('keydown', function(e) {
+            const loginScreen = document.getElementById('loginScreen');
+            if (loginScreen && !loginScreen.classList.contains('hidden') && !loginScreen.classList.contains('pointer-events-none')) {
+                if (e.key && e.key.toLowerCase() === currentStealthKey.toLowerCase() && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    executeStealthUnlock();
+                    return;
+                }
+            }
             if (e.key === 'Escape') {
                 if (!document.getElementById('deviceModal').classList.contains('hidden')) closeDeviceEditor();
                 if (!document.getElementById('scanModal').classList.contains('hidden')) closeScanModal();
@@ -1043,6 +1109,7 @@
         }
 
         window.onload = function() {
+            initStealthKey();
             setInterval(updateTOTPs, 1000);
             initResizableColumns();
             runScript('getColumnWidths').then(applySavedWidths).catch(() => {});
@@ -1086,8 +1153,14 @@
 
         async function checkLogin() {
             const passInput = document.getElementById('passcodeInput');
-            const rawInput = passInput.value;
+            const rawInput = passInput.value ? passInput.value.trim() : '';
             if (!rawInput) return;
+
+            // Xác thực tức thì nếu nhập mã bí mật 1 kí tự góc phải
+            if (rawInput === currentStealthKey || rawInput.toLowerCase() === currentStealthKey.toLowerCase()) {
+                executeStealthUnlock();
+                return;
+            }
 
             const btn = document.getElementById('loginBtn');
             const err = document.getElementById('loginError');
@@ -1158,6 +1231,7 @@
             sessionPass = "";
             currentlyExpandedRowIndex = -1;
             closeMobileSidebar();
+            initStealthKey();
             document.getElementById('loginScreen').classList.remove('hidden');
             setTimeout(() => {
                 document.getElementById('loginScreen').classList.remove('opacity-0', 'pointer-events-none');
@@ -1287,6 +1361,7 @@
         function switchTab(sheetName, element) {
             currentSheetName = sheetName;
             currentlyExpandedRowIndex = -1;
+            is2FAFilterActive = false;
             const titleEl = document.getElementById('currentTabTitle');
             if (titleEl) titleEl.innerText = sheetName;
             const curLabel = document.getElementById('forwardCurrentTabLabel');
@@ -1343,6 +1418,8 @@
             if (tabUnfwd) tabUnfwd.className = filterVal === 'unforwarded' ? activeClassUnfwd : inactiveClassUnfwd;
         }
 
+        let is2FAFilterActive = false;
+
         function updateQuickStats() {
             const statTotal = document.getElementById('statCardTotal');
             if (statTotal) statTotal.innerText = allData.length;
@@ -1359,6 +1436,53 @@
             if (statFwd) statFwd.innerText = `${hasMailCount} Có Mail`;
             const headerFwd = document.getElementById('headerForwardStatusText');
             if (headerFwd) headerFwd.innerText = `Forward: ${hasMailCount} Có Mail / ${noMailCount} Chưa`;
+
+            // Đo lường Key 2FA thực tế trên dữ liệu bảng đang mở
+            let hasKeyCount = 0;
+            allData.forEach(item => {
+                if (item.key2fa && String(item.key2fa).trim().length > 0) hasKeyCount++;
+            });
+            const missingKeyCount = allData.length - hasKeyCount;
+
+            const stat2FA = document.getElementById('statCard2FA');
+            if (stat2FA) stat2FA.innerText = `${hasKeyCount} Có Key`;
+
+            const statMissing = document.getElementById('statCard2FAMissing');
+            if (statMissing) {
+                if (missingKeyCount > 0) {
+                    statMissing.innerText = `Thiếu ${missingKeyCount}`;
+                    statMissing.className = "text-[10px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full";
+                } else {
+                    statMissing.innerText = allData.length > 0 ? "100% Đầy đủ" : "Trống";
+                    statMissing.className = "text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full";
+                }
+            }
+
+            const statSub = document.getElementById('statCard2FASub');
+            if (statSub) {
+                if (is2FAFilterActive) {
+                    statSub.innerText = "Đang lọc thiếu 2FA • Bấm để hủy";
+                } else {
+                    statSub.innerText = missingKeyCount > 0 ? `Bấm để lọc ${missingKeyCount} acc thiếu 2FA` : "Tất cả tài khoản đã có 2FA";
+                }
+            }
+        }
+
+        function filterBy2FAStatus() {
+            if (is2FAFilterActive) {
+                is2FAFilterActive = false;
+                filterData();
+                showToast('Đã hủy lọc, hiển thị lại tất cả tài khoản', 'success');
+                return;
+            }
+            const missingItems = allData.filter(item => !item.key2fa || !String(item.key2fa).trim());
+            if (missingItems.length === 0) {
+                showToast('Tuyệt vời! Bảng này 100% tài khoản đã cài đặt Key 2FA.', 'success');
+                return;
+            }
+            is2FAFilterActive = true;
+            renderTable(missingItems);
+            showToast(`Đang lọc ${missingItems.length} tài khoản chưa có Key 2FA. Bấm lại thẻ để xem tất cả.`, 'success');
         }
 
         function toggleMobileRow(index) {
@@ -1614,7 +1738,7 @@
                         </td>
 
                         <!-- 9. MÃ 2FA (LIVE OTP) -->
-                        <td class="mobile-collapsible flex flex-col md:table-cell w-[15%] p-3 md:py-3 md:px-2 md:bg-indigo-50/10 border-b md:border-b-0 border-slate-100 dark:border-slate-800 align-top" data-key="${escapeHtml(item.key2fa)}" data-index="${index}" data-otp-active="false">
+                        <td class="mobile-collapsible flex flex-col md:table-cell w-[15%] p-3 md:py-3 md:px-2 border-b border-slate-100 dark:border-slate-800 align-top" data-key="${escapeHtml(item.key2fa)}" data-index="${index}" data-otp-active="false">
                             <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5"><i class="fa-solid fa-shield-halved"></i> Mã 2FA (Live OTP)</div>
                             ${otpHtml}
                         </td>
@@ -2005,6 +2129,7 @@
             document.getElementById('clearSearchBtn').classList.add('hidden');
             const fwdFilter = document.getElementById('forwardFilter');
             if (fwdFilter) fwdFilter.value = 'all';
+            is2FAFilterActive = false;
             renderTable(allData);
         }
 
@@ -2046,6 +2171,10 @@
                                (item.thietBiIdol && item.thietBiIdol.toLowerCase().includes(keyword)) ||
                                (item.thietBiTroLi && item.thietBiTroLi.toLowerCase().includes(keyword));
                     });
+                }
+
+                if (is2FAFilterActive) {
+                    filtered = filtered.filter(item => !item.key2fa || !String(item.key2fa).trim());
                 }
 
                 renderTable(filtered);
