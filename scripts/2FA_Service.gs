@@ -79,6 +79,10 @@ function handleAppScriptRequest(e) {
         resultData = getEmailVerificationCode(payload.targetEmail);
         break;
 
+      case "checkEmailForwardStatus":
+        resultData = checkEmailForwardStatus(payload.targetEmail);
+        break;
+
       case "logDeviceAction":
         resultData = logDeviceAction(payload.account, payload.actionType, payload.device);
         break;
@@ -573,13 +577,16 @@ function getConfigDevices() {
  */
 function getEmailVerificationCode(targetEmail) {
   if (!targetEmail) return "";
-  const clean = targetEmail.trim();
+  const clean = targetEmail.trim().toLowerCase();
+  const username = clean.split('@')[0];
 
   const searchQueries = [
-    'to:tino.hohr@gmail.com "' + clean + '"',
     '"' + clean + '"',
-    'to:' + clean
-  ];
+    clean,
+    'to:' + clean,
+    'from:' + clean,
+    username.length >= 6 ? username : null
+  ].filter(Boolean);
 
   for (let q of searchQueries) {
     try {
@@ -587,15 +594,74 @@ function getEmailVerificationCode(targetEmail) {
       for (let thread of threads) {
         const msgs = thread.getMessages();
         for (let j = msgs.length - 1; j >= 0; j--) {
-          const body = msgs[j].getPlainBody();
-          // Tìm mã 6 chữ số TikTok / Email code
-          const m = body.match(/\b\d{6}\b/);
-          if (m) return m[0];
+          const body = msgs[j].getPlainBody() + " " + msgs[j].getSubject();
+          
+          // 1. Tìm mã 6 chữ số TikTok / Gmail / Outlook
+          const m6 = body.match(/\b\d{6}\b/);
+          if (m6) return m6[0];
+
+          // 2. Tìm mã có tiền tố code / mã / verification / xác thực
+          const mPrefix = body.match(/(?:mã|code|otp|verification|xác thực|confirmation)[\s\:\-]*([0-9]{4,8})/i);
+          if (mPrefix) return mPrefix[1];
+
+          // 3. Tìm mã 4 chữ số (VD Outlook code 2026)
+          const m4 = body.match(/\b\d{4}\b/);
+          if (m4) return m4[0];
         }
       }
     } catch (e) {}
   }
   return "";
+}
+
+/**
+ * Kiểm tra trạng thái kết nối Forward mail về tino.hohr@gmail.com
+ * Nếu có bất kỳ email nào trong hòm thư liên quan đến địa chỉ này -> Xác nhận ĐÃ KẾT NỐI
+ */
+function checkEmailForwardStatus(targetEmail) {
+  if (!targetEmail) return { hasMail: false, message: "Email trống" };
+  const clean = targetEmail.trim().toLowerCase();
+  const username = clean.split('@')[0];
+
+  const searchQueries = [
+    '"' + clean + '"',
+    clean,
+    'to:' + clean,
+    'from:' + clean,
+    username.length >= 6 ? username : null
+  ].filter(Boolean);
+
+  for (let q of searchQueries) {
+    try {
+      const threads = GmailApp.search(q, 0, 5);
+      if (threads && threads.length > 0) {
+        const msgs = threads[0].getMessages();
+        const latestMsg = msgs[msgs.length - 1];
+        const body = latestMsg.getPlainBody() + " " + latestMsg.getSubject();
+        
+        let foundCode = "";
+        const m6 = body.match(/\b\d{6}\b/);
+        const mPrefix = body.match(/(?:mã|code|otp|verification|xác thực|confirmation)[\s\:\-]*([0-9]{4,8})/i);
+        const mGoogleForward = body.match(/confirmation code[\s\:\-]+([0-9]{8,10})/i);
+        const m4 = body.match(/\b\d{4}\b/);
+
+        if (m6) foundCode = m6[0];
+        else if (mGoogleForward) foundCode = mGoogleForward[1];
+        else if (mPrefix) foundCode = mPrefix[1];
+        else if (m4) foundCode = m4[0];
+        else foundCode = "Đã kết nối";
+
+        return {
+          hasMail: true,
+          code: foundCode,
+          subject: latestMsg.getSubject(),
+          date: latestMsg.getDate() ? latestMsg.getDate().toISOString() : ""
+        };
+      }
+    } catch (e) {}
+  }
+
+  return { hasMail: false, code: "", message: "Chưa tìm thấy mail" };
 }
 
 /**
