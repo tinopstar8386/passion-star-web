@@ -95,7 +95,7 @@ const DEFAULT_TEAMS_CONFIG = [
     basic: 3500000,
     hRow: 7,
     defaultIdols: ["SURI", "BAMBI", "KONI", "HAKIRA", "SOFIE", "CARROT"],
-    lastRowName: "ZUMI"
+    lastRowName: ""
   },
   {
     name: "ELRIS",
@@ -103,7 +103,7 @@ const DEFAULT_TEAMS_CONFIG = [
     basic: 1500000,
     hRow: 8,
     defaultIdols: ["COOKIES", "ALICE", "NINI", "RUBY", "ANGEL"],
-    lastRowName: "CHISTY"
+    lastRowName: ""
   }
 ];
 
