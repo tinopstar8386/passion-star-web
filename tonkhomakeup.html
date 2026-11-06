@@ -947,51 +947,63 @@
 
     <!-- ========================================================================= -->
     <!-- MOBILE QUICK ACTIONS BAR: THANH ĐIỀU HƯỚNG NỔI & TỔNG CỘNG FREEZE ĐÁY     -->
-    <!-- ĐỒNG ĐỀU 3 CỘT (GRID-COLS-3) 100% KHÔNG MẤT Ô, KHÔNG MẤT NÉT, KHÔNG MẤT CHỮ -->
+    <!-- TRỰC QUAN CHO MOBILE: NHẬP HÀNG, LẤY HÀNG, LỊCH SỬ, THÊM MỚI              -->
     <!-- ========================================================================= -->
-    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-teal-200 shadow-xl md:hidden no-print flex flex-col" aria-label="Mobile Quick Actions">
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t-2 border-teal-300 shadow-[0_-6px_24px_rgba(0,0,0,0.1)] md:hidden no-print flex flex-col" aria-label="Mobile Quick Actions">
         <!-- DÒNG TỔNG CỘNG FREEZE CỐ ĐỊNH TINH CHỈNH GIAO DIỆN SÁNG ĐẸP HÀI HOÀ -->
-        <div id="mobile-freeze-summary" class="h-7.5 px-3 py-1 flex items-center justify-between text-[11px] font-bold bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 border-b border-teal-200/90 text-teal-950 tracking-tight shrink-0 select-none shadow-2xs">
+        <div id="mobile-freeze-summary" class="px-3 py-1 flex items-center justify-between text-[11px] font-bold bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 border-b border-teal-200/90 text-teal-950 tracking-tight shrink-0 select-none">
             <div class="flex items-center gap-1.5 min-w-0">
                 <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                <span class="text-slate-600 font-semibold">42 SP:</span>
-                <span id="mobile-sum-stock" class="text-emerald-900 font-black">Tồn: 0</span>
+                <span id="mobile-sum-stock" class="text-emerald-900 font-black truncate">Tồn cuối: 0</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-                <span id="mobile-sum-alert" class="text-amber-800 font-bold text-[10px] bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">0 món sắp hết</span>
+                <span id="mobile-sum-alert" onclick="filterByStatus('LOW_STOCK')" class="cursor-pointer text-amber-900 font-bold text-[10px] bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">0 món sắp hết</span>
+                <button type="button" onclick="restoreSeedItems()" class="text-[10px] font-bold text-teal-800 bg-white px-1.5 py-0.5 rounded border border-teal-300 active:scale-95" title="Khôi phục số liệu gốc Google Sheet">
+                    🔄 Chuẩn GSheet
+                </button>
             </div>
         </div>
 
-        <!-- HÀNG 3 NÚT THAO TÁC NHANH: CHIA ĐỀU 3 CỘT (GRID-COLS-3) -->
-        <div class="grid grid-cols-3 gap-1.5 px-2 py-1.5 w-full">
-            <!-- Nút 1: Thêm kho -->
+        <!-- HÀNG 4 NÚT THAO TÁC NHANH TRÊN MOBILE -->
+        <div class="grid grid-cols-4 gap-1.5 px-2 py-1.5 w-full">
+            <!-- Nút 1: Nhập thêm hàng (+) -->
+            <button
+                type="button"
+                onclick="openInboundModal()"
+                class="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[11px] font-extrabold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 active:scale-95 transition-all shadow-2xs w-full truncate"
+            >
+                <i data-lucide="arrow-down-to-dot" class="w-4 h-4 text-emerald-700 shrink-0"></i>
+                <span class="truncate mt-0.5">Nhập hàng (+)</span>
+            </button>
+
+            <!-- Nút 2: Lấy hàng / Xuất kho (-) -->
+            <button
+                type="button"
+                onclick="openOutboundModal()"
+                class="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[11px] font-extrabold text-amber-950 bg-amber-100 hover:bg-amber-200 border border-amber-300 active:scale-95 transition-all shadow-2xs w-full truncate"
+            >
+                <i data-lucide="arrow-up-from-dot" class="w-4 h-4 text-amber-700 shrink-0"></i>
+                <span class="truncate mt-0.5">Lấy hàng (-)</span>
+            </button>
+
+            <!-- Nút 3: Xem & Sửa Lịch sử -->
+            <button
+                type="button"
+                onclick="openHistoryModal()"
+                class="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[11px] font-bold text-teal-900 bg-teal-50 hover:bg-teal-100 border border-teal-300 active:scale-95 transition-all shadow-2xs w-full truncate"
+            >
+                <i data-lucide="history" class="w-4 h-4 text-teal-700 shrink-0"></i>
+                <span class="truncate mt-0.5">Lịch sử / Sửa</span>
+            </button>
+
+            <!-- Nút 4: Thêm vật liệu mới -->
             <button
                 type="button"
                 onclick="openItemModal()"
-                class="flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 transition-all shadow-xs w-full truncate"
+                class="flex flex-col items-center justify-center py-1.5 px-1 rounded-xl text-[11px] font-bold text-white bg-teal-600 hover:bg-teal-700 active:scale-95 transition-all shadow-xs w-full truncate"
             >
-                <i data-lucide="plus-circle" class="w-3.5 h-3.5 shrink-0"></i>
-                <span class="truncate">+ Thêm kho</span>
-            </button>
-
-            <!-- Nút 2: Dán DS thông minh -->
-            <button
-                type="button"
-                onclick="openSmartPasteModal()"
-                class="flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold text-teal-950 bg-gradient-to-r from-teal-100 via-emerald-100 to-teal-50 border border-teal-300/80 active:scale-95 transition-all shadow-2xs w-full truncate"
-            >
-                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-teal-700 shrink-0"></i>
-                <span class="truncate">✨ Dán DS</span>
-            </button>
-
-            <!-- Nút 3: Xóa nhanh -->
-            <button
-                type="button"
-                onclick="openQuickDeleteModal()"
-                class="flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 active:scale-95 transition-all shadow-2xs w-full truncate"
-            >
-                <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-600 shrink-0"></i>
-                <span class="truncate">🗑️ Xóa hàng</span>
+                <i data-lucide="plus-circle" class="w-4 h-4 shrink-0"></i>
+                <span class="truncate mt-0.5">+ Món mới</span>
             </button>
         </div>
     </nav>
@@ -1428,18 +1440,18 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 2: PHIẾU NHẬP KHO (INBOUND MODAL)                                     -->
+    <!-- MODAL 2: PHIẾU NHẬP KHO TRỰC QUAN (CÓ NGÀY NHẬP & HÌNH ẢNH CHỨNG CỨ)       -->
     <!-- ========================================================================= -->
-    <div id="inbound-modal" onclick="closeInboundModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-2.5 sm:p-4 overscroll-contain">
-        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-emerald-300 shadow-2xl flex flex-col max-h-[86dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
-            <div class="px-5 py-3.5 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between shrink-0">
+    <div id="inbound-modal" onclick="closeInboundModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl max-w-lg w-full border-2 border-emerald-300 shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
+            <div class="px-4 sm:px-5 py-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-200 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                        <i data-lucide="arrow-down-to-dot" class="w-4 h-4"></i>
+                    <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <i data-lucide="arrow-down-to-dot" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-slate-900 text-sm sm:text-base">Tạo Phiếu Nhập Kho</h3>
-                        <p class="text-[11px] text-slate-500">Cộng thêm số lượng tồn kho và ghi nhật ký giao dịch</p>
+                        <h3 class="font-extrabold text-emerald-950 text-sm sm:text-base">📥 Nhập Thêm Hàng Vào Kho</h3>
+                        <p class="text-[11px] text-emerald-800">Cộng thêm tồn kho theo ngày & lưu ảnh chứng cứ nhập hàng</p>
                     </div>
                 </div>
                 <button type="button" onclick="closeInboundModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors shrink-0">
@@ -1451,65 +1463,86 @@
                 <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-3.5">
                     <!-- Chọn vật liệu -->
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Chọn vật liệu nhập kho *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">1. Chọn vật liệu cần nhập thêm *</label>
                         <select
                             id="inbound-item-select"
                             required
                             onchange="handleInboundItemChange(this.value)"
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-emerald-500"
+                            class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-emerald-500"
                         >
                             <!-- Populated dynamically -->
                         </select>
                     </div>
 
-                    <!-- Tồn kho hiện tại info card -->
-                    <div id="inbound-current-info" class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-emerald-900" id="inbound-info-name">Chưa chọn</p>
-                            <p class="text-[11px] text-slate-600" id="inbound-info-sku">ĐVT: --</p>
+                    <!-- Thẻ Xem trước biến động tồn kho trực quan (Có ảnh sản phẩm) -->
+                    <div id="inbound-current-info" class="p-3 bg-emerald-50/80 border-2 border-emerald-200 rounded-xl flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <img id="inbound-info-img" src="" alt="" class="w-12 h-12 rounded-lg object-contain bg-white border border-emerald-200 p-0.5 shrink-0" />
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs sm:text-sm font-extrabold text-emerald-950 truncate" id="inbound-info-name">Chưa chọn</p>
+                                <p class="text-[11px] text-slate-600 font-medium" id="inbound-info-sku">ĐVT: --</p>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-xs font-bold text-slate-500">Tồn hiện có</p>
-                            <p class="text-base font-black text-emerald-800" id="inbound-info-stock">0</p>
+                        <div class="text-right shrink-0 bg-white px-3 py-1.5 rounded-xl border border-emerald-200 shadow-2xs">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase">Tồn hiện có ➔ Sau nhập</p>
+                            <div class="flex items-center justify-end gap-1.5 mt-0.5">
+                                <span class="text-sm font-bold text-slate-600" id="inbound-info-stock">0</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span class="text-base sm:text-lg font-black text-emerald-700" id="inbound-info-after-stock">1</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <!-- Số lượng nhập (Nút chọn nhanh + Stepper trực quan cho Mobile) & Ngày nhập -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Số lượng nhập (+) *</label>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-xs font-bold text-emerald-900">2. Số lượng nhập (+) *</label>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" onclick="setQuickModalQty('inbound-qty', 1)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 hover:bg-emerald-200">+1</button>
+                                    <button type="button" onclick="setQuickModalQty('inbound-qty', 2)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 hover:bg-emerald-200">+2</button>
+                                    <button type="button" onclick="setQuickModalQty('inbound-qty', 5)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 hover:bg-emerald-200">+5</button>
+                                    <button type="button" onclick="setQuickModalQty('inbound-qty', 10)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 hover:bg-emerald-200">+10</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" onclick="stepModalQty('inbound-qty', -1)" class="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 font-black text-base text-slate-700 flex items-center justify-center active:scale-95 shrink-0">-</button>
+                                <input
+                                    type="number"
+                                    id="inbound-qty"
+                                    required
+                                    min="1"
+                                    step="1"
+                                    value="1"
+                                    oninput="updateInboundPreviewAfter()"
+                                    class="w-full h-10 px-2 bg-white border-2 border-emerald-400 rounded-xl text-base font-black text-emerald-800 text-center focus:outline-none focus:border-emerald-600"
+                                />
+                                <button type="button" onclick="stepModalQty('inbound-qty', 1)" class="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base flex items-center justify-center active:scale-95 shrink-0">+</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">3. Ngày nhập hàng (Theo Sheet) *</label>
                             <input
-                                type="number"
-                                id="inbound-qty"
+                                type="date"
+                                id="inbound-date"
                                 required
-                                min="1"
-                                step="1"
-                                value="1"
-                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-base font-black text-emerald-800 text-center focus:outline-none focus:bg-white focus:border-emerald-500"
+                                class="w-full h-10 px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
                             />
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Đơn giá nhập (VNĐ)</label>
-                            <input
-                                type="number"
-                                id="inbound-price"
-                                min="0"
-                                step="any"
-                                placeholder="0 ₫"
-                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold text-right focus:outline-none focus:bg-white focus:border-emerald-500"
-                            />
+                            <input type="hidden" id="inbound-price" value="0" />
                         </div>
                     </div>
 
+                    <!-- Người thực hiện & Nguồn hàng -->
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Người thực hiện *</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Người nhập kho *</label>
                             <input
                                 type="text"
                                 id="inbound-operator"
                                 required
                                 value="Quản lý kho"
-                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-emerald-500"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:bg-white focus:border-emerald-500"
                             />
                         </div>
 
@@ -1521,6 +1554,37 @@
                                 placeholder="Shop / Nhà cung cấp..."
                                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-emerald-500"
                             />
+                        </div>
+                    </div>
+
+                    <!-- Hình ảnh chứng cứ nhập hàng -->
+                    <div class="p-3 bg-emerald-50/40 border border-emerald-200 rounded-xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                                <i data-lucide="camera" class="w-4 h-4 text-emerald-600"></i>
+                                <span>4. Hình ảnh chứng cứ nhập hàng (Hóa đơn / Ảnh hàng về)</span>
+                            </label>
+                            <button type="button" id="inbound-clear-evidence-btn" onclick="clearModalEvidence('inbound')" class="hidden text-[11px] font-bold text-red-600 hover:underline">Xóa ảnh</button>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div id="inbound-evidence-preview-box" class="w-16 h-16 rounded-xl border-2 border-dashed border-emerald-300 bg-white flex flex-col items-center justify-center overflow-hidden shrink-0">
+                                <img id="inbound-evidence-preview" src="" alt="Chứng cứ" class="w-full h-full object-cover hidden cursor-zoom-in" onclick="openRawImageLightbox(this.src, 'Ảnh chứng cứ nhập kho')" />
+                                <span id="inbound-evidence-placeholder" class="text-[10px] text-slate-400 font-semibold text-center px-1">Chưa có ảnh</span>
+                            </div>
+                            <div class="flex-1 space-y-1.5 min-w-0">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-2xs active:scale-95 transition-all">
+                                    <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                                    <span>📸 Chụp ảnh / Tải ảnh chứng cứ</span>
+                                    <input type="file" id="inbound-evidence-file" accept="image/*" class="hidden" onchange="handleModalEvidenceUpload(event, 'inbound')" />
+                                </label>
+                                <input
+                                    type="text"
+                                    id="inbound-evidence-url"
+                                    oninput="handleModalEvidenceUrl(this.value, 'inbound')"
+                                    placeholder="Hoặc dán link ảnh chứng cứ (https://...)"
+                                    class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-emerald-500"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -1536,19 +1600,20 @@
                 </div>
 
                 <!-- Sticky Footer -->
-                <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+                <div class="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
                     <button
                         type="button"
                         onclick="closeInboundModal()"
-                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300"
+                        class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300"
                     >
                         Hủy
                     </button>
                     <button
                         type="submit"
-                        class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 shadow-xs"
+                        class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
                     >
-                        Xác nhận Nhập kho
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        <span>Xác nhận Nhập Hàng (+)</span>
                     </button>
                 </div>
             </form>
@@ -1556,18 +1621,18 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 3: PHIẾU XUẤT KHO (OUTBOUND MODAL)                                    -->
+    <!-- MODAL 3: PHIẾU LẤY HÀNG / XUẤT KHO TRỰC QUAN (CÓ NGÀY LẤY & ẢNH CHỨNG CỨ)  -->
     <!-- ========================================================================= -->
-    <div id="outbound-modal" onclick="closeOutboundModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-2.5 sm:p-4 overscroll-contain">
-        <div class="bg-white rounded-2xl max-w-lg w-full border-2 border-amber-300 shadow-2xl flex flex-col max-h-[86dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
-            <div class="px-5 py-3.5 bg-amber-50 border-b border-amber-200 flex items-center justify-between shrink-0">
+    <div id="outbound-modal" onclick="closeOutboundModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl max-w-lg w-full border-2 border-amber-300 shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
+            <div class="px-4 sm:px-5 py-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0">
-                        <i data-lucide="arrow-up-from-dot" class="w-4 h-4"></i>
+                    <div class="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <i data-lucide="arrow-up-from-dot" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-slate-900 text-sm sm:text-base">Tạo Phiếu Xuất Kho</h3>
-                        <p class="text-[11px] text-slate-500">Trừ số lượng tồn và xuất cho ca makeup, thợ nhận</p>
+                        <h3 class="font-extrabold text-amber-950 text-sm sm:text-base">📤 Lấy Hàng / Xuất Kho Theo Ngày</h3>
+                        <p class="text-[11px] text-amber-800">Ghi nhận ngày lấy khớp Sheet Excel & lưu ảnh chứng cứ lấy hàng</p>
                     </div>
                 </div>
                 <button type="button" onclick="closeOutboundModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors shrink-0">
@@ -1578,39 +1643,84 @@
             <form onsubmit="handleOutboundSubmit(event)" class="flex flex-col flex-1 min-h-0 overflow-hidden">
                 <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-3.5">
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Chọn vật liệu xuất kho *</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">1. Chọn vật liệu cần lấy *</label>
                         <select
                             id="outbound-item-select"
                             required
                             onchange="handleOutboundItemChange(this.value)"
-                            class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-semibold focus:outline-none focus:bg-white focus:border-amber-500"
+                            class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:bg-white focus:border-amber-500"
                         >
                             <!-- Populated dynamically -->
                         </select>
                     </div>
 
-                    <div id="outbound-current-info" class="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-center justify-between">
-                        <div>
-                            <p class="text-xs font-semibold text-amber-950" id="outbound-info-name">Chưa chọn</p>
-                            <p class="text-[11px] text-slate-600" id="outbound-info-sku">ĐVT: --</p>
+                    <!-- Thẻ Xem trước biến động tồn kho trực quan (Có ảnh sản phẩm) -->
+                    <div id="outbound-current-info" class="p-3 bg-amber-50/80 border-2 border-amber-200 rounded-xl flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <img id="outbound-info-img" src="" alt="" class="w-12 h-12 rounded-lg object-contain bg-white border border-amber-200 p-0.5 shrink-0" />
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs sm:text-sm font-extrabold text-amber-950 truncate" id="outbound-info-name">Chưa chọn</p>
+                                <p class="text-[11px] text-slate-600 font-medium" id="outbound-info-sku">ĐVT: --</p>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <p class="text-xs font-bold text-slate-500">Khả dụng trong kho</p>
-                            <p class="text-base font-black text-amber-900" id="outbound-info-stock">0</p>
+                        <div class="text-right shrink-0 bg-white px-3 py-1.5 rounded-xl border border-amber-200 shadow-2xs">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase">Hiện có ➔ Còn lại</p>
+                            <div class="flex items-center justify-end gap-1.5 mt-0.5">
+                                <span class="text-sm font-bold text-slate-600" id="outbound-info-stock">0</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-amber-600"></i>
+                                <span class="text-base sm:text-lg font-black text-amber-800" id="outbound-info-after-stock">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Số lượng lấy & Ngày lấy (Khớp cột ngày Sheet Excel) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-xs font-bold text-amber-900">2. Số lượng lấy (-) *</label>
+                                <div class="flex items-center gap-1">
+                                    <button type="button" onclick="setQuickModalQty('outbound-qty', 1)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 hover:bg-amber-200">-1</button>
+                                    <button type="button" onclick="setQuickModalQty('outbound-qty', 2)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 hover:bg-amber-200">-2</button>
+                                    <button type="button" onclick="setQuickModalQty('outbound-qty', 3)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 hover:bg-amber-200">-3</button>
+                                    <button type="button" onclick="setQuickModalQty('outbound-qty', 5)" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 hover:bg-amber-200">-5</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" onclick="stepModalQty('outbound-qty', -1)" class="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 font-black text-base text-slate-700 flex items-center justify-center active:scale-95 shrink-0">-</button>
+                                <input
+                                    type="number"
+                                    id="outbound-qty"
+                                    required
+                                    min="1"
+                                    step="1"
+                                    value="1"
+                                    oninput="updateOutboundPreviewAfter()"
+                                    class="w-full h-10 px-2 bg-white border-2 border-amber-400 rounded-xl text-base font-black text-amber-900 text-center focus:outline-none focus:border-amber-600"
+                                />
+                                <button type="button" onclick="stepModalQty('outbound-qty', 1)" class="w-10 h-10 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-base flex items-center justify-center active:scale-95 shrink-0">+</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">3. Ngày lấy hàng (Theo Sheet) *</label>
+                            <input
+                                type="date"
+                                id="outbound-date"
+                                required
+                                class="w-full h-10 px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:border-amber-500"
+                            />
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Số lượng xuất (-) *</label>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Người nhận / Thợ lấy *</label>
                             <input
-                                type="number"
-                                id="outbound-qty"
+                                type="text"
+                                id="outbound-recipient"
                                 required
-                                min="1"
-                                step="1"
-                                value="1"
-                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-base font-black text-amber-900 text-center focus:outline-none focus:bg-white focus:border-amber-500"
+                                placeholder="VD: Thợ Mai, Bàn Makeup 1..."
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:bg-white focus:border-amber-500"
                             />
                         </div>
 
@@ -1621,64 +1731,73 @@
                                 required
                                 class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:bg-white focus:border-amber-500"
                             >
+                                <option value="Thợ makeup nhận">Thợ makeup nhận</option>
                                 <option value="Ca makeup sự kiện">Ca makeup sự kiện</option>
-                                <option value="Thợ makeup mượn/nhận">Thợ makeup nhận</option>
-                                <option value="Hàng mẫu / Test">Hàng mẫu / Test</option>
                                 <option value="Tiêu hao định kỳ">Tiêu hao định kỳ</option>
+                                <option value="Hàng mẫu / Test">Hàng mẫu / Test</option>
                                 <option value="Hỏng / Hết hạn">Hỏng / Hết hạn</option>
                             </select>
                         </div>
                     </div>
+                    <input type="hidden" id="outbound-operator" value="Quản lý kho" />
 
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Người nhận / Thợ nhận *</label>
-                            <input
-                                type="text"
-                                id="outbound-recipient"
-                                required
-                                placeholder="VD: Thợ Mai, Team Sự Kiện..."
-                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-amber-500"
-                            />
+                    <!-- Hình ảnh chứng cứ lấy hàng -->
+                    <div class="p-3 bg-amber-50/50 border border-amber-200 rounded-xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                                <i data-lucide="camera" class="w-4 h-4 text-amber-700"></i>
+                                <span>4. Hình ảnh chứng cứ lấy hàng (Ảnh bàn giao / Đồ xuất)</span>
+                            </label>
+                            <button type="button" id="outbound-clear-evidence-btn" onclick="clearModalEvidence('outbound')" class="hidden text-[11px] font-bold text-red-600 hover:underline">Xóa ảnh</button>
                         </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-700 mb-1">Người lập phiếu *</label>
-                            <input
-                                type="text"
-                                id="outbound-operator"
-                                required
-                                value="Quản lý kho"
-                                class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:bg-white focus:border-amber-500"
-                            />
+                        <div class="flex items-center gap-3">
+                            <div id="outbound-evidence-preview-box" class="w-16 h-16 rounded-xl border-2 border-dashed border-amber-300 bg-white flex flex-col items-center justify-center overflow-hidden shrink-0">
+                                <img id="outbound-evidence-preview" src="" alt="Chứng cứ" class="w-full h-full object-cover hidden cursor-zoom-in" onclick="openRawImageLightbox(this.src, 'Ảnh chứng cứ xuất kho')" />
+                                <span id="outbound-evidence-placeholder" class="text-[10px] text-slate-400 font-semibold text-center px-1">Chưa có ảnh</span>
+                            </div>
+                            <div class="flex-1 space-y-1.5 min-w-0">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-2xs active:scale-95 transition-all">
+                                    <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                                    <span>📸 Chụp ảnh / Tải ảnh chứng cứ</span>
+                                    <input type="file" id="outbound-evidence-file" accept="image/*" class="hidden" onchange="handleModalEvidenceUpload(event, 'outbound')" />
+                                </label>
+                                <input
+                                    type="text"
+                                    id="outbound-evidence-url"
+                                    oninput="handleModalEvidenceUrl(this.value, 'outbound')"
+                                    placeholder="Hoặc dán link ảnh chứng cứ (https://...)"
+                                    class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-amber-500"
+                                />
+                            </div>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Ghi chú phiếu xuất</label>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Ghi chú phiếu lấy hàng</label>
                         <input
                             type="text"
                             id="outbound-note"
-                            placeholder="VD: Xuất cho show diễn cuối tuần..."
+                            placeholder="VD: Lấy chai mới cho bàn số 2..."
                             class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs focus:outline-none focus:bg-white focus:border-amber-500"
                         />
                     </div>
                 </div>
 
                 <!-- Sticky Footer -->
-                <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
+                <div class="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
                     <button
                         type="button"
                         onclick="closeOutboundModal()"
-                        class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300"
+                        class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300"
                     >
                         Hủy
                     </button>
                     <button
                         type="submit"
-                        class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 border border-amber-700 shadow-xs"
+                        class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold text-white bg-amber-600 hover:bg-amber-700 border border-amber-700 shadow-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
                     >
-                        Xác nhận Xuất kho
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        <span>Xác nhận Lấy Hàng (-)</span>
                     </button>
                 </div>
             </form>
@@ -1686,79 +1805,203 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 4: LỊCH SỬ XUẤT - NHẬP KHO (TRANSACTION LOG MODAL)                    -->
+    <!-- MODAL 4: LỊCH SỬ XUẤT - NHẬP TOÀN KHO (CÓ XEM ẢNH CHỨNG CỨ, SỬA & XÓA)     -->
     <!-- ========================================================================= -->
-    <div id="history-modal" onclick="closeHistoryModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-2.5 sm:p-4 overscroll-contain">
-        <div class="bg-white rounded-2xl max-w-4xl w-full border-2 border-teal-300 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[86dvh] sm:max-h-[90vh]" onclick="event.stopPropagation()">
+    <div id="history-modal" onclick="closeHistoryModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl max-w-5xl w-full border-2 border-teal-300 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92dvh] sm:max-h-[90vh]" onclick="event.stopPropagation()">
             <!-- Header -->
-            <div class="px-5 py-4 bg-teal-50 border-b border-teal-200 flex items-center justify-between shrink-0">
+            <div class="px-4 sm:px-5 py-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border-b border-teal-200 flex items-center justify-between shrink-0">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center">
-                        <i data-lucide="history" class="w-4 h-4"></i>
+                    <div class="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0">
+                        <i data-lucide="history" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-slate-900 text-base">Nhật Ký Giao Dịch Xuất - Nhập Kho</h3>
-                        <p class="text-xs text-slate-500">Toàn bộ lịch sử nhập thêm, xuất kho và biến động tồn thực tế</p>
+                        <h3 class="font-extrabold text-slate-900 text-sm sm:text-base">Nhật Ký Xuất - Nhập Kho & Ảnh Chứng Cứ</h3>
+                        <p class="text-[11px] text-slate-600">Xem lịch sử từng ngày, bấm Sửa hoặc Xóa bất kỳ giao dịch nào (Tự động hoàn trả số lượng tồn)</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeHistoryModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors">
+                <button type="button" onclick="closeHistoryModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors shrink-0">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
             <!-- Filter Controls in History Modal -->
-            <div class="p-4 bg-slate-50/80 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
-                <div class="flex items-center gap-2">
+            <div class="p-3 sm:p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+                <div class="flex items-center gap-2 flex-wrap flex-1 min-w-[240px]">
                     <select
                         id="history-type-filter"
                         onchange="renderHistoryTable()"
-                        class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold"
+                        class="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800"
                     >
-                        <option value="ALL">Tất cả giao dịch</option>
-                        <option value="INBOUND">📥 Chỉ phiếu Nhập kho</option>
-                        <option value="OUTBOUND">📤 Chỉ phiếu Xuất kho</option>
+                        <option value="ALL">📋 Tất cả giao dịch</option>
+                        <option value="INBOUND">📥 Chỉ lịch sử Nhập hàng (+)</option>
+                        <option value="OUTBOUND">📤 Chỉ lịch sử Lấy hàng (-)</option>
+                        <option value="HAS_PHOTO">📷 Có hình ảnh chứng cứ</option>
                     </select>
+
+                    <div class="relative flex-1 min-w-[160px] max-w-xs">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                        <input
+                            type="text"
+                            id="history-search-input"
+                            oninput="renderHistoryTable()"
+                            placeholder="Tìm tên món, ngày (VD: 15/10), người nhận..."
+                            class="w-full h-9 pl-8 pr-3 bg-white border border-slate-300 rounded-xl text-xs font-medium focus:outline-none focus:border-teal-500"
+                        />
+                    </div>
                 </div>
-                <div class="text-xs font-semibold text-slate-600" id="history-count-badge">
-                    0 giao dịch
+
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-teal-900 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200" id="history-count-badge">
+                        0 giao dịch
+                    </span>
+                    <button
+                        type="button"
+                        onclick="restoreSeedItems()"
+                        class="h-8 px-2.5 rounded-lg text-xs font-bold text-teal-800 bg-white hover:bg-teal-50 border border-teal-300 shadow-2xs inline-flex items-center gap-1"
+                        title="Khôi phục toàn bộ số liệu tồn kho và lịch sử chuẩn theo Google Sheet gốc"
+                    >
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-teal-600"></i>
+                        <span>Khôi phục gốc GSheet</span>
+                    </button>
                 </div>
             </div>
 
             <!-- History Table Content -->
-            <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-4">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="bg-teal-50 text-teal-900 font-bold border-b border-teal-200">
-                            <th class="py-2.5 px-3">Thời gian</th>
-                            <th class="py-2.5 px-2 text-center">Loại</th>
-                            <th class="py-2.5 px-3">Vật liệu</th>
-                            <th class="py-2.5 px-2 text-center">Số lượng</th>
-                            <th class="py-2.5 px-2 text-center">Tồn sau GD</th>
-                            <th class="py-2.5 px-3">Người thực hiện / Nhận</th>
-                            <th class="py-2.5 px-3">Ghi chú</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-table-body" class="divide-y divide-slate-200 font-medium">
-                        <!-- Populated dynamically -->
-                    </tbody>
-                </table>
+            <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-teal-50 text-teal-900 font-bold border-b-2 border-teal-200">
+                                <th class="py-2.5 px-2.5 whitespace-nowrap">Ngày / Giờ</th>
+                                <th class="py-2.5 px-2 text-center whitespace-nowrap">Loại</th>
+                                <th class="py-2.5 px-2.5">Vật liệu</th>
+                                <th class="py-2.5 px-2 text-center whitespace-nowrap">Số lượng</th>
+                                <th class="py-2.5 px-2 text-center whitespace-nowrap">Ảnh chứng cứ</th>
+                                <th class="py-2.5 px-2.5">Người thực hiện / Nhận</th>
+                                <th class="py-2.5 px-2.5">Ghi chú</th>
+                                <th class="py-2.5 px-2 text-center whitespace-nowrap">Sửa / Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body" class="divide-y divide-slate-200 font-medium">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Footer -->
-            <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+            <div class="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0">
                 <button
                     type="button"
                     onclick="clearHistoryLogs()"
-                    class="text-xs text-red-600 hover:text-red-800 font-semibold"
+                    class="px-3 py-1.5 rounded-lg text-xs text-red-600 hover:bg-red-50 border border-red-200 font-bold inline-flex items-center gap-1"
                 >
-                    Xóa nhật ký cũ
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <span>Xóa toàn bộ nhật ký</span>
                 </button>
                 <button
                     type="button"
                     onclick="closeHistoryModal()"
-                    class="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100"
+                    class="px-5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100"
                 >
                     Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL 4B: CHI TIẾT & CHỈNH SỬA LỊCH SỬ THEO NGÀY CỦA TỪNG SẢN PHẨM         -->
+    <!-- (LIÊN ĐỚI TRỰC TIẾP TỚI TỒN ĐẦU - ĐÃ LẤY - TỒN CUỐI GOOGLE SHEET)          -->
+    <!-- ========================================================================= -->
+    <div id="item-history-modal" onclick="closeItemDailyHistoryModal()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-end sm:items-center justify-center p-0 sm:p-4 overscroll-contain">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl max-w-2xl w-full border-2 border-teal-400 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92dvh] sm:max-h-[90vh]" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="px-4 sm:px-5 py-3.5 bg-gradient-to-r from-teal-50 via-emerald-50 to-teal-50 border-b border-teal-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <img id="item-hist-img" src="" alt="" class="w-11 h-11 rounded-xl object-contain bg-white border border-teal-300 p-0.5 shrink-0 shadow-2xs" />
+                    <div class="min-w-0">
+                        <h3 id="item-hist-title" class="font-extrabold text-slate-900 text-sm sm:text-base truncate">Lịch sử theo ngày</h3>
+                        <p class="text-[11px] text-teal-800 font-medium">Sửa hoặc xóa bất kỳ ngày Nhập / Lấy nào ➔ Tồn cuối tự động tính lại chuẩn xác</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeItemDailyHistoryModal()" class="w-8 h-8 rounded-lg bg-white/80 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 flex items-center justify-center transition-colors shrink-0">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Tóm tắt công thức liên đới Google Sheet -->
+            <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 grid grid-cols-4 gap-2 text-center shrink-0">
+                <div class="bg-white p-1.5 rounded-lg border border-sky-200">
+                    <span class="text-[10px] font-bold text-sky-800 uppercase block">Tồn đầu gốc</span>
+                    <span id="item-hist-orig-init" class="text-sm sm:text-base font-black text-sky-950">0</span>
+                </div>
+                <div class="bg-white p-1.5 rounded-lg border border-emerald-200">
+                    <span class="text-[10px] font-bold text-emerald-800 uppercase block">+ Nhập thêm</span>
+                    <span id="item-hist-added" class="text-sm sm:text-base font-black text-emerald-700">+0</span>
+                </div>
+                <div class="bg-white p-1.5 rounded-lg border border-rose-200">
+                    <span class="text-[10px] font-bold text-rose-800 uppercase block">- Đã lấy</span>
+                    <span id="item-hist-used" class="text-sm sm:text-base font-black text-rose-700">-0</span>
+                </div>
+                <div class="bg-emerald-50 p-1.5 rounded-lg border-2 border-emerald-400">
+                    <span class="text-[10px] font-extrabold text-emerald-900 uppercase block">= Tồn cuối</span>
+                    <span id="item-hist-stock" class="text-sm sm:text-base font-black text-emerald-950">0</span>
+                </div>
+            </div>
+
+            <!-- Body: Danh sách ngày Nhập & ngày Lấy -->
+            <div class="modal-scroll-body flex-1 overflow-y-auto overscroll-contain p-4 space-y-4">
+                <!-- Nút thao tác nhanh cho món này -->
+                <div class="flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="item-hist-btn-in" class="h-8 px-3 rounded-lg text-xs font-bold text-emerald-900 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 inline-flex items-center gap-1 shadow-2xs">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>+ Thêm ngày Nhập hàng</span>
+                        </button>
+                        <button type="button" id="item-hist-btn-out" class="h-8 px-3 rounded-lg text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 inline-flex items-center gap-1 shadow-2xs">
+                            <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                            <span>- Thêm ngày Lấy hàng</span>
+                        </button>
+                    </div>
+                    <button type="button" id="item-hist-btn-reset" class="h-8 px-2.5 rounded-lg text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 inline-flex items-center gap-1" title="Khôi phục riêng món này về đúng số liệu Google Sheet gốc">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                        <span>Reset món này theo GSheet</span>
+                    </button>
+                </div>
+
+                <!-- Khu vực 1: Lịch sử các ngày NHẬP THÊM HÀNG (+) -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-extrabold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>📥 Lịch sử các ngày Nhập thêm hàng (+)</span>
+                    </h4>
+                    <div id="item-hist-inbound-list" class="space-y-2">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Khu vực 2: Lịch sử các ngày LẤY HÀNG / XUẤT KHO (-) -->
+                <div class="space-y-2">
+                    <h4 class="text-xs font-extrabold text-rose-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                        <span>📤 Lịch sử các ngày Lấy hàng trong tháng (- Khớp cột ngày Sheet Excel)</span>
+                    </h4>
+                    <div id="item-hist-outbound-list" class="space-y-2">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end shrink-0">
+                <button
+                    type="button"
+                    onclick="closeItemDailyHistoryModal()"
+                    class="px-5 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-teal-600 hover:bg-teal-700 shadow-xs"
+                >
+                    Hoàn tất & Đóng
                 </button>
             </div>
         </div>
@@ -4867,6 +5110,31 @@
         let currentLightboxItemId = null;
         let targetLinkModalItemId = null;
 
+        function recalculateItemStockFromHistory(it) {
+            if (!it) return it;
+            if (!Array.isArray(it.dailyUsage)) it.dailyUsage = [];
+            if (!Array.isArray(it.dailyInbound)) it.dailyInbound = [];
+
+            const addedQty = it.dailyInbound.reduce((s, d) => s + (Number(d.qty) || 0), 0);
+            const usedQty = it.dailyUsage.reduce((s, d) => s + (Number(d.qty) || 0), 0);
+
+            if (it.initStockOriginal === undefined || it.initStockOriginal === null) {
+                const stt = Number(it.stt) || 0;
+                const seedMatch = stt ? SEED_INVENTORY_ITEMS.find(s => s.stt === stt) : null;
+                if (seedMatch) {
+                    it.initStockOriginal = Number(seedMatch.initStock) || 0;
+                } else {
+                    const curInit = Number(it.initStock) || Math.max(0, (Number(it.stock) || 0) + usedQty);
+                    it.initStockOriginal = Math.max(0, curInit - addedQty);
+                }
+            }
+
+            it.initStock = Math.max(0, Number(it.initStockOriginal) + addedQty);
+            it.usedStock = usedQty;
+            it.stock = Math.max(0, it.initStock - it.usedStock);
+            return it;
+        }
+
         function normalizeInventoryItem(it) {
             if (!it) return it;
             const stt = Number(it.stt) || 0;
@@ -4879,18 +5147,34 @@
             if ((!it.nameZh || it.nameZh.trim() === '' || it.nameZh === it.nameVi) && stt && ZH_MAP_BY_STT[stt]) {
                 it.nameZh = ZH_MAP_BY_STT[stt];
             }
-            const stock = Number(it.stock) || 0;
-            const used = Number(it.usedStock) || 0;
-            if (it.initStock === undefined || it.initStock === null || (Number(it.initStock) === 0 && (stock > 0 || used > 0))) {
-                it.initStock = Math.max(0, stock + used);
-            } else {
-                it.initStock = Number(it.initStock) || 0;
-            }
-            it.usedStock = used;
-            it.stock = stock;
             if (!Array.isArray(it.dailyUsage)) {
                 it.dailyUsage = [];
             }
+            if (!Array.isArray(it.dailyInbound)) {
+                it.dailyInbound = [];
+            }
+            it.dailyUsage.forEach((d, idx) => {
+                if (!d.id) d.id = `du-${stt || 'x'}-${idx}-${String(d.date || '').replace(/[^a-zA-Z0-9]/g, '')}`;
+            });
+            it.dailyInbound.forEach((d, idx) => {
+                if (!d.id) d.id = `di-${stt || 'x'}-${idx}-${String(d.date || '').replace(/[^a-zA-Z0-9]/g, '')}`;
+            });
+
+            if (it.initStockOriginal === undefined || it.initStockOriginal === null) {
+                const seedMatch = stt ? SEED_INVENTORY_ITEMS.find(s => s.stt === stt) : null;
+                if (seedMatch) {
+                    it.initStockOriginal = Number(seedMatch.initStock) || 0;
+                } else {
+                    const stock = Number(it.stock) || 0;
+                    const used = Number(it.usedStock) || 0;
+                    const added = it.dailyInbound.reduce((s, d) => s + (Number(d.qty) || 0), 0);
+                    const init = (it.initStock !== undefined && it.initStock !== null && Number(it.initStock) > 0)
+                        ? Number(it.initStock)
+                        : Math.max(0, stock + used);
+                    it.initStockOriginal = Math.max(0, init - added);
+                }
+            }
+            recalculateItemStockFromHistory(it);
             return it;
         }
 
@@ -5834,12 +6118,22 @@
                         statusText = t.statusLowStock;
                     }
 
-                    // Render danh sách các ngày đã lấy
+                    // Render danh sách các ngày nhập thêm (nếu có)
+                    let inboundChipsHtml = '';
+                    if (Array.isArray(item.dailyInbound) && item.dailyInbound.length > 0) {
+                        inboundChipsHtml = '<div class="flex flex-wrap gap-1 mt-1 justify-center">' + item.dailyInbound.map((d, dIdx) => `
+                            <span onclick="openItemDailyHistoryModal('${item.id}')" class="cursor-pointer inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors" title="Bấm để xem/sửa/xóa ngày nhập ${escapeHtml(d.date)}: +${d.qty}">
+                                <span>📥${escapeHtml(d.date)}:</span><b>+${d.qty}</b>${d.evidenceImage ? '<span>📷</span>' : ''}
+                            </span>
+                        `).join('') + '</div>';
+                    }
+
+                    // Render danh sách các ngày đã lấy (Bấm vào để sửa/xóa trực tiếp)
                     let dailyChipsHtml = '';
                     if (Array.isArray(item.dailyUsage) && item.dailyUsage.length > 0) {
-                        dailyChipsHtml = item.dailyUsage.map(d => `
-                            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200" title="Ngày ${d.date}: lấy ${d.qty}">
-                                <span>📅${d.date}:</span><b>-${d.qty}</b>
+                        dailyChipsHtml = item.dailyUsage.map((d, dIdx) => `
+                            <span onclick="openItemDailyHistoryModal('${item.id}')" class="cursor-pointer inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors" title="Bấm để sửa hoặc xóa ngày ${escapeHtml(d.date)}: -${d.qty}">
+                                <span>📅${escapeHtml(d.date)}:</span><b>-${d.qty}</b>${d.evidenceImage ? '<span>📷</span>' : ''}
                             </span>
                         `).join('');
                     } else {
@@ -5878,18 +6172,22 @@
                                 </div>
                             </td>
 
-                            <!-- 4. TỒN ĐẦU KỲ -->
+                            <!-- 4. TỒN ĐẦU KỲ (+ LỊCH SỬ NGÀY NHẬP NẾU CÓ) -->
                             <td class="py-2.5 px-2 text-center">
-                                <span class="inline-block px-2.5 py-1 rounded-lg text-sm font-black bg-sky-50 text-sky-900 border border-sky-200 shadow-2xs">
+                                <span onclick="openItemDailyHistoryModal('${item.id}')" class="cursor-pointer inline-block px-2.5 py-1 rounded-lg text-sm font-black bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 shadow-2xs" title="Bấm để xem/sửa tồn đầu & lịch sử ngày nhập">
                                     ${formatNumber(initStock)}
                                 </span>
+                                ${inboundChipsHtml}
                             </td>
 
-                            <!-- 5. ĐÃ LẤY TRONG THÁNG (CÁC NGÀY LẤY) -->
+                            <!-- 5. ĐÃ LẤY TRONG THÁNG (CÁC NGÀY LẤY - BẤM ĐỂ SỬA / XÓA) -->
                             <td class="py-2.5 px-3">
                                 <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="font-black text-rose-700 text-xs sm:text-sm mr-1">-${formatNumber(usedStock)}</span>
+                                    <span class="font-black text-rose-700 text-xs sm:text-sm mr-0.5">-${formatNumber(usedStock)}</span>
                                     ${dailyChipsHtml}
+                                    <button type="button" onclick="openItemDailyHistoryModal('${item.id}')" class="px-1.5 py-0.5 rounded text-[10px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 no-print" title="Xem, sửa hoặc xóa lịch sử ngày nhập/lấy">
+                                        ✏️ Sửa ngày
+                                    </button>
                                 </div>
                             </td>
 
@@ -5900,14 +6198,14 @@
                                         type="button" 
                                         onclick="stepStock('${item.id}', -1)"
                                         class="w-6 h-6 flex items-center justify-center rounded bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-700 border border-slate-200 text-xs font-bold shrink-0 no-print"
-                                        title="Giảm 1"
+                                        title="Lấy nhanh 1 (Có thể xóa trong Sửa ngày)"
                                     >-</button>
                                     <span class="w-8 text-center font-black text-slate-900 text-sm">${formatNumber(stock)}</span>
                                     <button 
                                         type="button" 
                                         onclick="stepStock('${item.id}', 1)"
                                         class="w-6 h-6 flex items-center justify-center rounded bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-xs font-bold shrink-0 no-print"
-                                        title="Tăng 1"
+                                        title="Nhập nhanh 1 (Có thể xóa trong Sửa ngày)"
                                     >+</button>
                                 </div>
                             </td>
@@ -5940,7 +6238,7 @@
                                         type="button"
                                         onclick="openInboundModal('${item.id}')"
                                         class="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 shadow-2xs"
-                                        title="Nhập thêm (+)"
+                                        title="Nhập thêm hàng (+)"
                                     >
                                         <i data-lucide="arrow-down-to-dot" class="w-3.5 h-3.5"></i>
                                     </button>
@@ -5948,15 +6246,23 @@
                                         type="button"
                                         onclick="openOutboundModal('${item.id}')"
                                         class="w-7 h-7 flex items-center justify-center rounded-lg text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 shadow-2xs"
-                                        title="Xuất vật liệu (-)"
+                                        title="Lấy hàng / Xuất kho (-)"
                                     >
                                         <i data-lucide="arrow-up-from-dot" class="w-3.5 h-3.5"></i>
                                     </button>
                                     <button
                                         type="button"
+                                        onclick="openItemDailyHistoryModal('${item.id}')"
+                                        class="w-7 h-7 flex items-center justify-center rounded-lg text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-300 shadow-2xs"
+                                        title="Xem & Sửa lịch sử ngày nhập/lấy của món này"
+                                    >
+                                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    <button
+                                        type="button"
                                         onclick="openItemModal('${item.id}')"
                                         class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-600 bg-white hover:bg-teal-50 border border-slate-300 shadow-2xs"
-                                        title="Chỉnh sửa"
+                                        title="Chỉnh sửa thông tin"
                                     >
                                         <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                                     </button>
@@ -5980,7 +6286,7 @@
         }
 
         // ============================================================================
-        // 9B. CHẾ ĐỘ XEM DẠNG THẺ (TRỰC QUAN: TỒN ĐẦU, CÁC NGÀY LẤY, TỒN CUỐI, GHI CHÚ)
+        // 9B. CHẾ ĐỘ XEM DẠNG THẺ (TRỰC QUAN: TỒN ĐẦU, LỊCH SỬ NHẬP, LỊCH SỬ LẤY, TỒN CUỐI)
         // ============================================================================
         function renderCards() {
             const container = document.getElementById('cards-feed');
@@ -6007,6 +6313,9 @@
                 const minStock = Number(item.minStock ?? 2);
                 const displayName = currentLang === 'zh' ? (item.nameZh || item.nameVi) : item.nameVi;
                 const imgSrc = item.image || IMAGE_MAP_BY_STT[item.stt] || DEFAULT_MAKEUP_SVG;
+                const addedStock = Array.isArray(item.dailyInbound)
+                    ? item.dailyInbound.reduce((s, d) => s + (Number(d.qty) || 0), 0)
+                    : 0;
 
                 let statusBadgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-300';
                 let statusText = t.statusInStock;
@@ -6022,12 +6331,28 @@
                     stockColorClass = 'text-amber-800';
                 }
 
-                // Render danh sách các ngày đã lấy
+                // Render danh sách các ngày nhập thêm (Bấm vào để sửa/xóa hoặc xem ảnh chứng cứ)
+                let inboundChips = '';
+                if (Array.isArray(item.dailyInbound) && item.dailyInbound.length > 0) {
+                    inboundChips = item.dailyInbound.map((d, dIdx) => `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-white text-emerald-800 border border-emerald-300 shadow-2xs">
+                            <span onclick="openItemDailyHistoryModal('${item.id}')" class="cursor-pointer hover:underline">📥 ${escapeHtml(d.date)}: <b>+${d.qty}</b></span>
+                            ${d.evidenceImage ? `<button type="button" onclick="openRawImageLightbox('${escapeHtml(d.evidenceImage)}', 'Ảnh chứng cứ nhập ngày ${escapeHtml(d.date)}')" class="text-emerald-600 hover:scale-110" title="Xem ảnh chứng cứ">📷</button>` : ''}
+                            <button type="button" onclick="deleteDailyHistoryEntry('${item.id}', 'INBOUND', ${dIdx})" class="ml-0.5 text-slate-400 hover:text-red-600 font-black" title="Xóa lần nhập này">×</button>
+                        </span>
+                    `).join('');
+                } else {
+                    inboundChips = `<span class="text-[11px] text-slate-400 italic">Gốc GSheet: ${formatNumber(item.initStockOriginal ?? initStock)} (Chưa nhập thêm)</span>`;
+                }
+
+                // Render danh sách các ngày đã lấy (Bấm vào để sửa/xóa hoặc xem ảnh chứng cứ)
                 let dailyChips = '';
                 if (Array.isArray(item.dailyUsage) && item.dailyUsage.length > 0) {
-                    dailyChips = item.dailyUsage.map(d => `
-                        <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-white text-rose-800 border border-rose-300 shadow-2xs">
-                            <span>📅 ${d.date}:</span> <b>-${d.qty}</b>
+                    dailyChips = item.dailyUsage.map((d, dIdx) => `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-white text-rose-800 border border-rose-300 shadow-2xs">
+                            <span onclick="openItemDailyHistoryModal('${item.id}')" class="cursor-pointer hover:underline" title="Bấm để sửa ngày hoặc số lượng">📅 ${escapeHtml(d.date)}: <b>-${d.qty}</b></span>
+                            ${d.evidenceImage ? `<button type="button" onclick="openRawImageLightbox('${escapeHtml(d.evidenceImage)}', 'Ảnh chứng cứ lấy hàng ngày ${escapeHtml(d.date)}')" class="text-rose-600 hover:scale-110" title="Xem ảnh chứng cứ">📷</button>` : ''}
+                            <button type="button" onclick="deleteDailyHistoryEntry('${item.id}', 'OUTBOUND', ${dIdx})" class="ml-0.5 text-slate-400 hover:text-red-600 font-black" title="Xóa ngày lấy này (Tự động hoàn lại tồn kho)">×</button>
                         </span>
                     `).join('');
                 } else {
@@ -6035,7 +6360,7 @@
                 }
 
                 return `
-                    <div class="bg-white rounded-2xl border-2 border-teal-200/90 hover:border-teal-400 shadow-xs hover:shadow-md transition-all p-3.5 sm:p-4 space-y-3 flex flex-col justify-between">
+                    <div class="bg-white rounded-2xl border-2 border-teal-200/90 hover:border-teal-400 shadow-xs hover:shadow-md transition-all p-3.5 sm:p-4 space-y-2.5 flex flex-col justify-between">
                         <!-- Top Row: #STT + Tên sản phẩm + Thao tác -->
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-start gap-2.5 min-w-0 flex-1">
@@ -6060,9 +6385,17 @@
                             <div class="flex items-center gap-1 shrink-0">
                                 <button
                                     type="button"
+                                    onclick="openItemDailyHistoryModal('${item.id}')"
+                                    class="p-1.5 rounded-lg text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 shadow-2xs"
+                                    title="Xem & Sửa lịch sử ngày nhập/lấy"
+                                >
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button
+                                    type="button"
                                     onclick="openItemModal('${item.id}')"
-                                    class="p-1.5 rounded-lg text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 shadow-2xs"
-                                    title="Sửa"
+                                    class="p-1.5 rounded-lg text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 shadow-2xs"
+                                    title="Sửa thông tin"
                                 >
                                     <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                                 </button>
@@ -6091,8 +6424,8 @@
                                 />
                             </div>
 
-                            <!-- Khối 3 Chỉ số Tồn kho (Rõ ràng, không có tiền) -->
-                            <div class="flex-1 grid grid-cols-3 gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+                            <!-- Khối 3 Chỉ số Tồn kho (Rõ ràng, bấm vào để xem chi tiết) -->
+                            <div onclick="openItemDailyHistoryModal('${item.id}')" class="cursor-pointer flex-1 grid grid-cols-3 gap-1.5 bg-slate-50 p-2 rounded-xl border border-slate-200 text-center" title="Bấm để mở bảng quản lý lịch sử theo ngày">
                                 <!-- 1. Tồn ban đầu -->
                                 <div class="bg-white p-1.5 rounded-lg border border-sky-200">
                                     <span class="text-[9px] font-bold text-sky-800 uppercase block">1. Tồn đầu</span>
@@ -6111,14 +6444,32 @@
                             </div>
                         </div>
 
-                        <!-- Nhật ký đã lấy theo ngày (RÕ RÀNG NGÀY NÀO MẤY CHAI) -->
+                        <!-- Nhật ký NHẬP THÊM theo ngày -->
+                        <div class="bg-emerald-50/60 rounded-xl p-2 border border-emerald-200/90">
+                            <div class="flex items-center justify-between text-xs font-bold text-emerald-950 mb-1">
+                                <span class="flex items-center gap-1">
+                                    <i data-lucide="arrow-down-to-dot" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                    <span>Lịch sử ngày nhập:</span>
+                                </span>
+                                <button type="button" onclick="openItemDailyHistoryModal('${item.id}')" class="text-[11px] font-extrabold text-emerald-700 hover:underline">
+                                    ${addedStock > 0 ? `+${formatNumber(addedStock)} (Sửa/Xóa)` : '+ Sửa / Thêm'}
+                                </button>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${inboundChips}
+                            </div>
+                        </div>
+
+                        <!-- Nhật ký ĐÃ LẤY theo ngày (CÓ NÚT XÓA & SỬA TRỰC TIẾP) -->
                         <div class="bg-rose-50/60 rounded-xl p-2 border border-rose-200/80">
                             <div class="flex items-center justify-between text-xs font-bold text-rose-900 mb-1">
                                 <span class="flex items-center gap-1">
                                     <i data-lucide="calendar" class="w-3.5 h-3.5 text-rose-600"></i>
                                     <span>Lịch sử các ngày lấy:</span>
                                 </span>
-                                <span class="font-extrabold text-rose-700">Tổng: -${formatNumber(usedStock)}</span>
+                                <button type="button" onclick="openItemDailyHistoryModal('${item.id}')" class="text-[11px] font-extrabold text-rose-700 hover:underline">
+                                    Tổng: -${formatNumber(usedStock)} (Sửa/Xóa)
+                                </button>
                             </div>
                             <div class="flex flex-wrap gap-1.5">
                                 ${dailyChips}
@@ -6139,21 +6490,21 @@
                             </p>
                         </div>
 
-                        <!-- Bottom Row: Stepper điều chỉnh tồn cuối & Nút Nhập/Xuất nhanh -->
-                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                        <!-- Bottom Row: Stepper điều chỉnh nhanh & Nút Nhập/Lấy có ảnh chứng cứ -->
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                            <div class="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200">
                                 <button
                                     type="button"
                                     onclick="stepStock('${item.id}', -1)"
-                                    class="w-7 h-7 rounded-lg bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-700 border border-slate-200 text-xs font-bold flex items-center justify-center shadow-2xs"
-                                    title="Giảm 1"
+                                    class="w-7 h-7 rounded-lg bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-700 border border-slate-200 text-xs font-bold flex items-center justify-center shadow-2xs active:scale-95"
+                                    title="Lấy nhanh 1 (Có thể xóa ở chip ngày bên trên)"
                                 >-</button>
-                                <span class="w-8 text-center font-black text-slate-900 text-sm">${formatNumber(stock)}</span>
+                                <span class="w-7 text-center font-black text-slate-900 text-sm">${formatNumber(stock)}</span>
                                 <button
                                     type="button"
                                     onclick="stepStock('${item.id}', 1)"
-                                    class="w-7 h-7 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-xs font-bold flex items-center justify-center shadow-2xs"
-                                    title="Tăng 1"
+                                    class="w-7 h-7 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-xs font-bold flex items-center justify-center shadow-2xs active:scale-95"
+                                    title="Nhập nhanh 1 (Có thể xóa ở chip ngày bên trên)"
                                 >+</button>
                             </div>
 
@@ -6161,18 +6512,18 @@
                                 <button
                                     type="button"
                                     onclick="openInboundModal('${item.id}')"
-                                    class="h-8 px-2.5 rounded-lg text-xs font-bold text-emerald-900 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 flex items-center gap-1 shadow-2xs"
+                                    class="h-8 px-2.5 rounded-lg text-xs font-extrabold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 flex items-center gap-1 shadow-2xs active:scale-95"
                                 >
-                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                                    <span>Nhập (+)</span>
+                                    <i data-lucide="plus" class="w-3.5 h-3.5 text-emerald-700"></i>
+                                    <span>Nhập hàng</span>
                                 </button>
                                 <button
                                     type="button"
                                     onclick="openOutboundModal('${item.id}')"
-                                    class="h-8 px-2.5 rounded-lg text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 flex items-center gap-1 shadow-2xs"
+                                    class="h-8 px-2.5 rounded-lg text-xs font-extrabold text-amber-950 bg-amber-100 hover:bg-amber-200 border border-amber-300 flex items-center gap-1 shadow-2xs active:scale-95"
                                 >
-                                    <i data-lucide="minus" class="w-3.5 h-3.5"></i>
-                                    <span>Xuất (-)</span>
+                                    <i data-lucide="minus" class="w-3.5 h-3.5 text-amber-700"></i>
+                                    <span>Lấy hàng</span>
                                 </button>
                             </div>
                         </div>

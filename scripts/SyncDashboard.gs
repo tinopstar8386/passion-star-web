@@ -37,26 +37,37 @@ function onEdit(e) {
 
     // 1. Thay đổi tháng tại ô B1
     if (a1 === "B1") {
-      const oldMonthVal = (e.oldValue && typeof e.oldValue === "string") ? e.oldValue.trim() : "";
-      const newMonthVal = (e.value && typeof e.value === "string") ? e.value.trim() : (sheet.getRange("B1").getValue() || "").toString().trim();
+      let oldMonthVal = (e && e.oldValue && typeof e.oldValue === "string") ? e.oldValue.trim() : "";
+      const newMonthVal = (sheet.getRange("B1").getValue() || "").toString().trim();
 
-      if (oldMonthVal && newMonthVal && oldMonthVal !== newMonthVal) {
-        // A. Lưu trữ Target & Basic của tháng cũ vào database
-        saveAllCurrentDashboardKpi(sheet.getParent(), sheet, oldMonthVal);
+      if (newMonthVal) {
+        if (!oldMonthVal) {
+          // Tự động suy ra tháng cũ nếu Google Sheets không truyền oldValue
+          const parsedNew = parseMonthYear(newMonthVal);
+          let prevM = parsedNew.month - 1;
+          let prevY = parsedNew.year;
+          if (prevM === 0) { prevM = 12; prevY -= 1; }
+          oldMonthVal = "T" + prevM + "." + prevY;
+        }
 
-        // B. Tự động lưu trữ / đóng băng KPI_DASHBOARD của tháng cũ thành sheet riêng (Paste Values)
-        try {
-          archiveDashboardSheet(sheet.getParent(), oldMonthVal);
-        } catch (errArch) {}
+        if (oldMonthVal !== newMonthVal) {
+          // A. Lưu trữ Target & Basic của tháng cũ vào database
+          saveAllCurrentDashboardKpi(sheet.getParent(), sheet, oldMonthVal);
 
-        // C. Tự động clone sheet DATA cho tháng mới nếu chưa có
-        try {
-          const newDataSheetName = "DATA " + newMonthVal;
-          if (!sheet.getParent().getSheetByName(newDataSheetName)) {
-            cloneDataSheetForNewMonth(sheet.getParent(), oldMonthVal, newMonthVal);
-            sheet.getParent().toast("Đã tự động khởi tạo sheet " + newDataSheetName + " cho tháng mới!", "Tự Động Clone ✨", 5);
-          }
-        } catch (errClone) {}
+          // B. Tự động lưu trữ / đóng băng KPI_DASHBOARD của tháng cũ thành sheet riêng (Paste Values)
+          try {
+            archiveDashboardSheet(sheet.getParent(), oldMonthVal);
+          } catch (errArch) {}
+
+          // C. Tự động clone sheet DATA cho tháng mới nếu chưa có
+          try {
+            const newDataSheetName = "DATA " + newMonthVal;
+            if (!sheet.getParent().getSheetByName(newDataSheetName)) {
+              cloneDataSheetForNewMonth(sheet.getParent(), oldMonthVal, newMonthVal);
+              sheet.getParent().toast("Đã tự động khởi tạo sheet " + newDataSheetName + " cho tháng mới!", "Tự Động Clone ✨", 5);
+            }
+          } catch (errClone) {}
+        }
       }
 
       dongBoDashboardChuanDep(true);
@@ -730,9 +741,38 @@ function dongBoDashboardChuanDep(isAuto) {
     .setVerticalAlignment("middle")
     .setBorder(true, true, true, true, false, false, "#000000", SpreadsheetApp.BorderStyle.SOLID);
 
-  // Tiêu đề Cột Hàng 2 (C2:O2)
+  // Chuẩn hóa nội dung Tiêu đề Cột Hàng 2 (C2:O2) động theo tháng:
+  const monthFullNames = ["", "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+  const parsedCurMonth = parseMonthYear(selectedMonth);
+  let prevMonthNumber = parsedCurMonth.month - 1;
+  if (prevMonthNumber === 0) prevMonthNumber = 12;
+  const prevMonthFullName = monthFullNames[prevMonthNumber] || "PREVIOUS";
+  const curMonthFullName = monthFullNames[parsedCurMonth.month] || "CURRENT";
+
+  const headersRow2 = [
+    "TEAM",
+    "TEAM TOTAL",
+    "TEAM KPI\n(MC SETUP)",
+    "TEAM KPI TARGET\n(Get salary on Day 10)",
+    "Basic KPI\n(Get KPI Salary)",
+    "NAME",
+    prevMonthFullName + " COINS",
+    curMonthFullName + " KPI",
+    curMonthFullName + " KPI\n(Get salary on Day 10)",
+    curMonthFullName + " KPI\n(Get KPI salary)",
+    "Tăng/\nGiảm",
+    "LÃNH LƯƠNG\nNGÀY 10",
+    "ĐẠT KPI"
+  ];
+
   let headerRange = dashSheet.getRange(2, 3, 1, 13);
-  headerRange.setBorder(true, true, true, true, true, true, "#000000", SpreadsheetApp.BorderStyle.SOLID);
+  headerRange.setValues([headersRow2])
+    .setFontFamily("Calibri")
+    .setFontSize(14)
+    .setFontWeight("bold")
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle")
+    .setBorder(true, true, true, true, true, true, "#000000", SpreadsheetApp.BorderStyle.SOLID);
   dashSheet.getRange("C2:O2").setBorder(true, true, true, true, null, null, "#000000", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
   // 3. Unmerge và xóa sạch vùng dữ liệu cũ
@@ -1179,25 +1219,37 @@ function cloneDataSheetForNewMonth(ss, oldMonthStr, newMonthStr) {
   // Số ngày của tháng mới (28, 29, 30 hoặc 31)
   const daysInNewMonth = new Date(newParsed.year, newParsed.month, 0).getDate();
 
-  // 2. Cập nhật Cột A (Ngày tháng) cho cả 2 tầng Top & Bottom:
+  // 2. Cập nhật Cột Ngày tháng (Cột A, V, AQ nếu có) cho cả 2 tầng Top & Bottom:
   // Top teams: hàng 3 đến hàng 3+daysInNewMonth-1
   // Bottom teams: hàng 45 đến hàng 45+daysInNewMonth-1
+  const dateCols = [1, 22, 43]; // Cột A (1), Cột V (22), Cột AQ (43)
   const dateRanges = [
     { startRow: 3, maxRows: 31 },
     { startRow: 45, maxRows: 31 }
   ];
 
-  dateRanges.forEach(function(dr) {
-    for (let d = 1; d <= dr.maxRows; d++) {
-      const curRow = dr.startRow + d - 1;
-      const cell = newSheet.getRange(curRow, 1);
-      if (d <= daysInNewMonth) {
-        const dateObj = new Date(newParsed.year, newParsed.month - 1, d, 0, 0, 0);
-        cell.setValue(dateObj);
-      } else {
-        cell.setValue("");
+  dateCols.forEach(function(colIdx) {
+    if (colIdx > newSheet.getLastColumn()) return;
+    dateRanges.forEach(function(dr) {
+      const sampleCell = newSheet.getRange(dr.startRow, colIdx);
+      const sampleFormula = sampleCell.getFormula();
+      // Nếu cột này dùng công thức tham chiếu sang Cột A (ví dụ =A3) thì không ghi đè
+      if (sampleFormula && sampleFormula.indexOf("A") !== -1) return;
+      const sampleVal = sampleCell.getValue();
+      // Nếu là ô ngày hoặc ô Cột A
+      if (colIdx === 1 || sampleVal instanceof Date || isNumericOrDate(sampleVal)) {
+        for (let d = 1; d <= dr.maxRows; d++) {
+          const curRow = dr.startRow + d - 1;
+          const cell = newSheet.getRange(curRow, colIdx);
+          if (d <= daysInNewMonth) {
+            const dateObj = new Date(newParsed.year, newParsed.month - 1, d, 0, 0, 0);
+            cell.setValue(dateObj);
+          } else {
+            cell.setValue("");
+          }
+        }
       }
-    }
+    });
   });
 
   // 3. Quét động danh sách các nhóm và xóa sạch vùng nhập coin của idol:
