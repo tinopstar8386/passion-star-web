@@ -5864,9 +5864,19 @@ service cloud.firestore {
                         hasSeededExcelPosts = true;
                         await syncExcelDatasetToFirebase(false);
                         return;
-                    }
+                    }                    if (loadedPosts.length > 0) {
+                        // Tự động kết nối lại các bài mồ côi (khi tài khoản cũ bị xóa và tạo lại)
+                        loadedPosts.forEach(p => {
+                            if (p.accountId && !accounts.some(a => a.id === p.accountId)) {
+                                const linkH = extractTikTokHandleFromUrl(p.link);
+                                const matchAcc = accounts.find(a => isHandleMatchAccount(linkH, a));
+                                if (matchAcc) {
+                                    p.accountId = matchAcc.id;
+                                    postsToCleanOnCloud.push(p);
+                                }
+                            }
+                        });
 
-                    if (loadedPosts.length > 0) {
                         // Tự động nhận diện và dọn sạch các bài rác/trống (không có link, không video, không ghi chú) từng bị tạo nhầm
                         const ghostPostIds = [];
                         const validLoadedPosts = loadedPosts.filter(p => {
@@ -8136,10 +8146,16 @@ service cloud.firestore {
                         submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     }
                     return;
-                }
+                }                // Kiểm tra xem bài trùng này có thực sự thuộc về Idol/Kênh khác hay không
+                // (Tránh bắt nhầm khi kênh bị xóa và tạo lại với ID mới nhưng cùng @handle TikTok!)
+                const isSameIdolOrHandle = targetAcc && (
+                    isHandleMatchAccount(handleStr, targetAcc) ||
+                    (dupAcc && isHandleMatchAccount(dupAcc.handle, targetAcc)) ||
+                    (dupPost.link && isHandleMatchAccount(extractTikTokHandleFromUrl(dupPost.link), targetAcc))
+                );
 
                 // Nếu bài trùng có handle không khớp với link dán vào -> Cấm gắn chéo giữa các Idol
-                if (handleStr && dupAcc && !isHandleMatchAccount(handleStr, dupAcc)) {
+                if (handleStr && dupAcc && !isHandleMatchAccount(handleStr, dupAcc) && !isSameIdolOrHandle) {
                     hintBox.classList.remove('hidden');
                     hintBox.className = 'mt-2 p-3 rounded-xl text-xs border bg-rose-50 border-rose-300 text-rose-900 space-y-1.5';
                     hintBox.innerHTML = `
@@ -8159,10 +8175,8 @@ service cloud.firestore {
                         submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     }
                     return;
-                }
-
-                // Nếu bài trùng thuộc về Idol / Kênh khác (Không được gắn chéo video giữa các Idol)
-                if (targetAccId && dupPost.accountId && dupPost.accountId !== targetAccId) {
+                }                // Nếu bài trùng thuộc về Idol / Kênh khác (Không được gắn chéo video giữa các Idol)
+                if (targetAccId && dupPost.accountId && dupPost.accountId !== targetAccId && !isSameIdolOrHandle) {
                     hintBox.classList.remove('hidden');
                     hintBox.className = 'mt-2 p-3 rounded-xl text-xs border bg-rose-50 border-rose-300 text-rose-900 space-y-1.5';
                     hintBox.innerHTML = `
@@ -8351,14 +8365,24 @@ service cloud.firestore {
             const weekMonday = getMondayOfWeekStr(date);
 
             // 1. Kiểm tra chống trùng theo videoId hoặc link
-            if (!editingId && link) {
-                const existingDup = findExistingPostByLinkOrVideoId(accountId, videoId, link, '');
+            if (!editingId && link) {                const existingDup = findExistingPostByLinkOrVideoId(accountId, videoId, link, '');
                 if (existingDup) {
                     if (existingDup.accountId && existingDup.accountId !== accountId) {
+                        const targetAcc = getAccountById(accountId);
                         const dupOwner = getAccountById(existingDup.accountId);
-                        const dupOwnerName = dupOwner ? `${extractCleanGroupName(dupOwner)} - ${extractCleanIdolName(dupOwner)}` : '';
-                        showToast(`⛔ Video này đã có trong hệ thống và thuộc về Kênh ${dupOwnerName}! Không được phép lưu trùng video của Idol khác.`, 'error');
-                        return;
+                        const linkHandle = extractTikTokHandleFromUrl(link);
+                        const isSameIdolOrHandle = targetAcc && (
+                            isHandleMatchAccount(linkHandle, targetAcc) ||
+                            (dupOwner && isHandleMatchAccount(dupOwner.handle, targetAcc)) ||
+                            (existingDup.link && isHandleMatchAccount(extractTikTokHandleFromUrl(existingDup.link), targetAcc))
+                        );
+                        if (!isSameIdolOrHandle && dupOwner) {
+                            const dupOwnerName = `${extractCleanGroupName(dupOwner)} - ${extractCleanIdolName(dupOwner)}`;
+                            showToast(`⛔ Video này đã có trong hệ thống và thuộc về Kênh ${dupOwnerName}! Không được phép lưu trùng video của Idol khác.`, 'error');
+                            return;
+                        }
+                        // Nếu cùng handle TikTok (hoặc kênh cũ từng bị xóa rồi tạo lại), tự động chuyển quyền sở hữu bài về tài khoản hiện tại!
+                        existingDup.accountId = accountId;
                     }
                     editingId = existingDup.id;
                     if (!note && existingDup.note) note = existingDup.note;
@@ -9566,7 +9590,27 @@ service cloud.firestore {
                 subHandle = '@' + subHandle;
             }
 
-            const accId = editId ? editId : 'acc_' + Date.now();
+            let accId = editId;
+            if (!accId) {
+                const normH = handle.toLowerCase();
+                const defaultMatch = DEFAULT_ACCOUNTS.find(d => 
+                    d.handle.toLowerCase() === normH ||
+                    (role === 'GROUP' && d.role === 'GROUP' && (d.groupName || '').toLowerCase() === groupName.toLowerCase())
+                );
+                if (defaultMatch) {
+                    accId = defaultMatch.id;
+                } else if (role === 'GROUP') {
+                    const grpSlug = groupName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    accId = `grp_${grpSlug}`;
+                } else {
+                    const orphanPost = posts.find(p => p.link && isHandleMatchAccount(extractTikTokHandleFromUrl(p.link), { handle }));
+                    if (orphanPost && orphanPost.accountId && !getAccountById(orphanPost.accountId)) {
+                        accId = orphanPost.accountId;
+                    } else {
+                        accId = 'acc_' + Date.now();
+                    }
+                }
+            }
             const existingAcc = getAccountById(accId);
             const fullName = role === 'GROUP' ? `${groupName} (Kênh Nhóm)` : `${groupName} - ${idolName}`;
 
