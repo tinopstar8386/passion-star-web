@@ -673,7 +673,7 @@
                         <i class="fa-solid fa-user-plus text-xs"></i>
                         <span>Acc Idol mới</span>
                     </button>
-                    <button type="button" onclick="switchTab('Velion Technologies', this)" class="sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer">
+                    <button type="button" onclick="switchTab('Velion', this)" class="sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer">
                         <i class="fa-solid fa-microchip text-xs"></i>
                         <span>Velion</span>
                     </button>
@@ -1362,6 +1362,22 @@
             clearTimeout(inactivityTimer);
         }
 
+        // Bộ lọc làm sạch dữ liệu: Triệt tiêu 100% dòng tiêu đề cột / dòng End Data rác
+        function sanitizeAccountData(rawData) {
+            if (!Array.isArray(rawData)) return [];
+            return rawData.filter(item => {
+                if (!item) return false;
+                const em = (item.email || '').trim().toLowerCase();
+                const tm = (item.team || '').trim().toUpperCase();
+                const idol = (item.tenIdol || '').trim().toUpperCase();
+                if (em === 'email đăng nhập' || em === 'outlook' || em.includes('end  data') || em === 'end data') return false;
+                if (tm === 'TEAM' && (em.includes('email') || em.includes('outlook') || !item.email)) return false;
+                if (idol === 'TÊN IDOL' || idol === 'USERSNAME') return false;
+                if (!item.email && !item.tenIdol) return false;
+                return true;
+            });
+        }
+
         async function loadData() {
             if (!sessionPass) return;
             document.getElementById('tableContainer').classList.remove('hidden');
@@ -1372,7 +1388,7 @@
                     const safeID = currentSheetName.replace(/\s+/g, '_');
                     const docSnap = await window.fs.getDoc(window.fs.doc(window.db, "2fa_cache", safeID));
                     if (docSnap.exists()) {
-                        allData = docSnap.data().dataArray;
+                        allData = sanitizeAccountData(docSnap.data().dataArray);
                         renderTable(allData);
                         resetTimer();
                         checkPrimeRadiantAlarms();
@@ -1385,14 +1401,15 @@
                 document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
             }
 
-            runScript('getSheetData', { sheetName: currentSheetName, pass: sessionPass })
+            const reqSheetName = (currentSheetName === 'Velion' ? 'Velion Technologies' : currentSheetName);
+            runScript('getSheetData', { sheetName: reqSheetName, pass: sessionPass })
                 .then(async (data) => {
-                    allData = data;
+                    allData = sanitizeAccountData(data);
                     const kw = document.getElementById('searchInput').value.trim();
                     if (kw) filterData(); else renderTable(allData);
                     if (window.db && window.fs) {
                         const safeID = currentSheetName.replace(/\s+/g, '_');
-                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
+                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: allData });
                     }
                 })
                 .catch(error => { if (error.message && error.message.includes("AUTH_FAILED")) lockApp(); });
@@ -1404,15 +1421,16 @@
             showToast('Đang tải dữ liệu mới từ máy chủ...', 'success');
             document.getElementById('dataTableBody').innerHTML = generateSkeletonHTML();
 
-            runScript('getSheetData', { sheetName: currentSheetName, pass: sessionPass })
+            const reqSheetName = (currentSheetName === 'Velion' ? 'Velion Technologies' : currentSheetName);
+            runScript('getSheetData', { sheetName: reqSheetName, pass: sessionPass })
                 .then(async (data) => {
-                    allData = data;
+                    allData = sanitizeAccountData(data);
                     renderTable(allData);
                     resetTimer();
                     checkPrimeRadiantAlarms();
                     if (window.db && window.fs) {
                         const safeID = currentSheetName.replace(/\s+/g, '_');
-                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
+                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: allData });
                     }
                     showToast('Đã đồng bộ với Google Sheets!', 'success');
                 })
@@ -2547,11 +2565,12 @@
             }
 
             const sheets = scope === 'active'
-                ? ['Passion Star', 'Prime Radiant', 'Idol Team', 'Acc Idol mới', 'Velion Technologies']
-                : ['Passion Star', 'Prime Radiant', 'Idol Team', 'Acc Idol mới', 'Velion Technologies', 'Acc Idol Retire'];
+                ? ['Passion Star', 'Prime Radiant', 'Idol Team', 'Acc Idol mới', 'Velion']
+                : ['Passion Star', 'Prime Radiant', 'Idol Team', 'Acc Idol mới', 'Velion', 'Acc Idol Retire'];
 
             for (const sName of sheets) {
-                if (sName === currentSheetName && allData && allData.length > 0) {
+                const isCurrent = (sName === currentSheetName || (sName === 'Velion' && currentSheetName === 'Velion Technologies'));
+                if (isCurrent && allData && allData.length > 0) {
                     allData.forEach(item => {
                         const em = (item.email || '').trim();
                         if (em && em.includes('@') && !em.toLowerCase().includes('dang nh')) {
@@ -2560,9 +2579,11 @@
                     });
                 } else {
                     try {
-                        const res = await runScript('getSheetData', { sheetName: sName, pass: sessionPass });
-                        if (Array.isArray(res)) {
-                            res.forEach(item => {
+                        const reqSName = (sName === 'Velion' ? 'Velion Technologies' : sName);
+                        const res = await runScript('getSheetData', { sheetName: reqSName, pass: sessionPass });
+                        const cleanRes = sanitizeAccountData(res);
+                        if (Array.isArray(cleanRes)) {
+                            cleanRes.forEach(item => {
                                 const em = (item.email || '').trim();
                                 if (em && em.includes('@') && !em.toLowerCase().includes('dang nh')) {
                                     list.push({ sheet: sName, team: item.team || '', idol: item.tenIdol || '', email: em });
