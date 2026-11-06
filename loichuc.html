@@ -90,7 +90,7 @@
 
       .skeleton { animation: skeleton-loading 1s linear infinite alternate; border-color: transparent !important; box-shadow: none !important; }
       .skeleton .skel-title { width: 40%; height: 24px; background: var(--bg-hover); border-radius: 8px; margin-bottom: 15px; }
-      .skeleton .skel-box { width: 100%; height: 110px; background: var(--bg-hover); border-radius: 14px; margin-bottom: 15px; }
+      .skeleton .skel-box { width: 100%; height: 145px; background: var(--bg-hover); border-radius: 14px; margin-bottom: 15px; }
       .skeleton .skel-btn { width: 100%; height: 45px; background: var(--bg-hover); border-radius: 14px; }
       @keyframes skeleton-loading { 0% { opacity: 0.4; } 100% { opacity: 0.8; } }
 
@@ -127,7 +127,7 @@
 
       .manual-inputs { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }
 
-      .msg-box { width: 100%; height: 110px; padding: 12px; border-radius: 12px; font-size: 13px; resize: none; font-family: inherit; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-primary); transition: 0.2s; line-height: 1.45; -webkit-appearance: none; appearance: none; }
+      .msg-box { width: 100%; height: 145px; padding: 12px; border-radius: 12px; font-size: 13px; resize: none; font-family: inherit; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-primary); transition: 0.2s; line-height: 1.45; -webkit-appearance: none; appearance: none; }
       .msg-box:focus { border-color: var(--accent); background: var(--bg-hover); outline: none; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
       
       .action-group { display: flex; gap: 10px; margin-top: 15px; width: 100%; }
@@ -326,11 +326,11 @@
           border-radius: 10px;
         }
         #manual-msg {
-          height: 88px !important;
+          height: 125px !important;
         }
         .msg-box {
-          font-size: 16px !important;
-          height: 110px;
+          font-size: 15px !important;
+          height: 140px;
           padding: 10px 12px;
           line-height: 1.45;
           border-radius: 12px;
@@ -479,9 +479,32 @@
       }
 
       // ==========================================
-      // HÀM COPY TƯƠNG THÍCH 100% SAFARI IPHONE (iOS WEBKIT)
+      // HÀM COPY TƯƠNG THÍCH 100% ZALO & TẤT CẢ THIẾT BỊ (PC / iOS WEBKIT / ANDROID)
       // ==========================================
-      function copyToClipboard(text) {
+      async function copyToClipboard(text) {
+        try {
+          if (navigator.clipboard && window.isSecureContext && window.ClipboardItem) {
+            let html = text
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/\*(.*?)\*/g, '<b>$1</b>')
+              .replace(/_(.*?)_/g, '<i>$1</i>')
+              .replace(/\n/g, '<br>');
+
+            const blobText = new Blob([text], { type: 'text/plain' });
+            const blobHtml = new Blob([html], { type: 'text/html' });
+            const item = new ClipboardItem({
+              'text/plain': blobText,
+              'text/html': blobHtml
+            });
+            await navigator.clipboard.write([item]);
+            return;
+          }
+        } catch (e) {
+          console.warn('ClipboardItem write fallback:', e);
+        }
+
         if (navigator.clipboard && window.isSecureContext) {
           return navigator.clipboard.writeText(text).catch(() => fallbackCopySafari(text));
         } else {
@@ -780,6 +803,125 @@
         return msgsStart;                   
       }
 
+      // ==========================================
+      // ĐỊNH DẠNG TIN NHẮN CHUẨN ZALO FORMAT THEO TỪNG CỘT MỐC
+      // MỐC CÀNG CAO CÀNG NỔI BẬT, SANG TRỌNG VÀ HOÀNH TRÁNG
+      // ==========================================
+      function formatWishForZalo(template, name, tier, withAssistant) {
+        let numStr = (tier || "").replace(/[^0-9]/g, '');
+        let val = parseInt(numStr) || 0;
+        let isDefault = tier === "{MOC}" || !numStr;
+
+        // 1. Phân cấp Header Banner & Khung viền trang trí theo từng nấc thành tích
+        let headerBanner = "";
+        let topDivider = "";
+        let botDivider = "";
+
+        if (val >= 500) {
+          headerBanner = `╔══════════════════════════════════╗\n  🌌👑 *ĐẠI KỶ LỤC HUYỀN THOẠI — MỐC ${tier}* 👑🌌\n╚══════════════════════════════════╝`;
+          topDivider = "";
+          botDivider = "🌌 ════════════════════════════════ 🌌";
+        } else if (val >= 300) {
+          headerBanner = `╔══════════════════════════════════╗\n  🔥👑 *SIÊU KỶ LỤC DANH VỌNG — MỐC ${tier}* 👑🔥\n╚══════════════════════════════════╝`;
+          topDivider = "";
+          botDivider = "🔥 ════════════════════════════════ 🔥";
+        } else if (val >= 200) {
+          headerBanner = `💎✨ *ĐẲNG CẤP KIM CƯƠNG — SIÊU MỐC ${tier}* ✨💎`;
+          topDivider = "💎 ════════════════════════════════ 💎";
+          botDivider = "💎 ════════════════════════════════ 💎";
+        } else if (val >= 100) {
+          headerBanner = `⭐👑 *ĐẲNG CẤP NGÔI SAO — CỘT MỐC ${tier}* 👑⭐`;
+          topDivider = "⭐ ━━━━━━━━━━━━━━━━━━━━━━━━ ⭐";
+          botDivider = "⭐ ━━━━━━━━━━━━━━━━━━━━━━━━ ⭐";
+        } else if (val >= 50) {
+          headerBanner = `🔥⚡ *CHIẾN TÍCH BÙNG NỔ — CHINH PHỤC ${tier}* ⚡🔥`;
+          topDivider = "══════════════════════════════════";
+          botDivider = "══════════════════════════════════";
+        } else if (val >= 30) {
+          headerBanner = `🚀✨ *BỨT TỐC NGOẠN MỤC — CÁN MỐC ${tier}* ✨🚀`;
+          topDivider = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+          botDivider = "✦ ────────────────────────────── ✦";
+        } else {
+          let title = isDefault ? "*VINH DANH THÀNH TÍCH MỚI*" : `*VINH DANH THÀNH TÍCH — CỘT MỐC ${tier}*`;
+          headerBanner = `🌱🎯 ${title} 🎯🌱`;
+          topDivider = "✦ ────────────────────────────── ✦";
+          botDivider = "";
+        }
+
+        // 2. Tinh chỉnh Tên Idol, Trợ lý & Cột mốc nổi bật với định dạng in đậm (*text*)
+        let msg = template || "";
+        if (!withAssistant) {
+          msg = msg.replace(/( và| cùng) Trợ Lý/g, "");
+        }
+
+        let boldName = name === "{TEN}" ? "{TEN}" : `*${name}*`;
+        let boldTier = tier === "{MOC}" ? "{MOC}" : `*${tier}*`;
+        msg = msg.replace(/{TEN}/g, boldName).replace(/{MOC}/g, boldTier);
+        if (withAssistant) {
+          msg = msg.replace(/(cùng|và)\s+Trợ Lý/g, "$1 *Trợ Lý*");
+        }
+
+        // 3. Tách các câu: Hook mở đầu, Thân đoạn chúc mừng & Lời chúc kết thúc
+        let sentenceRegex = /[^.!?]+[.!?]+[^.!?A-ZÀ-ỸÁ-Ý\r\n]*/gu;
+        let matches = msg.match(sentenceRegex);
+        let sents = [];
+        if (matches) {
+          sents = matches.map(s => s.trim()).filter(Boolean);
+        }
+
+        let formattedBody = "";
+        if (sents.length < 2) {
+          formattedBody = msg;
+        } else {
+          let hook = sents[0];
+          let closing = sents[sents.length - 1];
+          let mid = sents.slice(1, sents.length - 1);
+
+          // Nếu câu đầu tiên là Hook (không chứa trực tiếp tên Idol)
+          if (!hook.includes(boldName)) {
+            let emojiMatch = hook.match(/^([\p{Extended_Pictographic}\u2600-\u27BF\uD800-\uDFFF\s]+)(.*)/u);
+            if (emojiMatch && emojiMatch[1].trim().length > 0) {
+              let em = emojiMatch[1].trim();
+              let rest = emojiMatch[2].trim();
+              if (val >= 100) rest = rest.toUpperCase();
+              hook = `${em} *${rest}*`;
+            } else {
+              if (val >= 100) hook = `*${hook.toUpperCase()}*`;
+              else hook = `*${hook}*`;
+            }
+          }
+
+          // Xử lý câu kết: Mốc từ 50K trở lên được nhấn mạnh in đậm / in hoa rực rỡ
+          if (val >= 50) {
+            let emojiTailMatch = closing.match(/(.*?)([\p{Extended_Pictographic}\u2600-\u27BF\uD800-\uDFFF\s]+)$/u);
+            if (emojiTailMatch && emojiTailMatch[2].trim().length > 0) {
+              let cText = emojiTailMatch[1].trim();
+              let cEm = emojiTailMatch[2].trim();
+              if (val >= 300) cText = cText.toUpperCase();
+              closing = `*${cText}* ${cEm}`;
+            } else {
+              if (val >= 300) closing = `*${closing.toUpperCase()}*`;
+              else closing = `*${closing}*`;
+            }
+          }
+
+          let bodyText = mid.join(" ");
+          if (hook.includes(boldName)) {
+            formattedBody = bodyText.length > 0 ? `${hook}\n\n${bodyText}\n\n${closing}` : `${hook}\n\n${closing}`;
+          } else {
+            formattedBody = `${hook}\n\n${bodyText}\n\n${closing}`;
+          }
+        }
+
+        // 4. Ghép toàn bộ thành tin nhắn Zalo hoàn mỹ
+        let parts = [headerBanner];
+        if (topDivider) parts.push(topDivider);
+        parts.push(formattedBody);
+        if (botDivider) parts.push(botDivider);
+
+        return parts.join("\n");
+      }
+
       function assignUniqueMessage(item) {
         let templates = getTemplatesForTier(item.tier);
         let usedIndices = currentData
@@ -800,10 +942,10 @@
         }
 
         item.templateIndex = chosenIndex;
-        let baseMsg = templates[chosenIndex].replace(/{TEN}/g, item.name).replace(/{MOC}/g, item.tier);
-        item.baseMessage = baseMsg;
+        item.rawTemplate = templates[chosenIndex];
+        item.baseTemplate = item.rawTemplate;
         if (item.withAssistant === undefined) item.withAssistant = true; 
-        item.message = item.withAssistant ? item.baseMessage : item.baseMessage.replace(/( và| cùng) Trợ Lý/g, "");
+        item.message = formatWishForZalo(item.rawTemplate, item.name, item.tier, item.withAssistant);
       }
 
       function toggleAssistant(id, isChecked) {
@@ -811,7 +953,12 @@
         if (!item) return;
 
         item.withAssistant = isChecked;
-        item.message = item.withAssistant ? item.baseMessage : item.baseMessage.replace(/( và| cùng) Trợ Lý/g, "");
+        if (!item.rawTemplate) {
+          let templates = getTemplatesForTier(item.tier);
+          item.rawTemplate = templates[item.templateIndex !== undefined ? item.templateIndex : 0] || templates[0];
+          item.baseTemplate = item.rawTemplate;
+        }
+        item.message = formatWishForZalo(item.rawTemplate, item.name, item.tier, item.withAssistant);
 
         let textarea = document.getElementById(`msg-${item.id}`);
         if (textarea) textarea.value = item.message;
@@ -869,11 +1016,9 @@
               manualState.lastTierLevel = templates;
           }
 
-          let baseMsg = templates[manualState.templateIndex].replace(/{TEN}/g, name).replace(/{MOC}/g, tierStr);
-          manualState.baseMessage = baseMsg;
-
           let withAssistant = document.getElementById('manual-assistant').checked;
-          let finalMsg = withAssistant ? baseMsg : baseMsg.replace(/( và| cùng) Trợ Lý/g, "");
+          let rawTpl = templates[manualState.templateIndex];
+          let finalMsg = formatWishForZalo(rawTpl, name, tierStr, withAssistant);
           document.getElementById('manual-msg').value = finalMsg;
 
           let st = getTierStyle(tierStr);
