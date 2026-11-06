@@ -320,6 +320,136 @@
         </div>
     </div>
 
+    <!-- MÀN HÌNH KIỂM TRA FORWARD MAIL (FORWARD MODAL) -->
+    <div id="forwardModal" class="fixed inset-0 z-[100000] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl shadow-2xl w-[820px] max-w-[96%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90dvh]" id="forwardModalContent">
+            <!-- Header Modal -->
+            <div class="flex items-center gap-3.5 mb-3.5 border-b border-slate-100 dark:border-slate-700/80 pb-3.5 shrink-0">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 border border-emerald-200/60 dark:border-emerald-500/30 shadow-sm">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-white truncate">Kiểm Tra Trạng Thái Forward Mail</h3>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/30 shrink-0">tino.hohr@gmail.com</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">Quét hòm thư tino.hohr@gmail.com để xác nhận tài khoản nào đã forward & tài khoản nào chưa</p>
+                </div>
+                <button type="button" onclick="closeForwardModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-rose-600 transition-colors shrink-0 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Điều Khiển Phạm Vi & Nút Bắt Đầu -->
+            <div class="bg-slate-50 dark:bg-slate-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 mb-3.5 shrink-0">
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0"><i class="fa-solid fa-layer-group text-indigo-500 mr-1"></i> Phạm vi:</span>
+                        <div class="inline-flex rounded-xl p-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium">
+                            <button type="button" id="scopeBtnCurrent" onclick="setForwardScanScope('current')" class="px-2.5 py-1 rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-indigo-600">Tab này (<span id="forwardCurrentTabLabel">Idol Team</span>)</button>
+                            <button type="button" id="scopeBtnActive" onclick="setForwardScanScope('active')" class="px-2.5 py-1 rounded-lg transition text-indigo-600 bg-indigo-50 dark:bg-indigo-500/20 font-bold">5 Tab hoạt động (74)</button>
+                            <button type="button" id="scopeBtnAll" onclick="setForwardScanScope('all')" class="px-2.5 py-1 rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-indigo-600">Tất cả gồm Retire (234)</button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button type="button" id="btnStartForwardScan" onclick="startForwardScan()" class="btn-ripple flex-1 sm:flex-initial px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-play text-xs"></i> <span>Bắt đầu quét</span>
+                        </button>
+                        <button type="button" id="btnStopForwardScan" onclick="stopForwardScan()" class="hidden px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i class="fa-solid fa-stop text-xs"></i> <span>Dừng</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Thanh Tiến Trình & Thông Báo Quét -->
+                <div id="forwardProgressSection" class="mt-3 hidden">
+                    <div class="flex items-center justify-between text-xs mb-1.5 font-medium">
+                        <span id="forwardProgressLabel" class="text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-spinner fa-spin text-emerald-500"></i> Đang chuẩn bị quét...
+                        </span>
+                        <span id="forwardProgressPercent" class="font-mono font-bold text-emerald-600 dark:text-emerald-400">0%</span>
+                    </div>
+                    <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden relative">
+                        <div id="forwardProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-indigo-600 transition-all duration-300 w-0"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thẻ Thống Kê 3 Chỉ Số -->
+            <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-3.5 shrink-0">
+                <div class="bg-slate-50 dark:bg-slate-900/40 p-2.5 sm:p-3 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-slate-200/80 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0 text-sm">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">Tổng tài khoản</div>
+                        <div id="statTotalScanned" class="text-base sm:text-lg font-extrabold text-slate-800 dark:text-white font-mono">0</div>
+                    </div>
+                </div>
+                <div class="bg-emerald-50/60 dark:bg-emerald-500/10 p-2.5 sm:p-3 rounded-2xl border border-emerald-200/70 dark:border-emerald-500/30 flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 text-sm">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider truncate">Đã có Forward</div>
+                        <div id="statHasMail" class="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">0</div>
+                    </div>
+                </div>
+                <div class="bg-rose-50/60 dark:bg-rose-500/10 p-2.5 sm:p-3 rounded-2xl border border-rose-200/70 dark:border-rose-500/30 flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 text-sm">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-[10px] sm:text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider truncate">Chưa có Mail</div>
+                        <div id="statNoMail" class="text-base sm:text-lg font-extrabold text-rose-600 dark:text-rose-400 font-mono">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar Lọc & Thao Tác Trong Modal -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mb-2.5 shrink-0">
+                <!-- Tabs Lọc: Chưa có Mail / Đã có Mail / Tất cả -->
+                <div class="inline-flex rounded-xl p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-xs font-bold shrink-0">
+                    <button type="button" id="tabFilterNoMail" onclick="switchForwardModalTab('nomail')" class="px-3 py-1.5 rounded-lg transition bg-white dark:bg-slate-800 text-rose-600 shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-xmark text-xs"></i> <span>Chưa có mail</span> <span id="badgeTabNoMail" class="px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[10px] font-mono">0</span>
+                    </button>
+                    <button type="button" id="tabFilterHasMail" onclick="switchForwardModalTab('hasmail')" class="px-3 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-emerald-600 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-check text-xs"></i> <span>Đã có mail</span> <span id="badgeTabHasMail" class="px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono">0</span>
+                    </button>
+                    <button type="button" id="tabFilterAll" onclick="switchForwardModalTab('all')" class="px-3 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-700 flex items-center gap-1.5">
+                        <span>Tất cả</span> <span id="badgeTabAll" class="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-mono">0</span>
+                    </button>
+                </div>
+
+                <!-- Nút Tiện Ích: Copy & Xuất file -->
+                <div class="flex items-center gap-2">
+                    <div class="relative flex-1 sm:w-44">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="forwardModalSearchInput" oninput="renderForwardResultsList()" placeholder="Lọc idol/mail..."
+                               class="w-full pl-7 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                    <button type="button" id="btnCopyUnforwarded" onclick="copyUnforwardedEmails()" title="Sao chép toàn bộ email chưa có mail chuyển tiếp để đi cài đặt" class="btn-ripple px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 dark:text-indigo-400 border border-indigo-200/80 dark:border-indigo-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer">
+                        <i class="fa-solid fa-copy"></i> <span class="hidden xs:inline">Copy Email Chưa Có</span>
+                    </button>
+                    <button type="button" onclick="exportForwardReport()" title="Xuất báo cáo dạng file .txt" class="btn-ripple px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer">
+                        <i class="fa-solid fa-download"></i> <span class="hidden xs:inline">Xuất file</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Danh Sách Kết Quả Quét (Vùng Cuộn) -->
+            <div id="forwardModalBody" class="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-[220px] max-h-[460px] space-y-2">
+                <!-- Nội dung danh sách kết quả render động ở đây -->
+            </div>
+
+            <!-- Footer Modal -->
+            <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700 mt-2 shrink-0">
+                <span id="forwardModalFooterNote" class="text-[11px] text-slate-400 truncate">Mẹo: Bấm nút 🔄 bên cạnh từng dòng để kiểm tra lại ngay sau khi bạn vừa cài đặt forward xong.</span>
+                <button type="button" onclick="closeForwardModal()" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs sm:text-sm cursor-pointer shrink-0">Đóng</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SIDEBAR TỐI ƯU CHO MOBILE VÀ PC -->
     <aside id="sidebar" class="fixed md:relative inset-y-0 left-0 z-[99980] md:z-20 w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 h-full shadow-xl md:shadow-sm transform -translate-x-full md:translate-x-0 transition-transform duration-300">
         <div class="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -409,6 +539,9 @@
                 <button type="button" onclick="scanDuplicates()" class="btn-ripple h-9 px-3 md:px-4 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm cursor-pointer" title="Quét Dữ Liệu">
                     <i class="fa-solid fa-clone"></i> <span class="hidden sm:inline">Quét</span>
                 </button>
+                <button type="button" onclick="openForwardModal()" class="btn-ripple h-9 px-3 md:px-4 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm cursor-pointer" title="Kiểm Tra Forward Mail (tino.hohr@gmail.com)">
+                    <i class="fa-solid fa-envelope-circle-check"></i> <span class="hidden sm:inline">Check Forward</span>
+                </button>
             </div>
         </header>
 
@@ -424,6 +557,11 @@
                         <i class="fa-solid fa-circle-xmark text-xs"></i>
                     </button>
                 </div>
+                <select id="forwardFilter" onchange="filterData()" class="bg-slate-50 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 text-xs sm:text-sm rounded-xl px-2.5 py-2 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shrink-0">
+                    <option value="all">Tất cả Forward</option>
+                    <option value="forwarded">🟢 Đã Forward</option>
+                    <option value="unforwarded">🔴 Chưa Forward</option>
+                </select>
                 <div class="flex items-center gap-1 text-xs sm:text-sm text-slate-500 px-2 shrink-0 whitespace-nowrap border-l border-slate-200 dark:border-slate-700 pl-2.5">
                     <span id="recordCount" class="font-bold text-indigo-600 dark:text-indigo-400">0</span>
                     <span class="hidden xs:inline">kết quả</span>
@@ -563,6 +701,35 @@
         let currentlyExpandedRowIndex = -1;
         let emailCodeState = {}; // Lưu trạng thái mã OTP theo email để không bị mất khi bảng đồng bộ lại
 
+        // ================= TRẠNG THÁI KIỂM TRA FORWARD MAIL VỀ tino.hohr@gmail.com =================
+        const PRE_VERIFIED_FORWARD_EMAILS = {
+            'nctp2131@gmail.com': { hasMail: true, code: '048583', sheet: 'Idol Team', idol: 'Chloe', team: 'Angelik' },
+            'pstnn0053@outlook.com': { hasMail: true, code: '2026', sheet: 'Idol Team', idol: 'Damie', team: 'Angelik' },
+            'pstn0055@gmail.com': { hasMail: true, code: '048583', sheet: 'Idol Team', idol: 'Tboo', team: 'Fashion' },
+            'nctp2137@gmail.com': { hasMail: true, code: '048583', sheet: 'Idol Team', idol: 'Cobra', team: 'Royen:One' },
+            'pstn0071@gmail.com': { hasMail: true, code: '048583', sheet: 'Idol Team', idol: 'Carrot', team: 'Miracle' },
+            'pstp0004@gmail.com': { hasMail: true, code: '048583', sheet: 'Passion Star', idol: 'ROYEN:ONE', team: 'ROYEN:ONE' },
+            'pstn0032@gmail.com': { hasMail: true, code: '048583', sheet: 'Passion Star', idol: 'PS _Orion', team: 'PS _Orion' },
+            'pstn0059@gmail.com': { hasMail: true, code: '048583', sheet: 'Passion Star', idol: 'ELRIS-101', team: 'ELRIS-101' }
+        };
+
+        let forwardStatusCache = (function() {
+            try {
+                let saved = JSON.parse(localStorage.getItem('forward_mail_status_cache') || '{}');
+                for (let k in PRE_VERIFIED_FORWARD_EMAILS) {
+                    if (!saved[k]) saved[k] = PRE_VERIFIED_FORWARD_EMAILS[k];
+                }
+                return saved;
+            } catch (e) {
+                return Object.assign({}, PRE_VERIFIED_FORWARD_EMAILS);
+            }
+        })();
+
+        let forwardScanScope = 'active'; // 'current' | 'active' | 'all'
+        let forwardModalActiveTab = 'nomail'; // 'nomail' | 'hasmail' | 'all'
+        let isForwardScanning = false;
+        let forwardScanResults = [];
+
         function fetchConfigDevices() {
             if (!sessionPass) return;
             runScript('getConfigDevices', { pass: sessionPass })
@@ -574,6 +741,7 @@
             if (e.key === 'Escape') {
                 if (!document.getElementById('deviceModal').classList.contains('hidden')) closeDeviceEditor();
                 if (!document.getElementById('scanModal').classList.contains('hidden')) closeScanModal();
+                if (!document.getElementById('forwardModal')?.classList.contains('hidden')) closeForwardModal();
                 const activeInlineInputs = document.querySelectorAll('input[id^="inline-edit-"]');
                 if (activeInlineInputs.length > 0) renderTable(allData);
                 const globalDrop = document.getElementById('globalDeviceDropdown');
@@ -992,6 +1160,20 @@
                 const stateKey = (item.email || '').trim().toLowerCase() + '_' + index;
                 const savedMailState = emailCodeState[stateKey];
 
+                const emailClean = (item.email || '').trim().toLowerCase();
+                const fwdCache = forwardStatusCache[emailClean];
+                let forwardBadgeHtml = '';
+                if (fwdCache) {
+                    if (fwdCache.hasMail) {
+                        const otpSnippet = fwdCache.code && fwdCache.code !== 'nha' ? ` (Mã: ${escapeHtml(fwdCache.code)})` : '';
+                        forwardBadgeHtml = `<span onclick="event.stopPropagation(); checkSingleRowForward(${index}, this)" title="Đã nhận được mail tại tino.hohr@gmail.com${otpSnippet}. Bấm để quét lại" class="cursor-pointer inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 transition"><i class="fa-solid fa-circle-check text-[10px]"></i> Đã Fwd</span>`;
+                    } else {
+                        forwardBadgeHtml = `<span onclick="event.stopPropagation(); checkSingleRowForward(${index}, this)" title="Chưa nhận được mail forward tại tino.hohr@gmail.com. Bấm để quét lại" class="cursor-pointer inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 hover:bg-rose-100 transition animate-pulse"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Chưa Fwd</span>`;
+                    }
+                } else {
+                    forwardBadgeHtml = `<span onclick="event.stopPropagation(); checkSingleRowForward(${index}, this)" title="Chưa kiểm tra forward về tino.hohr@gmail.com. Bấm để kiểm tra" class="cursor-pointer inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400 border border-slate-200 dark:border-slate-600 hover:bg-slate-200 transition"><i class="fa-regular fa-circle-question text-[10px]"></i> Check</span>`;
+                }
+
                 let otpHtml = '';
                 if (item.key2fa && String(item.key2fa).trim() !== '') {
                     otpHtml = `
@@ -1130,7 +1312,10 @@
 
                         <!-- 4. EMAIL & LẤY CODE -->
                         <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
-                            <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1.5 shrink-0"><i class="fa-solid fa-envelope"></i> Email & Lấy Code</div>
+                            <div class="flex items-center justify-between gap-2 mb-1.5 px-0.5 w-full md:w-[240px]">
+                                <div class="md:hidden text-[11px] font-bold text-slate-400 uppercase flex items-center gap-1.5 shrink-0"><i class="fa-solid fa-envelope"></i> Email & Lấy Code</div>
+                                <div class="ml-auto">${forwardBadgeHtml}</div>
+                            </div>
 
                             <!-- KHUNG EMAIL -->
                             <div class="shrink-0 font-medium text-slate-900 flex items-center justify-between gap-2 bg-white dark:bg-slate-800 px-2.5 py-2 md:py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700 shadow-sm w-full md:w-max md:min-w-[240px] md:max-w-[240px] transition-[max-width] duration-300 ease-in-out overflow-hidden mb-2">
@@ -1588,6 +1773,8 @@
             const input = document.getElementById('searchInput');
             input.value = '';
             document.getElementById('clearSearchBtn').classList.add('hidden');
+            const fwdFilter = document.getElementById('forwardFilter');
+            if (fwdFilter) fwdFilter.value = 'all';
             renderTable(allData);
         }
 
@@ -1595,22 +1782,42 @@
         function filterData() {
             const rawVal = document.getElementById('searchInput').value;
             const clearBtn = document.getElementById('clearSearchBtn');
+            const fwdFilterEl = document.getElementById('forwardFilter');
+            const fwdFilter = fwdFilterEl ? fwdFilterEl.value : 'all';
+
             if (rawVal.length > 0) clearBtn.classList.remove('hidden');
             else clearBtn.classList.add('hidden');
 
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 const keyword = rawVal.toLowerCase().trim();
-                if (!keyword) { renderTable(allData); return; }
-                const filtered = allData.filter(item => {
-                    return (item.team && item.team.toLowerCase().includes(keyword)) ||
-                           (item.email && item.email.toLowerCase().includes(keyword)) ||
-                           (item.tenIdol && item.tenIdol.toLowerCase().includes(keyword)) ||
-                           (item.tiktokId && item.tiktokId.toLowerCase().includes(keyword)) ||
-                           (item.daiLi && String(item.daiLi).toLowerCase().includes(keyword)) ||
-                           (item.thietBiIdol && item.thietBiIdol.toLowerCase().includes(keyword)) ||
-                           (item.thietBiTroLi && item.thietBiTroLi.toLowerCase().includes(keyword));
-                });
+                let filtered = allData;
+
+                if (fwdFilter !== 'all') {
+                    filtered = filtered.filter(item => {
+                        const emailKey = (item.email || '').trim().toLowerCase();
+                        const cache = forwardStatusCache[emailKey];
+                        if (fwdFilter === 'forwarded') {
+                            return cache && cache.hasMail;
+                        } else if (fwdFilter === 'unforwarded') {
+                            return !cache || !cache.hasMail;
+                        }
+                        return true;
+                    });
+                }
+
+                if (keyword) {
+                    filtered = filtered.filter(item => {
+                        return (item.team && item.team.toLowerCase().includes(keyword)) ||
+                               (item.email && item.email.toLowerCase().includes(keyword)) ||
+                               (item.tenIdol && item.tenIdol.toLowerCase().includes(keyword)) ||
+                               (item.tiktokId && item.tiktokId.toLowerCase().includes(keyword)) ||
+                               (item.daiLi && String(item.daiLi).toLowerCase().includes(keyword)) ||
+                               (item.thietBiIdol && item.thietBiIdol.toLowerCase().includes(keyword)) ||
+                               (item.thietBiTroLi && item.thietBiTroLi.toLowerCase().includes(keyword));
+                    });
+                }
+
                 renderTable(filtered);
             }, 200);
         }
@@ -1795,6 +2002,532 @@
             modal.classList.add('opacity-0');
             content.classList.add('scale-95');
             setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
+        }
+
+        // ================= HỆ THỐNG KIỂM TRA FORWARD MAIL VỀ tino.hohr@gmail.com =================
+        function setForwardScanScope(scope) {
+            forwardScanScope = scope;
+            const btnCur = document.getElementById('scopeBtnCurrent');
+            const btnAct = document.getElementById('scopeBtnActive');
+            const btnAll = document.getElementById('scopeBtnAll');
+
+            const activeClass = "px-2.5 py-1 rounded-lg transition text-indigo-600 bg-indigo-50 dark:bg-indigo-500/20 font-bold";
+            const inactiveClass = "px-2.5 py-1 rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-indigo-600";
+
+            if (btnCur) btnCur.className = scope === 'current' ? activeClass : inactiveClass;
+            if (btnAct) btnAct.className = scope === 'active' ? activeClass : inactiveClass;
+            if (btnAll) btnAll.className = scope === 'all' ? activeClass : inactiveClass;
+
+            loadScopeAccountsForDisplay();
+        }
+
+        function switchForwardModalTab(tab) {
+            forwardModalActiveTab = tab;
+            const btnNoMail = document.getElementById('tabFilterNoMail');
+            const btnHasMail = document.getElementById('tabFilterHasMail');
+            const btnAll = document.getElementById('tabFilterAll');
+
+            const activeClasses = {
+                nomail: "px-3 py-1.5 rounded-lg transition bg-white dark:bg-slate-800 text-rose-600 shadow-sm flex items-center gap-1.5 font-bold",
+                hasmail: "px-3 py-1.5 rounded-lg transition bg-white dark:bg-slate-800 text-emerald-600 shadow-sm flex items-center gap-1.5 font-bold",
+                all: "px-3 py-1.5 rounded-lg transition bg-white dark:bg-slate-800 text-indigo-600 shadow-sm flex items-center gap-1.5 font-bold"
+            };
+            const inactiveClass = "px-3 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex items-center gap-1.5";
+
+            if (btnNoMail) btnNoMail.className = tab === 'nomail' ? activeClasses.nomail : inactiveClass;
+            if (btnHasMail) btnHasMail.className = tab === 'hasmail' ? activeClasses.hasmail : inactiveClass;
+            if (btnAll) btnAll.className = tab === 'all' ? activeClasses.all : inactiveClass;
+
+            renderForwardResultsList();
+        }
+
+        function openForwardModal() {
+            const modal = document.getElementById('forwardModal');
+            const content = document.getElementById('forwardModalContent');
+            const curLabel = document.getElementById('forwardCurrentTabLabel');
+            if (curLabel) curLabel.innerText = currentSheetName || 'Tab này';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+
+            loadScopeAccountsForDisplay();
+        }
+
+        function closeForwardModal() {
+            if (isForwardScanning) {
+                stopForwardScan();
+            }
+            const modal = document.getElementById('forwardModal');
+            const content = document.getElementById('forwardModalContent');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        async function getTargetAccountsForScope(scope) {
+            let list = [];
+            if (scope === 'current') {
+                (allData || []).forEach(item => {
+                    const em = (item.email || '').trim();
+                    if (em && em.includes('@') && !em.toLowerCase().includes('dang nh')) {
+                        list.push({ sheet: currentSheetName, team: item.team || '', idol: item.tenIdol || '', email: em });
+                    }
+                });
+                return list;
+            }
+
+            const sheets = scope === 'active'
+                ? ['Idol Team', 'Prime Radiant', 'Velion Technologies', 'Passion Star', 'Acc Idol mới']
+                : ['Idol Team', 'Prime Radiant', 'Velion Technologies', 'Passion Star', 'Acc Idol mới', 'Acc Idol Retire'];
+
+            for (const sName of sheets) {
+                if (sName === currentSheetName && allData && allData.length > 0) {
+                    allData.forEach(item => {
+                        const em = (item.email || '').trim();
+                        if (em && em.includes('@') && !em.toLowerCase().includes('dang nh')) {
+                            list.push({ sheet: sName, team: item.team || '', idol: item.tenIdol || '', email: em });
+                        }
+                    });
+                } else {
+                    try {
+                        const res = await runScript('getSheetData', { sheetName: sName, pass: sessionPass });
+                        if (Array.isArray(res)) {
+                            res.forEach(item => {
+                                const em = (item.email || '').trim();
+                                if (em && em.includes('@') && !em.toLowerCase().includes('dang nh')) {
+                                    list.push({ sheet: sName, team: item.team || '', idol: item.tenIdol || '', email: em });
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('Lỗi đọc sheet ' + sName, e);
+                    }
+                }
+            }
+            return list;
+        }
+
+        async function loadScopeAccountsForDisplay() {
+            forwardScanResults = await getTargetAccountsForScope(forwardScanScope);
+            updateForwardModalStats();
+            renderForwardResultsList();
+        }
+
+        function updateForwardModalStats() {
+            let total = forwardScanResults.length;
+            let hasMailCount = 0;
+            let noMailCount = 0;
+
+            forwardScanResults.forEach(acc => {
+                const key = acc.email.toLowerCase().trim();
+                const info = forwardStatusCache[key];
+                if (info && info.hasMail) {
+                    hasMailCount++;
+                } else {
+                    noMailCount++;
+                }
+            });
+
+            const statTotal = document.getElementById('statTotalScanned');
+            const statHas = document.getElementById('statHasMail');
+            const statNo = document.getElementById('statNoMail');
+            const bNo = document.getElementById('badgeTabNoMail');
+            const bHas = document.getElementById('badgeTabHasMail');
+            const bAll = document.getElementById('badgeTabAll');
+
+            if (statTotal) statTotal.innerText = total;
+            if (statHas) statHas.innerText = hasMailCount;
+            if (statNo) statNo.innerText = noMailCount;
+            if (bNo) bNo.innerText = noMailCount;
+            if (bHas) bHas.innerText = hasMailCount;
+            if (bAll) bAll.innerText = total;
+
+            const copyBtn = document.getElementById('btnCopyUnforwarded');
+            if (copyBtn) {
+                copyBtn.innerHTML = `<i class="fa-solid fa-copy"></i> <span class="hidden xs:inline">Copy ${noMailCount} Email Chưa Có</span>`;
+            }
+        }
+
+        function renderForwardResultsList() {
+            const body = document.getElementById('forwardModalBody');
+            if (!body) return;
+
+            const searchKw = (document.getElementById('forwardModalSearchInput')?.value || '').toLowerCase().trim();
+
+            let filtered = forwardScanResults.filter(acc => {
+                const key = acc.email.toLowerCase().trim();
+                const info = forwardStatusCache[key];
+                const hasMail = Boolean(info && info.hasMail);
+
+                if (forwardModalActiveTab === 'nomail' && hasMail) return false;
+                if (forwardModalActiveTab === 'hasmail' && !hasMail) return false;
+
+                if (searchKw) {
+                    const matchText = `${acc.sheet} ${acc.team} ${acc.idol} ${acc.email}`.toLowerCase();
+                    return matchText.includes(searchKw);
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                body.innerHTML = `
+                    <div class="text-center py-10">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-2.5 text-slate-400">
+                            <i class="fa-solid fa-inbox text-xl"></i>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Không tìm thấy tài khoản nào phù hợp bộ lọc.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach((acc) => {
+                const key = acc.email.toLowerCase().trim();
+                const info = forwardStatusCache[key];
+                const isChecked = Boolean(info);
+                const hasMail = Boolean(info && info.hasMail);
+                const otpCode = (info && info.code) ? info.code : '';
+
+                const statusBadge = hasMail
+                    ? `<span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 shrink-0"><i class="fa-solid fa-circle-check text-emerald-500"></i> ĐÃ CÓ MAIL ${otpCode ? `<span class="font-mono text-[11px] bg-emerald-100 dark:bg-emerald-500/30 px-1.5 py-0.2 rounded font-bold">${escapeHtml(otpCode)}</span>` : ''}</span>`
+                    : (isChecked
+                        ? `<span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 shrink-0"><i class="fa-solid fa-triangle-exclamation text-rose-500"></i> CHƯA FORWARD</span>`
+                        : `<span class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 shrink-0"><i class="fa-regular fa-clock"></i> Chưa kiểm tra</span>`
+                    );
+
+                html += `
+                    <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:border-slate-300 dark:hover:border-slate-600 transition">
+                        <div class="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                            <div class="w-8 h-8 rounded-xl ${hasMail ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'} flex items-center justify-center shrink-0 text-xs">
+                                <i class="fa-solid ${hasMail ? 'fa-envelope-open-text' : 'fa-envelope'}"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700">${escapeHtml(acc.sheet)}</span>
+                                    ${acc.team ? `<span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">• Team ${escapeHtml(acc.team)}</span>` : ''}
+                                    ${acc.idol ? `<span class="text-xs font-bold text-slate-800 dark:text-slate-200">• ${escapeHtml(acc.idol)}</span>` : ''}
+                                </div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span onclick="copyToClipboard('${escapeHtml(acc.email)}', 'Email')" title="Bấm để copy email" class="font-mono text-xs text-slate-700 dark:text-slate-300 font-medium hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer select-all truncate">${escapeHtml(acc.email)}</span>
+                                    <button type="button" onclick="copyToClipboard('${escapeHtml(acc.email)}', 'Email')" title="Sao chép" class="text-slate-400 hover:text-indigo-600 p-1 rounded transition"><i class="fa-regular fa-copy text-xs"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-end gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60 dark:border-slate-700/60">
+                            ${statusBadge}
+                            <button type="button" onclick="recheckSingleEmailInModal('${escapeHtml(acc.email)}', this)" title="Kiểm tra lại mail này trong hộp thư tino.hohr@gmail.com" class="px-2.5 py-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-1 cursor-pointer">
+                                <i class="fa-solid fa-rotate text-[11px]"></i> <span class="hidden sm:inline">Quét lại</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            body.innerHTML = html;
+        }
+
+        async function startForwardScan() {
+            if (isForwardScanning) return;
+            if (!sessionPass) {
+                showToast('Chưa đăng nhập hệ thống!', 'error');
+                return;
+            }
+
+            isForwardScanning = true;
+            const btnStart = document.getElementById('btnStartForwardScan');
+            const btnStop = document.getElementById('btnStopForwardScan');
+            const progSec = document.getElementById('forwardProgressSection');
+            const progBar = document.getElementById('forwardProgressBar');
+            const progLabel = document.getElementById('forwardProgressLabel');
+            const progPct = document.getElementById('forwardProgressPercent');
+
+            if (btnStart) btnStart.classList.add('hidden');
+            if (btnStop) btnStop.classList.remove('hidden');
+            if (progSec) progSec.classList.remove('hidden');
+
+            if (progLabel) progLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-500"></i> Đang tải danh sách tài khoản...';
+
+            forwardScanResults = await getTargetAccountsForScope(forwardScanScope);
+            const total = forwardScanResults.length;
+            if (total === 0) {
+                showToast('Không tìm thấy tài khoản nào để quét!', 'error');
+                stopForwardScan();
+                return;
+            }
+
+            let completed = 0;
+            let cursor = 0;
+            const CONCURRENCY = 4;
+            let activeCount = 0;
+
+            async function scanAccountWorker(acc) {
+                const em = acc.email.trim();
+                try {
+                    const raw = await runScript('getEmailVerificationCode', { targetEmail: em, pass: sessionPass });
+                    const code = String(raw || '').trim();
+                    const hasMail = Boolean(code && !code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && code !== "nha");
+                    const key = em.toLowerCase();
+                    forwardStatusCache[key] = {
+                        hasMail: hasMail,
+                        code: hasMail ? code : '',
+                        checkedAt: new Date().toISOString(),
+                        sheet: acc.sheet,
+                        team: acc.team,
+                        idol: acc.idol
+                    };
+                } catch (e) {
+                    console.error('Lỗi quét email ' + em, e);
+                }
+            }
+
+            return new Promise((resolve) => {
+                function updateProgressUI() {
+                    const pct = Math.floor((completed / total) * 100);
+                    if (progBar) progBar.style.width = pct + '%';
+                    if (progPct) progPct.innerText = pct + '%';
+                    if (progLabel) progLabel.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-emerald-500"></i> Đang quét ${completed}/${total} tài khoản...`;
+                    updateForwardModalStats();
+                }
+
+                function pump() {
+                    if (!isForwardScanning) {
+                        resolve();
+                        return;
+                    }
+
+                    if (completed >= total) {
+                        resolve();
+                        return;
+                    }
+
+                    while (activeCount < CONCURRENCY && cursor < total) {
+                        const acc = forwardScanResults[cursor++];
+                        activeCount++;
+                        scanAccountWorker(acc).finally(() => {
+                            activeCount--;
+                            completed++;
+                            updateProgressUI();
+                            pump();
+                        });
+                    }
+
+                    if (cursor >= total && activeCount === 0) {
+                        resolve();
+                    }
+                }
+
+                pump();
+            }).then(() => {
+                localStorage.setItem('forward_mail_status_cache', JSON.stringify(forwardStatusCache));
+                finishForwardScan();
+            });
+        }
+
+        function stopForwardScan() {
+            isForwardScanning = false;
+            finishForwardScan(true);
+        }
+
+        function finishForwardScan(wasStopped = false) {
+            isForwardScanning = false;
+            const btnStart = document.getElementById('btnStartForwardScan');
+            const btnStop = document.getElementById('btnStopForwardScan');
+            const progLabel = document.getElementById('forwardProgressLabel');
+            const progBar = document.getElementById('forwardProgressBar');
+
+            if (btnStart) btnStart.classList.remove('hidden');
+            if (btnStop) btnStop.classList.add('hidden');
+
+            if (progLabel) {
+                progLabel.innerHTML = wasStopped
+                    ? '<i class="fa-solid fa-circle-pause text-amber-500"></i> Đã tạm dừng quét'
+                    : '<i class="fa-solid fa-circle-check text-emerald-500"></i> Quét hoàn tất!';
+            }
+            if (progBar && !wasStopped) progBar.style.width = '100%';
+
+            updateForwardModalStats();
+            renderForwardResultsList();
+            renderTable(allData);
+
+            if (!wasStopped) {
+                showToast('Đã quét xong toàn bộ trạng thái Forward mail!', 'success');
+            }
+        }
+
+        async function recheckSingleEmailInModal(email, btnElem) {
+            if (!sessionPass) {
+                showToast('Chưa đăng nhập!', 'error');
+                return;
+            }
+            const oldHtml = btnElem.innerHTML;
+            btnElem.disabled = true;
+            btnElem.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-indigo-600"></i>';
+
+            try {
+                const raw = await runScript('getEmailVerificationCode', { targetEmail: email, pass: sessionPass });
+                const code = String(raw || '').trim();
+                const hasMail = Boolean(code && !code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && code !== "nha");
+                const key = email.toLowerCase().trim();
+
+                forwardStatusCache[key] = {
+                    hasMail: hasMail,
+                    code: hasMail ? code : '',
+                    checkedAt: new Date().toISOString()
+                };
+                localStorage.setItem('forward_mail_status_cache', JSON.stringify(forwardStatusCache));
+
+                updateForwardModalStats();
+                renderForwardResultsList();
+                renderTable(allData);
+
+                if (hasMail) {
+                    showToast(`🟢 ĐÃ CÓ MAIL: ${email} (Mã: ${code})`, 'success', 4000);
+                } else {
+                    showToast(`🔴 CHƯA CÓ MAIL: ${email} chưa nhận được mail nào tại tino.hohr@gmail.com`, 'error', 4000);
+                }
+            } catch (err) {
+                showToast('Lỗi khi kiểm tra: ' + err.message, 'error');
+            } finally {
+                btnElem.disabled = false;
+                btnElem.innerHTML = oldHtml;
+            }
+        }
+
+        async function checkSingleRowForward(index, badgeElem) {
+            const item = allData[index];
+            if (!item || !item.email) {
+                showToast('Không có email!', 'error');
+                return;
+            }
+            if (!sessionPass) {
+                showToast('Chưa đăng nhập hệ thống!', 'error');
+                return;
+            }
+
+            if (badgeElem) {
+                badgeElem.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang KT...';
+            }
+
+            try {
+                const raw = await runScript('getEmailVerificationCode', { targetEmail: item.email, pass: sessionPass });
+                const code = String(raw || '').trim();
+                const hasMail = Boolean(code && !code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && code !== "nha");
+                const key = item.email.toLowerCase().trim();
+
+                forwardStatusCache[key] = {
+                    hasMail: hasMail,
+                    code: hasMail ? code : '',
+                    checkedAt: new Date().toISOString(),
+                    sheet: currentSheetName,
+                    team: item.team || '',
+                    idol: item.tenIdol || ''
+                };
+                localStorage.setItem('forward_mail_status_cache', JSON.stringify(forwardStatusCache));
+
+                renderTable(allData);
+
+                if (hasMail) {
+                    showToast(`🟢 ĐÃ CÓ MAIL: ${item.tenIdol || item.email} (Mã: ${code})`, 'success', 4000);
+                } else {
+                    showToast(`🔴 CHƯA CÓ MAIL: ${item.tenIdol || item.email} chưa forward về tino.hohr@gmail.com`, 'error', 4000);
+                }
+            } catch (err) {
+                showToast('Lỗi quét mail: ' + err.message, 'error');
+                renderTable(allData);
+            }
+        }
+
+        function copyUnforwardedEmails() {
+            let unforwardedList = [];
+            forwardScanResults.forEach(acc => {
+                const key = acc.email.toLowerCase().trim();
+                const info = forwardStatusCache[key];
+                if (!info || !info.hasMail) {
+                    if (!unforwardedList.includes(acc.email)) {
+                        unforwardedList.push(acc.email);
+                    }
+                }
+            });
+
+            if (unforwardedList.length === 0) {
+                showToast('Tất cả email đều đã có forward mail! Không có email nào cần làm.', 'success');
+                return;
+            }
+
+            const textToCopy = unforwardedList.join('\r\n');
+            copyToClipboard(textToCopy, `${unforwardedList.length} email chưa có forward`);
+            showToast(`Đã sao chép ${unforwardedList.length} email chưa có mail vào bộ nhớ tạm!`, 'success', 4000);
+        }
+
+        function exportForwardReport() {
+            if (forwardScanResults.length === 0) {
+                showToast('Chưa có danh sách để xuất!', 'error');
+                return;
+            }
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('vi-VN') + ' ' + now.toLocaleTimeString('vi-VN');
+
+            let hasMailList = [];
+            let noMailList = [];
+
+            forwardScanResults.forEach(acc => {
+                const key = acc.email.toLowerCase().trim();
+                const info = forwardStatusCache[key];
+                if (info && info.hasMail) {
+                    hasMailList.push({ ...acc, code: info.code });
+                } else {
+                    noMailList.push(acc);
+                }
+            });
+
+            let content = `========================================================================\r\n`;
+            content += `⭐ BÁO CÁO KIỂM TRA FORWARD MAIL VỀ TINO.HOHR@GMAIL.COM\r\n`;
+            content += `⭐ DỰ ÁN: PASSION STAR - 2FA ACCOUNT SECURITY SYSTEM\r\n`;
+            content += `⭐ THỜI GIAN: ${dateStr}\r\n`;
+            content += `⭐ TỔNG SỐ TÀI KHOẢN: ${forwardScanResults.length}\r\n`;
+            content += `------------------------------------------------------------------------\r\n`;
+            content += `🟢 ĐÃ CÓ MAIL FORWARD: ${hasMailList.length} tài khoản\r\n`;
+            content += `🔴 CHƯA CÓ MAIL FORWARD (CẦN LÀM): ${noMailList.length} tài khoản\r\n`;
+            content += `========================================================================\r\n\r\n`;
+
+            content += `========================================================================\r\n`;
+            content += `I. DANH SÁCH ${noMailList.length} TÀI KHOẢN CHƯA CÓ MAIL (CẦN CÀI ĐẶT FORWARD):\r\n`;
+            content += `========================================================================\r\n`;
+            noMailList.forEach((item, i) => {
+                content += `${(i + 1).toString().padStart(2, '0')}. [${item.sheet}] [${item.team || 'No Team'}] ${item.idol ? item.idol + ' - ' : ''}${item.email}\r\n`;
+            });
+
+            content += `\r\n========================================================================\r\n`;
+            content += `II. DANH SÁCH CHỈ EMAIL (ĐỂ DÁN HÀNG LOẠT):\r\n`;
+            content += `========================================================================\r\n`;
+            content += noMailList.map(item => item.email).join('\r\n');
+
+            content += `\r\n\r\n========================================================================\r\n`;
+            content += `III. DANH SÁCH ${hasMailList.length} TÀI KHOẢN ĐÃ CÓ MAIL FORWARD HOẠT ĐỘNG:\r\n`;
+            content += `========================================================================\r\n`;
+            hasMailList.forEach((item, i) => {
+                content += `${(i + 1).toString().padStart(2, '0')}. [${item.sheet}] [${item.team || 'No Team'}] ${item.idol ? item.idol + ' - ' : ''}${item.email} (Mã gần nhất: ${item.code || 'Không có số'})\r\n`;
+            });
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Bao_Cao_Forward_Mail_tino_hohr_${now.toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast('Đã tải xuống file báo cáo chi tiết!', 'success');
         }
 
         // ================= SỬA THIẾT BỊ INLINE & MODAL =================
