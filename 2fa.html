@@ -3,185 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Tra cứu Tài khoản & 2FA System</title>
-    <link rel="icon" href="./icon/2fa.svg" type="image/svg+xml">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script>tailwind.config = { darkMode: 'class' };</script>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="2FA Security">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="apple-mobile-web-app-title" content="Passion 2FA">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#090d16">
+    <title>Tra cứu Tài khoản & 2FA Security System - Passion Star</title>
+    <link rel="icon" href="./icon/2fa.svg" type="image/svg+xml">
+
+    <!-- Tailwind CSS with Dark Mode -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#090d16',
+                        darkcard: '#111827',
+                        darkborder: '#1f2937'
+                    }
+                }
+            }
+        };
+        // Apply theme immediately to prevent flashing
+        if (localStorage.getItem('theme') === 'light' || localStorage.getItem('ps_theme') === 'light') {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         html, body {
             font-family: 'Inter', sans-serif;
-            height: 100%;
-            height: 100dvh;
-            width: 100%;
-            overflow: hidden !important;
-            overscroll-behavior: none;
-            position: fixed;
-            inset: 0;
-            background-color: #f1f5f9; /* Phủ màu nền sáng lấp đầy viền đáy iPhone */
+            background-color: #f4f6fb;
+            overflow-x: hidden !important;
+            max-width: 100vw;
+            min-height: 100vh;
+            min-height: 100dvh;
+            transition: background-color 0.25s ease, color 0.25s ease;
         }
-        
+        html.dark body {
+            background-color: #090d16;
+            color: #f1f5f9;
+        }
+        .tiktok-gradient {
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 45%, #ff0844 100%);
+        }
+        .security-gradient {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        html.dark ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        html.dark ::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+        html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none !important;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+
+        /* Smooth Modals matching idol_tracker */
+        .smooth-modal {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s;
+        }
+        .smooth-modal.active,
+        .smooth-modal:not(.hidden) {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        .smooth-modal-card {
+            transform: translateY(12px) scale(0.97);
+            transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .smooth-modal.active .smooth-modal-card,
+        .smooth-modal:not(.hidden) .smooth-modal-card {
+            transform: translateY(0) scale(1);
+        }
+
+        /* Password and Peek Effect */
         .password-text { transition: opacity 0.12s ease-in-out; opacity: 1; }
         .password-text.fade-out { opacity: 0; }
+        .peek-container { position: relative; display: inline-block; cursor: none; --x: -100px; --y: -100px; }
+        .peek-obfuscated { color: #cbd5e1; font-family: monospace; font-weight: 600; letter-spacing: 0.1em; transition: opacity 0.15s ease; }
+        html.dark .peek-obfuscated { color: #475569 !important; }
+        .peek-container:hover .peek-obfuscated { -webkit-mask-image: radial-gradient(circle 22px at var(--x) var(--y), transparent 40%, black 100%); mask-image: radial-gradient(circle 22px at var(--x) var(--y), transparent 40%, black 100%); }
+        .peek-real { position: absolute; top: 0; left: 0; color: #4f46e5; font-family: monospace; font-weight: 800; letter-spacing: 0.1em; white-space: nowrap; -webkit-mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); opacity: 0; transition: opacity 0.15s ease; pointer-events: none; text-shadow: 0 0 2px rgba(79, 70, 229, 0.4); }
+        html.dark .peek-real { color: #818cf8 !important; text-shadow: 0 0 4px rgba(129, 140, 248, 0.4); }
+        .peek-container:hover .peek-real { opacity: 1; }
 
-        /* Cố định Sidebar trên PC */
-        @media (min-width: 768px) {
-            aside.collapsed { width: 76px !important; min-width: 76px !important; }
-            aside.collapsed .collapse-text, aside.collapsed .section-title, aside.collapsed .user-info-text { display: none !important; }
-            aside.collapsed .menu-item { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
-            aside.collapsed .menu-item:hover { transform: none !important; }
-            aside.collapsed nav { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-            aside.collapsed .logo-box { margin: 0 auto; }
-        }
-
-        /* --- LOGIC HIỆU ỨNG BOTTOM SHEET TRÊN MOBILE --- */
-        @media (max-width: 767px) {
-            .mobile-collapsible { display: none !important; }
-
-            tr.mobile-expanded {
-                position: fixed !important;
-                inset: 0 !important;
-                z-index: 99990 !important; /* Hạ xuống để Bảng Thiết Bị (100000) nổi lên trên */
-                background: rgba(15, 23, 42, 0.75) !important;
-                backdrop-filter: blur(5px);
-                -webkit-backdrop-filter: blur(5px);
-                display: block !important; /* Dùng block thay cho flex để iOS không bị đơ cuộn */
-                overflow-y: auto !important;
-                -webkit-overflow-scrolling: touch !important;
-                padding-top: 80px !important; /* Chừa không gian phía trên để không bị che khuất */
-                margin: 0 !important;
-                border: none !important;
-                animation: fadeInOverlay 0.2s ease-out forwards;
-                border-radius: 0 !important;
-            }
-
-            @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
-
-            tr.mobile-expanded .mobile-header-row { display: none !important; }
-            
-            /* Lớp nền tàng hình để bấm tắt, phủ toàn màn hình */
-            tr.mobile-expanded .mobile-close-area {
-                display: block !important;
-                position: fixed !important;
-                inset: 0 !important;
-                z-index: 0 !important;
-                background: transparent !important;
-                min-height: 100dvh !important;
-                width: 100% !important;
-            }
-
-            /* Khung chứa tiêu đề và nút X */
-            tr.mobile-expanded .mobile-sheet-header {
-                display: flex !important;
-                position: relative !important;
-                z-index: 10 !important;
-                background: white !important;
-                border-radius: 1.5rem 1.5rem 0 0 !important;
-                box-shadow: 0 -10px 25px rgba(0,0,0,0.1) !important;
-                flex-shrink: 0 !important;
-                opacity: 1 !important;
-                transform: none; 
-                animation: none !important;
-            }
-
-            html.dark tr.mobile-expanded .mobile-sheet-header {
-                background: #1e293b !important;
-            }
-
-            /* Khung chứa các dòng thông tin (Email, Pass...) */
-            tr.mobile-expanded .mobile-collapsible {
-                display: flex !important;
-                flex-direction: column !important;
-                position: relative !important;
-                z-index: 10 !important;
-                flex-shrink: 0 !important;
-                background: white;
-                padding: 0.9rem 1.25rem !important;
-                border-bottom: 1px solid #f1f5f9 !important;
-                border-top: none !important;
-                opacity: 1 !important;
-                transform: none; 
-                animation: none !important;
-            }
-
-            html.dark tr.mobile-expanded .mobile-collapsible {
-                background: #1e293b !important;
-                border-bottom: 1px solid #334155 !important;
-            }
-
-            tr.mobile-expanded .mobile-collapsible:last-child {
-                padding-bottom: calc(2.25rem + env(safe-area-inset-bottom, 0px)) !important;
-                border-bottom: none !important;
-                border-radius: 0 !important;
-            }
-        }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        html.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
-
+        /* Column Resizer */
         th { position: relative; }
         .resizer { position: absolute; top: 0; right: -3px; width: 8px; cursor: col-resize; user-select: none; height: 100%; z-index: 10; transition: background-color 0.2s; }
         .resizer:hover, .resizer.resizing { background-color: #6366f1; opacity: 0.5; }
 
-        .peek-container { position: relative; display: inline-block; cursor: none; --x: -100px; --y: -100px; }
-        .peek-obfuscated { color: #cbd5e1; font-family: monospace; font-weight: 600; letter-spacing: 0.1em; transition: opacity 0.15s ease; }
-        .peek-container:hover .peek-obfuscated { -webkit-mask-image: radial-gradient(circle 22px at var(--x) var(--y), transparent 40%, black 100%); mask-image: radial-gradient(circle 22px at var(--x) var(--y), transparent 40%, black 100%); }
-        .peek-real { position: absolute; top: 0; left: 0; color: #4f46e5; font-family: monospace; font-weight: 800; letter-spacing: 0.1em; white-space: nowrap; -webkit-mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); mask-image: radial-gradient(circle 22px at var(--x) var(--y), black 40%, transparent 100%); opacity: 0; transition: opacity 0.15s ease; pointer-events: none; text-shadow: 0 0 2px rgba(79, 70, 229, 0.4); }
-        .peek-container:hover .peek-real { opacity: 1; }
-
-        html.dark, html.dark body, html.dark main, html.dark .bg-slate-100 { background-color: #0f172a !important; color: #f1f5f9 !important; }
-        html.dark .bg-white { background-color: #1e293b !important; border-color: #334155 !important; }
-        html.dark .border-slate-200, html.dark .border-slate-100, html.dark .border-slate-300 { border-color: #334155 !important; }
-        html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: #334155 !important; }
-        html.dark .text-slate-900, html.dark .text-slate-800, html.dark .text-slate-700 { color: #f8fafc !important; }
-        html.dark .text-slate-600, html.dark .text-slate-500, html.dark .text-slate-400 { color: #94a3b8 !important; }
-        html.dark .bg-slate-50, html.dark input { background-color: #0f172a !important; border-color: #334155 !important; color: #f8fafc !important; }
-        html.dark .bg-slate-200 { background-color: #334155 !important; color: #f8fafc !important; border-color: #475569 !important; }
-        html.dark th.bg-indigo-100 { background-color: #312e81 !important; border-color: #4338ca !important; color: #c7d2fe !important; }
-        html.dark .bg-indigo-50 { background-color: #1e1b4b !important; border-color: #312e81 !important; color: #c7d2fe !important; }
-        html.dark .bg-slate-50\/50, html.dark .bg-slate-50\/30 { background-color: rgba(30, 41, 59, 0.5) !important; }
-        html.dark .bg-indigo-50\/10 { background-color: rgba(49, 46, 129, 0.3) !important; }
-        html.dark .hover\:bg-indigo-50\/40:hover { background-color: rgba(49, 46, 129, 0.5) !important; }
-        html.dark .hover\:bg-indigo-50\/50:hover { background-color: rgba(49, 46, 129, 0.6) !important; color: #818cf8 !important; }
-        html.dark .text-indigo-600, html.dark .text-indigo-700 { color: #818cf8 !important; }
-        html.dark .bg-indigo-600 { background-color: #4f46e5 !important; color: white !important; }
-        html.dark .bg-emerald-50 { background-color: #064e3b !important; border-color: #065f46 !important; color: #34d399 !important; }
-        html.dark .text-emerald-700 { color: #34d399 !important; }
-        html.dark .bg-rose-50 { background-color: #4c0519 !important; border-color: #881337 !important; color: #fb7185 !important; }
-        html.dark .text-rose-600, html.dark .text-rose-500 { color: #fb7185 !important; }
-        html.dark .shadow-sm, html.dark .shadow-md, html.dark .shadow-xl, html.dark .shadow-2xl { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.2) !important; }
-        html.dark .peek-obfuscated { color: #475569 !important; }
-        html.dark .peek-real { color: #818cf8 !important; text-shadow: 0 0 4px rgba(129, 140, 248, 0.4); }
-
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
-        .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-
-        .menu-item { transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1); position: relative; overflow: hidden; }
-        @media (min-width: 768px) {
-            #sidebar:not(.collapsed) nav:has(.menu-item:hover) .menu-item:not(:hover) { filter: blur(2px); opacity: 0.45; transform: scale(0.97); }
-            #sidebar:not(.collapsed) nav .menu-item:hover { filter: blur(0px) !important; opacity: 1 !important; transform: scale(1.02) translateX(4px) !important; box-shadow: 0 4px 20px -2px rgba(79, 70, 229, 0.25); z-index: 10; position: relative; }
-        }
-        .menu-item > * { position: relative; z-index: 1; }
-
-        @keyframes staggerFadeIn { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
-        .stagger-row { opacity: 0; animation: staggerFadeIn 0.25s ease-out forwards; }
-
-        @keyframes vaultEnter { 0% { transform: scale(0.9) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
-        .animate-vault-enter { animation: vaultEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-
+        /* Toast Container */
         .toast-container { position: fixed; bottom: 20px; right: 16px; z-index: 100010; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: calc(100vw - 32px); }
-        .cyber-toast { background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 11px 15px; border-radius: 10px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); font-family: 'Inter', monospace; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; backdrop-filter: blur(8px); }
+        .cyber-toast { background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 11px 15px; border-radius: 14px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; backdrop-filter: blur(8px); }
         .cyber-toast.show { transform: translateX(0) scale(1); opacity: 1; }
         .cyber-toast.success { border-color: rgba(16, 185, 129, 0.5); }
         .cyber-toast.error { border-color: rgba(244, 63, 94, 0.5); }
@@ -190,8 +150,8 @@
         .cyber-toast.error .toast-progress { background: #f43f5e; }
         @keyframes toastProgress { 0% { width: 100%; } 100% { width: 0%; } }
 
-        .checkbox-cell { width: 40px; text-align: center; }
-        .cyber-checkbox { appearance: none; width: 18px; height: 18px; border: 2px solid rgba(99, 102, 241, 0.5); border-radius: 5px; background: rgba(0,0,0,0.15); cursor: pointer; position: relative; transition: all 0.2s; outline: none; }
+        /* Checkbox & Batch Bar */
+        .cyber-checkbox { appearance: none; width: 18px; height: 18px; border: 2px solid rgba(99, 102, 241, 0.5); border-radius: 6px; background: rgba(0,0,0,0.1); cursor: pointer; position: relative; transition: all 0.2s; outline: none; }
         .cyber-checkbox:checked { background: #6366f1; border-color: #6366f1; box-shadow: 0 0 8px rgba(99,102,241,0.5); }
         .cyber-checkbox:checked::after { content: '✓'; position: absolute; color: white; font-size: 12px; font-weight: bold; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
@@ -202,10 +162,33 @@
         .ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: ripple-animation 0.6s linear; background-color: rgba(255, 255, 255, 0.4); pointer-events: none; }
         @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
 
-        .dropdown-item-active { background-color: #e0e7ff !important; color: #4f46e5 !important; }
-        html.dark .dropdown-item-active { background-color: #334155 !important; color: #818cf8 !important; }
+        @keyframes staggerFadeIn { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+        .stagger-row { opacity: 0; animation: staggerFadeIn 0.25s ease-out forwards; }
 
-        /* Tối ưu phản hồi chạm trên nút bấm di động */
+        @keyframes pinShake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-9px); } 40%, 80% { transform: translateX(9px); } }
+        .pin-shake { animation: pinShake 0.4s ease-in-out; }
+
+        /* Mobile Bottom Sheet adjustments */
+        @media screen and (max-width: 640px) {
+            #deviceModal, #scanModal, #forwardModal {
+                align-items: flex-end !important;
+                padding: 0 !important;
+            }
+            #deviceModal > div, #scanModal > div, #forwardModal > div {
+                border-bottom-left-radius: 0 !important;
+                border-bottom-right-radius: 0 !important;
+                border-top-left-radius: 28px !important;
+                border-top-right-radius: 28px !important;
+                max-height: 92dvh !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+        }
+
+        /* Safe area cho Header */
+        header.safe-top {
+            padding-top: max(0.5rem, env(safe-area-inset-top, 0.5rem));
+        }
         button, .copy-trigger {
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
@@ -227,13 +210,10 @@
         window.fs = { doc, setDoc, getDoc };
     </script>
 </head>
-<body class="bg-slate-100 text-slate-800 flex">
+<body class="text-slate-800 min-h-screen flex flex-col">
 
     <!-- TOAST NOTIFICATION -->
     <div class="toast-container" id="toastContainer"></div>
-
-    <!-- LỚP PHỦ CHO MOBILE SIDEBAR -->
-    <div id="mobileOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99970] hidden md:hidden transition-opacity" onclick="closeMobileSidebar()"></div>
 
     <!-- MULTI-SELECT BATCH ACTION BAR -->
     <div id="batchActionBar">
@@ -247,51 +227,89 @@
         </button>
     </div>
 
-    <!-- MÀN HÌNH ĐĂNG NHẬP -->
-    <div id="loginScreen" class="fixed inset-0 z-[100020] bg-[#050505] flex items-center justify-center transition-all duration-500" style="top: -50px; bottom: -50px;">
-        <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#4f46e5 1px, transparent 1px); background-size: 30px 30px;"></div>
-        <div class="w-[400px] max-w-[90%] bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/10 p-6 md:p-10 rounded-3xl shadow-[0_0_50px_rgba(79,70,229,0.15)] relative overflow-hidden animate-vault-enter">
-            <div id="loginShimmer" class="absolute top-0 left-0 w-full h-[2px] bg-indigo-500/80 shadow-[0_0_15px_#6366f1] opacity-0 transition-opacity duration-300"></div>
-            <div class="text-center mb-7">
-                <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10 shadow-inner">
-                    <i class="fa-solid fa-fingerprint text-indigo-400 text-3xl"></i>
+    <!-- MÀN HÌNH KHÓA XÁC THỰC QUẢN TRỊ VIÊN (PIN / PASSCODE - PHONG CÁCH IDOL TRACKER) -->
+    <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-4 select-none">
+        <div id="pinLockCard" class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div id="loginIconBox" class="w-14 h-14 mx-auto rounded-2xl bg-indigo-500/20 border border-indigo-400/40 text-indigo-400 flex items-center justify-center text-2xl shadow-inner mb-3 transition-colors duration-300">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+
+            <div class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 mb-2">
+                HỆ THỐNG BẢO MẬT 2FA
+            </div>
+
+            <h3 class="text-base sm:text-lg font-black tracking-tight text-white">
+                XÁC THỰC QUẢN TRỊ VIÊN
+            </h3>
+            <p class="text-xs text-slate-400 mt-1 mb-4">
+                Vui lòng nhập mật mã bảo mật để truy cập bảng dữ liệu tài khoản
+            </p>
+
+            <form onsubmit="event.preventDefault(); checkLogin();" class="space-y-3">
+                <div class="relative">
+                    <input type="password" id="passcodeInput"
+                           placeholder="Nhập mật mã bảo mật..."
+                           autocomplete="off"
+                           class="w-full h-11 px-4 text-center text-sm font-black tracking-widest rounded-xl border border-slate-700 bg-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition font-mono">
                 </div>
-                <h2 class="text-white text-2xl font-bold tracking-tight">2FA Account System</h2>
-                <p class="text-slate-500 text-sm mt-1">Hệ thống bảo mật 2FA</p>
+
+                <div id="loginShimmer" class="w-full h-[2px] bg-gradient-to-r from-pink-500 via-indigo-500 to-teal-400 opacity-0 transition-opacity rounded-full"></div>
+
+                <p id="loginError" class="text-xs min-h-[1.25rem] font-bold text-rose-400 transition-colors hidden">
+                    Từ chối truy cập: Sai mật khẩu
+                </p>
+
+                <button type="button" onclick="checkLogin()" id="loginBtn"
+                        class="w-full h-11 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-xs font-black shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-key"></i>
+                    <span>XÁC THỰC HỆ THỐNG</span>
+                </button>
+            </form>
+
+            <div class="mt-4 text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-lock text-[10px]"></i>
+                <span>Tự động mã hóa SHA-256 bảo mật</span>
             </div>
-            <div class="relative group">
-                <input type="password" id="passcodeInput" placeholder="Nhập mã bảo mật..."
-                       class="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 px-5 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all duration-300 font-mono tracking-widest text-center shadow-inner relative z-10"
-                       onkeypress="if(event.key === 'Enter') checkLogin()">
-            </div>
-            <button type="button" onclick="checkLogin()" class="btn-ripple w-full mt-5 py-3.5 bg-white/5 hover:bg-indigo-600/20 border border-white/10 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.1)] flex items-center justify-center gap-2" id="loginBtn">
-                <i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>
-            </button>
-            <p id="loginError" class="text-rose-500 text-xs text-center mt-4 font-semibold hidden">Từ chối truy cập: Sai mật khẩu</p>
         </div>
     </div>
 
-    <!-- MÀN HÌNH QUẢN LÝ THIẾT BỊ (DEVICE MODAL - Z-INDEX CAO HƠN BOTTOM SHEET) -->
-    <div id="deviceModal" class="fixed inset-0 z-[100000] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl shadow-xl w-[500px] max-w-[94%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[85dvh]" id="deviceModalContent">
-            <div class="flex items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-700 pb-3 shrink-0">
-                <div>
-                    <h3 class="text-base md:text-lg font-bold text-slate-800 dark:text-white">Quản lý Thiết bị</h3>
-                    <p id="editDeviceTarget" class="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-0.5">Tài khoản: ...</p>
+    <!-- MÀN HÌNH QUẢN LÝ THIẾT BỊ (DEVICE MODAL) -->
+    <div id="deviceModal" class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 opacity-0 transition-opacity duration-300">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl max-w-lg w-full max-h-[92dvh] sm:max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100" id="deviceModalContent">
+            <!-- Header -->
+            <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-extrabold flex items-center gap-2">
+                            <span>Quản Lý Thiết Bị Đăng Nhập</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500 text-white font-extrabold">TAG</span>
+                        </h3>
+                        <p id="editDeviceTarget" class="text-xs text-slate-300">Tài khoản: ...</p>
+                    </div>
                 </div>
-                <button type="button" onclick="closeDeviceEditor()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-rose-100 text-slate-500 hover:text-rose-600 transition-colors">
+                <button type="button" onclick="closeDeviceEditor()" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center transition cursor-pointer">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div id="deviceListContainer" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 mb-4 pr-1"></div>
-            <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700 mt-auto shrink-0">
-                <button type="button" onclick="addDeviceRow('', '', true, '')" class="px-3.5 py-2 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 font-medium rounded-xl text-sm transition-colors flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> <span>Thêm máy</span>
+
+            <!-- Body -->
+            <div id="deviceListContainer" class="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-3 flex-1"></div>
+
+            <!-- Footer -->
+            <div class="px-5 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                <button type="button" onclick="addDeviceRow('', '', true, '')" class="h-9 px-3.5 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-plus text-xs"></i> <span>+ Thêm máy</span>
                 </button>
-                <div class="flex gap-2">
-                    <button type="button" onclick="closeDeviceEditor()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium rounded-xl text-sm">Hủy</button>
-                    <button type="button" id="btnSaveDevice" onclick="saveDeviceData()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm shadow-md flex items-center gap-2">
-                        <i class="fa-solid fa-floppy-disk"></i> Lưu
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeDeviceEditor()" class="h-9 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs transition cursor-pointer">Hủy</button>
+                    <button type="button" id="btnSaveDevice" onclick="saveDeviceData()" class="h-9 px-5 rounded-xl bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-floppy-disk text-xs"></i> <span>Lưu Thiết Bị</span>
                     </button>
                 </div>
             </div>
@@ -299,296 +317,468 @@
     </div>
 
     <!-- MÀN HÌNH QUÉT TRÙNG LẶP (SCAN MODAL) -->
-    <div id="scanModal" class="fixed inset-0 z-[100000] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-xl w-[600px] max-w-[94%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[85dvh]" id="scanModalContent">
-            <div class="flex items-center gap-3.5 mb-4 border-b border-slate-100 dark:border-slate-700 pb-3.5 shrink-0">
-                <div id="scanModalIcon" class="w-11 h-11 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-lg shrink-0 border border-slate-100 dark:border-slate-700">
-                    <i class="fa-solid fa-clone"></i>
+    <div id="scanModal" class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 opacity-0 transition-opacity duration-300">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl max-w-xl w-full max-h-[92dvh] sm:max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100" id="scanModalContent">
+            <!-- Header -->
+            <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div id="scanModalIcon" class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-clone"></i>
+                    </div>
+                    <div>
+                        <h3 id="scanModalTitle" class="text-sm sm:text-base font-extrabold flex items-center gap-2">
+                            <span>Quét Trùng Lặp Dữ Liệu</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-extrabold">KIỂM TRA</span>
+                        </h3>
+                        <p id="scanModalSubtitle" class="text-xs text-slate-300">Đang phân tích...</p>
+                    </div>
                 </div>
-                <div class="flex-1 min-w-0">
-                    <h3 id="scanModalTitle" class="text-base md:text-lg font-bold text-slate-800 dark:text-white truncate">Quét Dữ Liệu</h3>
-                    <p id="scanModalSubtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Đang phân tích...</p>
-                </div>
-                <button type="button" onclick="closeScanModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-rose-600 transition-colors shrink-0">
+                <button type="button" onclick="closeScanModal()" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center transition cursor-pointer">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div id="scanModalBody" class="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-[180px]"></div>
-            <div class="flex justify-end pt-3.5 border-t border-slate-100 dark:border-slate-700 mt-3 shrink-0">
-                <button type="button" onclick="closeScanModal()" class="px-5 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-sm">Đóng</button>
+
+            <!-- Body -->
+            <div id="scanModalBody" class="p-5 sm:p-6 overflow-y-auto custom-scrollbar min-h-[180px] flex-1"></div>
+
+            <!-- Footer -->
+            <div class="px-5 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex justify-end shrink-0">
+                <button type="button" onclick="closeScanModal()" class="h-9 px-5 rounded-xl bg-slate-900 dark:bg-slate-700 hover:bg-pink-600 text-white text-xs font-bold transition cursor-pointer shadow-xs">Đóng Bảng</button>
             </div>
         </div>
     </div>
 
     <!-- MÀN HÌNH KIỂM TRA FORWARD MAIL (FORWARD MODAL) -->
-    <div id="forwardModal" class="fixed inset-0 z-[100000] bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center opacity-0 transition-opacity duration-300">
-        <div class="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl shadow-2xl w-[820px] max-w-[96%] border border-slate-200 dark:border-slate-700 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90dvh]" id="forwardModalContent">
+    <div id="forwardModal" class="fixed inset-0 z-50 hidden bg-slate-900/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 opacity-0 transition-opacity duration-300">
+        <div class="smooth-modal-card bg-white dark:bg-slate-900 rounded-t-[28px] sm:rounded-3xl max-w-3xl w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-slate-800 dark:text-slate-100" id="forwardModalContent">
             <!-- Header Modal -->
-            <div class="flex items-center gap-3.5 mb-3.5 border-b border-slate-100 dark:border-slate-700/80 pb-3.5 shrink-0">
-                <div class="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 border border-emerald-200/60 dark:border-emerald-500/30 shadow-sm">
-                    <i class="fa-solid fa-envelope-circle-check"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-white truncate">Kiểm Tra Trạng Thái Forward Mail</h3>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/30 shrink-0">tino.hohr@gmail.com</span>
+            <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-envelope-circle-check"></i>
                     </div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">Quét hòm thư tino.hohr@gmail.com để xác nhận tài khoản nào đã forward & tài khoản nào chưa</p>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h3 class="text-sm sm:text-base font-extrabold">Kiểm Tra Forward Mail</h3>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold">tino.hohr@gmail.com</span>
+                        </div>
+                        <p class="text-xs text-slate-300">Xác nhận email nào đã forward về hộp thư & email nào chưa</p>
+                    </div>
                 </div>
-                <button type="button" onclick="closeForwardModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-rose-600 transition-colors shrink-0 cursor-pointer">
+                <button type="button" onclick="closeForwardModal()" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 flex items-center justify-center transition cursor-pointer">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <!-- Điều Khiển Phạm Vi & Nút Bắt Đầu -->
-            <div class="bg-slate-50 dark:bg-slate-900/60 p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 mb-3.5 shrink-0">
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0"><i class="fa-solid fa-layer-group text-indigo-500 mr-1"></i> Phạm vi:</span>
-                        <div class="inline-flex rounded-xl p-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium">
-                            <button type="button" id="scopeBtnCurrent" onclick="setForwardScanScope('current')" class="px-2.5 py-1 rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-indigo-600">Tab này (<span id="forwardCurrentTabLabel">Idol Team</span>)</button>
-                            <button type="button" id="scopeBtnActive" onclick="setForwardScanScope('active')" class="px-2.5 py-1 rounded-lg transition text-indigo-600 bg-indigo-50 dark:bg-indigo-500/20 font-bold">5 Tab hoạt động (74)</button>
-                            <button type="button" id="scopeBtnAll" onclick="setForwardScanScope('all')" class="px-2.5 py-1 rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-indigo-600">Tất cả gồm Retire (234)</button>
+            <!-- Body Area -->
+            <div class="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-4 flex-1">
+                <!-- Điều Khiển Phạm Vi & Nút Bắt Đầu -->
+                <div class="bg-slate-50 dark:bg-slate-800/60 p-3 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-700">
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shrink-0"><i class="fa-solid fa-layer-group text-indigo-500 mr-1"></i> Phạm vi:</span>
+                            <div class="inline-flex rounded-xl p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-medium">
+                                <button type="button" id="scopeBtnCurrent" onclick="setForwardScanScope('current')" class="px-2.5 py-1 rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-indigo-600">Tab này (<span id="forwardCurrentTabLabel">Idol Team</span>)</button>
+                                <button type="button" id="scopeBtnActive" onclick="setForwardScanScope('active')" class="px-2.5 py-1 rounded-lg transition text-indigo-600 bg-indigo-50 dark:bg-indigo-500/20 font-bold">5 Tab hoạt động (74)</button>
+                                <button type="button" id="scopeBtnAll" onclick="setForwardScanScope('all')" class="px-2.5 py-1 rounded-lg transition text-slate-600 dark:text-slate-400 hover:text-indigo-600">Tất cả gồm Retire (234)</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" id="btnStartForwardScan" onclick="startForwardScan()" class="btn-ripple px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-play text-xs"></i> <span>Bắt đầu quét</span>
+                            </button>
+                            <button type="button" id="btnStopForwardScan" onclick="stopForwardScan()" class="hidden px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-stop text-xs"></i> <span>Dừng</span>
+                            </button>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <button type="button" id="btnStartForwardScan" onclick="startForwardScan()" class="btn-ripple flex-1 sm:flex-initial px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2 cursor-pointer">
-                            <i class="fa-solid fa-play text-xs"></i> <span>Bắt đầu quét</span>
+
+                    <!-- Thanh Tiến Trình & Thông Báo Quét -->
+                    <div id="forwardProgressSection" class="mt-3 hidden">
+                        <div class="flex items-center justify-between text-xs mb-1.5 font-medium">
+                            <span id="forwardProgressLabel" class="text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-spinner fa-spin text-emerald-500"></i> Đang chuẩn bị quét...
+                            </span>
+                            <span id="forwardProgressPercent" class="font-mono font-bold text-emerald-600 dark:text-emerald-400">0%</span>
+                        </div>
+                        <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden relative">
+                            <div id="forwardProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-indigo-600 transition-all duration-300 w-0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thẻ Thống Kê 3 Chỉ Số -->
+                <div class="grid grid-cols-3 gap-2.5 sm:gap-3">
+                    <div class="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-slate-200/80 dark:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0 text-sm">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">Tổng tài khoản</div>
+                            <div id="statTotalScanned" class="text-base sm:text-lg font-extrabold text-slate-800 dark:text-white font-mono">0</div>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-50/70 dark:bg-emerald-500/10 p-3 rounded-2xl border border-emerald-200/80 dark:border-emerald-500/30 flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 text-sm">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider truncate">Đã có Forward</div>
+                            <div id="statHasMail" class="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">0</div>
+                        </div>
+                    </div>
+                    <div class="bg-rose-50/70 dark:bg-rose-500/10 p-3 rounded-2xl border border-rose-200/80 dark:border-rose-500/30 flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 text-sm">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-[10px] sm:text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider truncate">Chưa có Mail</div>
+                            <div id="statNoMail" class="text-base sm:text-lg font-extrabold text-rose-600 dark:text-rose-400 font-mono">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Toolbar Lọc & Thao Tác Trong Modal -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+                    <div class="inline-flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-xs font-bold shrink-0">
+                        <button type="button" id="tabFilterNoMail" onclick="switchForwardModalTab('nomail')" class="px-3 py-1.5 rounded-lg transition bg-white dark:bg-slate-900 text-rose-600 shadow-sm flex items-center gap-1.5 font-bold">
+                            <i class="fa-solid fa-circle-xmark text-xs"></i> <span>Chưa có mail</span> <span id="badgeTabNoMail" class="px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[10px] font-mono">0</span>
                         </button>
-                        <button type="button" id="btnStopForwardScan" onclick="stopForwardScan()" class="hidden px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-stop text-xs"></i> <span>Dừng</span>
+                        <button type="button" id="tabFilterHasMail" onclick="switchForwardModalTab('hasmail')" class="px-3 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-emerald-600 flex items-center gap-1.5 font-medium">
+                            <i class="fa-solid fa-circle-check text-xs"></i> <span>Đã có mail</span> <span id="badgeTabHasMail" class="px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono">0</span>
+                        </button>
+                        <button type="button" id="tabFilterAll" onclick="switchForwardModalTab('all')" class="px-3 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-700 flex items-center gap-1.5 font-medium">
+                            <span>Tất cả</span> <span id="badgeTabAll" class="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-mono">0</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1 sm:w-44">
+                            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="forwardModalSearchInput" oninput="renderForwardResultsList()" placeholder="Lọc idol/mail..."
+                                   class="w-full pl-7 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <button type="button" id="btnCopyUnforwarded" onclick="copyUnforwardedEmails()" title="Sao chép toàn bộ email chưa có mail chuyển tiếp để đi cài đặt" class="btn-ripple px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 dark:text-indigo-400 border border-indigo-200/80 dark:border-indigo-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer">
+                            <i class="fa-solid fa-copy"></i> <span class="hidden xs:inline">Copy Email Chưa Có</span>
+                        </button>
+                        <button type="button" onclick="exportForwardReport()" title="Xuất báo cáo dạng file .txt" class="btn-ripple px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer">
+                            <i class="fa-solid fa-download"></i> <span class="hidden xs:inline">Xuất file</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Thanh Tiến Trình & Thông Báo Quét -->
-                <div id="forwardProgressSection" class="mt-3 hidden">
-                    <div class="flex items-center justify-between text-xs mb-1.5 font-medium">
-                        <span id="forwardProgressLabel" class="text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                            <i class="fa-solid fa-spinner fa-spin text-emerald-500"></i> Đang chuẩn bị quét...
-                        </span>
-                        <span id="forwardProgressPercent" class="font-mono font-bold text-emerald-600 dark:text-emerald-400">0%</span>
-                    </div>
-                    <div class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden relative">
-                        <div id="forwardProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-indigo-600 transition-all duration-300 w-0"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Thẻ Thống Kê 3 Chỉ Số -->
-            <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-3.5 shrink-0">
-                <div class="bg-slate-50 dark:bg-slate-900/40 p-2.5 sm:p-3 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-slate-200/80 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0 text-sm">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">Tổng tài khoản</div>
-                        <div id="statTotalScanned" class="text-base sm:text-lg font-extrabold text-slate-800 dark:text-white font-mono">0</div>
-                    </div>
-                </div>
-                <div class="bg-emerald-50/60 dark:bg-emerald-500/10 p-2.5 sm:p-3 rounded-2xl border border-emerald-200/70 dark:border-emerald-500/30 flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 text-sm">
-                        <i class="fa-solid fa-circle-check"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <div class="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider truncate">Đã có Forward</div>
-                        <div id="statHasMail" class="text-base sm:text-lg font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">0</div>
-                    </div>
-                </div>
-                <div class="bg-rose-50/60 dark:bg-rose-500/10 p-2.5 sm:p-3 rounded-2xl border border-rose-200/70 dark:border-rose-500/30 flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 text-sm">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <div class="text-[10px] sm:text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider truncate">Chưa có Mail</div>
-                        <div id="statNoMail" class="text-base sm:text-lg font-extrabold text-rose-600 dark:text-rose-400 font-mono">0</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Toolbar Lọc & Thao Tác Trong Modal -->
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mb-2.5 shrink-0">
-                <!-- Tabs Lọc: Chưa có Mail / Đã có Mail / Tất cả -->
-                <div class="inline-flex rounded-xl p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 text-xs font-bold shrink-0">
-                    <button type="button" id="tabFilterNoMail" onclick="switchForwardModalTab('nomail')" class="px-3 py-1.5 rounded-lg transition bg-white dark:bg-slate-800 text-rose-600 shadow-sm flex items-center gap-1.5">
-                        <i class="fa-solid fa-circle-xmark text-xs"></i> <span>Chưa có mail</span> <span id="badgeTabNoMail" class="px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[10px] font-mono">0</span>
-                    </button>
-                    <button type="button" id="tabFilterHasMail" onclick="switchForwardModalTab('hasmail')" class="px-3 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-emerald-600 flex items-center gap-1.5">
-                        <i class="fa-solid fa-circle-check text-xs"></i> <span>Đã có mail</span> <span id="badgeTabHasMail" class="px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono">0</span>
-                    </button>
-                    <button type="button" id="tabFilterAll" onclick="switchForwardModalTab('all')" class="px-3 py-1.5 rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-700 flex items-center gap-1.5">
-                        <span>Tất cả</span> <span id="badgeTabAll" class="px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-mono">0</span>
-                    </button>
-                </div>
-
-                <!-- Nút Tiện Ích: Copy & Xuất file -->
-                <div class="flex items-center gap-2">
-                    <div class="relative flex-1 sm:w-44">
-                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input type="text" id="forwardModalSearchInput" oninput="renderForwardResultsList()" placeholder="Lọc idol/mail..."
-                               class="w-full pl-7 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                    </div>
-                    <button type="button" id="btnCopyUnforwarded" onclick="copyUnforwardedEmails()" title="Sao chép toàn bộ email chưa có mail chuyển tiếp để đi cài đặt" class="btn-ripple px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 dark:text-indigo-400 border border-indigo-200/80 dark:border-indigo-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer">
-                        <i class="fa-solid fa-copy"></i> <span class="hidden xs:inline">Copy Email Chưa Có</span>
-                    </button>
-                    <button type="button" onclick="exportForwardReport()" title="Xuất báo cáo dạng file .txt" class="btn-ripple px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer">
-                        <i class="fa-solid fa-download"></i> <span class="hidden xs:inline">Xuất file</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Danh Sách Kết Quả Quét (Vùng Cuộn) -->
-            <div id="forwardModalBody" class="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-[220px] max-h-[460px] space-y-2">
-                <!-- Nội dung danh sách kết quả render động ở đây -->
+                <!-- Danh Sách Kết Quả Quét (Vùng Cuộn) -->
+                <div id="forwardModalBody" class="custom-scrollbar pr-1 min-h-[220px] max-h-[380px] overflow-y-auto space-y-2"></div>
             </div>
 
             <!-- Footer Modal -->
-            <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700 mt-2 shrink-0">
+            <div class="px-5 sm:px-6 py-3.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
                 <span id="forwardModalFooterNote" class="text-[11px] text-slate-400 truncate">Mẹo: Bấm nút 🔄 bên cạnh từng dòng để kiểm tra lại ngay sau khi bạn vừa cài đặt forward xong.</span>
-                <button type="button" onclick="closeForwardModal()" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl text-xs sm:text-sm cursor-pointer shrink-0">Đóng</button>
+                <button type="button" onclick="closeForwardModal()" class="h-9 px-5 rounded-xl bg-slate-900 dark:bg-slate-700 hover:bg-pink-600 text-white font-bold text-xs transition cursor-pointer shadow-xs">Đóng</button>
             </div>
         </div>
     </div>
 
-    <!-- SIDEBAR TỐI ƯU CHO MOBILE VÀ PC -->
-    <aside id="sidebar" class="fixed md:relative inset-y-0 left-0 z-[99980] md:z-20 w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 h-full shadow-xl md:shadow-sm transform -translate-x-full md:translate-x-0 transition-transform duration-300">
-        <div class="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
-            <div class="flex items-center gap-3 overflow-hidden">
-                <div class="logo-box w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-200 shrink-0">
-                    <i class="fa-solid fa-shield-halved text-xl"></i>
+    <!-- TOP NAVIGATION BAR (CHUẨN PHONG CÁCH IDOL TRACKER) -->
+    <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md border-b border-slate-800 safe-top">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+            <!-- Brand & Title Row -->
+            <div class="flex items-center justify-between gap-2 w-full sm:w-auto">
+                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl tiktok-gradient p-0.5 flex items-center justify-center shadow-md shrink-0">
+                        <div class="w-full h-full bg-slate-900 rounded-[10px] sm:rounded-[14px] flex items-center justify-center">
+                            <i class="fa-solid fa-shield-halved text-sm sm:text-lg text-white"></i>
+                        </div>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <h1 class="text-sm sm:text-base font-black tracking-tight text-white whitespace-nowrap">PASSION 2FA HUB</h1>
+                            <span id="headerSheetTagBadge" class="text-[10px] font-extrabold px-2 py-0.2 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 whitespace-nowrap">
+                                6 Sheet • Live OTP
+                            </span>
+                        </div>
+                        <p class="hidden sm:block text-[11px] text-slate-400 mt-0.5">Tra cứu tài khoản, mật mã & mã 2FA • Tự động lấy mã Email</p>
+                    </div>
                 </div>
-                <div class="collapse-text whitespace-nowrap">
-                    <h2 class="font-bold text-slate-900 leading-tight">2FA SECURITY</h2>
-                    <p class="text-[11px] text-slate-400 font-medium">Hệ thống tra cứu account</p>
-                </div>
-            </div>
-            <button type="button" onclick="closeMobileSidebar()" class="md:hidden w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
 
-        <div class="p-3.5 md:p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3 overflow-hidden shrink-0">
-            <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-sm border border-indigo-200 shrink-0">
-                <i class="fa-solid fa-user-shield"></i>
-            </div>
-            <div class="user-info-text whitespace-nowrap">
-                <p class="text-xs text-slate-400 font-medium">Xin chào,</p>
-                <p class="text-xs font-bold text-slate-800">Anh Tino</p>
-            </div>
-        </div>
-
-        <nav class="p-3 flex-1 space-y-1.5 overflow-y-auto custom-scrollbar overflow-x-hidden">
-            <div class="section-title px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Bảng Dữ Liệu</div>
-            <button type="button" onclick="switchTab('Idol Team', this)" title="Idol Team" class="btn-ripple menu-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-100/60 shadow-sm">
-                <i class="fa-solid fa-users text-indigo-600 w-5 shrink-0 text-center"></i>
-                <span class="collapse-text whitespace-nowrap">Idol Team</span>
-            </button>
-            <button type="button" onclick="switchTab('Prime Radiant', this)" title="Prime Radiant" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600">
-                <i class="fa-solid fa-layer-group text-slate-400 w-5 shrink-0 text-center"></i>
-                <span class="collapse-text whitespace-nowrap">Prime Radiant</span>
-            </button>
-            <button type="button" onclick="switchTab('Velion Technologies', this)" title="Velion Technologies" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600">
-                <i class="fa-solid fa-microchip text-slate-400 w-5 shrink-0 text-center"></i>
-                <span class="collapse-text whitespace-nowrap">Velion Technologies</span>
-            </button>
-            <button type="button" onclick="switchTab('Passion Star', this)" title="Passion Star" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600">
-                <i class="fa-solid fa-star text-slate-400 w-5 shrink-0 text-center"></i>
-                <span class="collapse-text whitespace-nowrap">Passion Star</span>
-            </button>
-
-            <div class="section-title px-3 pt-4 pb-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Trạng Thái Idol</div>
-            <button type="button" onclick="switchTab('Acc Idol mới', this)" title="Acc Idol mới" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600">
-                <i class="fa-solid fa-user-plus text-slate-400 w-5 shrink-0 text-center"></i>
-                <span class="collapse-text whitespace-nowrap">Acc Idol mới</span>
-            </button>
-            <button type="button" onclick="switchTab('Acc Idol Retire', this)" title="Acc Idol Retire" class="btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600">
-                <i class="fa-solid fa-user-minus text-slate-400 w-5 shrink-0 text-center"></i>
-                <span class="collapse-text whitespace-nowrap">Acc Idol Retire</span>
-            </button>
-        </nav>
-
-        <div class="p-4 border-t border-slate-100 text-[11px] text-slate-400 text-center collapse-text whitespace-nowrap shrink-0">
-            Idol Account developed by Tino
-        </div>
-    </aside>
-
-    <!-- KHUNG NỘI DUNG CHÍNH: CỐ ĐỊNH HEADER & SEARCH, CHỈ CUỘN DANH SÁCH -->
-    <main id="mainContainer" class="flex-1 flex flex-col min-w-0 h-full bg-slate-100 relative overflow-hidden">
-        <!-- HEADER LUÔN CỐ ĐỊNH Ở ĐỈNH MÀN HÌNH -->
-        <header class="bg-white border-b border-slate-200 px-3.5 md:px-6 py-3 md:py-4 flex items-center justify-between shadow-sm z-30 shrink-0" style="padding-top: max(0.75rem, env(safe-area-inset-top));">
-            <div class="flex items-center gap-2.5 md:gap-4 min-w-0">
-                <button type="button" onclick="toggleSidebar()" class="btn-ripple w-10 h-10 flex items-center justify-center rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 transition cursor-pointer shrink-0" title="Menu">
-                    <i class="fa-solid fa-bars-staggered text-base"></i>
-                </button>
-                <div class="min-w-0">
-                    <h1 id="currentTabTitle" class="text-base md:text-xl font-bold text-slate-900 leading-tight truncate">Idol Team</h1>
-                    <p class="text-[10px] md:text-xs text-slate-500 truncate">Hệ thống đang được bảo mật</p>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-1.5 md:gap-2.5 shrink-0">
-                <button type="button" onclick="toggleTheme()" id="themeToggleBtn" class="btn-ripple w-9 h-9 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition shadow-sm cursor-pointer" title="Đổi Giao Diện Sáng/Tối">
-                    <i class="fa-solid fa-moon"></i>
-                </button>
-                <button type="button" onclick="forceRefreshData()" class="btn-ripple h-9 px-3 md:px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm cursor-pointer" title="Làm mới">
-                    <i class="fa-solid fa-rotate"></i> <span class="hidden sm:inline">Làm mới</span>
-                </button>
-                <button type="button" onclick="lockApp()" class="btn-ripple h-9 px-3 md:px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-sm cursor-pointer" title="Khóa màn hình">
-                    <i class="fa-solid fa-lock"></i> <span class="hidden sm:inline">Khóa</span>
-                </button>
-                <button type="button" onclick="scanDuplicates()" class="btn-ripple h-9 px-3 md:px-4 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm cursor-pointer" title="Quét Dữ Liệu">
-                    <i class="fa-solid fa-clone"></i> <span class="hidden sm:inline">Quét</span>
-                </button>
-                <button type="button" onclick="openForwardModal()" class="btn-ripple h-9 px-3 md:px-4 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm cursor-pointer" title="Kiểm Tra Forward Mail (tino.hohr@gmail.com)">
-                    <i class="fa-solid fa-envelope-circle-check"></i> <span class="hidden sm:inline">Check Forward</span>
-                </button>
-            </div>
-        </header>
-
-        <!-- VÙNG DỮ LIỆU CHÍNH -->
-        <div class="p-3 md:p-6 w-full flex-1 flex flex-col min-h-0 max-w-full overflow-hidden">
-            <!-- THANH TÌM KIẾM GỌN GÀNG, CỐ ĐỊNH NGAY DƯỚI HEADER -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-2.5 md:p-3.5 mb-3 md:mb-4 flex items-center gap-2.5 shrink-0">
-                <div class="relative flex-1 min-w-0">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                    <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Tìm Team, Email, Tên Idol..."
-                           class="w-full pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
-                    <button type="button" id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
-                        <i class="fa-solid fa-circle-xmark text-xs"></i>
+                <!-- Action Buttons on Mobile: Top-right icon group -->
+                <div class="flex items-center gap-1.5 sm:hidden shrink-0">
+                    <button onclick="openForwardModal()" class="h-8 px-2.5 rounded-xl bg-emerald-600 text-white text-[11px] font-extrabold flex items-center gap-1 shadow-sm active:scale-95 transition" title="Kiểm tra Forward Mail">
+                        <i class="fa-solid fa-envelope-circle-check text-[10px]"></i>
+                        <span>Fwd</span>
+                    </button>
+                    <button onclick="toggleTheme()" class="h-8 w-8 rounded-xl bg-slate-800 text-indigo-400 border border-slate-700 flex items-center justify-center active:scale-95 transition" title="Chuyển chế độ Sáng/Tối">
+                        <i id="mobileThemeToggleIcon" class="fa-solid fa-moon text-xs"></i>
+                    </button>
+                    <button onclick="lockApp()" class="h-8 w-8 rounded-xl bg-slate-800 text-amber-400 border border-slate-700 flex items-center justify-center active:scale-95 transition" title="Khóa màn hình">
+                        <i class="fa-solid fa-lock text-xs"></i>
                     </button>
                 </div>
-                <select id="forwardFilter" onchange="filterData()" class="bg-slate-50 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 text-xs sm:text-sm rounded-xl px-2.5 py-2 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shrink-0">
+            </div>
+
+            <!-- Right: Action Buttons Row (Desktop Full View) -->
+            <div class="hidden sm:flex items-center gap-2 flex-wrap shrink-0">
+                <!-- Forward Status Badge on Header -->
+                <div onclick="openForwardModal()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-bold flex items-center gap-2 shadow-sm shrink-0 whitespace-nowrap cursor-pointer hover:border-emerald-300 transition" title="Bấm để xem chi tiết Forward Mail tino.hohr@gmail.com">
+                    <i class="fa-solid fa-envelope-circle-check text-emerald-400 text-sm"></i>
+                    <div>
+                        <div id="headerForwardStatusText" class="leading-tight text-white font-extrabold text-[11px]">Forward: 8 Có Mail / 66 Chưa</div>
+                        <div class="text-[10px] text-emerald-300 font-medium">Hòm thư đích: tino.hohr@gmail.com</div>
+                    </div>
+                </div>
+
+                <!-- Check Forward Button -->
+                <button type="button" onclick="openForwardModal()" class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer shrink-0" title="Kiểm tra Forward Mail">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                    <span>Check Forward</span>
+                </button>
+
+                <!-- Quét Trùng Lặp Button -->
+                <button type="button" onclick="scanDuplicates()" class="h-9 px-3.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0" title="Quét trùng lặp Email và TikTok ID">
+                    <i class="fa-solid fa-clone text-amber-400"></i>
+                    <span>Quét Dữ Liệu</span>
+                </button>
+
+                <!-- Làm Mới Sheet Button -->
+                <button type="button" onclick="forceRefreshData()" class="h-9 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer shrink-0" title="Đồng bộ lại từ Google Sheets">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span>Làm Mới</span>
+                </button>
+
+                <!-- Khóa Màn Hình Button -->
+                <button type="button" onclick="lockApp()" class="h-9 px-3 rounded-xl bg-slate-800 hover:bg-rose-950/60 hover:text-rose-300 text-slate-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0" title="Khóa màn hình">
+                    <i class="fa-solid fa-lock text-amber-400"></i>
+                    <span>Khóa PIN</span>
+                </button>
+
+                <!-- Dark Mode Toggle Button -->
+                <button type="button" onclick="toggleTheme()" id="themeToggleBtn" class="h-9 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 shadow-sm cursor-pointer shrink-0" title="Đổi Giao Diện Sáng/Tối">
+                    <i id="themeToggleIcon" class="fa-solid fa-moon text-indigo-400"></i>
+                    <span id="themeToggleText">Tối</span>
+                </button>
+
+                <!-- Firebase Status -->
+                <div class="h-9 px-3 rounded-xl bg-slate-800/90 text-emerald-300 text-xs font-medium border border-slate-700 transition flex items-center gap-2 shrink-0">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Firebase</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- KHUNG NỘI DUNG CHÍNH (CHUẨN FORM DỰ ÁN IDOL TRACKER) -->
+    <main id="mainContainer" class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 space-y-5">
+        <!-- SECTION 1: SHEET SELECTION & CONTROL BAR (CHUẨN weeklyControlSection CỦA IDOL TRACKER) -->
+        <section id="sheetControlSection" class="bg-white dark:bg-slate-900 rounded-2xl px-3.5 sm:px-5 py-3 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <!-- Left: Sheet Info -->
+            <div class="flex items-center gap-3 min-w-0 shrink-0">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg font-bold shrink-0 border border-indigo-100 dark:border-indigo-900/60">
+                    <i class="fa-solid fa-table-list"></i>
+                </div>
+                <div class="min-w-0 flex flex-col justify-center">
+                    <div class="flex items-center gap-2 whitespace-nowrap">
+                        <span class="text-xs font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Bảng Dữ Liệu Đang Chọn</span>
+                        <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80 whitespace-nowrap">
+                            Live Sync
+                        </span>
+                    </div>
+                    <h2 id="currentTabTitle" class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 mt-0.5 whitespace-nowrap truncate">
+                        Idol Team
+                    </h2>
+                </div>
+            </div>
+
+            <!-- Right: Sheet Navigation Segmented Pills -->
+            <div class="flex flex-wrap items-center gap-1.5 lg:justify-end lg:ml-auto overflow-x-auto no-scrollbar max-w-full py-0.5">
+                <div class="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 gap-1 overflow-x-auto no-scrollbar max-w-full">
+                    <button type="button" onclick="switchTab('Idol Team', this)" class="sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 whitespace-nowrap bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs cursor-pointer">
+                        <i class="fa-solid fa-users text-xs"></i>
+                        <span>Idol Team</span>
+                    </button>
+                    <button type="button" onclick="switchTab('Prime Radiant', this)" class="sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer">
+                        <i class="fa-solid fa-layer-group text-xs"></i>
+                        <span>Prime Radiant</span>
+                    </button>
+                    <button type="button" onclick="switchTab('Velion Technologies', this)" class="sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer">
+                        <i class="fa-solid fa-microchip text-xs"></i>
+                        <span>Velion Technologies</span>
+                    </button>
+                    <button type="button" onclick="switchTab('Passion Star', this)" class="sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer">
+                        <i class="fa-solid fa-star text-xs"></i>
+                        <span>Passion Star</span>
+                    </button>
+                    <button type="button" onclick="switchTab('Acc Idol mới', this)" class="sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer">
+                        <i class="fa-solid fa-user-plus text-xs"></i>
+                        <span>Acc Idol mới</span>
+                    </button>
+                    <button type="button" onclick="switchTab('Acc Idol Retire', this)" class="sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer">
+                        <i class="fa-solid fa-user-minus text-xs"></i>
+                        <span>Acc Idol Retire</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: QUICK STATS (4 CARDS TRÊN DESKTOP, STRIP TRÊN MOBILE) -->
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <!-- Card 1: Tổng Tài Khoản -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                    <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tổng Tài Khoản</p>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <p id="statCardTotal" class="text-2xl font-extrabold text-slate-900 dark:text-white">0</p>
+                        <span id="statCardSheetName" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 dark:text-indigo-400 px-2 py-0.5 rounded-full">Idol Team</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Trong bảng đang hiển thị</p>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+            </div>
+
+            <!-- Card 2: Forward Mail Status -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between cursor-pointer hover:border-emerald-400/50 transition" onclick="openForwardModal()" title="Bấm để kiểm tra Forward Mail">
+                <div>
+                    <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Trạng Thái Forward</p>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <p id="statCardForward" class="text-2xl font-extrabold text-emerald-600">8 Có Mail</p>
+                        <span class="text-[10px] font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full">66 Chưa</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Về tino.hohr@gmail.com</p>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                </div>
+            </div>
+
+            <!-- Card 3: 2FA Live OTP -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                    <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Mã Live 2FA (OTP)</p>
+                    <p id="statCardOtpStatus" class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">RFC 6238</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Chu kỳ 30s • Chạm là sao chép</p>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-pink-50 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+            </div>
+
+            <!-- Card 4: Tiện Ích & Thao Tác Nhanh -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                <div class="min-w-0">
+                    <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tiện Ích Vận Hành</p>
+                    <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                        <button onclick="scanDuplicates()" class="h-7 px-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-xs font-extrabold border border-amber-200 dark:border-amber-800 transition flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-clone text-[10px]"></i>
+                            <span>Quét Trùng</span>
+                        </button>
+                        <button onclick="openForwardModal()" class="h-7 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold border border-emerald-200 dark:border-emerald-800 transition flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-envelope-circle-check text-[10px]"></i>
+                            <span>Check Fwd</span>
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 truncate">Quét mã mail & sao chép hàng loạt</p>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg shrink-0 ml-2">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: BẢNG DỮ LIỆU & DANH SÁCH TRA CỨU 2FA (CHUẨN SECTION TRONG IDOL TRACKER) -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 sm:p-6 transition-colors duration-200">
+            <!-- Header Row: Title on Left, Action Buttons on Right -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-100 dark:border-slate-800">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-indigo-600 mr-0.5 shrink-0"></i>
+                            <span id="sectionTableTitleText">Danh Sách Tài Khoản & Tra Cứu 2FA</span>
+                        </h2>
+                        <span id="recordCountBadge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 whitespace-nowrap">
+                            <span id="recordCount">0</span> tài khoản
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        💡 <strong>Bấm vào Email / Pass / Mã OTP</strong> để tự động sao chép nhanh • Bấm <strong>Lấy mã</strong> để nhận OTP đăng nhập.
+                    </p>
+                </div>
+
+                <!-- Right Action Buttons -->
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="openForwardModal()"
+                        class="h-9 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-envelope-circle-check text-xs"></i>
+                        <span>Check Forward</span>
+                    </button>
+                    <button type="button" onclick="scanDuplicates()"
+                        class="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200/80 dark:border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-xs">
+                        <i class="fa-solid fa-clone text-amber-500"></i>
+                        <span>Quét Trùng</span>
+                    </button>
+                    <button type="button" onclick="forceRefreshData()"
+                        class="h-9 px-3 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95" title="Đồng bộ lại từ Google Sheets">
+                        <i class="fa-solid fa-rotate text-indigo-400 text-xs"></i>
+                        <span>Đồng Bộ</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter & Search Row (CHUẨN dirFilterRow CỦA IDOL TRACKER) -->
+            <div id="dirFilterRow" class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-4 pt-1">
+                <!-- Forward Status Segmented Pills Filter -->
+                <div class="inline-flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 overflow-x-auto no-scrollbar max-w-full">
+                    <button type="button" onclick="setForwardFilterPill('all')" id="fwdTabAll" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs transition cursor-pointer">
+                        Tất cả Forward
+                    </button>
+                    <button type="button" onclick="setForwardFilterPill('forwarded')" id="fwdTabForwarded" class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer">
+                        🟢 Đã Forward (8)
+                    </button>
+                    <button type="button" onclick="setForwardFilterPill('unforwarded')" id="fwdTabUnforwarded" class="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer">
+                        🔴 Chưa Forward (66)
+                    </button>
+                </div>
+
+                <!-- Hidden select for programmatic binding -->
+                <select id="forwardFilter" class="hidden" onchange="filterData()">
                     <option value="all">Tất cả Forward</option>
                     <option value="forwarded">🟢 Đã Forward</option>
                     <option value="unforwarded">🔴 Chưa Forward</option>
                 </select>
-                <div class="flex items-center gap-1 text-xs sm:text-sm text-slate-500 px-2 shrink-0 whitespace-nowrap border-l border-slate-200 dark:border-slate-700 pl-2.5">
-                    <span id="recordCount" class="font-bold text-indigo-600 dark:text-indigo-400">0</span>
-                    <span class="hidden xs:inline">kết quả</span>
+
+                <!-- Search Input with clear button -->
+                <div class="relative w-full lg:w-80">
+                    <input type="text" id="searchInput" onkeyup="filterData()"
+                           placeholder="Tìm Team, Email, Tên Idol, Thiết bị... (Phím: /)"
+                           class="w-full h-9 pl-8 pr-8 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/30 transition">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <button type="button" id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+                        <i class="fa-solid fa-circle-xmark text-xs"></i>
+                    </button>
                 </div>
             </div>
 
-            <!-- BẢNG DỮ LIỆU: VÙNG CUỘN DUY NHẤT -->
-            <div id="tableContainer" class="bg-white rounded-2xl shadow-sm border border-slate-200 hidden flex-1 min-h-0 flex flex-col relative overflow-hidden w-full max-w-full">
-                <div id="tableScrollWrapper" class="overflow-x-auto overflow-y-auto custom-scrollbar flex-1 min-h-0 rounded-2xl relative w-full p-2.5 md:p-0 pb-28 md:pb-48">
-                    <table class="w-full text-left border-collapse relative" id="mainTable">
-                        <thead class="sticky top-0 z-20 backdrop-blur-md hidden md:table-header-group">
-                            <tr class="text-sm font-bold text-slate-800 uppercase tracking-widest shadow-md">
-                                <th class="py-4 px-2 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 checkbox-cell"><input type="checkbox" id="selectAllCheckbox" class="cyber-checkbox" onclick="toggleSelectAll()"></th>
-                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[100px] max-w-[150px]">Team</th>
-                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[240px]">Thông tin Email & Lấy Code</th>
-                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[200px]">Pass Tiktok</th>
-                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[150px]">Idol / TikTok ID</th>
-                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[250px]">Thiết bị</th>
-                                <th class="py-4 px-4 bg-slate-200/85 dark:bg-slate-800/85 border border-slate-300 dark:border-slate-700 text-center align-middle whitespace-nowrap min-w-[100px]">Đại lí</th>
-                                <th class="py-4 px-4 bg-indigo-100/85 dark:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 text-center align-middle whitespace-nowrap min-w-[170px] max-w-[200px]">Mã 2FA (Live OTP)</th>
+            <!-- Table Container (CHUẨN BẢNG IDOL TRACKER) -->
+            <div id="tableContainer" class="mt-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900">
+                <div id="tableScrollWrapper" class="overflow-x-auto overflow-y-auto custom-scrollbar max-h-[75vh]">
+                    <table class="w-full text-left border-collapse" id="mainTable">
+                        <thead class="sticky top-0 z-20 backdrop-blur-md bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 hidden md:table-header-group">
+                            <tr class="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                                <th class="py-3 px-3 checkbox-cell text-center"><input type="checkbox" id="selectAllCheckbox" class="cyber-checkbox" onclick="toggleSelectAll()"></th>
+                                <th class="py-3 px-4 text-center whitespace-nowrap min-w-[90px]">Team</th>
+                                <th class="py-3 px-4 whitespace-nowrap min-w-[240px]">Thông tin Email & Lấy Code</th>
+                                <th class="py-3 px-4 whitespace-nowrap min-w-[190px]">Pass Tiktok</th>
+                                <th class="py-3 px-4 whitespace-nowrap min-w-[140px]">Idol / TikTok ID</th>
+                                <th class="py-3 px-4 whitespace-nowrap min-w-[240px]">Thiết bị</th>
+                                <th class="py-3 px-4 whitespace-nowrap min-w-[90px] text-center">Đại lí</th>
+                                <th class="py-3 px-4 bg-indigo-50/80 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 text-center whitespace-nowrap min-w-[170px]">Mã 2FA (Live OTP)</th>
                             </tr>
                         </thead>
-                        <tbody id="dataTableBody" class="divide-y divide-slate-200 text-sm"></tbody>
+                        <tbody id="dataTableBody" class="divide-y divide-slate-100 dark:divide-slate-800/80 text-sm"></tbody>
                     </table>
                 </div>
             </div>
-        </div>
+        </section>
     </main>
 
     <!-- KỊCH BẢN JAVASCRIPT -->
@@ -1106,23 +1296,78 @@
         function switchTab(sheetName, element) {
             currentSheetName = sheetName;
             currentlyExpandedRowIndex = -1;
-            document.getElementById('currentTabTitle').innerText = sheetName;
+            const titleEl = document.getElementById('currentTabTitle');
+            if (titleEl) titleEl.innerText = sheetName;
+            const curLabel = document.getElementById('forwardCurrentTabLabel');
+            if (curLabel) curLabel.innerText = sheetName;
+            const statSheet = document.getElementById('statCardSheetName');
+            if (statSheet) statSheet.innerText = sheetName;
+
+            document.querySelectorAll('.sheet-tab-pill').forEach(btn => {
+                btn.className = "sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer";
+            });
+            if (element && element.classList.contains('sheet-tab-pill')) {
+                element.className = "sheet-tab-pill px-3 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 whitespace-nowrap bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs cursor-pointer";
+            }
+
             document.querySelectorAll('.menu-item').forEach(btn => {
                 btn.className = "btn-ripple menu-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-indigo-50/50 hover:text-indigo-600";
                 const icon = btn.querySelector('i');
                 if (icon) icon.className = icon.className.replace('text-indigo-600', 'text-slate-400');
             });
-            element.className = "btn-ripple menu-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-100/60 shadow-sm";
-            const activeIcon = element.querySelector('i');
-            if (activeIcon) activeIcon.className = activeIcon.className.replace('text-slate-400', 'text-indigo-600');
+            if (element && element.classList.contains('menu-item')) {
+                element.className = "btn-ripple menu-item active w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-100/60 shadow-sm";
+                const activeIcon = element.querySelector('i');
+                if (activeIcon) activeIcon.className = activeIcon.className.replace('text-slate-400', 'text-indigo-600');
+            }
 
-            // Tự động đóng Menu trên điện thoại sau khi chọn bảng
             if (window.innerWidth < 768) {
                 closeMobileSidebar();
             }
             const scrollWrapper = document.getElementById('tableScrollWrapper');
             if (scrollWrapper) scrollWrapper.scrollTop = 0;
             loadData();
+        }
+
+        function setForwardFilterPill(filterVal) {
+            const selectEl = document.getElementById('forwardFilter');
+            if (selectEl) {
+                selectEl.value = filterVal;
+                filterData();
+            }
+            const tabAll = document.getElementById('fwdTabAll');
+            const tabFwd = document.getElementById('fwdTabForwarded');
+            const tabUnfwd = document.getElementById('fwdTabUnforwarded');
+
+            const activeClassAll = "px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs transition cursor-pointer";
+            const activeClassFwd = "px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-xs transition cursor-pointer";
+            const activeClassUnfwd = "px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-xs transition cursor-pointer";
+
+            const inactiveClass = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer";
+            const inactiveClassFwd = "px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer";
+            const inactiveClassUnfwd = "px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer";
+
+            if (tabAll) tabAll.className = filterVal === 'all' ? activeClassAll : inactiveClass;
+            if (tabFwd) tabFwd.className = filterVal === 'forwarded' ? activeClassFwd : inactiveClassFwd;
+            if (tabUnfwd) tabUnfwd.className = filterVal === 'unforwarded' ? activeClassUnfwd : inactiveClassUnfwd;
+        }
+
+        function updateQuickStats() {
+            const statTotal = document.getElementById('statCardTotal');
+            if (statTotal) statTotal.innerText = allData.length;
+            const statSheet = document.getElementById('statCardSheetName');
+            if (statSheet) statSheet.innerText = currentSheetName;
+
+            let hasMailCount = 0;
+            let noMailCount = 0;
+            for (let k in forwardStatusCache) {
+                if (forwardStatusCache[k]?.hasMail) hasMailCount++;
+                else noMailCount++;
+            }
+            const statFwd = document.getElementById('statCardForward');
+            if (statFwd) statFwd.innerText = `${hasMailCount} Có Mail`;
+            const headerFwd = document.getElementById('headerForwardStatusText');
+            if (headerFwd) headerFwd.innerText = `Forward: ${hasMailCount} Có Mail / ${noMailCount} Chưa`;
         }
 
         function toggleMobileRow(index) {
@@ -1147,10 +1392,12 @@
 
         function renderTable(data) {
             const tbody = document.getElementById('dataTableBody');
-            document.getElementById('recordCount').innerText = data.length;
+            const countEl = document.getElementById('recordCount');
+            if (countEl) countEl.innerText = data.length;
+            updateQuickStats();
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400">Không có dữ liệu trong trang tính <b>${currentSheetName}</b>.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400 dark:text-slate-500">Không có dữ liệu trong trang tính <b>${currentSheetName}</b>.</td></tr>`;
                 return;
             }
 
@@ -1308,7 +1555,9 @@
                         </td>
 
                         <!-- 3. TEAM PC -->
-                        <td class="hidden md:table-cell py-4 px-4 font-bold text-indigo-700 bg-slate-50/30 whitespace-nowrap">${escapeHtml(item.team)}</td>
+                        <td class="hidden md:table-cell py-4 px-4 whitespace-nowrap align-top">
+                            <span class="inline-block px-2.5 py-1 rounded-xl text-xs font-black bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 shadow-2xs">${escapeHtml(item.team)}</span>
+                        </td>
 
                         <!-- 4. EMAIL & LẤY CODE -->
                         <td class="mobile-collapsible md:table-cell p-3 md:py-4 md:px-4 border-b border-slate-100 dark:border-slate-700 md:border-none align-top">
@@ -1878,33 +2127,36 @@
         }
 
         function initTheme() {
-            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
+            const savedTheme = localStorage.getItem('ps_theme') || localStorage.getItem('theme') || 'dark';
+            applyTheme(savedTheme);
+        }
+
+        function applyTheme(theme) {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeToggleIcon');
+            const mobileIcon = document.getElementById('mobileThemeToggleIcon');
+            const text = document.getElementById('themeToggleText');
+            if (theme === 'dark') {
+                html.classList.add('dark');
+                if (icon) icon.className = 'fa-solid fa-moon text-indigo-400';
+                if (mobileIcon) mobileIcon.className = 'fa-solid fa-moon text-xs text-indigo-400';
+                if (text) text.textContent = 'Tối';
             } else {
-                document.documentElement.classList.remove('dark');
+                html.classList.remove('dark');
+                if (icon) icon.className = 'fa-solid fa-sun text-amber-500';
+                if (mobileIcon) mobileIcon.className = 'fa-solid fa-sun text-xs text-amber-500';
+                if (text) text.textContent = 'Sáng';
             }
-            updateThemeIcon(document.documentElement.classList.contains('dark'));
+            localStorage.setItem('ps_theme', theme);
+            localStorage.setItem('theme', theme);
         }
 
         function toggleTheme() {
-            const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            updateThemeIcon(isDark);
-        }
-
-        function updateThemeIcon(isDark) {
-            const btn = document.getElementById('themeToggleBtn');
-            if (!btn) return;
-            if (isDark) {
-                btn.innerHTML = '<i class="fa-solid fa-sun text-amber-400"></i>';
-                btn.classList.replace('bg-slate-100', 'bg-slate-800');
-                btn.classList.replace('text-slate-700', 'text-slate-100');
-                btn.classList.replace('border-slate-200', 'border-slate-700');
-            } else {
-                btn.innerHTML = '<i class="fa-solid fa-moon"></i>';
-                btn.classList.replace('bg-slate-800', 'bg-slate-100');
-                btn.classList.replace('text-slate-100', 'text-slate-700');
-                btn.classList.replace('border-slate-700', 'border-slate-200');
+            const isDark = document.documentElement.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+            applyTheme(newTheme);
+            if (typeof showToast === 'function') {
+                showToast(`Đã chuyển sang giao diện ${newTheme === 'dark' ? 'Tối' : 'Sáng'}`);
             }
         }
         initTheme();
