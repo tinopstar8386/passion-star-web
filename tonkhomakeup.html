@@ -6647,8 +6647,28 @@
             }
         }
 
-        // 10. INBOUND MODAL & LOGIC
+        // 10. INBOUND MODAL, OUTBOUND MODAL, EVIDENCE PHOTO & DAILY HISTORY LOGIC
         // ============================================================================
+        function getTodayIsoDate() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function formatIsoToDayMonth(isoStr) {
+            if (!isoStr) {
+                const now = new Date();
+                return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+            }
+            if (isoStr.includes('-')) {
+                const p = isoStr.split('-');
+                if (p.length >= 3) return `${p[2]}/${p[1]}`;
+            }
+            return isoStr;
+        }
+
         function populateItemSelectOptions(selectId, selectedId = null) {
             const select = document.getElementById(selectId);
             if (!select) return;
@@ -6656,9 +6676,102 @@
             select.innerHTML = '<option value="">-- Vui lòng chọn vật liệu --</option>' +
                 inventoryItems.map(item => `
                     <option value="${item.id}" ${item.id === selectedId ? 'selected' : ''}>
-                        [${escapeHtml(item.sku || 'SKU')}] ${escapeHtml(item.nameVi)} (Hiện có: ${item.stock || 0} ${escapeHtml(item.unit || '')})
+                        #${item.stt || ''} ${escapeHtml(item.nameVi)} (Tồn: ${item.stock || 0} ${escapeHtml(item.unit || '')})
                     </option>
                 `).join('');
+        }
+
+        function setQuickModalQty(inputId, val) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            el.value = Math.max(1, parseInt(val, 10) || 1);
+            if (inputId === 'inbound-qty') updateInboundPreviewAfter();
+            if (inputId === 'outbound-qty') updateOutboundPreviewAfter();
+        }
+
+        function stepModalQty(inputId, delta) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const cur = parseInt(el.value, 10) || 1;
+            el.value = Math.max(1, cur + (parseInt(delta, 10) || 0));
+            if (inputId === 'inbound-qty') updateInboundPreviewAfter();
+            if (inputId === 'outbound-qty') updateOutboundPreviewAfter();
+        }
+
+        function updateInboundPreviewAfter() {
+            const itemId = document.getElementById('inbound-item-select')?.value;
+            const item = inventoryItems.find(i => i.id === itemId);
+            const qty = Math.max(0, parseInt(document.getElementById('inbound-qty')?.value, 10) || 0);
+            const cur = Number(item?.stock) || 0;
+            const afterEl = document.getElementById('inbound-info-after-stock');
+            if (afterEl) afterEl.textContent = `${cur + qty} ${item?.unit || ''}`;
+        }
+
+        function updateOutboundPreviewAfter() {
+            const itemId = document.getElementById('outbound-item-select')?.value;
+            const item = inventoryItems.find(i => i.id === itemId);
+            const qty = Math.max(0, parseInt(document.getElementById('outbound-qty')?.value, 10) || 0);
+            const cur = Number(item?.stock) || 0;
+            const afterEl = document.getElementById('outbound-info-after-stock');
+            if (afterEl) afterEl.textContent = `${Math.max(0, cur - qty)} ${item?.unit || ''}`;
+        }
+
+        async function handleModalEvidenceUpload(event, prefix) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            try {
+                const compressed = await readFileAsCompressedDataUrl(file, 900, 900, 0.78);
+                handleModalEvidenceUrl(compressed, prefix);
+                showToast('📸 Đã đính kèm hình ảnh chứng cứ!');
+            } catch (err) {
+                console.error('Evidence upload error:', err);
+                showToast('⚠️ Lỗi khi đọc ảnh chứng cứ!');
+            }
+        }
+
+        function handleModalEvidenceUrl(url, prefix) {
+            const clean = (url || '').trim();
+            const urlInput = document.getElementById(`${prefix}-evidence-url`);
+            const previewImg = document.getElementById(`${prefix}-evidence-preview`);
+            const placeholder = document.getElementById(`${prefix}-evidence-placeholder`);
+            const clearBtn = document.getElementById(`${prefix}-clear-evidence-btn`);
+
+            if (urlInput && urlInput.value !== clean) urlInput.value = clean;
+            if (clean) {
+                if (previewImg) {
+                    previewImg.src = clean;
+                    previewImg.classList.remove('hidden');
+                }
+                if (placeholder) placeholder.classList.add('hidden');
+                if (clearBtn) clearBtn.classList.remove('hidden');
+            } else {
+                if (previewImg) {
+                    previewImg.src = '';
+                    previewImg.classList.add('hidden');
+                }
+                if (placeholder) placeholder.classList.remove('hidden');
+                if (clearBtn) clearBtn.classList.add('hidden');
+            }
+        }
+
+        function clearModalEvidence(prefix) {
+            const fileInput = document.getElementById(`${prefix}-evidence-file`);
+            if (fileInput) fileInput.value = '';
+            handleModalEvidenceUrl('', prefix);
+        }
+
+        function openRawImageLightbox(imgSrc, titleText = 'Xem hình ảnh chứng cứ') {
+            if (!imgSrc) return;
+            const modal = document.getElementById('lightbox-modal');
+            const titleEl = document.getElementById('lightbox-title');
+            const imgEl = document.getElementById('lightbox-img');
+            if (titleEl) titleEl.textContent = titleText;
+            if (imgEl) imgEl.src = imgSrc;
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            if (window.lucide) lucide.createIcons();
         }
 
         function openInboundModal(presetItemId = null) {
@@ -6673,9 +6786,14 @@
 
             document.getElementById('inbound-qty').value = '1';
             document.getElementById('inbound-note').value = '';
+            const dateInput = document.getElementById('inbound-date');
+            if (dateInput) dateInput.value = getTodayIsoDate();
+            clearModalEvidence('inbound');
+            updateInboundPreviewAfter();
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
         function closeInboundModal() {
@@ -6686,16 +6804,21 @@
 
         function handleInboundItemChange(itemId) {
             const item = inventoryItems.find(i => i.id === itemId);
+            const imgEl = document.getElementById('inbound-info-img');
             if (!item) {
                 document.getElementById('inbound-info-name').textContent = 'Chưa chọn';
                 document.getElementById('inbound-info-sku').textContent = 'SKU: --';
                 document.getElementById('inbound-info-stock').textContent = '0';
+                if (imgEl) imgEl.src = DEFAULT_MAKEUP_SVG;
                 return;
             }
-            document.getElementById('inbound-info-name').textContent = item.nameVi;
-            document.getElementById('inbound-info-sku').textContent = `SKU: ${item.sku || '---'} | ĐVT: ${item.unit || 'cái'}`;
-            document.getElementById('inbound-info-stock').textContent = `${item.stock || 0} ${item.unit || ''}`;
-            document.getElementById('inbound-price').value = item.costPrice || '';
+            document.getElementById('inbound-info-name').textContent = `#${item.stt || ''} ${item.nameVi}`;
+            document.getElementById('inbound-info-sku').textContent = `Tồn đầu: ${item.initStock || 0} | Đã lấy: -${item.usedStock || 0} | ĐVT: ${item.unit || 'cái'}`;
+            document.getElementById('inbound-info-stock').textContent = `${item.stock || 0}`;
+            if (imgEl) imgEl.src = item.image || IMAGE_MAP_BY_STT[item.stt] || DEFAULT_MAKEUP_SVG;
+            const priceEl = document.getElementById('inbound-price');
+            if (priceEl) priceEl.value = item.costPrice || 0;
+            updateInboundPreviewAfter();
         }
 
         function quickInbound(itemId) {
@@ -6706,10 +6829,13 @@
             e.preventDefault();
             const itemId = document.getElementById('inbound-item-select').value;
             const qty = parseInt(document.getElementById('inbound-qty').value, 10);
-            const price = parseFloat(document.getElementById('inbound-price').value) || 0;
+            const price = parseFloat(document.getElementById('inbound-price')?.value) || 0;
             const operator = document.getElementById('inbound-operator').value.trim() || 'Quản lý kho';
             const supplier = document.getElementById('inbound-supplier').value.trim();
             const note = document.getElementById('inbound-note').value.trim();
+            const dateIso = document.getElementById('inbound-date')?.value || getTodayIsoDate();
+            const dStr = formatIsoToDayMonth(dateIso);
+            const evidenceImage = document.getElementById('inbound-evidence-url')?.value.trim() || '';
 
             const item = inventoryItems.find(i => i.id === itemId);
             if (!item || !qty || qty <= 0) {
@@ -6718,35 +6844,57 @@
             }
 
             const current = Number(item.stock) || 0;
-            const newStock = current + qty;
-            item.stock = newStock;
-            item.initStock = (Number(item.initStock) || current) + qty;
+            if (!Array.isArray(item.dailyInbound)) item.dailyInbound = [];
+            const entryId = 'di-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+            item.dailyInbound.push({
+                id: entryId,
+                date: dStr,
+                fullDate: dateIso,
+                qty: qty,
+                operator: operator,
+                supplier: supplier,
+                note: note || 'Nhập thêm vào kho',
+                evidenceImage: evidenceImage
+            });
+            item.hasCustomHistory = true;
             if (price > 0) item.costPrice = price;
             if (supplier) item.supplier = supplier;
 
-            closeInboundModal();
-            renderTable();
-            updateOverviewStats();
+            recalculateItemStockFromHistory(item);
+            localStorage.setItem(INIT_STATUS_KEY, 'true');
 
             const txObj = {
                 id: 'tx-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                dailyEntryId: entryId,
                 timestamp: Date.now(),
+                dateStr: `${dStr}/${dateIso.split('-')[0] || '2026'}`,
+                shortDate: dStr,
                 type: 'INBOUND',
                 itemId: item.id,
                 sku: item.sku || '',
                 itemName: item.nameVi,
                 qty: qty,
                 stockBefore: current,
-                stockAfter: newStock,
+                stockAfter: item.stock,
                 unit: item.unit || 'cái',
                 costPrice: price,
                 operator: operator,
-                recipient: supplier || 'Nhà cung cấp',
-                note: note || 'Phiếu nhập kho'
+                recipient: supplier || 'Nhập bổ sung kho',
+                note: note || `Nhập thêm ngày ${dStr}`,
+                evidenceImage: evidenceImage
             };
             transactionLogs.unshift(txObj);
-            await saveTransactionToFirebase(txObj);
+            const toolBadge = document.getElementById('ui-history-badge');
+            if (toolBadge) toolBadge.textContent = transactionLogs.length;
 
+            closeInboundModal();
+            backupLocally();
+            renderTable();
+            renderCards();
+            updateOverviewStats();
+            if (currentHistoryModalItemId === item.id) renderItemDailyHistoryModal(item.id);
+
+            await saveTransactionToFirebase(txObj);
             await saveItemToFirebase(item);
             showToast(I18N[currentLang].toastInboundSuccess(qty, item.nameVi));
         }
@@ -6767,9 +6915,14 @@
             document.getElementById('outbound-qty').value = '1';
             document.getElementById('outbound-note').value = '';
             document.getElementById('outbound-recipient').value = '';
+            const dateInput = document.getElementById('outbound-date');
+            if (dateInput) dateInput.value = getTodayIsoDate();
+            clearModalEvidence('outbound');
+            updateOutboundPreviewAfter();
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
         function closeOutboundModal() {
@@ -6780,15 +6933,19 @@
 
         function handleOutboundItemChange(itemId) {
             const item = inventoryItems.find(i => i.id === itemId);
+            const imgEl = document.getElementById('outbound-info-img');
             if (!item) {
                 document.getElementById('outbound-info-name').textContent = 'Chưa chọn';
                 document.getElementById('outbound-info-sku').textContent = 'SKU: --';
                 document.getElementById('outbound-info-stock').textContent = '0';
+                if (imgEl) imgEl.src = DEFAULT_MAKEUP_SVG;
                 return;
             }
-            document.getElementById('outbound-info-name').textContent = item.nameVi;
-            document.getElementById('outbound-info-sku').textContent = `SKU: ${item.sku || '---'} | ĐVT: ${item.unit || 'cái'}`;
-            document.getElementById('outbound-info-stock').textContent = `${item.stock || 0} ${item.unit || ''}`;
+            document.getElementById('outbound-info-name').textContent = `#${item.stt || ''} ${item.nameVi}`;
+            document.getElementById('outbound-info-sku').textContent = `Tồn đầu: ${item.initStock || 0} | Đã lấy: -${item.usedStock || 0} | ĐVT: ${item.unit || 'cái'}`;
+            document.getElementById('outbound-info-stock').textContent = `${item.stock || 0}`;
+            if (imgEl) imgEl.src = item.image || IMAGE_MAP_BY_STT[item.stt] || DEFAULT_MAKEUP_SVG;
+            updateOutboundPreviewAfter();
         }
 
         function quickOutbound(itemId) {
@@ -6801,8 +6958,11 @@
             const qty = parseInt(document.getElementById('outbound-qty').value, 10);
             const purpose = document.getElementById('outbound-purpose').value;
             const recipient = document.getElementById('outbound-recipient').value.trim() || 'Thợ makeup';
-            const operator = document.getElementById('outbound-operator').value.trim() || 'Quản lý kho';
+            const operator = document.getElementById('outbound-operator')?.value.trim() || 'Quản lý kho';
             const note = document.getElementById('outbound-note').value.trim();
+            const dateIso = document.getElementById('outbound-date')?.value || getTodayIsoDate();
+            const dStr = formatIsoToDayMonth(dateIso);
+            const evidenceImage = document.getElementById('outbound-evidence-url')?.value.trim() || '';
 
             const item = inventoryItems.find(i => i.id === itemId);
             if (!item || !qty || qty <= 0) {
@@ -6816,56 +6976,301 @@
                 return;
             }
 
-            const newStock = current - qty;
-            item.stock = newStock;
-            item.usedStock = (Number(item.usedStock) || 0) + qty;
-
-            const now = new Date();
-            const dStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
             if (!Array.isArray(item.dailyUsage)) item.dailyUsage = [];
-            const existingDay = item.dailyUsage.find(d => d.date === dStr);
-            if (existingDay) {
-                existingDay.qty = (Number(existingDay.qty) || 0) + qty;
-            } else {
-                item.dailyUsage.push({ date: dStr, qty: qty });
-            }
+            const entryId = 'du-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+            item.dailyUsage.push({
+                id: entryId,
+                date: dStr,
+                fullDate: dateIso,
+                qty: qty,
+                operator: operator,
+                recipient: `${recipient} (${purpose})`,
+                note: note || `Xuất: ${purpose}`,
+                evidenceImage: evidenceImage
+            });
+            item.hasCustomHistory = true;
 
-            closeOutboundModal();
-            renderTable();
-            updateOverviewStats();
+            recalculateItemStockFromHistory(item);
+            localStorage.setItem(INIT_STATUS_KEY, 'true');
 
             const txObj = {
                 id: 'tx-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                dailyEntryId: entryId,
                 timestamp: Date.now(),
+                dateStr: `${dStr}/${dateIso.split('-')[0] || '2026'}`,
+                shortDate: dStr,
                 type: 'OUTBOUND',
                 itemId: item.id,
                 sku: item.sku || '',
                 itemName: item.nameVi,
                 qty: qty,
                 stockBefore: current,
-                stockAfter: newStock,
+                stockAfter: item.stock,
                 unit: item.unit || 'cái',
                 costPrice: item.costPrice || 0,
                 operator: operator,
                 recipient: `${recipient} (${purpose})`,
-                note: note || `Xuất: ${purpose}`
+                note: note || `Lấy ngày ${dStr}: ${purpose}`,
+                evidenceImage: evidenceImage
             };
             transactionLogs.unshift(txObj);
-            await saveTransactionToFirebase(txObj);
+            const toolBadge = document.getElementById('ui-history-badge');
+            if (toolBadge) toolBadge.textContent = transactionLogs.length;
 
+            closeOutboundModal();
+            backupLocally();
+            renderTable();
+            renderCards();
+            updateOverviewStats();
+            if (currentHistoryModalItemId === item.id) renderItemDailyHistoryModal(item.id);
+
+            await saveTransactionToFirebase(txObj);
             await saveItemToFirebase(item);
             showToast(I18N[currentLang].toastOutboundSuccess(qty, item.nameVi));
         }
 
         // ============================================================================
-        // 12. TRANSACTION HISTORY MODAL & LOGS
+        // 11B. QUẢN LÝ, SỬA & XÓA LỊCH SỬ THEO NGÀY CỦA TỪNG SẢN PHẨM (LIÊN ĐỚI SHEET)
+        // ============================================================================
+        let currentHistoryModalItemId = null;
+
+        function openItemDailyHistoryModal(itemId) {
+            const item = inventoryItems.find(i => i.id === itemId);
+            if (!item) return;
+            currentHistoryModalItemId = itemId;
+            renderItemDailyHistoryModal(itemId);
+            const modal = document.getElementById('item-history-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeItemDailyHistoryModal() {
+            const modal = document.getElementById('item-history-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            currentHistoryModalItemId = null;
+        }
+
+        function renderItemDailyHistoryModal(itemId) {
+            const item = inventoryItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            recalculateItemStockFromHistory(item);
+            const addedQty = (item.dailyInbound || []).reduce((s, d) => s + (Number(d.qty) || 0), 0);
+            const usedQty = (item.dailyUsage || []).reduce((s, d) => s + (Number(d.qty) || 0), 0);
+
+            const imgEl = document.getElementById('item-hist-img');
+            const titleEl = document.getElementById('item-hist-title');
+            if (imgEl) imgEl.src = item.image || IMAGE_MAP_BY_STT[item.stt] || DEFAULT_MAKEUP_SVG;
+            if (titleEl) titleEl.textContent = `#${item.stt || ''} ${item.nameVi}`;
+
+            const elOrig = document.getElementById('item-hist-orig-init');
+            const elAdded = document.getElementById('item-hist-added');
+            const elUsed = document.getElementById('item-hist-used');
+            const elStock = document.getElementById('item-hist-stock');
+            if (elOrig) elOrig.textContent = formatNumber(item.initStockOriginal ?? item.initStock);
+            if (elAdded) elAdded.textContent = `+${formatNumber(addedQty)}`;
+            if (elUsed) elUsed.textContent = `-${formatNumber(usedQty)}`;
+            if (elStock) elStock.textContent = formatNumber(item.stock);
+
+            const btnIn = document.getElementById('item-hist-btn-in');
+            const btnOut = document.getElementById('item-hist-btn-out');
+            const btnReset = document.getElementById('item-hist-btn-reset');
+            if (btnIn) btnIn.onclick = () => { closeItemDailyHistoryModal(); openInboundModal(item.id); };
+            if (btnOut) btnOut.onclick = () => { closeItemDailyHistoryModal(); openOutboundModal(item.id); };
+            if (btnReset) btnReset.onclick = () => resetSingleItemToSheet(item.id);
+
+            // Render Inbound List
+            const inList = document.getElementById('item-hist-inbound-list');
+            if (inList) {
+                if (!item.dailyInbound || item.dailyInbound.length === 0) {
+                    inList.innerHTML = `<div class="p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-xs text-slate-400 italic text-center">Chưa có lịch sử nhập thêm hàng ngoài số lượng gốc (${item.initStockOriginal ?? item.initStock})</div>`;
+                } else {
+                    inList.innerHTML = item.dailyInbound.map((d, idx) => `
+                        <div class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between gap-2 flex-wrap">
+                            <div class="flex items-center gap-2 min-w-0 flex-1">
+                                <span class="px-2 py-1 rounded-lg bg-emerald-600 text-white font-black text-xs shrink-0">+${d.qty}</span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-bold text-emerald-950 text-xs">📅 Ngày nhập: ${escapeHtml(d.date)}</span>
+                                        ${d.operator ? `<span class="text-[11px] text-slate-500">• ${escapeHtml(d.operator)}</span>` : ''}
+                                    </div>
+                                    <p class="text-[11px] text-slate-600 truncate">${escapeHtml(d.note || 'Nhập bổ sung kho')}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                ${d.evidenceImage ? `
+                                    <img src="${escapeHtml(d.evidenceImage)}" onclick="openRawImageLightbox('${escapeHtml(d.evidenceImage)}', 'Ảnh chứng cứ nhập ngày ${escapeHtml(d.date)}')" class="w-9 h-9 rounded-lg object-cover border border-emerald-300 cursor-zoom-in" title="Bấm để xem ảnh chứng cứ" />
+                                ` : ''}
+                                <button type="button" onclick="editDailyHistoryEntry('${item.id}', 'INBOUND', ${idx})" class="px-2.5 py-1 rounded-lg text-xs font-bold text-teal-800 bg-white hover:bg-teal-50 border border-teal-300 shadow-2xs">
+                                    ✏️ Sửa
+                                </button>
+                                <button type="button" onclick="deleteDailyHistoryEntry('${item.id}', 'INBOUND', ${idx})" class="px-2.5 py-1 rounded-lg text-xs font-bold text-red-600 bg-white hover:bg-red-50 border border-red-200 shadow-2xs">
+                                    🗑️ Xóa
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // Render Outbound List
+            const outList = document.getElementById('item-hist-outbound-list');
+            if (outList) {
+                if (!item.dailyUsage || item.dailyUsage.length === 0) {
+                    outList.innerHTML = `<div class="p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-xs text-slate-400 italic text-center">Chưa có ngày lấy hàng nào trong tháng</div>`;
+                } else {
+                    outList.innerHTML = item.dailyUsage.map((d, idx) => `
+                        <div class="p-2.5 rounded-xl bg-rose-50/70 border border-rose-200 flex items-center justify-between gap-2 flex-wrap">
+                            <div class="flex items-center gap-2 min-w-0 flex-1">
+                                <span class="px-2 py-1 rounded-lg bg-rose-600 text-white font-black text-xs shrink-0">-${d.qty}</span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-bold text-rose-950 text-xs">📅 Ngày lấy: ${escapeHtml(d.date)}</span>
+                                        ${d.recipient ? `<span class="text-[11px] text-slate-600 font-semibold">• ${escapeHtml(d.recipient)}</span>` : ''}
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 truncate">${escapeHtml(d.note || 'Xuất vật tư theo ngày Sheet Excel')}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                ${d.evidenceImage ? `
+                                    <img src="${escapeHtml(d.evidenceImage)}" onclick="openRawImageLightbox('${escapeHtml(d.evidenceImage)}', 'Ảnh chứng cứ lấy hàng ngày ${escapeHtml(d.date)}')" class="w-9 h-9 rounded-lg object-cover border border-rose-300 cursor-zoom-in" title="Bấm để xem ảnh chứng cứ" />
+                                ` : ''}
+                                <button type="button" onclick="editDailyHistoryEntry('${item.id}', 'OUTBOUND', ${idx})" class="px-2.5 py-1 rounded-lg text-xs font-bold text-teal-800 bg-white hover:bg-teal-50 border border-teal-300 shadow-2xs">
+                                    ✏️ Sửa
+                                </button>
+                                <button type="button" onclick="deleteDailyHistoryEntry('${item.id}', 'OUTBOUND', ${idx})" class="px-2.5 py-1 rounded-lg text-xs font-bold text-red-600 bg-white hover:bg-red-50 border border-red-200 shadow-2xs">
+                                    🗑️ Xóa
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        async function editDailyHistoryEntry(itemId, mode, index) {
+            const item = inventoryItems.find(i => i.id === itemId);
+            if (!item) return;
+            const list = mode === 'INBOUND' ? item.dailyInbound : item.dailyUsage;
+            if (!Array.isArray(list) || !list[index]) return;
+            const entry = list[index];
+
+            const newDate = prompt(`1. Sửa ngày ${mode === 'INBOUND' ? 'nhập' : 'lấy'} (Định dạng DD/MM, VD: 15/10 hoặc 06/11):`, entry.date || '');
+            if (newDate === null) return;
+            const newQtyStr = prompt(`2. Sửa số lượng ${mode === 'INBOUND' ? 'nhập (+)' : 'lấy (-)'}:`, String(entry.qty || 1));
+            if (newQtyStr === null) return;
+            const newQty = Math.max(1, parseInt(newQtyStr, 10) || 1);
+            const newNote = prompt(`3. Sửa ghi chú:`, entry.note || '');
+            if (newNote === null) return;
+
+            entry.date = newDate.trim() || entry.date;
+            entry.qty = newQty;
+            entry.note = newNote.trim();
+            item.hasCustomHistory = true;
+
+            recalculateItemStockFromHistory(item);
+
+            // Đồng bộ sang transactionLogs nếu có liên kết
+            const linkedTx = transactionLogs.find(tx => tx.dailyEntryId && tx.dailyEntryId === entry.id);
+            if (linkedTx) {
+                linkedTx.qty = newQty;
+                linkedTx.shortDate = entry.date;
+                linkedTx.dateStr = `${entry.date}/2026`;
+                linkedTx.note = entry.note;
+                linkedTx.stockAfter = item.stock;
+                await saveTransactionToFirebase(linkedTx);
+            }
+
+            localStorage.setItem(INIT_STATUS_KEY, 'true');
+            backupLocally();
+            renderTable();
+            renderCards();
+            updateOverviewStats();
+            if (currentHistoryModalItemId === item.id) renderItemDailyHistoryModal(item.id);
+            await saveItemToFirebase(item);
+            showToast('✅ Đã cập nhật lịch sử ngày & tính lại tồn kho!');
+        }
+
+        async function deleteDailyHistoryEntry(itemId, mode, index) {
+            const item = inventoryItems.find(i => i.id === itemId);
+            if (!item) return;
+            const list = mode === 'INBOUND' ? item.dailyInbound : item.dailyUsage;
+            if (!Array.isArray(list) || !list[index]) return;
+
+            const removed = list.splice(index, 1)[0];
+            item.hasCustomHistory = true;
+            recalculateItemStockFromHistory(item);
+
+            // Xóa giao dịch tương ứng trong transactionLogs nếu có
+            if (removed && removed.id) {
+                const txIdx = transactionLogs.findIndex(tx => tx.dailyEntryId === removed.id);
+                if (txIdx !== -1) {
+                    const txId = transactionLogs[txIdx].id;
+                    transactionLogs.splice(txIdx, 1);
+                    try {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'makeup_inventory_tx', txId));
+                    } catch (e) {}
+                }
+            }
+
+            const toolBadge = document.getElementById('ui-history-badge');
+            if (toolBadge) toolBadge.textContent = transactionLogs.length;
+
+            localStorage.setItem(INIT_STATUS_KEY, 'true');
+            backupLocally();
+            renderTable();
+            renderCards();
+            updateOverviewStats();
+            if (currentHistoryModalItemId === item.id) renderItemDailyHistoryModal(item.id);
+            await saveItemToFirebase(item);
+            showToast(`🗑️ Đã xóa lịch sử ngày ${removed?.date || ''} và hoàn lại số lượng tồn!`);
+        }
+
+        async function resetSingleItemToSheet(itemId) {
+            const item = inventoryItems.find(i => i.id === itemId);
+            if (!item) return;
+            const seed = SEED_INVENTORY_ITEMS.find(s => s.stt === item.stt || s.id === item.id);
+            if (!seed) {
+                item.dailyInbound = [];
+                item.dailyUsage = [];
+                recalculateItemStockFromHistory(item);
+            } else {
+                item.initStockOriginal = Number(seed.initStock) || 0;
+                item.initStock = Number(seed.initStock) || 0;
+                item.usedStock = Number(seed.usedStock) || 0;
+                item.stock = Number(seed.stock) || 0;
+                item.dailyInbound = [];
+                item.dailyUsage = JSON.parse(JSON.stringify(seed.dailyUsage || []));
+                item.hasCustomHistory = false;
+                normalizeInventoryItem(item);
+            }
+
+            backupLocally();
+            renderTable();
+            renderCards();
+            updateOverviewStats();
+            if (currentHistoryModalItemId === item.id) renderItemDailyHistoryModal(item.id);
+            await saveItemToFirebase(item);
+            showToast(`🔄 Đã khôi phục "${item.nameVi}" về chuẩn Google Sheet gốc!`);
+        }
+
+        // ============================================================================
+        // 12. TRANSACTION HISTORY MODAL & LOGS (CÓ SỬA, XÓA & HOÀN TRẢ TỒN KHO)
         // ============================================================================
         function openHistoryModal() {
             const modal = document.getElementById('history-modal');
             renderHistoryTable();
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
         }
 
         function closeHistoryModal() {
@@ -6876,24 +7281,30 @@
 
         function renderHistoryTable() {
             const tbody = document.getElementById('history-table-body');
-            const typeFilter = document.getElementById('history-type-filter').value;
+            if (!tbody) return;
+            const typeFilter = document.getElementById('history-type-filter')?.value || 'ALL';
+            const searchQ = (document.getElementById('history-search-input')?.value || '').trim().toLowerCase();
 
-            let filtered = transactionLogs;
-            if (typeFilter !== 'ALL') {
-                filtered = filtered.filter(tx => {
-                    if (typeFilter === 'INBOUND') return tx.type === 'INBOUND' || tx.type === 'IN';
-                    if (typeFilter === 'OUTBOUND') return tx.type === 'OUTBOUND' || tx.type === 'OUT';
-                    return tx.type === typeFilter;
-                });
-            }
+            let filtered = transactionLogs.filter(tx => {
+                if (typeFilter === 'INBOUND' && !(tx.type === 'INBOUND' || tx.type === 'IN')) return false;
+                if (typeFilter === 'OUTBOUND' && !(tx.type === 'OUTBOUND' || tx.type === 'OUT')) return false;
+                if (typeFilter === 'HAS_PHOTO' && !tx.evidenceImage) return false;
 
-            document.getElementById('history-count-badge').textContent = `${filtered.length} giao dịch`;
+                if (searchQ) {
+                    const hay = `${tx.itemName || ''} ${tx.itemNameVi || ''} ${tx.dateStr || ''} ${tx.shortDate || ''} ${tx.operator || ''} ${tx.operatorName || ''} ${tx.recipient || ''} ${tx.note || ''}`.toLowerCase();
+                    if (!hay.includes(searchQ)) return false;
+                }
+                return true;
+            });
+
+            const badgeEl = document.getElementById('history-count-badge');
+            if (badgeEl) badgeEl.textContent = `${filtered.length} giao dịch`;
 
             if (filtered.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="py-8 text-center text-slate-400">
-                            Chưa có dữ liệu nhật ký giao dịch nào
+                        <td colspan="8" class="py-8 text-center text-slate-400">
+                            Không tìm thấy giao dịch nào phù hợp
                         </td>
                     </tr>
                 `;
@@ -6901,7 +7312,7 @@
             }
 
             tbody.innerHTML = filtered.map(tx => {
-                const dateStr = tx.dateStr || new Date(tx.timestamp || Date.now()).toLocaleString('vi-VN');
+                const dateStr = tx.dateStr || new Date(tx.timestamp || Date.now()).toLocaleDateString('vi-VN');
                 const isIn = tx.type === 'INBOUND' || tx.type === 'IN';
                 const isAudit = tx.type === 'AUDIT';
                 const itemName = tx.itemName || tx.itemNameVi || 'Vật liệu';
@@ -6911,61 +7322,162 @@
 
                 let badge = '';
                 if (isIn) {
-                    badge = '<span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Nhập kho</span>';
+                    badge = '<span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">📥 Nhập</span>';
                 } else if (isAudit) {
                     badge = '<span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-300">Kiểm kê</span>';
                 } else {
-                    badge = '<span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">Xuất kho</span>';
+                    badge = '<span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">📤 Lấy hàng</span>';
                 }
+
+                const photoHtml = tx.evidenceImage
+                    ? `<img src="${escapeHtml(tx.evidenceImage)}" onclick="openRawImageLightbox('${escapeHtml(tx.evidenceImage)}', 'Ảnh chứng cứ: ${escapeHtml(itemName)} (${escapeHtml(dateStr)})')" class="w-9 h-9 rounded-lg object-cover border border-teal-300 mx-auto cursor-zoom-in hover:scale-110 transition-transform" title="Bấm để xem ảnh chứng cứ" />`
+                    : `<span class="text-[10px] text-slate-300">—</span>`;
 
                 return `
                     <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="py-2.5 px-3 text-slate-600 font-mono text-[11px] whitespace-nowrap">${escapeHtml(dateStr)}</td>
-                        <td class="py-2.5 px-2 text-center">${badge}</td>
-                        <td class="py-2.5 px-3">
+                        <td class="py-2.5 px-2.5 text-slate-700 font-mono font-bold text-[11px] whitespace-nowrap">${escapeHtml(dateStr)}</td>
+                        <td class="py-2.5 px-2 text-center whitespace-nowrap">${badge}</td>
+                        <td class="py-2.5 px-2.5">
                             <span class="font-bold text-slate-900">${escapeHtml(itemName)}</span>
-                            ${tx.sku ? `<span class="text-slate-400 text-[11px] font-mono ml-1">[${escapeHtml(tx.sku)}]</span>` : ''}
                         </td>
-                        <td class="py-2.5 px-2 text-center font-black ${isIn ? 'text-emerald-700' : 'text-amber-800'}">
+                        <td class="py-2.5 px-2 text-center font-black whitespace-nowrap ${isIn ? 'text-emerald-700' : 'text-rose-700'}">
                             ${isIn ? '+' : '-'}${qty} ${escapeHtml(tx.unit || '')}
                         </td>
-                        <td class="py-2.5 px-2 text-center font-bold text-slate-800">
-                            ${tx.stockAfter ?? '---'}
+                        <td class="py-2 px-2 text-center">${photoHtml}</td>
+                        <td class="py-2.5 px-2.5 text-slate-700">
+                            <div class="font-semibold text-xs">${escapeHtml(recipient)}</div>
+                            <div class="text-[10px] text-slate-400">Bởi: ${escapeHtml(operator)}</div>
                         </td>
-                        <td class="py-2.5 px-3 text-slate-700">
-                            <div>${escapeHtml(recipient)}</div>
-                            <div class="text-[10px] text-slate-400 font-semibold">Bởi: ${escapeHtml(operator)}</div>
-                        </td>
-                        <td class="py-2.5 px-3 text-slate-500 italic text-[11px]">
+                        <td class="py-2.5 px-2.5 text-slate-600 text-[11px]">
                             ${escapeHtml(tx.note || '')}
+                        </td>
+                        <td class="py-2.5 px-2 text-center whitespace-nowrap">
+                            <div class="inline-flex items-center gap-1">
+                                <button type="button" onclick="editHistoryTransaction('${tx.id}')" class="px-2 py-1 rounded bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-[11px] font-bold" title="Sửa giao dịch này">
+                                    Sửa
+                                </button>
+                                <button type="button" onclick="deleteHistoryTransaction('${tx.id}')" class="px-2 py-1 rounded bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[11px] font-bold" title="Xóa giao dịch này & hoàn lại tồn kho">
+                                    Xóa
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
             }).join('');
         }
 
-        let isClearingHistory = false;
+        async function editHistoryTransaction(txId) {
+            const tx = transactionLogs.find(t => t.id === txId);
+            if (!tx) return;
+            const isIn = tx.type === 'INBOUND' || tx.type === 'IN';
+            const oldQty = Number(tx.qty ?? tx.quantity) || 1;
+            const oldDate = tx.shortDate || (tx.dateStr ? tx.dateStr.slice(0, 5).replace('.', '/') : '');
+
+            const newDate = prompt('1. Sửa ngày (VD: 15/10 hoặc 06/11):', oldDate || '06/11');
+            if (newDate === null) return;
+            const newQtyStr = prompt(`2. Sửa số lượng ${isIn ? 'Nhập (+)' : 'Lấy (-)'}:`, String(oldQty));
+            if (newQtyStr === null) return;
+            const newQty = Math.max(1, parseInt(newQtyStr, 10) || 1);
+            const newNote = prompt('3. Sửa ghi chú:', tx.note || '');
+            if (newNote === null) return;
+
+            tx.shortDate = newDate.trim();
+            tx.dateStr = `${newDate.trim()}/2026`;
+            tx.qty = newQty;
+            tx.quantity = newQty;
+            tx.note = newNote.trim();
+
+            // Cập nhật lại vào item liên kết
+            const item = inventoryItems.find(i => i.id === tx.itemId || i.nameVi === (tx.itemName || tx.itemNameVi));
+            if (item) {
+                const list = isIn ? item.dailyInbound : item.dailyUsage;
+                if (Array.isArray(list)) {
+                    let entry = list.find(d => (tx.dailyEntryId && d.id === tx.dailyEntryId) || (d.date === oldDate && Number(d.qty) === oldQty));
+                    if (entry) {
+                        entry.date = newDate.trim();
+                        entry.qty = newQty;
+                        entry.note = newNote.trim();
+                    }
+                }
+                item.hasCustomHistory = true;
+                recalculateItemStockFromHistory(item);
+                tx.stockAfter = item.stock;
+                await saveItemToFirebase(item);
+            }
+
+            backupLocally();
+            renderHistoryTable();
+            renderTable();
+            renderCards();
+            updateOverviewStats();
+            await saveTransactionToFirebase(tx);
+            showToast('✅ Đã sửa giao dịch và cập nhật lại số lượng tồn kho!');
+        }
+
+        async function deleteHistoryTransaction(txId) {
+            const idx = transactionLogs.findIndex(t => t.id === txId);
+            if (idx === -1) return;
+            const tx = transactionLogs[idx];
+            const isIn = tx.type === 'INBOUND' || tx.type === 'IN';
+            const qty = Number(tx.qty ?? tx.quantity) || 0;
+            const shortD = tx.shortDate || (tx.dateStr ? tx.dateStr.slice(0, 5).replace('.', '/') : '');
+
+            // Hoàn trả lại số lượng trong sản phẩm liên kết
+            const item = inventoryItems.find(i => i.id === tx.itemId || i.nameVi === (tx.itemName || tx.itemNameVi));
+            if (item) {
+                const list = isIn ? item.dailyInbound : item.dailyUsage;
+                if (Array.isArray(list)) {
+                    let eIdx = list.findIndex(d => tx.dailyEntryId && d.id === tx.dailyEntryId);
+                    if (eIdx === -1 && shortD) {
+                        eIdx = list.findIndex(d => d.date === shortD && Number(d.qty) === qty);
+                    }
+                    if (eIdx !== -1) {
+                        list.splice(eIdx, 1);
+                    }
+                }
+                item.hasCustomHistory = true;
+                recalculateItemStockFromHistory(item);
+                await saveItemToFirebase(item);
+            }
+
+            transactionLogs.splice(idx, 1);
+            const toolBadge = document.getElementById('ui-history-badge');
+            if (toolBadge) toolBadge.textContent = transactionLogs.length;
+
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'makeup_inventory_tx', txId));
+            } catch (e) {}
+
+            backupLocally();
+            renderHistoryTable();
+            renderTable();
+            renderCards();
+            updateOverviewStats();
+            showToast('🗑️ Đã xóa giao dịch và hoàn trả lại số lượng tồn kho!');
+        }
+
         async function clearHistoryLogs() {
             if (transactionLogs.length === 0) {
                 showToast('Nhật ký giao dịch hiện đang trống!');
                 return;
             }
-            if (!isClearingHistory) {
-                isClearingHistory = true;
-                showToast('⚠️ Bấm nút "Xóa nhật ký cũ" lần nữa để xác nhận xóa sạch lịch sử!');
-                setTimeout(() => { isClearingHistory = false; }, 4000);
+            if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ nhật ký giao dịch không?')) {
                 return;
             }
-            isClearingHistory = false;
             try {
-                for (const tx of transactionLogs) {
-                    const txRef = doc(db, 'artifacts', appId, 'public', 'data', 'makeup_inventory_tx', tx.id);
-                    await deleteDoc(txRef);
-                }
+                const oldLogs = [...transactionLogs];
                 transactionLogs = [];
+                const toolBadge = document.getElementById('ui-history-badge');
+                if (toolBadge) toolBadge.textContent = '0';
                 backupLocally();
                 renderHistoryTable();
-                showToast('Đã xóa sạch nhật ký giao dịch cũ!');
+                showToast('🗑️ Đã xóa sạch toàn bộ nhật ký giao dịch!');
+                for (const tx of oldLogs) {
+                    try {
+                        const txRef = doc(db, 'artifacts', appId, 'public', 'data', 'makeup_inventory_tx', tx.id);
+                        await deleteDoc(txRef);
+                    } catch (e) {}
+                }
             } catch (err) {
                 console.error('Error clearing history:', err);
                 showToast('Có lỗi xảy ra khi xóa nhật ký!');
@@ -7855,6 +8367,7 @@
                 closeInboundModal();
                 closeOutboundModal();
                 closeHistoryModal();
+                closeItemDailyHistoryModal();
             }
         });
 
@@ -7926,23 +8439,85 @@
             const diff = Number(delta) || 0;
             const next = Math.max(0, cur + diff);
             if (next === cur) return;
-            item.stock = next;
+
+            const todayStr = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            const dailyEntryId = 'day-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+            item.hasCustomHistory = true;
+
             if (diff < 0) {
                 const taken = cur - next;
-                item.usedStock = (Number(item.usedStock) || 0) + taken;
                 if (!Array.isArray(item.dailyUsage)) item.dailyUsage = [];
-                const todayStr = new Date().toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
-                const existingDay = item.dailyUsage.find(d => d.date === todayStr);
-                if (existingDay) existingDay.qty = (Number(existingDay.qty) || 0) + taken;
-                else item.dailyUsage.push({ date: todayStr, qty: taken });
+                item.dailyUsage.push({
+                    id: dailyEntryId,
+                    date: todayStr,
+                    qty: taken,
+                    recipient: 'Lấy nhanh (-1)',
+                    note: 'Bấm nút (-) trên bảng/thẻ (Có thể bấm × để xóa)'
+                });
+                recalculateItemStockFromHistory(item);
+
+                const tx = {
+                    id: 'tx-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                    dailyEntryId,
+                    type: 'OUTBOUND',
+                    itemId: item.id,
+                    sku: item.sku,
+                    itemName: item.nameVi,
+                    dateStr: todayStr,
+                    qty: taken,
+                    stockBefore: cur,
+                    stockAfter: item.stock,
+                    unit: item.unit,
+                    costPrice: item.costPrice,
+                    operator: 'Thao tác nhanh (-)',
+                    recipient: 'Lấy nhanh (-1)',
+                    note: `Ngày ${todayStr}: Trừ nhanh -${taken} (Có thể bấm Xóa trong Lịch sử để hoàn lại)`,
+                    timestamp: Date.now()
+                };
+                transactionLogs.unshift(tx);
+                saveTransactionToFirebase(tx);
             } else if (diff > 0) {
-                item.initStock = (Number(item.initStock) || cur) + diff;
+                if (!Array.isArray(item.dailyInbound)) item.dailyInbound = [];
+                item.dailyInbound.push({
+                    id: dailyEntryId,
+                    date: todayStr,
+                    qty: diff,
+                    operator: 'Thao tác nhanh (+)',
+                    note: 'Bấm nút (+) trên bảng/thẻ (Có thể bấm × để xóa)'
+                });
+                recalculateItemStockFromHistory(item);
+
+                const tx = {
+                    id: 'tx-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+                    dailyEntryId,
+                    type: 'INBOUND',
+                    itemId: item.id,
+                    sku: item.sku,
+                    itemName: item.nameVi,
+                    dateStr: todayStr,
+                    qty: diff,
+                    stockBefore: cur,
+                    stockAfter: item.stock,
+                    unit: item.unit,
+                    costPrice: item.costPrice,
+                    operator: 'Thao tác nhanh (+)',
+                    recipient: 'Cộng nhanh (+1)',
+                    note: `Ngày ${todayStr}: Cộng nhanh +${diff} (Có thể bấm Xóa trong Lịch sử để hoàn lại)`,
+                    timestamp: Date.now()
+                };
+                transactionLogs.unshift(tx);
+                saveTransactionToFirebase(tx);
             }
+
+            const toolBadge = document.getElementById('ui-history-badge');
+            if (toolBadge) toolBadge.textContent = transactionLogs.length;
+
             backupLocally();
             saveItemToFirebase(item);
             renderTable();
             renderCards();
             updateOverviewStats();
+            showToast(`${diff > 0 ? '📥 Đã cộng +' + diff : '📤 Đã trừ ' + diff} "${item.nameVi}" (Bấm × trên thẻ ngày để hoàn tác)`);
         }
 
         function updateItemStockDirect(itemId, val) {
@@ -7951,14 +8526,8 @@
             const cur = Number(item.stock) || 0;
             const num = Math.max(0, parseInt(val, 10) || 0);
             if (num === cur) return;
-            item.stock = num;
-            const used = Number(item.usedStock) || 0;
-            item.initStock = Math.max(num, num + used);
-            backupLocally();
-            saveItemToFirebase(item);
-            renderTable();
-            renderCards();
-            updateOverviewStats();
+            const diff = num - cur;
+            stepStock(itemId, diff);
         }
 
         // ============================================================================
@@ -7999,6 +8568,21 @@
         window.closeOutboundModal = closeOutboundModal;
         window.handleOutboundItemChange = handleOutboundItemChange;
         window.handleOutboundSubmit = handleOutboundSubmit;
+        window.setQuickModalQty = setQuickModalQty;
+        window.stepModalQty = stepModalQty;
+        window.updateInboundPreviewAfter = updateInboundPreviewAfter;
+        window.updateOutboundPreviewAfter = updateOutboundPreviewAfter;
+        window.handleModalEvidenceUpload = handleModalEvidenceUpload;
+        window.handleModalEvidenceUrl = handleModalEvidenceUrl;
+        window.clearModalEvidence = clearModalEvidence;
+        window.openRawImageLightbox = openRawImageLightbox;
+        window.openItemDailyHistoryModal = openItemDailyHistoryModal;
+        window.closeItemDailyHistoryModal = closeItemDailyHistoryModal;
+        window.editDailyHistoryEntry = editDailyHistoryEntry;
+        window.deleteDailyHistoryEntry = deleteDailyHistoryEntry;
+        window.resetSingleItemToSheet = resetSingleItemToSheet;
+        window.editHistoryTransaction = editHistoryTransaction;
+        window.deleteHistoryTransaction = deleteHistoryTransaction;
         window.openHistoryModal = openHistoryModal;
         window.editItemNote = editItemNote;
         window.setSortFromHeader = setSortFromHeader;
@@ -8786,13 +9370,13 @@ Má hồng : 2 bảng`;
             const callbackName = 'onGSheetCallback_' + Date.now();
             window[callbackName] = function(data) {
                 try {
-                    parseAndApplyGvizData(data);
+                    parseAndApplyGvizData(data, silent);
                     if (syncEl) {
                         syncEl.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs shrink-0 no-print cursor-pointer';
                         syncEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Đã khớp GSheet (' + new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) + ')</span>';
                     }
                     if (!silent) {
-                        showToast('✅ Đã đồng bộ chính xác 42 sản phẩm, các ngày lấy & ghi chú từ Google Sheet!');
+                        showToast('✅ Đã đồng bộ chuẩn 42 sản phẩm, các ngày lấy & ghi chú từ Google Sheet!');
                     }
                 } catch (err) {
                     console.error('Error applying GSheet data:', err);
@@ -8819,7 +9403,7 @@ Má hồng : 2 bảng`;
             document.body.appendChild(script);
         }
 
-        function parseAndApplyGvizData(gviz) {
+        function parseAndApplyGvizData(gviz, silent = false) {
             if (!gviz || !gviz.table || !Array.isArray(gviz.table.rows)) return;
             const rows = gviz.table.rows;
             if (rows.length < 2) return;
@@ -8870,7 +9454,13 @@ Má hồng : 2 bảng`;
                     }
                     if (u > 0) {
                         usedStock += u;
-                        dailyUsage.push({ date: dateHeaders[c] || `Cột ${c}`, qty: u });
+                        dailyUsage.push({
+                            id: `gsheet-${stt}-${c}`,
+                            date: dateHeaders[c] || `Cột ${c}`,
+                            qty: u,
+                            recipient: 'Xuất trên Google Sheet',
+                            note: 'Đồng bộ từ cột ngày trên Sheet'
+                        });
                     }
                 }
 
@@ -8904,11 +9494,20 @@ Má hồng : 2 bảng`;
                     inventoryItems.push(target);
                 }
 
-                target.initStock = initStock;
-                target.usedStock = usedStock;
-                target.dailyUsage = dailyUsage;
-                target.stock = endStock;
-                if (noteVal) target.note = noteVal;
+                target.initStockOriginal = initStock;
+                // Nếu người dùng đã chỉnh sửa/xóa lịch sử trên web và đang tự động nạp ngầm (silent=true), giữ nguyên lịch sử tùy chỉnh của người dùng
+                if (silent && target.hasCustomHistory) {
+                    if (noteVal && !target.note) target.note = noteVal;
+                    recalculateItemStockFromHistory(target);
+                } else {
+                    target.hasCustomHistory = false;
+                    target.initStock = initStock;
+                    target.usedStock = usedStock;
+                    target.dailyUsage = dailyUsage;
+                    target.dailyInbound = [];
+                    target.stock = endStock;
+                    if (noteVal) target.note = noteVal;
+                }
                 normalizeInventoryItem(target);
                 updatedCount++;
             }
