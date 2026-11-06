@@ -479,21 +479,32 @@
       }
 
       // ==========================================
-      // HÀM COPY TƯƠNG THÍCH 100% ZALO & TẤT CẢ THIẾT BỊ (PC / iOS WEBKIT / ANDROID)
+      // HÀM COPY ĐỔI MÀU CHỮ CHUẨN ZALO & TƯƠNG THÍCH TẤT CẢ THIẾT BỊ
       // ==========================================
-      async function copyToClipboard(text) {
+      async function copyToClipboard(text, tierColor) {
+        let color = tierColor || '#3b82f6';
         try {
           if (navigator.clipboard && window.isSecureContext && window.ClipboardItem) {
-            let html = text
+            let escaped = text
               .replace(/&/g, '&amp;')
               .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;')
-              .replace(/\*(.*?)\*/g, '<b>$1</b>')
-              .replace(/_(.*?)_/g, '<i>$1</i>')
-              .replace(/\n/g, '<br>');
+              .replace(/>/g, '&gt;');
+
+            // Đổi màu các từ khóa in đậm (*text*) theo đúng mã màu của cột mốc
+            let coloredHtml = escaped.replace(/\*(.*?)\*/g, (match, p1) => {
+              return `<span style="color: ${color}; font-weight: bold;"><font color="${color}"><b>${p1}</b></font></span>`;
+            }).replace(/_(.*?)_/g, '<i>$1</i>');
+
+            let paragraphs = coloredHtml.split(/\n\n+/);
+            let htmlContent = paragraphs.map(p => {
+              let lines = p.replace(/\n/g, '<br>');
+              return `<p style="margin: 0 0 10px 0; line-height: 1.55;">${lines}</p>`;
+            }).join('');
+
+            let fullHtml = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px;">${htmlContent}</div>`;
 
             const blobText = new Blob([text], { type: 'text/plain' });
-            const blobHtml = new Blob([html], { type: 'text/html' });
+            const blobHtml = new Blob([fullHtml], { type: 'text/html' });
             const item = new ClipboardItem({
               'text/plain': blobText,
               'text/html': blobHtml
@@ -804,64 +815,27 @@
       }
 
       // ==========================================
-      // ĐỊNH DẠNG TIN NHẮN CHUẨN ZALO FORMAT THEO TỪNG CỘT MỐC
-      // MỐC CÀNG CAO CÀNG NỔI BẬT, SANG TRỌNG VÀ HOÀNH TRÁNG
+      // ĐỊNH DẠNG TIN NHẮN CHUẨN ZALO: ĐỔI MÀU & IN ĐẬM TỰ NHIÊN
+      // KHÔNG CHÈN TIÊU ĐỀ RƯỜM RÀ, GIỮ NGUYÊN VẸN CÂU CHÚC GỐC
       // ==========================================
       function formatWishForZalo(template, name, tier, withAssistant) {
-        let numStr = (tier || "").replace(/[^0-9]/g, '');
-        let val = parseInt(numStr) || 0;
-        let isDefault = tier === "{MOC}" || !numStr;
+        let st = getTierStyle(tier);
+        let isDefaultTier = tier === "{MOC}" || !tier;
+        let tierBadge = isDefaultTier ? "" : (" " + st.i);
 
-        // 1. Phân cấp Header Banner & Khung viền trang trí theo từng nấc thành tích
-        let headerBanner = "";
-        let topDivider = "";
-        let botDivider = "";
-
-        if (val >= 500) {
-          headerBanner = `╔══════════════════════════════════╗\n  🌌👑 *ĐẠI KỶ LỤC HUYỀN THOẠI — MỐC ${tier}* 👑🌌\n╚══════════════════════════════════╝`;
-          topDivider = "";
-          botDivider = "🌌 ════════════════════════════════ 🌌";
-        } else if (val >= 300) {
-          headerBanner = `╔══════════════════════════════════╗\n  🔥👑 *SIÊU KỶ LỤC DANH VỌNG — MỐC ${tier}* 👑🔥\n╚══════════════════════════════════╝`;
-          topDivider = "";
-          botDivider = "🔥 ════════════════════════════════ 🔥";
-        } else if (val >= 200) {
-          headerBanner = `💎✨ *ĐẲNG CẤP KIM CƯƠNG — SIÊU MỐC ${tier}* ✨💎`;
-          topDivider = "💎 ════════════════════════════════ 💎";
-          botDivider = "💎 ════════════════════════════════ 💎";
-        } else if (val >= 100) {
-          headerBanner = `⭐👑 *ĐẲNG CẤP NGÔI SAO — CỘT MỐC ${tier}* 👑⭐`;
-          topDivider = "⭐ ━━━━━━━━━━━━━━━━━━━━━━━━ ⭐";
-          botDivider = "⭐ ━━━━━━━━━━━━━━━━━━━━━━━━ ⭐";
-        } else if (val >= 50) {
-          headerBanner = `🔥⚡ *CHIẾN TÍCH BÙNG NỔ — CHINH PHỤC ${tier}* ⚡🔥`;
-          topDivider = "══════════════════════════════════";
-          botDivider = "══════════════════════════════════";
-        } else if (val >= 30) {
-          headerBanner = `🚀✨ *BỨT TỐC NGOẠN MỤC — CÁN MỐC ${tier}* ✨🚀`;
-          topDivider = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
-          botDivider = "✦ ────────────────────────────── ✦";
-        } else {
-          let title = isDefault ? "*VINH DANH THÀNH TÍCH MỚI*" : `*VINH DANH THÀNH TÍCH — CỘT MỐC ${tier}*`;
-          headerBanner = `🌱🎯 ${title} 🎯🌱`;
-          topDivider = "✦ ────────────────────────────── ✦";
-          botDivider = "";
-        }
-
-        // 2. Tinh chỉnh Tên Idol, Trợ lý & Cột mốc nổi bật với định dạng in đậm (*text*)
         let msg = template || "";
         if (!withAssistant) {
           msg = msg.replace(/( và| cùng) Trợ Lý/g, "");
         }
 
         let boldName = name === "{TEN}" ? "{TEN}" : `*${name}*`;
-        let boldTier = tier === "{MOC}" ? "{MOC}" : `*${tier}*`;
+        let boldTier = tier === "{MOC}" ? "{MOC}" : `*${tier}*${tierBadge}`;
         msg = msg.replace(/{TEN}/g, boldName).replace(/{MOC}/g, boldTier);
         if (withAssistant) {
           msg = msg.replace(/(cùng|và)\s+Trợ Lý/g, "$1 *Trợ Lý*");
         }
 
-        // 3. Tách các câu: Hook mở đầu, Thân đoạn chúc mừng & Lời chúc kết thúc
+        // Tách câu: Hook mở đầu, Thân vinh danh & Lời chúc kết thúc
         let sentenceRegex = /[^.!?]+[.!?]+[^.!?A-ZÀ-ỸÁ-Ý\r\n]*/gu;
         let matches = msg.match(sentenceRegex);
         let sents = [];
@@ -869,57 +843,42 @@
           sents = matches.map(s => s.trim()).filter(Boolean);
         }
 
-        let formattedBody = "";
         if (sents.length < 2) {
-          formattedBody = msg;
-        } else {
-          let hook = sents[0];
-          let closing = sents[sents.length - 1];
-          let mid = sents.slice(1, sents.length - 1);
+          return msg;
+        }
 
-          // Nếu câu đầu tiên là Hook (không chứa trực tiếp tên Idol)
-          if (!hook.includes(boldName)) {
-            let emojiMatch = hook.match(/^([\p{Extended_Pictographic}\u2600-\u27BF\uD800-\uDFFF\s]+)(.*)/u);
-            if (emojiMatch && emojiMatch[1].trim().length > 0) {
-              let em = emojiMatch[1].trim();
-              let rest = emojiMatch[2].trim();
-              if (val >= 100) rest = rest.toUpperCase();
-              hook = `${em} *${rest}*`;
-            } else {
-              if (val >= 100) hook = `*${hook.toUpperCase()}*`;
-              else hook = `*${hook}*`;
-            }
-          }
+        let hook = sents[0];
+        let closing = sents[sents.length - 1];
+        let mid = sents.slice(1, sents.length - 1);
 
-          // Xử lý câu kết: Mốc từ 50K trở lên được nhấn mạnh in đậm / in hoa rực rỡ
-          if (val >= 50) {
-            let emojiTailMatch = closing.match(/(.*?)([\p{Extended_Pictographic}\u2600-\u27BF\uD800-\uDFFF\s]+)$/u);
-            if (emojiTailMatch && emojiTailMatch[2].trim().length > 0) {
-              let cText = emojiTailMatch[1].trim();
-              let cEm = emojiTailMatch[2].trim();
-              if (val >= 300) cText = cText.toUpperCase();
-              closing = `*${cText}* ${cEm}`;
-            } else {
-              if (val >= 300) closing = `*${closing.toUpperCase()}*`;
-              else closing = `*${closing}*`;
-            }
-          }
-
-          let bodyText = mid.join(" ");
-          if (hook.includes(boldName)) {
-            formattedBody = bodyText.length > 0 ? `${hook}\n\n${bodyText}\n\n${closing}` : `${hook}\n\n${closing}`;
+        // Nếu câu đầu tiên là Hook (không chứa trực tiếp tên Idol)
+        if (!hook.includes(boldName)) {
+          let emojiMatch = hook.match(/^([\p{Extended_Pictographic}\u2600-\u27BF\uD800-\uDFFF\s]+)(.*)/u);
+          if (emojiMatch && emojiMatch[1].trim().length > 0) {
+            let em = emojiMatch[1].trim();
+            let rest = emojiMatch[2].trim();
+            hook = `${em} *${rest}*`;
           } else {
-            formattedBody = `${hook}\n\n${bodyText}\n\n${closing}`;
+            hook = `*${hook}*`;
           }
         }
 
-        // 4. Ghép toàn bộ thành tin nhắn Zalo hoàn mỹ
-        let parts = [headerBanner];
-        if (topDivider) parts.push(topDivider);
-        parts.push(formattedBody);
-        if (botDivider) parts.push(botDivider);
+        // Xử lý câu kết: In đậm truyền cảm hứng
+        let emojiTailMatch = closing.match(/(.*?)([\p{Extended_Pictographic}\u2600-\u27BF\uD800-\uDFFF\s]+)$/u);
+        if (emojiTailMatch && emojiTailMatch[2].trim().length > 0) {
+          let cText = emojiTailMatch[1].trim();
+          let cEm = emojiTailMatch[2].trim();
+          closing = `*${cText}* ${cEm}`;
+        } else {
+          closing = `*${closing}*`;
+        }
 
-        return parts.join("\n");
+        let bodyText = mid.join(" ");
+        if (hook.includes(boldName)) {
+          return bodyText.length > 0 ? `${hook}\n\n${bodyText}\n\n${closing}` : `${hook}\n\n${closing}`;
+        } else {
+          return `${hook}\n\n${bodyText}\n\n${closing}`;
+        }
       }
 
       function assignUniqueMessage(item) {
@@ -1064,7 +1023,6 @@
       function copyManual() {
           let msg = document.getElementById('manual-msg').value;
           if (!msg) return;
-          copyToClipboard(msg);
           
           let rawTier = document.getElementById('manual-tier').value.replace(/[^0-9]/g, '');
           let tierStr = "";
@@ -1074,6 +1032,7 @@
               tierStr = tierK + "K";
           }
           let st = getTierStyle(tierStr);
+          copyToClipboard(msg, st.a);
           
           if (st.c === 'epic-100k') confetti({ particleCount: 50, spread: 80, colors: ['#fef08a'], shapes: ['star'] });
           else if (st.c === 'epic-500k') confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
@@ -1414,7 +1373,7 @@
         let textarea = document.getElementById(`msg-${id}`);
         let finalMessage = textarea.value; 
         
-        copyToClipboard(finalMessage);
+        copyToClipboard(finalMessage, particleColor);
         
         if (tierClass === 'epic-100k') confetti({ particleCount: 50, spread: 80, colors: ['#fef08a'], shapes: ['star'] });
         else if (tierClass === 'epic-500k') confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
@@ -1434,7 +1393,9 @@
 
       function copyOnly(id) {
         let val = document.getElementById(`msg-${id}`).value;
-        copyToClipboard(val);
+        let item = currentData.find(i => i.id === id);
+        let st = getTierStyle(item ? item.tier : '');
+        copyToClipboard(val, st.a);
         showToast("Đã copy lại!");
       }
 
