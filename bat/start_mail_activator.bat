@@ -1,7 +1,8 @@
 @echo off
 title Passion Star - Trinh Kich Hoat Mail Tu Dong
-chcp 65001 >nul
-cd /d "%~dp0"
+color 0E
+cd /d "%~dp0.."
+cls
 echo ==============================================================================
 echo           PASSION STAR - AUTO MAIL ACTIVATOR SERVER (100%% SINGLE OPT-IN)
 echo ==============================================================================

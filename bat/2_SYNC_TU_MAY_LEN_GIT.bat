@@ -1,7 +1,7 @@
 @echo off
 title Passion Star - Auto Push len GitHub
 color 0B
-cd /d "%~dp0"
+cd /d "%~dp0.."
 cls
 echo ========================================================
 echo    PASSION STAR - AUTO SYNC TU MAY LEN GITHUB [PUSH]

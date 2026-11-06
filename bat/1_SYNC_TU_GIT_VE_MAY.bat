@@ -1,7 +1,7 @@
 @echo off
 title Passion Star - Pull tu GitHub ve may
 color 0A
-cd /d "%~dp0"
+cd /d "%~dp0.."
 cls
 echo ========================================================
 echo    PASSION STAR - DONG BO CODE TU GITHUB VE MAY [PULL]
