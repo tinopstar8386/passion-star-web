@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AI Auto Translator - Tino Workspace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#131c2e',
+                            900: '#0f172a',
+                            950: '#070b14',
+                        },
+                        teal: {
+                            450: '#14b8a6',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #070b14;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(20, 184, 166, 0.14) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(15, 118, 110, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #f1f5f9;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: rgba(19, 28, 46, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-header {
+            background: rgba(7, 11, 20, 0.78);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .teal-gradient-btn {
+            background: linear-gradient(135deg, #0d9488 0%, #0284c7 100%);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .teal-gradient-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px -4px rgba(20, 184, 166, 0.4);
+        }
+        .teal-gradient-btn:active {
+            transform: translateY(0);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.25);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(20, 184, 166, 0.5);
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 0.3; }
+            100% { transform: scale(0.95); opacity: 0.7; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-ring 2.2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-teal-500/30 selection:text-teal-200">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 translate-y-[-10px] transition-all duration-300">
+        <div class="glass-card px-4 py-2.5 rounded-full shadow-2xl border border-teal-500/40 flex items-center gap-2 text-sm font-medium text-teal-200 bg-slate-900/95">
+            <i id="toast-icon" class="ph-fill ph-check-circle text-teal-400 text-lg"></i>
+            <span id="toast-msg">Đã sao chép vào bộ nhớ tạm!</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="glass-header sticky top-0 z-30 px-4 py-3 sm:px-6">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-2">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl teal-gradient-btn flex items-center justify-center shadow-lg shadow-teal-500/20 shrink-0">
+                    <i class="ph-bold ph-translate text-white text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-teal-400 tracking-wide uppercase">Chào anh Tino</span>
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    </div>
+                    <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                        AI Auto Translator
+                        <span class="hidden md:inline-block text-[11px] font-normal px-2 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                            Trung ⇄ Việt & Anh
+                        </span>
+                    </h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <!-- Speech Speed Control -->
+                <button id="speed-btn" onclick="cycleSpeechRate()" class="px-2.5 py-2 rounded-xl glass-card hover:border-teal-500/40 text-xs font-semibold text-slate-300 hover:text-teal-300 transition-all flex items-center gap-1" title="Tốc độ đọc âm thanh">
+                    <i class="ph-bold ph-speaker-high text-teal-400 text-sm"></i>
+                    <span id="speed-label">1.0x</span>
+                </button>
+
+                <!-- Auto-Copy Toggle -->
+                <button id="auto-copy-btn" onclick="toggleAutoCopy()" class="px-2.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition-all bg-slate-800/80 border-slate-700 text-slate-400" title="Tự động copy kết quả ngay khi dịch xong">
+                    <i class="ph-fill ph-copy-simple text-sm"></i>
+                    <span class="hidden md:inline">Auto-Copy:</span>
+                    <span id="auto-copy-text" class="font-semibold">TẮT</span>
+                </button>
+
+                <!-- Toggle Auto-Translate on Paste/Type -->
+                <button id="auto-trigger-btn" onclick="toggleAutoTrigger()" class="px-2.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition-all bg-teal-500/15 border-teal-500/40 text-teal-300" title="Tự động dịch ngay khi dán hoặc ngừng gõ">
+                    <i class="ph-fill ph-lightning text-teal-400 text-sm"></i>
+                    <span class="hidden sm:inline">Auto-Dịch:</span>
+                    <span id="auto-status-text" class="font-semibold">BẬT</span>
+                </button>
+
+                <!-- Settings & API Key Modal Button -->
+                <button onclick="toggleModal('rules-modal')" class="p-2.5 rounded-xl glass-card hover:border-teal-500/40 text-slate-300 hover:text-white transition-all relative" title="Cấu hình câu lệnh & API Key">
+                    <i class="ph ph-gear-six text-lg"></i>
+                    <span id="custom-rule-dot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-teal-400"></span>
+                </button>
+
+                <!-- History Drawer Button -->
+                <button onclick="toggleDrawer(true)" class="p-2.5 rounded-xl glass-card hover:border-teal-500/40 text-slate-300 hover:text-white transition-all relative" title="Lịch sử dịch">
+                    <i class="ph ph-clock-counter-clockwise text-lg"></i>
+                    <span id="history-badge" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-teal-500 text-slate-950 text-[10px] font-bold flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-4 sm:px-6 sm:py-6 flex flex-col gap-5">
+
+        <!-- Translation Mode Selector Bar -->
+        <section class="flex flex-col gap-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 px-1">
+                <div class="flex items-center gap-2">
+                    <span class="font-medium flex items-center gap-1.5 text-slate-300">
+                        <i class="ph-fill ph-arrows-left-right text-teal-400"></i>
+                        Chế độ dịch chính:
+                    </span>
+                    <button onclick="quickSwapDirection()" class="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 flex items-center gap-1 transition-all font-medium" title="Đảo nhanh chiều Trung ⇄ Việt">
+                        <i class="ph-bold ph-arrows-InLineHorizontal"></i>
+                        <span>Đảo chiều nhanh</span>
+                    </button>
+                </div>
+
+                <label class="flex items-center gap-1.5 cursor-pointer select-none text-slate-300 hover:text-teal-300 transition-colors">
+                    <input type="checkbox" id="vocab-toggle" onchange="savePreferences()" checked class="rounded bg-slate-800 border-slate-600 text-teal-500 focus:ring-0">
+                    <span>Hiển thị Từ vựng (Kèm đọc & copy)</span>
+                </label>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5" id="preset-container">
+                <!-- Mode 1: Trung -> Việt (Default) -->
+                <button onclick="selectPreset('zh_to_vi')" data-preset="zh_to_vi" class="preset-btn group text-left p-3 rounded-2xl glass-card border transition-all flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center shrink-0 text-teal-300 mt-0.5 font-bold text-xs">
+                        中➔越
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="text-xs sm:text-sm font-bold text-white truncate">Trung ➔ Việt</div>
+                        <div class="text-[11px] text-slate-400 line-clamp-1">Dịch tiếng Trung sang Việt mượt mà</div>
+                    </div>
+                </button>
+
+                <!-- Mode 2: Việt -> Trung -->
+                <button onclick="selectPreset('vi_to_zh')" data-preset="vi_to_zh" class="preset-btn group text-left p-3 rounded-2xl glass-card border transition-all flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-300 mt-0.5 font-bold text-xs">
+                        越➔中
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="text-xs sm:text-sm font-bold text-white truncate">Việt ➔ Trung (+Đối chiếu Việt)</div>
+                        <div class="text-[11px] text-slate-400 line-clamp-1">Dịch sang Trung & dịch ngược lại Việt</div>
+                    </div>
+                </button>
+
+                <!-- Mode 3: Optional Việt -> Anh & Trung -->
+                <button onclick="selectPreset('vi_to_en_zh')" data-preset="vi_to_en_zh" class="preset-btn group text-left p-3 rounded-2xl glass-card border transition-all flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center shrink-0 text-sky-300 mt-0.5">
+                        <i class="ph-bold ph-arrows-split text-base"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="text-xs sm:text-sm font-bold text-white truncate">Việt ➔ Anh & Trung</div>
+                        <div class="text-[11px] text-slate-400 line-clamp-1">Ra cả Anh & Trung + nghĩa Việt kiểm tra</div>
+                    </div>
+                </button>
+
+                <!-- Mode 4: Auto Detect Trung <-> Việt -->
+                <button onclick="selectPreset('auto_zh_vi')" data-preset="auto_zh_vi" class="preset-btn group text-left p-3 rounded-2xl glass-card border transition-all flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-300 mt-0.5">
+                        <i class="ph-bold ph-magic-wand text-base"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="text-xs sm:text-sm font-bold text-white truncate">Tự nhận diện (Trung ⇄ Việt)</div>
+                        <div class="text-[11px] text-slate-400 line-clamp-1">Luôn hiện cả bản Trung & nghĩa Tiếng Việt</div>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+        <!-- Main Translation Workspace (2 Columns on Desktop, Stacked on Mobile) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+
+            <!-- Left Column: Input Box & Screenshot OCR -->
+            <div class="lg:col-span-5 flex flex-col gap-3">
+                <div class="glass-card rounded-3xl p-4 sm:p-5 flex flex-col flex-1 border border-slate-800/80 focus-within:border-teal-500/50 transition-colors relative">
+                    
+                    <!-- Top Action Bar inside Input -->
+                    <div class="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800/80">
+                        <div class="flex items-center gap-2">
+                            <span id="input-lang-label" class="text-xs font-semibold uppercase tracking-wider text-teal-400">Văn bản gốc (Trung / Việt)</span>
+                            <span id="char-count" class="text-[11px] text-slate-500">0 ký tự</span>
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <!-- Speak Input Text -->
+                            <button onclick="speakInputText()" class="p-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-teal-300 border border-slate-700/70 transition-all" title="Đọc văn bản gốc">
+                                <i class="ph-bold ph-speaker-high text-sm"></i>
+                            </button>
+
+                            <!-- Copy Input Text -->
+                            <button onclick="copyInputText()" class="p-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-teal-300 border border-slate-700/70 transition-all" title="Copy văn bản gốc">
+                                <i class="ph-bold ph-copy text-sm"></i>
+                            </button>
+
+                            <!-- Upload / Camera Screenshot OCR -->
+                            <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                            <button onclick="document.getElementById('image-upload').click()" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/80 text-slate-200 text-xs font-medium flex items-center gap-1.5 border border-slate-700/70 transition-all" title="Tải ảnh chụp màn hình app tiếng Trung">
+                                <i class="ph-bold ph-camera text-teal-400 text-sm"></i>
+                                <span>Dịch Ảnh</span>
+                            </button>
+
+                            <!-- Clear button -->
+                            <button onclick="clearInput()" id="clear-btn" class="hidden p-1.5 rounded-xl bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition-all" title="Xóa nội dung">
+                                <i class="ph-bold ph-x text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Image Preview Banner (When Screenshot is pasted or uploaded) -->
+                    <div id="image-preview-container" class="hidden mb-3 p-2.5 rounded-2xl bg-slate-900/90 border border-teal-500/30 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <img id="image-preview" src="" alt="Screenshot preview" class="w-14 h-14 object-cover rounded-xl border border-slate-700 shrink-0">
+                            <div class="overflow-hidden">
+                                <div class="text-xs font-semibold text-teal-300 flex items-center gap-1">
+                                    <i class="ph-fill ph-image"></i> Ảnh chụp màn hình đã sẵn sàng
+                                </div>
+                                <p class="text-[11px] text-slate-400 truncate">Quét chữ & dịch tự động theo chế độ đã chọn</p>
+                            </div>
+                        </div>
+                        <button onclick="removeImage()" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-rose-400 shrink-0">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </div>
+
+                    <!-- Source Textarea -->
+                    <textarea 
+                        id="source-input"
+                        rows="6"
+                        placeholder="Dán tiếng Trung hoặc tiếng Việt vào đây (hoặc nhấn Ctrl+V để dán ảnh chụp màn hình)...&#10;&#10;Hệ thống tự động dịch ngay lập tức mà không cần gõ câu lệnh!"
+                        class="w-full flex-1 bg-transparent text-slate-100 placeholder-slate-500 resize-none focus:outline-none text-base sm:text-lg leading-relaxed font-normal"
+                    ></textarea>
+
+                    <!-- Primary One-Tap Action Buttons -->
+                    <div class="pt-3 mt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2.5">
+                        <!-- One-Tap Paste & Translate -->
+                        <button onclick="pasteAndTranslate()" class="flex-1 py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700/90 active:scale-[0.99] text-teal-300 font-semibold text-sm flex items-center justify-center gap-2 border border-teal-500/30 transition-all shadow-sm">
+                            <i class="ph-bold ph-clipboard-text text-lg"></i>
+                            <span>Dán & Dịch Ngay (1 Chạm)</span>
+                        </button>
+
+                        <!-- Manual Translate Trigger -->
+                        <button onclick="triggerTranslation(true)" id="translate-btn" class="py-3 px-5 rounded-2xl teal-gradient-btn text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg">
+                            <i class="ph-bold ph-paper-plane-right text-base" id="translate-btn-icon"></i>
+                            <span id="translate-btn-text">Dịch Ngay</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sample Quick Test Chips -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    <span class="text-[11px] text-slate-500 shrink-0">Mẫu thử:</span>
+                    <button onclick="insertSample('这个需求今天下班前能搞定吗？如果接口还没对齐，我们先发个测试包给客户看下效果。', 'zh_to_vi')" class="text-xs px-2.5 py-1 rounded-full glass-card text-slate-300 hover:text-teal-300 hover:border-teal-500/40 shrink-0 transition-all">
+                        🇨🇳➔🇻🇳 Chat công việc Trung
+                    </button>
+                    <button onclick="insertSample('Anh đã kiểm tra bản cập nhật mới rồi, giao diện rất mượt nhưng phần thanh toán cần tối ưu thêm nhé.', 'vi_to_zh')" class="text-xs px-2.5 py-1 rounded-full glass-card text-slate-300 hover:text-teal-300 hover:border-teal-500/40 shrink-0 transition-all">
+                        🇻🇳➔🇨🇳 Nhắn tin tiếng Việt
+                    </button>
+                    <button onclick="insertSample('Vui lòng gửi báo giá chi tiết và tiến độ dự kiến của dự án này trước ngày mai.', 'vi_to_en_zh')" class="text-xs px-2.5 py-1 rounded-full glass-card text-slate-300 hover:text-teal-300 hover:border-teal-500/40 shrink-0 transition-all">
+                        🇻🇳➔🇬🇧+🇨🇳 Dịch Việt sang Anh & Trung
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: AI Output Display -->
+            <div class="lg:col-span-7 flex flex-col gap-4">
+                <div class="glass-card rounded-3xl p-4 sm:p-6 flex-1 flex flex-col justify-between border border-slate-800/80 relative overflow-hidden min-h-[340px]">
+
+                    <!-- Output Top Bar -->
+                    <div class="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-slate-800/80">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+                            <span id="active-preset-label" class="text-xs font-semibold uppercase tracking-wider text-teal-300">
+                                Kết quả dịch: Trung ➔ Việt
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button onclick="stopSpeaking()" id="stop-audio-btn" class="hidden px-2.5 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-semibold flex items-center gap-1">
+                                <i class="ph-fill ph-stop-circle"></i> Dừng đọc
+                            </button>
+                            <button onclick="speakPrimaryOutput()" class="px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-teal-300 text-xs font-medium flex items-center gap-1.5 border border-slate-700/70 transition-all" title="Phát âm thanh bản dịch chính">
+                                <i class="ph-bold ph-speaker-high text-teal-400 text-sm"></i>
+                                <span>Đọc</span>
+                            </button>
+                            <button onclick="copyPrimaryTranslation()" class="px-3 py-1.5 rounded-xl teal-gradient-btn text-white text-xs font-semibold flex items-center gap-1.5 shadow">
+                                <i class="ph-bold ph-copy text-sm"></i>
+                                <span>Copy Chính</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Loading Skeleton -->
+                    <div id="loading-state" class="hidden flex-1 flex flex-col justify-center items-center py-12 gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 animate-pulse-slow">
+                            <i class="ph-bold ph-sparkle text-2xl animate-spin"></i>
+                        </div>
+                        <div class="text-sm font-medium text-teal-200">Gemini đang dịch tự động...</div>
+                        <p class="text-xs text-slate-400">Đang xử lý câu chữ mượt mà nhất cho anh Tino</p>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="empty-state" class="flex-1 flex flex-col justify-center items-center text-center py-10 px-4">
+                        <div class="w-14 h-14 rounded-2xl bg-slate-800/70 border border-slate-700/60 flex items-center justify-center text-slate-400 mb-3">
+                            <i class="ph-duotone ph-translate text-3xl text-teal-400"></i>
+                        </div>
+                        <h3 class="text-sm sm:text-base font-semibold text-slate-200 mb-1">Dịch Tự Động Trung ⇄ Việt & Anh</h3>
+                        <p class="text-xs sm:text-sm text-slate-400 max-w-md leading-relaxed">
+                            Nhấn <span class="text-teal-300 font-medium">"Dán & Dịch Ngay"</span> hoặc dán văn bản/ảnh chụp màn hình. Tất cả kết quả đều có nút <span class="text-teal-300 font-medium">Copy nhớ tạm</span> và <span class="text-teal-300 font-medium">Phát âm thanh</span>.
+                        </p>
+                    </div>
+
+                    <!-- Result Content Container -->
+                    <div id="result-container" class="hidden flex-1 flex flex-col gap-3.5">
+                        
+                        <!-- Extracted OCR Text (only shown when translating from image) -->
+                        <div id="ocr-extracted-box" class="hidden p-3 rounded-2xl bg-slate-900/70 border border-slate-800 text-xs text-slate-300">
+                            <div class="text-[11px] font-semibold text-slate-400 uppercase mb-1.5 flex items-center justify-between">
+                                <span>Văn bản quét từ ảnh (OCR):</span>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="speakTextByElement('ocr-text-content', state.ocrLang || 'zh-CN')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1">
+                                        <i class="ph-bold ph-speaker-high text-teal-400"></i> Đọc
+                                    </button>
+                                    <button onclick="copyTextById('ocr-text-content', 'Đã copy chữ gốc từ ảnh!')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-teal-400 flex items-center gap-1">
+                                        <i class="ph-bold ph-copy"></i> Copy gốc
+                                    </button>
+                                </div>
+                            </div>
+                            <p id="ocr-text-content" class="font-medium text-slate-200 leading-relaxed whitespace-pre-wrap"></p>
+                        </div>
+
+                        <!-- Main Primary Translation Card -->
+                        <div class="p-4 rounded-2xl bg-slate-900/85 border border-teal-500/35 relative group shadow-inner">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <span id="primary-lang-tag" class="text-xs font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="ph-fill ph-check-circle"></i> Bản dịch Tiếng Việt
+                                </span>
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="speakPrimaryOutput()" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-teal-300 text-xs font-medium flex items-center gap-1 border border-slate-700 transition-all" title="Phát âm thanh">
+                                        <i class="ph-bold ph-speaker-high text-teal-400"></i> Đọc
+                                    </button>
+                                    <button onclick="copyPrimaryTranslation()" class="px-2.5 py-1 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 text-xs font-semibold flex items-center gap-1 transition-all">
+                                        <i class="ph-bold ph-copy"></i> Copy
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="primary-output" class="text-base sm:text-lg font-medium text-white leading-relaxed whitespace-pre-wrap select-all"></div>
+
+                            <!-- Dedicated Vietnamese Back-Translation / Verification Sub-Card right underneath Chinese output -->
+                            <div id="vi-verification-box" class="hidden mt-3.5 pt-3 border-t border-teal-500/25">
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span id="vi-verification-tag" class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="ph-fill ph-shield-check"></i> Nghĩa Tiếng Việt của bản dịch Trung (Đối chiếu kiểm tra)
+                                    </span>
+                                    <div class="flex items-center gap-1.5">
+                                        <button onclick="speakTextByElement('vi-verification-output', 'vi-VN')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-300 text-[11px] font-medium flex items-center gap-1 border border-slate-700 transition-all" title="Đọc nghĩa Tiếng Việt đối chiếu">
+                                            <i class="ph-bold ph-speaker-high text-emerald-400"></i> Đọc Việt
+                                        </button>
+                                        <button onclick="copyTextById('vi-verification-output', 'Đã copy nghĩa Tiếng Việt đối chiếu!')" class="px-2 py-0.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold flex items-center gap-1 transition-all">
+                                            <i class="ph-bold ph-copy"></i> Copy Việt
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="vi-verification-output" class="text-sm sm:text-base font-normal text-emerald-100/95 leading-relaxed whitespace-pre-wrap select-all bg-emerald-950/30 border border-emerald-500/20 rounded-xl p-2.5"></div>
+                            </div>
+                        </div>
+
+                        <!-- Secondary Translation Card (Used in Dual Mode Việt -> Anh & Trung, or Chinese Source Display in Trung -> Việt) -->
+                        <div id="secondary-box" class="hidden p-4 rounded-2xl bg-slate-900/65 border border-sky-500/30">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <span id="secondary-lang-tag" class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="ph-fill ph-globe"></i> Bản dịch Tiếng Anh (English)
+                                </span>
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="speakSecondaryOutput()" class="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-sky-300 text-xs font-medium flex items-center gap-1 border border-slate-700 transition-all" title="Phát âm thanh">
+                                        <i class="ph-bold ph-speaker-high text-sky-400"></i> Đọc
+                                    </button>
+                                    <button onclick="copyTextById('secondary-output', 'Đã sao chép vào bộ nhớ tạm!')" class="px-2.5 py-1 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold flex items-center gap-1 transition-all">
+                                        <i class="ph-bold ph-copy"></i> Copy
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="secondary-output" class="text-base sm:text-lg font-medium text-slate-100 leading-relaxed whitespace-pre-wrap select-all"></div>
+                        </div>
+
+                        <!-- Vocabulary Breakdown Only (No Pinyin & No Nuance Clutter) -->
+                        <div id="breakdown-box" class="p-3.5 rounded-2xl bg-slate-900/45 border border-slate-800/90">
+                            <div class="flex items-center justify-between mb-2.5">
+                                <div class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="ph-fill ph-bookmarks text-teal-400 text-sm"></i>
+                                    <span>Từ vựng & Thuật ngữ quan trọng</span>
+                                </div>
+                                <button onclick="copyAllVocab()" class="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-teal-300 text-[11px] font-medium flex items-center gap-1 border border-slate-700 transition-all">
+                                    <i class="ph-bold ph-copy"></i> Copy toàn bộ từ vựng
+                                </button>
+                            </div>
+                            <div id="vocab-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Reply Bar (Connected to Gemini API, Clean Output with Audio & Copy) -->
+                <div class="glass-card rounded-3xl p-4 border border-slate-800/80">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                        <label for="reply-input" class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                            <i class="ph-bold ph-paper-plane-tilt text-teal-400 text-sm"></i>
+                            <span>Trả lời nhanh bằng Gemini AI:</span>
+                        </label>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="setReplyTarget('zh')" id="reply-mode-zh" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/40 transition-all">
+                                Việt ➔ Trung
+                            </button>
+                            <button onclick="setReplyTarget('en_zh')" id="reply-mode-en-zh" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-400 border border-slate-700 transition-all">
+                                Việt ➔ Anh & Trung
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input 
+                            type="text" 
+                            id="reply-input"
+                            onkeydown="if(event.key === 'Enter') translateReply()"
+                            placeholder="Gõ câu trả lời tiếng Việt (VD: Ok gửi bản test cho mình kiểm tra nhé)..."
+                            class="flex-1 bg-slate-900/90 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                        >
+                        <button onclick="translateReply()" id="reply-btn" class="px-4 py-2.5 rounded-2xl teal-gradient-btn text-white text-xs sm:text-sm font-semibold shrink-0 transition-all flex items-center gap-1.5 shadow">
+                            <i class="ph-bold ph-magic-wand"></i>
+                            <span>Dịch Nhanh</span>
+                        </button>
+                    </div>
+
+                    <!-- Quick Preset Reply Chips -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto pt-2.5 pb-0.5 no-scrollbar">
+                        <span class="text-[11px] text-slate-500 shrink-0">Câu mẫu:</span>
+                        <button onclick="quickFillReply('Đã nhận, để mình kiểm tra ngay nhé.')" class="text-[11px] px-2.5 py-1 rounded-full bg-slate-900/90 hover:bg-teal-500/15 text-slate-300 hover:text-teal-300 border border-slate-800 hover:border-teal-500/30 shrink-0 transition-all">
+                            Đã nhận, để mình kiểm tra
+                        </button>
+                        <button onclick="quickFillReply('Vui lòng đợi mình một chút nhé.')" class="text-[11px] px-2.5 py-1 rounded-full bg-slate-900/90 hover:bg-teal-500/15 text-slate-300 hover:text-teal-300 border border-slate-800 hover:border-teal-500/30 shrink-0 transition-all">
+                            Vui lòng đợi một chút
+                        </button>
+                        <button onclick="quickFillReply('Đã duyệt phương án này, cứ tiến hành theo kế hoạch nhé.')" class="text-[11px] px-2.5 py-1 rounded-full bg-slate-900/90 hover:bg-teal-500/15 text-slate-300 hover:text-teal-300 border border-slate-800 hover:border-teal-500/30 shrink-0 transition-all">
+                            Đã duyệt phương án này
+                        </button>
+                        <button onclick="quickFillReply('Gửi lại giúp mình file gốc để đối chiếu nhé.')" class="text-[11px] px-2.5 py-1 rounded-full bg-slate-900/90 hover:bg-teal-500/15 text-slate-300 hover:text-teal-300 border border-slate-800 hover:border-teal-500/30 shrink-0 transition-all">
+                            Gửi lại giúp mình file gốc
+                        </button>
+                    </div>
+
+                    <!-- Quick Reply Output Cards -->
+                    <div id="reply-result-box" class="hidden mt-3 flex flex-col gap-2">
+                        <!-- Chinese Reply Card + Immediate Vietnamese Back-Translation Verification -->
+                        <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-teal-500/30 flex flex-col gap-2.5">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="overflow-hidden flex-1">
+                                    <span class="text-[10px] font-bold uppercase text-teal-400 block mb-0.5">Câu trả lời Tiếng Trung (Giản thể)</span>
+                                    <div id="reply-chinese" class="text-sm sm:text-base font-medium text-white select-all"></div>
+                                </div>
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <button onclick="speakTextByElement('reply-chinese', 'zh-CN')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700" title="Đọc tiếng Trung">
+                                        <i class="ph-bold ph-speaker-high text-sm"></i>
+                                    </button>
+                                    <button onclick="copyTextById('reply-chinese', 'Đã copy câu trả lời Tiếng Trung!')" class="px-3 py-1.5 rounded-xl teal-gradient-btn text-white text-xs font-semibold flex items-center gap-1">
+                                        <i class="ph-bold ph-copy"></i> Copy Trung
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Vietnamese Back-Translation inside Quick Reply -->
+                            <div class="pt-2 border-t border-slate-800/90 flex items-center justify-between gap-3">
+                                <div class="overflow-hidden flex-1">
+                                    <span class="text-[10px] font-bold uppercase text-emerald-400 flex items-center gap-1 mb-0.5">
+                                        <i class="ph-fill ph-shield-check"></i> Dịch lại sang Tiếng Việt (Kiểm tra nghĩa câu Trung):
+                                    </span>
+                                    <div id="reply-vi-verify" class="text-xs sm:text-sm font-normal text-emerald-200 select-all"></div>
+                                </div>
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <button onclick="speakTextByElement('reply-vi-verify', 'vi-VN')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700" title="Đọc nghĩa Tiếng Việt">
+                                        <i class="ph-bold ph-speaker-high text-xs"></i>
+                                    </button>
+                                    <button onclick="copyTextById('reply-vi-verify', 'Đã copy nghĩa Tiếng Việt kiểm tra!')" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold flex items-center gap-1">
+                                        <i class="ph-bold ph-copy"></i> Copy Việt
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- English Reply Card (Shown when Việt -> Anh & Trung is selected in Quick Reply) -->
+                        <div id="reply-english-card" class="hidden p-3 rounded-2xl bg-slate-900/80 border border-sky-500/30 flex items-center justify-between gap-3">
+                            <div class="overflow-hidden flex-1">
+                                <span class="text-[10px] font-bold uppercase text-sky-400 block mb-0.5">Tiếng Anh (English)</span>
+                                <div id="reply-english" class="text-sm sm:text-base font-medium text-slate-100 select-all"></div>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button onclick="speakTextByElement('reply-english', 'en-US')" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700" title="Đọc tiếng Anh">
+                                    <i class="ph-bold ph-speaker-high text-sm"></i>
+                                </button>
+                                <button onclick="copyTextById('reply-english', 'Đã copy câu trả lời Tiếng Anh!')" class="px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold flex items-center gap-1">
+                                    <i class="ph-bold ph-copy"></i> Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Settings & Custom Rules Modal -->
+    <div id="rules-modal" class="fixed inset-0 z-50 hidden bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-lg rounded-3xl p-5 sm:p-6 border border-slate-700 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="ph-bold ph-gear-six text-teal-400"></i>
+                    Cài đặt Dịch thuật & Gemini API Key
+                </h3>
+                <button onclick="toggleModal('rules-modal')" class="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Gemini API Key cá nhân (Tùy chọn khi dùng độc lập trên điện thoại/máy tính):
+                </label>
+                <input 
+                    type="password" 
+                    id="custom-api-key-input"
+                    placeholder="Dán Gemini API Key (AIza...) nếu chạy file ngoài..."
+                    class="w-full rounded-2xl bg-slate-900/90 border border-slate-700 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                >
+                <p class="text-[11px] text-slate-400 mt-1">Nếu để trống, ứng dụng sẽ dùng kết nối mặc định sẵn có.</p>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Quy tắc dịch cố định (System Prompt riêng cho anh Tino):
+                </label>
+                <textarea 
+                    id="custom-rule-input" 
+                    rows="3"
+                    placeholder="VD: Dịch văn phong lịch sự, chuyên ngành công nghệ/thương mại điện tử, giữ nguyên các thuật ngữ tiếng Anh chuyên môn..."
+                    class="w-full rounded-2xl bg-slate-900/90 border border-slate-700 p-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+                ></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+                <button onclick="resetCustomRule()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-medium hover:bg-slate-700">
+                    Xóa cài đặt riêng
+                </button>
+                <button onclick="saveCustomRule()" class="px-5 py-2 rounded-xl teal-gradient-btn text-white text-xs font-semibold">
+                    Lưu & Áp dụng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Slide-over Drawer -->
+    <div id="history-drawer" class="fixed inset-0 z-50 hidden">
+        <div onclick="toggleDrawer(false)" class="absolute inset-0 bg-black/60 backdrop-blur-xs"></div>
+        <div class="absolute right-0 top-0 bottom-0 w-full max-w-md glass-card border-l border-slate-800 p-5 flex flex-col shadow-2xl">
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <i class="ph-bold ph-clock-counter-clockwise text-teal-400 text-xl"></i>
+                    <h3 class="text-base font-bold text-white">Lịch sử dịch gần đây</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="clearHistory()" class="text-xs text-rose-400 hover:underline px-2 py-1">Xóa tất cả</button>
+                    <button onclick="toggleDrawer(false)" class="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white">
+                        <i class="ph-bold ph-x"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="history-list" class="flex-1 overflow-y-auto flex flex-col gap-3 pr-1">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // GEMINI API & STATE CONFIGURATION
+        // ==========================================
+        const apiKey = ""; // Provided automatically by the runtime environment
+        const MODEL_NAME = "gemini-3-flash-preview";
+
+        let state = {
+            preset: localStorage.getItem('tino_translator_preset_v2') || 'zh_to_vi',
+            autoTrigger: localStorage.getItem('tino_translator_auto') !== 'false',
+            autoCopy: localStorage.getItem('tino_translator_autocopy') === 'true',
+            showVocab: localStorage.getItem('tino_translator_vocab') !== 'false',
+            speechRate: parseFloat(localStorage.getItem('tino_translator_speed') || '1.0'),
+            replyTarget: localStorage.getItem('tino_translator_reply_target') || 'zh',
+            customRule: localStorage.getItem('tino_translator_custom_rule') || '',
+            customApiKey: localStorage.getItem('tino_translator_api_key') || '',
+            imageBase64: null,
+            imageMimeType: null,
+            history: JSON.parse(localStorage.getItem('tino_translator_history_v2') || '[]'),
+            lastTranslatedQuery: '',
+            currentPrimaryLang: 'vi-VN',
+            currentSecondaryLang: 'en-US',
+            ocrLang: 'zh-CN',
+            currentVocabList: []
+        };
+
+        let debounceTimer = null;
+
+        // Mode Configurations (Strictly Vietnamese <-> Chinese and Optional Vietnamese -> English & Chinese)
+        const PRESETS = {
+            zh_to_vi: {
+                label: "Kết quả dịch: Trung ➔ Việt",
+                inputLabel: "Văn bản Tiếng Trung",
+                primaryTag: "Bản dịch Tiếng Việt (Tự nhiên, chuẩn xác)",
+                secondaryTag: "Câu Tiếng Trung gốc (Đối chiếu)",
+                primaryLang: "vi-VN",
+                secondaryLang: "zh-CN",
+                dualOutput: false,
+                instruction: `You are an expert Chinese-to-Vietnamese translator. Translate the Chinese source text into natural, fluent, accurate Vietnamese in 'primaryTranslation'. Also place the clean Chinese source text in 'secondaryTranslation' and its literal/accurate Vietnamese meaning in 'vietnameseBackTranslation'. Do NOT include Pinyin or tone notes.`
+            },
+            vi_to_zh: {
+                label: "Kết quả dịch: Việt ➔ Trung (+Nghĩa Tiếng Việt đối chiếu)",
+                inputLabel: "Văn bản Tiếng Việt",
+                primaryTag: "Bản dịch Tiếng Trung (简体中文)",
+                secondaryTag: "",
+                primaryLang: "zh-CN",
+                secondaryLang: "vi-VN",
+                dualOutput: false,
+                instruction: `You are an expert Vietnamese-to-Chinese translator.
+1. Translate the Vietnamese source text into natural, fluent, native-sounding Simplified Chinese (简体中文) in 'primaryTranslation'.
+2. Immediately translate that generated Chinese sentence BACK into accurate, clear Vietnamese in 'vietnameseBackTranslation' so the user can verify the exact meaning and nuance of the Chinese translation before sending it.
+Do NOT include Pinyin or tone explanations.`
+            },
+            vi_to_en_zh: {
+                label: "Kết quả dịch: Việt ➔ Anh & Trung (+Nghĩa Tiếng Việt đối chiếu)",
+                inputLabel: "Văn bản Tiếng Việt",
+                primaryTag: "Bản dịch Tiếng Trung (简体中文)",
+                secondaryTag: "Bản dịch Tiếng Anh (Natural English)",
+                primaryLang: "zh-CN",
+                secondaryLang: "en-US",
+                dualOutput: true,
+                instruction: `You are an expert multilingual translator.
+1. Translate the user's Vietnamese text into natural Simplified Chinese (put in 'primaryTranslation') AND natural idiomatic English (put in 'secondaryTranslation').
+2. Translate the generated Simplified Chinese text BACK into clear Vietnamese in 'vietnameseBackTranslation' so the user can verify the exact meaning of the Chinese output.
+Do NOT include Pinyin or tone explanations.`
+            },
+            auto_zh_vi: {
+                label: "Tự động nhận diện (Trung ⇄ Việt + Nghĩa đối chiếu)",
+                inputLabel: "Tự nhận diện Trung / Việt",
+                primaryTag: "Bản dịch Chính (Tự nhận diện chiều dịch)",
+                secondaryTag: "",
+                primaryLang: "auto",
+                secondaryLang: "en-US",
+                dualOutput: false,
+                instruction: `Detect the language of the source text automatically:
+- If the input is primarily Chinese, translate it into natural, fluent Vietnamese in 'primaryTranslation', put the clean Chinese text in 'secondaryTranslation', and set 'detectedTargetLang' to 'vi-VN'.
+- If the input is primarily Vietnamese (or English), translate it into natural Simplified Chinese in 'primaryTranslation', set 'detectedTargetLang' to 'zh-CN', AND provide a faithful back-translation of that Chinese sentence into Vietnamese in 'vietnameseBackTranslation' so the user can verify the meaning of the Chinese output.
+Do NOT include Pinyin or tone notes.`
+            }
+        };
+
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        window.onload = function() {
+            document.getElementById('vocab-toggle').checked = state.showVocab;
+            document.getElementById('custom-rule-input').value = state.customRule;
+            document.getElementById('custom-api-key-input').value = state.customApiKey;
+            document.getElementById('speed-label').textContent = `${state.speechRate.toFixed(1)}x`;
+
+            updateCustomRuleIndicator();
+            updateAutoTriggerUI();
+            updateAutoCopyUI();
+            setReplyTarget(state.replyTarget, false);
+            selectPreset(state.preset, false);
+            renderHistory();
+
+            const sourceInput = document.getElementById('source-input');
+            sourceInput.addEventListener('input', () => {
+                const text = sourceInput.value;
+                document.getElementById('char-count').textContent = `${text.length} ký tự`;
+                document.getElementById('clear-btn').classList.toggle('hidden', text.length === 0 && !state.imageBase64);
+
+                if (state.autoTrigger && text.trim().length > 1) {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        triggerTranslation(false);
+                    }, 800);
+                }
+            });
+
+            window.addEventListener('paste', handleGlobalPaste);
+        };
+
+        // ==========================================
+        // UI INTERACTION & MODES
+        // ==========================================
+        function selectPreset(presetKey, retranslate = true) {
+            if (!PRESETS[presetKey]) presetKey = 'zh_to_vi';
+            state.preset = presetKey;
+            localStorage.setItem('tino_translator_preset_v2', presetKey);
+
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                const isSelected = btn.getAttribute('data-preset') === presetKey;
+                if (isSelected) {
+                    btn.classList.add('border-teal-500/80', 'bg-teal-500/10', 'shadow-lg', 'shadow-teal-500/5');
+                    btn.classList.remove('border-white/10');
+                } else {
+                    btn.classList.remove('border-teal-500/80', 'bg-teal-500/10', 'shadow-lg', 'shadow-teal-500/5');
+                    btn.classList.add('border-white/10');
+                }
+            });
+
+            const presetConfig = PRESETS[presetKey];
+            document.getElementById('active-preset-label').textContent = presetConfig.label;
+            document.getElementById('input-lang-label').textContent = presetConfig.inputLabel;
+            document.getElementById('primary-lang-tag').innerHTML = `<i class="ph-fill ph-check-circle"></i> ${presetConfig.primaryTag}`;
+            if (presetConfig.secondaryTag) {
+                document.getElementById('secondary-lang-tag').innerHTML = `<i class="ph-fill ph-globe"></i> ${presetConfig.secondaryTag}`;
+            }
+
+            const hasContent = document.getElementById('source-input').value.trim().length > 0 || state.imageBase64;
+            if (retranslate && hasContent) {
+                state.lastTranslatedQuery = '';
+                triggerTranslation(true);
+            }
+        }
+
+        function quickSwapDirection() {
+            const nextPreset = state.preset === 'zh_to_vi' ? 'vi_to_zh' : 'zh_to_vi';
+            const currentOutput = document.getElementById('primary-output').textContent.trim();
+            if (currentOutput) {
+                document.getElementById('source-input').value = currentOutput;
+                document.getElementById('char-count').textContent = `${currentOutput.length} ký tự`;
+            }
+            selectPreset(nextPreset, true);
+            showToast(nextPreset === 'zh_to_vi' ? "Đã chuyển: Trung ➔ Việt" : "Đã chuyển: Việt ➔ Trung");
+        }
+
+        function toggleAutoTrigger() {
+            state.autoTrigger = !state.autoTrigger;
+            localStorage.setItem('tino_translator_auto', state.autoTrigger);
+            updateAutoTriggerUI();
+            showToast(state.autoTrigger ? "Đã BẬT tự động dịch khi dán/gõ" : "Đã TẮT tự động dịch");
+        }
+
+        function updateAutoTriggerUI() {
+            const btn = document.getElementById('auto-trigger-btn');
+            const statusText = document.getElementById('auto-status-text');
+            if (state.autoTrigger) {
+                statusText.textContent = "BẬT";
+                btn.className = "px-2.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition-all bg-teal-500/15 border-teal-500/40 text-teal-300";
+            } else {
+                statusText.textContent = "TẮT";
+                btn.className = "px-2.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition-all bg-slate-800/80 border-slate-700 text-slate-400";
+            }
+        }
+
+        function toggleAutoCopy() {
+            state.autoCopy = !state.autoCopy;
+            localStorage.setItem('tino_translator_autocopy', state.autoCopy);
+            updateAutoCopyUI();
+            showToast(state.autoCopy ? "Đã BẬT tự động Copy kết quả sau khi dịch" : "Đã TẮT tự động Copy");
+        }
+
+        function updateAutoCopyUI() {
+            const btn = document.getElementById('auto-copy-btn');
+            const text = document.getElementById('auto-copy-text');
+            if (state.autoCopy) {
+                text.textContent = "BẬT";
+                btn.className = "px-2.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition-all bg-teal-500/15 border-teal-500/40 text-teal-300";
+            } else {
+                text.textContent = "TẮT";
+                btn.className = "px-2.5 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 border transition-all bg-slate-800/80 border-slate-700 text-slate-400";
+            }
+        }
+
+        function cycleSpeechRate() {
+            const rates = [0.8, 1.0, 1.2];
+            const idx = rates.indexOf(state.speechRate);
+            state.speechRate = rates[(idx + 1) % rates.length];
+            localStorage.setItem('tino_translator_speed', state.speechRate);
+            document.getElementById('speed-label').textContent = `${state.speechRate.toFixed(1)}x`;
+            showToast(`Tốc độ đọc âm thanh: ${state.speechRate.toFixed(1)}x`, "info");
+        }
+
+        function setReplyTarget(target, notify = true) {
+            state.replyTarget = target;
+            localStorage.setItem('tino_translator_reply_target', target);
+            const zhBtn = document.getElementById('reply-mode-zh');
+            const enZhBtn = document.getElementById('reply-mode-en-zh');
+
+            if (target === 'zh') {
+                zhBtn.className = "px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/40 transition-all";
+                enZhBtn.className = "px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-400 border border-slate-700 transition-all";
+            } else {
+                enZhBtn.className = "px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40 transition-all";
+                zhBtn.className = "px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 text-slate-400 border border-slate-700 transition-all";
+            }
+        }
+
+        function savePreferences() {
+            state.showVocab = document.getElementById('vocab-toggle').checked;
+            localStorage.setItem('tino_translator_vocab', state.showVocab);
+            document.getElementById('breakdown-box').classList.toggle('hidden', !state.showVocab);
+        }
+
+        function saveCustomRule() {
+            state.customRule = document.getElementById('custom-rule-input').value.trim();
+            state.customApiKey = document.getElementById('custom-api-key-input').value.trim();
+            localStorage.setItem('tino_translator_custom_rule', state.customRule);
+            localStorage.setItem('tino_translator_api_key', state.customApiKey);
+            updateCustomRuleIndicator();
+            toggleModal('rules-modal');
+            showToast("Đã lưu cài đặt thành công!");
+            if (document.getElementById('source-input').value.trim()) {
+                state.lastTranslatedQuery = '';
+                triggerTranslation(true);
+            }
+        }
+
+        function resetCustomRule() {
+            document.getElementById('custom-rule-input').value = '';
+            document.getElementById('custom-api-key-input').value = '';
+            state.customRule = '';
+            state.customApiKey = '';
+            localStorage.removeItem('tino_translator_custom_rule');
+            localStorage.removeItem('tino_translator_api_key');
+            updateCustomRuleIndicator();
+            toggleModal('rules-modal');
+            showToast("Đã khôi phục cài đặt gốc");
+        }
+
+        function updateCustomRuleIndicator() {
+            const dot = document.getElementById('custom-rule-dot');
+            dot.classList.toggle('hidden', !state.customRule && !state.customApiKey);
+        }
+
+        // ==========================================
+        // CLIPBOARD & SCREENSHOT OCR HANDLERS
+        // ==========================================
+        async function pasteAndTranslate() {
+            const sourceInput = document.getElementById('source-input');
+            sourceInput.focus();
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    if (text && text.trim()) {
+                        sourceInput.value = text.trim();
+                        document.getElementById('char-count').textContent = `${sourceInput.value.length} ký tự`;
+                        document.getElementById('clear-btn').classList.remove('hidden');
+                        triggerTranslation(true);
+                        return;
+                    }
+                }
+                showToast("Hãy nhấn Ctrl+V (hoặc chạm giữ -> Dán) vào ô văn bản", "info");
+            } catch (err) {
+                showToast("Hãy nhấn Ctrl+V hoặc chạm Dán trực tiếp vào ô nhập", "info");
+            }
+        }
+
+        function handleGlobalPaste(e) {
+            const activeTag = document.activeElement?.id;
+            if (activeTag === 'reply-input' || activeTag === 'custom-rule-input' || activeTag === 'custom-api-key-input') return;
+
+            const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
+            if (!items) return;
+
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    loadImageFile(file);
+                    return;
+                }
+            }
+
+            if (activeTag !== 'source-input') {
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                if (pastedText && pastedText.trim()) {
+                    e.preventDefault();
+                    const sourceInput = document.getElementById('source-input');
+                    sourceInput.value = pastedText.trim();
+                    document.getElementById('char-count').textContent = `${sourceInput.value.length} ký tự`;
+                    document.getElementById('clear-btn').classList.remove('hidden');
+                    if (state.autoTrigger) {
+                        triggerTranslation(true);
+                    }
+                }
+            } else {
+                if (state.autoTrigger) {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => triggerTranslation(true), 150);
+                }
+            }
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files?.[0];
+            if (file) {
+                loadImageFile(file);
+            }
+        }
+
+        function loadImageFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const dataUrl = evt.target.result;
+                state.imageBase64 = dataUrl.split(',')[1];
+                state.imageMimeType = file.type || 'image/png';
+
+                document.getElementById('image-preview').src = dataUrl;
+                document.getElementById('image-preview-container').classList.remove('hidden');
+                document.getElementById('clear-btn').classList.remove('hidden');
+
+                showToast("Đã nhận ảnh! Đang quét chữ & dịch...");
+                triggerTranslation(true);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            state.imageBase64 = null;
+            state.imageMimeType = null;
+            document.getElementById('image-upload').value = '';
+            document.getElementById('image-preview-container').classList.add('hidden');
+            document.getElementById('ocr-extracted-box').classList.add('hidden');
+            const text = document.getElementById('source-input').value;
+            document.getElementById('clear-btn').classList.toggle('hidden', text.length === 0);
+        }
+
+        function clearInput() {
+            document.getElementById('source-input').value = '';
+            document.getElementById('char-count').textContent = '0 ký tự';
+            removeImage();
+            document.getElementById('clear-btn').classList.add('hidden');
+            state.lastTranslatedQuery = '';
+        }
+
+        function insertSample(sampleText, targetPreset) {
+            if (targetPreset && targetPreset !== state.preset) {
+                selectPreset(targetPreset, false);
+            }
+            const sourceInput = document.getElementById('source-input');
+            sourceInput.value = sampleText;
+            document.getElementById('char-count').textContent = `${sampleText.length} ký tự`;
+            document.getElementById('clear-btn').classList.remove('hidden');
+            triggerTranslation(true);
+        }
+
+        // ==========================================
+        // GEMINI API CALL WITH EXPONENTIAL BACKOFF
+        // ==========================================
+        async function callGeminiAPI(payload, maxRetries = 4) {
+            const effectiveKey = state.customApiKey || apiKey;
+            const modelsToTry = [MODEL_NAME, "gemini-2.5-flash"];
+            let delay = 1000;
+
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                const activeModel = modelsToTry[Math.min(attempt, modelsToTry.length - 1)];
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${effectiveKey}`;
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP status ${response.status}`);
+                    }
+
+                    return await response.json();
+                } catch (err) {
+                    if (attempt === maxRetries - 1) throw err;
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        // ==========================================
+        // MAIN TRANSLATION LOGIC (NO PINYIN, NO NUANCE)
+        // ==========================================
+        async function triggerTranslation(force = false) {
+            const sourceText = document.getElementById('source-input').value.trim();
+            const hasImage = Boolean(state.imageBase64);
+
+            if (!sourceText && !hasImage) {
+                if (force) showToast("Vui lòng nhập hoặc dán nội dung cần dịch", "info");
+                return;
+            }
+
+            const querySignature = `${state.preset}|${sourceText}|${hasImage ? state.imageBase64.slice(0, 40) : ''}`;
+            if (!force && querySignature === state.lastTranslatedQuery) {
+                return;
+            }
+            state.lastTranslatedQuery = querySignature;
+
+            setLoadingState(true);
+
+            const presetConfig = PRESETS[state.preset];
+            const systemInstructionText = `
+${presetConfig.instruction}
+${state.customRule ? `\nAdditional User Rule: ${state.customRule}` : ''}
+
+Strict Output Rules:
+1. Do NOT output Pinyin anywhere.
+2. Do NOT output tone/nuance explanations.
+3. Always provide 'vietnameseBackTranslation': Whenever 'primaryTranslation' is in Chinese, 'vietnameseBackTranslation' MUST be the direct, accurate Vietnamese translation of that Chinese sentence so the user can verify what the Chinese translation means in Vietnamese.
+4. If an image is provided, extract all visible text accurately into 'extractedText', then translate it according to the active mode.
+5. For 'vocabulary', extract 3 to 6 important words/phrases from the sentence. Each item has:
+   - 'term': The Chinese word/phrase (always include the Chinese characters).
+   - 'meaning': Concise Vietnamese meaning (and English meaning if in dual mode).
+   - 'lang': Language code for TTS playback of 'term' ('zh-CN' for Chinese terms, 'en-US' for English terms).
+`.trim();
+
+            const userParts = [];
+            if (hasImage) {
+                userParts.push({
+                    text: sourceText 
+                        ? `Extract text from this image and translate along with: ${sourceText}`
+                        : `Extract all text from this screenshot and translate it according to the instructions.`
+                });
+                userParts.push({
+                    inlineData: {
+                        mimeType: state.imageMimeType,
+                        data: state.imageBase64
+                    }
+                });
+            } else {
+                userParts.push({
+                    text: `Translate the following text:\n\n${sourceText}`
+                });
+            }
+
+            const payload = {
+                contents: [{ role: "user", parts: userParts }],
+                systemInstruction: { parts: [{ text: systemInstructionText }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            extractedText: { type: "STRING" },
+                            primaryTranslation: { type: "STRING" },
+                            vietnameseBackTranslation: { type: "STRING" },
+                            secondaryTranslation: { type: "STRING" },
+                            detectedTargetLang: { type: "STRING" },
+                            vocabulary: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        term: { type: "STRING" },
+                                        meaning: { type: "STRING" },
+                                        lang: { type: "STRING" }
+                                    },
+                                    propertyOrdering: ["term", "meaning", "lang"]
+                                }
+                            }
+                        },
+                        propertyOrdering: ["extractedText", "primaryTranslation", "vietnameseBackTranslation", "secondaryTranslation", "detectedTargetLang", "vocabulary"]
+                    }
+                }
+            };
+
+            try {
+                const result = await callGeminiAPI(payload);
+                const rawJson = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!rawJson) throw new Error("Empty response from Gemini");
+
+                const data = JSON.parse(rawJson);
+                renderTranslationOutput(data, sourceText || data.extractedText || "[Ảnh chụp màn hình]");
+            } catch (error) {
+                console.error("Translation error:", error);
+                showToast("Có lỗi kết nối AI, vui lòng thử lại!", "error");
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        function renderTranslationOutput(data, originalSource) {
+            const presetConfig = PRESETS[state.preset];
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('result-container').classList.remove('hidden');
+
+            // Determine language codes for speech synthesis
+            let isPrimaryChinese = false;
+            if (state.preset === 'auto_zh_vi') {
+                isPrimaryChinese = data.detectedTargetLang === 'zh-CN' || containsChinese(data.primaryTranslation);
+                state.currentPrimaryLang = isPrimaryChinese ? 'zh-CN' : 'vi-VN';
+                document.getElementById('primary-lang-tag').innerHTML = isPrimaryChinese 
+                    ? `<i class="ph-fill ph-check-circle"></i> Bản dịch Tiếng Trung (简体中文)`
+                    : `<i class="ph-fill ph-check-circle"></i> Bản dịch Tiếng Việt`;
+            } else {
+                state.currentPrimaryLang = presetConfig.primaryLang;
+                isPrimaryChinese = (state.currentPrimaryLang === 'zh-CN');
+            }
+            state.currentSecondaryLang = presetConfig.secondaryLang;
+
+            // OCR Box if image was used
+            const ocrBox = document.getElementById('ocr-extracted-box');
+            if (state.imageBase64 && data.extractedText) {
+                ocrBox.classList.remove('hidden');
+                document.getElementById('ocr-text-content').textContent = data.extractedText;
+                state.ocrLang = containsChinese(data.extractedText) ? 'zh-CN' : 'vi-VN';
+            } else {
+                ocrBox.classList.add('hidden');
+            }
+
+            // Primary Output
+            const primaryText = data.primaryTranslation || '';
+            document.getElementById('primary-output').textContent = primaryText;
+
+            // Vietnamese Back-Translation Verification Box (Always shown whenever primary output is Chinese)
+            const viVerifyBox = document.getElementById('vi-verification-box');
+            const viVerifyOutput = document.getElementById('vi-verification-output');
+            if (isPrimaryChinese && data.vietnameseBackTranslation) {
+                viVerifyBox.classList.remove('hidden');
+                viVerifyOutput.textContent = data.vietnameseBackTranslation;
+            } else {
+                viVerifyBox.classList.add('hidden');
+                viVerifyOutput.textContent = '';
+            }
+
+            // Secondary Output (Shown in Dual Mode: Việt -> Anh & Trung, OR in Trung -> Việt to show clean Chinese text alongside Vietnamese)
+            const secondaryBox = document.getElementById('secondary-box');
+            if (presetConfig.dualOutput && data.secondaryTranslation) {
+                secondaryBox.classList.remove('hidden');
+                document.getElementById('secondary-lang-tag').innerHTML = `<i class="ph-fill ph-globe"></i> ${presetConfig.secondaryTag}`;
+                document.getElementById('secondary-output').textContent = data.secondaryTranslation;
+                state.currentSecondaryLang = 'en-US';
+            } else if (!isPrimaryChinese && (data.secondaryTranslation || containsChinese(originalSource))) {
+                const zhSourceText = data.secondaryTranslation || originalSource;
+                secondaryBox.classList.remove('hidden');
+                document.getElementById('secondary-lang-tag').innerHTML = `<i class="ph-fill ph-translate"></i> Câu Tiếng Trung gốc (Đối chiếu)`;
+                document.getElementById('secondary-output').textContent = zhSourceText;
+                state.currentSecondaryLang = 'zh-CN';
+            } else {
+                secondaryBox.classList.add('hidden');
+                document.getElementById('secondary-output').textContent = '';
+            }
+
+            // Auto-Copy if enabled
+            if (state.autoCopy && primaryText) {
+                copyToClipboard(primaryText, "Đã dịch & Tự động Copy vào bộ nhớ tạm!");
+            }
+
+            // Vocabulary Breakdown (Clean: Term + Meaning + Audio + Copy, NO Pinyin)
+            const vocabContainer = document.getElementById('vocab-list');
+            vocabContainer.innerHTML = '';
+            state.currentVocabList = Array.isArray(data.vocabulary) ? data.vocabulary : [];
+
+            if (state.currentVocabList.length > 0) {
+                state.currentVocabList.forEach((item) => {
+                    const langCode = item.lang || (containsChinese(item.term) ? 'zh-CN' : 'en-US');
+                    const card = document.createElement('div');
+                    card.className = "p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/90 hover:border-teal-500/40 flex items-center justify-between gap-2 transition-all";
+                    card.innerHTML = `
+                        <div class="overflow-hidden">
+                            <div class="font-bold text-teal-300 text-sm truncate select-all">${escapeHtml(item.term)}</div>
+                            <div class="text-slate-300 text-xs truncate select-all">${escapeHtml(item.meaning)}</div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="speakRawText('${escapeForJsString(item.term)}', '${langCode}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-teal-400 transition-colors" title="Đọc phát âm từ này">
+                                <i class="ph-bold ph-speaker-high text-xs"></i>
+                            </button>
+                            <button onclick="speakRawText('${escapeForJsString(item.meaning)}', 'vi-VN')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 transition-colors" title="Đọc nghĩa Tiếng Việt">
+                                <i class="ph-bold ph-speaker-simple-high text-xs"></i>
+                            </button>
+                            <button onclick="copyToClipboard('${escapeForJsString(item.term)}', 'Đã copy từ: ${escapeForJsString(item.term)}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors" title="Copy từ này">
+                                <i class="ph-bold ph-copy text-xs"></i>
+                            </button>
+                        </div>
+                    `;
+                    vocabContainer.appendChild(card);
+                });
+            } else {
+                vocabContainer.innerHTML = `<span class="text-slate-500 italic col-span-2">Không có thuật ngữ phức tạp.</span>`;
+            }
+
+            document.getElementById('breakdown-box').classList.toggle('hidden', !state.showVocab);
+
+            // Save to local history (including Vietnamese verification meaning)
+            saveToHistory({
+                id: Date.now(),
+                source: originalSource.slice(0, 220),
+                primary: primaryText,
+                viVerify: isPrimaryChinese ? (data.vietnameseBackTranslation || '') : '',
+                secondary: presetConfig.dualOutput ? (data.secondaryTranslation || '') : '',
+                primaryLang: state.currentPrimaryLang,
+                preset: state.preset,
+                timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+            });
+        }
+
+        // ==========================================
+        // QUICK REPLY BAR (GEMINI API, WITH VIETNAMESE BACK-TRANSLATION)
+        // ==========================================
+        function quickFillReply(sampleText) {
+            const replyInput = document.getElementById('reply-input');
+            replyInput.value = sampleText;
+            translateReply();
+        }
+
+        async function translateReply() {
+            const replyInput = document.getElementById('reply-input');
+            const text = replyInput.value.trim();
+            if (!text) {
+                showToast("Hãy nhập câu tiếng Việt cần dịch nhanh", "info");
+                return;
+            }
+
+            const btn = document.getElementById('reply-btn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> <span>Đang dịch...</span>`;
+
+            const isDual = state.replyTarget === 'en_zh';
+            const promptText = isDual
+                ? `Translate this message into BOTH natural Simplified Chinese ('chinese') and natural English ('english') for messaging/work reply. Also translate the generated 'chinese' sentence BACK into accurate Vietnamese ('vietnameseBackTranslation') so the user can verify the exact meaning of the Chinese reply. Do NOT include Pinyin: "${text}"`
+                : `Translate this message into natural, polite Simplified Chinese ('chinese') for messaging/work reply. Also translate the generated 'chinese' sentence BACK into accurate Vietnamese ('vietnameseBackTranslation') so the user can verify the exact meaning of the Chinese reply before sending. Do NOT include Pinyin: "${text}"`;
+
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: promptText }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            chinese: { type: "STRING" },
+                            vietnameseBackTranslation: { type: "STRING" },
+                            english: { type: "STRING" }
+                        },
+                        propertyOrdering: ["chinese", "vietnameseBackTranslation", "english"]
+                    }
+                }
+            };
+
+            try {
+                const res = await callGeminiAPI(payload);
+                const raw = res?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    document.getElementById('reply-chinese').textContent = parsed.chinese || '';
+                    document.getElementById('reply-vi-verify').textContent = parsed.vietnameseBackTranslation || '';
+                    document.getElementById('reply-result-box').classList.remove('hidden');
+
+                    const enCard = document.getElementById('reply-english-card');
+                    if (isDual && parsed.english) {
+                        document.getElementById('reply-english').textContent = parsed.english;
+                        enCard.classList.remove('hidden');
+                    } else {
+                        enCard.classList.add('hidden');
+                    }
+
+                    copyToClipboard(parsed.chinese, "Đã dịch & Tự động Copy câu Tiếng Trung!");
+                }
+            } catch (e) {
+                showToast("Không thể dịch câu trả lời, vui lòng thử lại!", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        // ==========================================
+        // AUDIO PLAYBACK (TEXT-TO-SPEECH) & COPY UTILITIES
+        // ==========================================
+        function containsChinese(str) {
+            return /[\u4e00-\u9fa5]/.test(str || '');
+        }
+
+        function speakPrimaryOutput() {
+            const text = document.getElementById('primary-output').textContent.trim();
+            if (!text) {
+                showToast("Chưa có kết quả để đọc", "info");
+                return;
+            }
+            speakRawText(text, state.currentPrimaryLang);
+        }
+
+        function speakSecondaryOutput() {
+            const text = document.getElementById('secondary-output').textContent.trim();
+            if (!text) return;
+            speakRawText(text, state.currentSecondaryLang);
+        }
+
+        function speakInputText() {
+            const text = document.getElementById('source-input').value.trim();
+            if (!text) {
+                showToast("Chưa có văn bản gốc để đọc", "info");
+                return;
+            }
+            const lang = containsChinese(text) ? 'zh-CN' : 'vi-VN';
+            speakRawText(text, lang);
+        }
+
+        function speakTextByElement(elementId, langCode) {
+            const text = document.getElementById(elementId)?.textContent?.trim();
+            if (!text) return;
+            speakRawText(text, langCode);
+        }
+
+        function speakRawText(text, langCode = 'zh-CN') {
+            if (!('speechSynthesis' in window)) {
+                showToast("Trình duyệt không hỗ trợ đọc giọng nói", "error");
+                return;
+            }
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = langCode;
+            utterance.rate = state.speechRate;
+
+            // Try to pick a matching high-quality voice if available
+            const voices = window.speechSynthesis.getVoices();
+            const matchedVoice = voices.find(v => v.lang.toLowerCase().includes(langCode.toLowerCase().split('-')[0]));
+            if (matchedVoice) utterance.voice = matchedVoice;
+
+            const stopBtn = document.getElementById('stop-audio-btn');
+            utterance.onstart = () => stopBtn.classList.remove('hidden');
+            utterance.onend = () => stopBtn.classList.add('hidden');
+            utterance.onerror = () => stopBtn.classList.add('hidden');
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function stopSpeaking() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            document.getElementById('stop-audio-btn').classList.add('hidden');
+        }
+
+        function copyInputText() {
+            const text = document.getElementById('source-input').value.trim();
+            if (!text) return;
+            copyToClipboard(text, "Đã copy văn bản gốc!");
+        }
+
+        function copyPrimaryTranslation() {
+            const text = document.getElementById('primary-output').textContent.trim();
+            if (!text) return;
+            copyToClipboard(text, "Đã sao chép bản dịch chính vào bộ nhớ tạm!");
+        }
+
+        function copyTextById(elementId, customMsg) {
+            const text = document.getElementById(elementId)?.textContent?.trim();
+            if (!text) return;
+            copyToClipboard(text, customMsg || "Đã sao chép vào bộ nhớ tạm!");
+        }
+
+        function copyAllVocab() {
+            if (!state.currentVocabList || state.currentVocabList.length === 0) {
+                showToast("Chưa có danh sách từ vựng để copy", "info");
+                return;
+            }
+            const formatted = state.currentVocabList.map(v => `${v.term}: ${v.meaning}`).join('\n');
+            copyToClipboard(formatted, "Đã copy toàn bộ danh sách từ vựng!");
+        }
+
+        function copyToClipboard(text, message) {
+            const tempInput = document.createElement('textarea');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showToast(message || "Đã sao chép!");
+        }
+
+        function setLoadingState(isLoading) {
+            const loadingEl = document.getElementById('loading-state');
+            const emptyEl = document.getElementById('empty-state');
+            const resultEl = document.getElementById('result-container');
+            const btnText = document.getElementById('translate-btn-text');
+            const btnIcon = document.getElementById('translate-btn-icon');
+
+            if (isLoading) {
+                loadingEl.classList.remove('hidden');
+                emptyEl.classList.add('hidden');
+                resultEl.classList.add('hidden');
+                btnText.textContent = "Đang dịch...";
+                btnIcon.className = "ph-bold ph-spinner animate-spin text-base";
+            } else {
+                loadingEl.classList.add('hidden');
+                btnText.textContent = "Dịch Ngay";
+                btnIcon.className = "ph-bold ph-paper-plane-right text-base";
+            }
+        }
+
+        function saveToHistory(entry) {
+            state.history.unshift(entry);
+            if (state.history.length > 25) state.history.pop();
+            localStorage.setItem('tino_translator_history_v2', JSON.stringify(state.history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            const badge = document.getElementById('history-badge');
+
+            if (state.history.length > 0) {
+                badge.textContent = state.history.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            if (state.history.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12 text-slate-500 text-xs">
+                        Chưa có lịch sử dịch nào.
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = state.history.map(item => `
+                <div class="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-teal-500/40 transition-all flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between text-[11px] text-slate-400">
+                        <span>${escapeHtml(item.timestamp)}</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="speakRawText('${escapeForJsString(item.primary)}', '${item.primaryLang || 'zh-CN'}')" class="text-slate-300 hover:text-teal-400 flex items-center gap-1">
+                                <i class="ph-bold ph-speaker-high"></i> Đọc
+                            </button>
+                            <button onclick="copyToClipboard('${escapeForJsString(item.primary)}', 'Đã copy bản dịch!')" class="text-teal-400 hover:underline flex items-center gap-1">
+                                <i class="ph-bold ph-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-xs text-slate-400 line-clamp-2">${escapeHtml(item.source)}</div>
+                    <div class="text-sm font-medium text-white">${escapeHtml(item.primary)}</div>
+                    ${item.viVerify ? `<div class="text-xs text-emerald-300/95 bg-emerald-950/40 border border-emerald-500/20 rounded-lg px-2 py-1">🇻🇳 Đối chiếu: ${escapeHtml(item.viVerify)}</div>` : ''}
+                    ${item.secondary ? `<div class="text-xs text-sky-300/90">${escapeHtml(item.secondary)}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            state.history = [];
+            localStorage.removeItem('tino_translator_history_v2');
+            renderHistory();
+            showToast("Đã xóa lịch sử dịch");
+        }
+
+        function toggleModal(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('hidden');
+        }
+
+        function toggleDrawer(open) {
+            const drawer = document.getElementById('history-drawer');
+            drawer.classList.toggle('hidden', !open);
+        }
+
+        let toastTimeout = null;
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-msg');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.textContent = msg;
+            if (type === 'error') {
+                iconEl.className = "ph-fill ph-warning-circle text-rose-400 text-lg";
+            } else if (type === 'info') {
+                iconEl.className = "ph-fill ph-info text-sky-400 text-lg";
+            } else {
+                iconEl.className = "ph-fill ph-check-circle text-teal-400 text-lg";
+            }
+
+            toast.classList.remove('opacity-0', 'translate-y-[-10px]');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 2400);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function escapeForJsString(str) {
+            if (!str) return '';
+            return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, "\\n");
+        }
+    </script>
+</body>
+</html>
