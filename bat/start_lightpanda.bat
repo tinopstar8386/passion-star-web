@@ -1,13 +1,13 @@
 @echo off
 chcp 65001 >nul
-title Khởi chạy Lightpanda Headless Browser (Port 9222)
+title Kh?i ch?y Lightpanda Headless Browser (Port 9222)
 echo ======================================================================
 echo    LIGHTPANDA HEADLESS BROWSER LAUNCHER - PASSION STAR
 echo    Sieu nhe, Zig-based (~10MB RAM vs 200MB+ Chrome)
 echo ======================================================================
 echo.
 
-:: 1. Kiểm tra xem port 9222 đã có dịch vụ nào đang chạy chưa
+:: 1. Ki?m tra xem port 9222 ?? c? d?ch v? n?o ?ang ch?y ch?a
 netstat -ano | findstr :9222 >nul
 if %errorlevel% == 0 (
     echo [OK] May chu CDP Port 9222 da dang chay!

@@ -22,7 +22,10 @@ git commit -m "chore: auto-sync local changes %DATE% %TIME%"
 echo.
 
 :DO_PUSH
-echo [*] Buoc 3: Dang day toan bo code len GitHub (origin main)...
+echo [*] Buoc 3: Dang dong bo commit moi nhat tu GitHub truoc khi day...
+git pull --rebase --autostash origin main
+echo.
+echo [*] Buoc 4: Dang day toan bo code len GitHub (origin main)...
 echo.
 git push origin main
 echo.
@@ -38,7 +41,9 @@ goto PUSH_END
 :PUSH_FAILED
 echo ========================================================
 echo    [THAT BAI] Co loi xay ra khi day code len GitHub.
-echo    Vui long kiem tra ket noi mang hoac xung dot code.
+echo    Nguyen nhan thuong gap:
+echo    1. File chua API Key / Secret bi GitHub Push Protection chan.
+echo    2. Mat ket noi mang hoac xung dot code.
 echo ========================================================
 
 :PUSH_END
