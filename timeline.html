@@ -2207,46 +2207,34 @@
             
             const tClean = String(teamName).toLowerCase().replace(/[\s:_ -]/g, '');
             
-            const aliasSet = new Set([tClean]);
-            if (tClean === 'elris' || tClean === 'bee' || tClean.includes('elris') || tClean.includes('bee')) {
-                aliasSet.add('elris');
-                aliasSet.add('bee');
-                aliasSet.add('teamdinobee');
-            }
-            if (tClean === 'bnart' || tClean === 'vnart' || tClean.includes('bnart') || tClean.includes('vnart')) {
-                aliasSet.add('bnart');
-                aliasSet.add('vnart');
-                aliasSet.add('teamdinovnart');
-            }
-            if (tClean === 'royenone' || tClean === 'royen' || tClean.includes('royen')) {
-                aliasSet.add('royenone');
-                aliasSet.add('royen');
-                aliasSet.add('teamuroyenone');
-            }
-            if (tClean === 'orion' || tClean.includes('orion')) {
-                aliasSet.add('orion');
-                aliasSet.add('teamkenorion');
-            }
-            if (tClean === 'angelik' || tClean.includes('angelik')) {
-                aliasSet.add('angelik');
-                aliasSet.add('teamkenangelik');
-            }
-            if (tClean === 'fashion' || tClean.includes('fashion')) {
-                aliasSet.add('fashion');
-                aliasSet.add('teamufashion');
-            }
-            if (tClean === 'miracle' || tClean.includes('miracle')) {
-                aliasSet.add('miracle');
-                aliasSet.add('teamdinomiracle');
-            }
+            // Từ khóa nhận diện riêng biệt cho từng team / idol (tránh nhận nhầm giáo viên như Ken, Dino, U)
+            const coreKeys = new Set();
+            if (tClean.includes('elris') || tClean.includes('bee')) { coreKeys.add('elris'); coreKeys.add('bee'); }
+            else if (tClean.includes('bnart') || tClean.includes('vnart')) { coreKeys.add('bnart'); coreKeys.add('vnart'); }
+            else if (tClean.includes('royen')) { coreKeys.add('royen'); coreKeys.add('royenone'); }
+            else if (tClean.includes('orion')) { coreKeys.add('orion'); }
+            else if (tClean.includes('angelik')) { coreKeys.add('angelik'); }
+            else if (tClean.includes('fashion')) { coreKeys.add('fashion'); }
+            else if (tClean.includes('miracle')) { coreKeys.add('miracle'); }
+            else { coreKeys.add(tClean); }
 
-            // Mở rộng alias từ danh sách nhân sự globalOffEmployees
+            // Nhận diện nhân sự Livestream thuộc team từ danh sách nhân sự off_employees
+            const memberNames = new Set();
             if (Array.isArray(window.globalOffEmployees)) {
                 for (const emp of window.globalOffEmployees) {
+                    const eRole = String(emp.role || '').toUpperCase();
+                    // Bỏ qua Giáo viên, Quản lý, Kỹ thuật - chỉ xét nhân sự livestream
+                    if (eRole && !eRole.includes('LIVE')) continue;
+                    
                     const eName = String(emp.name || '').toLowerCase().replace(/[\s:_ -]/g, '');
                     const eBadge = String(emp.customBadge || '').toLowerCase().replace(/[\s:_ -]/g, '');
-                    if (aliasSet.has(eName) || aliasSet.has(eBadge)) {
-                        if (emp.group) aliasSet.add(String(emp.group).toLowerCase().replace(/[\s:_ -]/g, ''));
+                    const eGroup = String(emp.group || '').toLowerCase().replace(/[\s:_ -]/g, '');
+                    
+                    for (const k of coreKeys) {
+                        if (eName === k || eBadge === k || (eGroup && eGroup.includes(k))) {
+                            if (eName) memberNames.add(eName);
+                            break;
+                        }
                     }
                 }
             }
@@ -2258,14 +2246,26 @@
                 const status = String(l.status || 'approved').toLowerCase();
                 if (status !== 'approved' && status !== 'pending') return false;
 
+                // Tuyệt đối không tính lịch nghỉ của Giáo viên (Teacher), Quản lý (Manager), Media, Kỹ thuật
+                const role = String(l.role || '').toUpperCase();
+                if (role.includes('TEACHER') || role.includes('MANAGER') || role.includes('MEDIA') || role.includes('ACCOUNTANT') || role.includes('HR')) {
+                    return false;
+                }
+
                 const lName = String(l.name || '').toLowerCase().replace(/[\s:_ -]/g, '');
                 const lGroup = String(l.group || '').toLowerCase().replace(/[\s:_ -]/g, '');
 
-                for (const alias of aliasSet) {
-                    if (lName && lName === alias) return true;
-                    if (lGroup && lGroup === alias) return true;
-                    if (lName && lName.length >= 3 && alias.length >= 3 && (lName.includes(alias) || alias.includes(lName))) return true;
-                    if (lGroup && lGroup.length >= 3 && alias.length >= 3 && (lGroup.includes(alias) || alias.includes(lGroup))) return true;
+                // 1. Nếu tên người nghỉ trùng với nhân sự livestream của team
+                if (memberNames.has(lName)) return true;
+
+                // 2. So khớp với coreKeys của team
+                for (const k of coreKeys) {
+                    if (lName === k) return true;
+                    if (lGroup === k) return true;
+                    if (k.length >= 3) {
+                        if (lName.includes(k) || (lName.length >= 4 && k.includes(lName))) return true;
+                        if (lGroup.includes(k)) return true;
+                    }
                 }
 
                 return false;
