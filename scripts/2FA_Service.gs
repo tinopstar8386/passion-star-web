@@ -574,11 +574,18 @@ function getConfigDevices() {
 
 /**
  * Quét Gmail tìm mã OTP xác thực email được forward về tino.hohr@gmail.com
+ * CHỈ lấy mã từ email mới nhất nhận trong vòng 1 tiếng, hoặc trong cùng ngày hôm nay.
+ * Bỏ qua hoàn toàn các email cũ của các ngày trước đó để tránh lấy sai mã hết hạn.
  */
 function getEmailVerificationCode(targetEmail) {
   if (!targetEmail) return "";
   const clean = targetEmail.trim().toLowerCase();
   const username = clean.split('@')[0];
+
+  const now = new Date();
+  const nowMs = now.getTime();
+  const oneHourMs = 60 * 60 * 1000;
+  const todayStr = Utilities.formatDate(now, "Asia/Ho_Chi_Minh", "yyyy-MM-dd");
 
   const searchQueries = [
     '"' + clean + '"',
@@ -588,40 +595,109 @@ function getEmailVerificationCode(targetEmail) {
     username.length >= 6 ? username : null
   ].filter(Boolean);
 
+  let candidateMessages = [];
+
   for (let q of searchQueries) {
     try {
-      const threads = GmailApp.search(q, 0, 5);
+      let threads = GmailApp.search(q + " newer_than:1d", 0, 5);
+      if (!threads || threads.length === 0) {
+        threads = GmailApp.search(q, 0, 5);
+      }
+
       for (let thread of threads) {
         const msgs = thread.getMessages();
-        for (let j = msgs.length - 1; j >= 0; j--) {
-          const body = msgs[j].getPlainBody() + " " + msgs[j].getSubject();
-          
-          // 1. Tìm mã 6 chữ số TikTok / Gmail / Outlook
-          const m6 = body.match(/\b\d{6}\b/);
-          if (m6) return m6[0];
+        for (let msg of msgs) {
+          const msgDate = msg.getDate();
+          if (!msgDate) continue;
 
-          // 2. Tìm mã có tiền tố code / mã / verification / xác thực
-          const mPrefix = body.match(/(?:mã|code|otp|verification|xác thực|confirmation)[\s\:\-]*([0-9]{4,8})/i);
-          if (mPrefix) return mPrefix[1];
+          const msgTime = msgDate.getTime();
+          const diffMs = nowMs - msgTime;
+          const msgDayStr = Utilities.formatDate(msgDate, "Asia/Ho_Chi_Minh", "yyyy-MM-dd");
 
-          // 3. Tìm mã 4 chữ số (VD Outlook code 2026)
-          const m4 = body.match(/\b\d{4}\b/);
-          if (m4) return m4[0];
+          // Điều kiện 1: Trong vòng 1 tiếng (<= 60 phút)
+          const isWithin1Hour = diffMs >= 0 && diffMs <= oneHourMs;
+          // Điều kiện 2: Trong cùng ngày hôm nay
+          const isToday = (msgDayStr === todayStr);
+
+          // Bỏ qua hoàn toàn mail cũ từ ngày hôm trước trở về trước
+          if (isWithin1Hour || isToday) {
+            candidateMessages.push({
+              msg: msg,
+              time: msgTime,
+              isWithin1Hour: isWithin1Hour,
+              isToday: isToday
+            });
+          }
         }
       }
+      if (candidateMessages.length > 0) break;
     } catch (e) {}
   }
+
+  if (candidateMessages.length === 0) {
+    return "";
+  }
+
+  // Sắp xếp giảm dần theo thời gian: tin nhắn mới nhất lên đầu tiên
+  candidateMessages.sort((a, b) => b.time - a.time);
+
+  function extractOtp(msgObj) {
+    const body = (msgObj.getPlainBody() || "") + " " + (msgObj.getSubject() || "");
+
+    // 1. TikTok format: "[TikTok] 123456 is your verification code"
+    const mTikTok = body.match(/([0-9]{6})\s+is your (?:verification )?code/i);
+    if (mTikTok) return mTikTok[1];
+
+    // 2. Tiếng Việt: "mã xác minh của bạn là 123456"
+    const mTiengViet = body.match(/(?:mã(?:\s+xác\s+(?:nhận|minh|thực))?|code|otp)[\s\:\-là]+([0-9]{4,8})/i);
+    if (mTiengViet) return mTiengViet[1];
+
+    // 3. Tiền tố tiếng Anh: "verification code: 123456"
+    const mPrefix = body.match(/(?:verification|confirmation|security)[\s\-]+code[\s\:\-]+([0-9]{4,8})/i);
+    if (mPrefix) return mPrefix[1];
+
+    // 4. Mã 6 chữ số chuẩn (TikTok, Google, Outlook, ...)
+    const m6 = body.match(/\b\d{6}\b/);
+    if (m6) return m6[0];
+
+    // 5. Mã 4 chữ số (Outlook, SMS ...)
+    const m4 = body.match(/\b\d{4}\b/);
+    if (m4) return m4[0];
+
+    return "";
+  }
+
+  // Bước 1: Ưu tiên email mới trong vòng 1 tiếng
+  const within1HourMsgs = candidateMessages.filter(item => item.isWithin1Hour);
+  for (let item of within1HourMsgs) {
+    const code = extractOtp(item.msg);
+    if (code) return code;
+  }
+
+  // Bước 2: Nếu chưa có trong 1 tiếng, lấy từ email mới nhất trong ngày hôm nay
+  for (let item of candidateMessages) {
+    const code = extractOtp(item.msg);
+    if (code) return code;
+  }
+
   return "";
 }
 
 /**
  * Kiểm tra trạng thái kết nối Forward mail về tino.hohr@gmail.com
- * Nếu có bất kỳ email nào trong hòm thư liên quan đến địa chỉ này -> Xác nhận ĐÃ KẾT NỐI
+ * Nếu có bất kỳ email nào trong hòm thư liên quan đến địa chỉ này -> Xác nhận ĐÃ KẾT NỐI (hasMail: true)
+ * TUYỆT ĐỐI KHÔNG gán mã OTP cũ của ngày trước hoặc quá 1 tiếng làm mã hiển thị,
+ * chỉ trả về mã OTP nếu email đó mới nhận trong vòng 1 tiếng / hôm nay, ngược lại trả về code: "Đã kết nối"
  */
 function checkEmailForwardStatus(targetEmail) {
   if (!targetEmail) return { hasMail: false, message: "Email trống" };
   const clean = targetEmail.trim().toLowerCase();
   const username = clean.split('@')[0];
+
+  const now = new Date();
+  const nowMs = now.getTime();
+  const oneHourMs = 60 * 60 * 1000;
+  const todayStr = Utilities.formatDate(now, "Asia/Ho_Chi_Minh", "yyyy-MM-dd");
 
   const searchQueries = [
     '"' + clean + '"',
@@ -638,24 +714,34 @@ function checkEmailForwardStatus(targetEmail) {
         const msgs = threads[0].getMessages();
         const latestMsg = msgs[msgs.length - 1];
         const body = latestMsg.getPlainBody() + " " + latestMsg.getSubject();
-        
-        let foundCode = "";
-        const m6 = body.match(/\b\d{6}\b/);
-        const mPrefix = body.match(/(?:mã|code|otp|verification|xác thực|confirmation)[\s\:\-]*([0-9]{4,8})/i);
-        const mGoogleForward = body.match(/confirmation code[\s\:\-]+([0-9]{8,10})/i);
-        const m4 = body.match(/\b\d{4}\b/);
+        const msgDate = latestMsg.getDate();
+        const msgTime = msgDate ? msgDate.getTime() : 0;
+        const msgDayStr = msgDate ? Utilities.formatDate(msgDate, "Asia/Ho_Chi_Minh", "yyyy-MM-dd") : "";
 
-        if (m6) foundCode = m6[0];
-        else if (mGoogleForward) foundCode = mGoogleForward[1];
-        else if (mPrefix) foundCode = mPrefix[1];
-        else if (m4) foundCode = m4[0];
-        else foundCode = "Đã kết nối";
+        // Kiểm tra xem email mới nhất có trong vòng 1 tiếng hoặc trong ngày hôm nay hay không
+        const isRecent = msgDate && ((nowMs - msgTime) <= oneHourMs || msgDayStr === todayStr);
+
+        let foundCode = "Đã kết nối";
+        if (isRecent) {
+          const mTikTok = body.match(/([0-9]{6})\s+is your (?:verification )?code/i);
+          const mGoogleForward = body.match(/confirmation code[\s\:\-]+([0-9]{8,10})/i);
+          const mPrefix = body.match(/(?:mã|code|otp|verification|xác thực|confirmation)[\s\:\-]*([0-9]{4,8})/i);
+          const m6 = body.match(/\b\d{6}\b/);
+          const m4 = body.match(/\b\d{4}\b/);
+
+          if (mTikTok) foundCode = mTikTok[1];
+          else if (mGoogleForward) foundCode = mGoogleForward[1];
+          else if (mPrefix) foundCode = mPrefix[1];
+          else if (m6) foundCode = m6[0];
+          else if (m4) foundCode = m4[0];
+        }
 
         return {
           hasMail: true,
           code: foundCode,
           subject: latestMsg.getSubject(),
-          date: latestMsg.getDate() ? latestMsg.getDate().toISOString() : ""
+          date: msgDate ? msgDate.toISOString() : "",
+          isRecent: isRecent
         };
       }
     } catch (e) {}
