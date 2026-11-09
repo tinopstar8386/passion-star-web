@@ -106,10 +106,32 @@
         
         
         /* Cyber Matrix Background & Stealth Unlock Trigger Styles */
+        #loginScreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            height: 100dvh !important;
+            z-index: 99999 !important;
+            background-color: #050811 !important;
+            display: flex !important;
+        }
+        #loginScreen.hidden {
+            display: none !important;
+        }
         #loginMatrixCanvas {
             image-rendering: pixelated;
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
         }
         #stealthPassTrigger {
+            position: fixed !important;
+            z-index: 100001 !important;
             opacity: 0.75;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
@@ -557,7 +579,7 @@
         window.fs = { doc, setDoc, getDoc };
     </script>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col">
+<body class="text-slate-800 min-h-screen flex flex-col overflow-hidden">
 
     <!-- TOAST NOTIFICATION -->
     <div class="toast-container" id="toastContainer"></div>
@@ -575,13 +597,13 @@
     </div>
 
     <!-- MÀN HÌNH KHÓA XÁC THỰC QUẢN TRỊ VIÊN (PIN / PASSCODE - PHONG CÁCH IDOL TRACKER) -->
-    <div id="loginScreen" class="fixed inset-0 z-[100] bg-[#050811] flex items-center justify-center p-4 select-none relative overflow-hidden">
+    <div id="loginScreen" class="fixed inset-0 z-[99999] bg-[#050811] flex items-center justify-center p-4 select-none overflow-hidden">
         <!-- MA TRẬN CHỮ BẢO MẬT PHỦ KÍN TOÀN MÀN HÌNH (FULL-SCREEN CODE MATRIX, CÙNG MỘT MÀU ĐỒNG NHẤT) -->
         <canvas id="loginMatrixCanvas" class="absolute inset-0 pointer-events-none w-full h-full z-0"></canvas>
         <div class="pointer-events-none absolute inset-0 bg-radial-[ellipse_at_center,_transparent_20%,_rgba(5,8,17,0.7)_80%,_rgba(5,8,17,0.95)_100%] z-[1]"></div>
 
         <!-- MÃ PASS BẢO MẬT: Random 1 trong 4 góc (Trên-Trái, Trên-Phải, Dưới-Trái, Dưới-Phải), không có decoy gây nhiễu -->
-        <div id="stealthPassTrigger" onclick="executeStealthUnlock()" class="fixed z-[120] text-xs sm:text-sm font-mono text-white/[0.10] hover:text-emerald-400 hover:scale-125 cursor-pointer select-none tracking-widest transition-all duration-300 font-bold px-2 py-1 rounded-md hover:bg-white/5" title="Mã xác thực bảo mật (Click hoặc gõ phím để mở khóa)"></div>
+        <div id="stealthPassTrigger" onclick="executeStealthUnlock()" class="fixed z-[100001] text-xs sm:text-sm font-mono text-white/[0.10] hover:text-emerald-400 hover:scale-125 cursor-pointer select-none tracking-widest transition-all duration-300 font-bold px-2 py-1 rounded-md hover:bg-white/5" title="Mã xác thực bảo mật (Click hoặc gõ phím để mở khóa)"></div>
         <div id="pinLockCard" class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden z-10">
             <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -1154,7 +1176,7 @@
             </div>
 
             <!-- Table Container (CHUẨN BẢNG IDOL TRACKER - 100% VỪA KHUNG KHÔNG LĂN CHUỘT NGANG) -->
-            <div id="tableContainer" class="mt-4 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs">
+            <div id="tableContainer" class="hidden mt-4 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs">
                 <div id="tableScrollWrapper" class="w-full">
                     <table class="w-full text-left border-separate border-spacing-0 table-fixed" id="mainTable">
                         <thead class="hidden md:table-header-group border-b border-slate-200 dark:border-slate-700 shadow-xs">
@@ -1805,6 +1827,7 @@
             document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => {
                 document.getElementById('loginScreen').classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
                 resetViewportScroll();
             }, 400);
             btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
@@ -1897,6 +1920,7 @@
             closeMobileSidebar();
             initStealthKey();
             initMatrixBackground();
+            document.body.classList.add('overflow-hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
             setTimeout(() => {
                 document.getElementById('loginScreen').classList.remove('opacity-0', 'pointer-events-none');
