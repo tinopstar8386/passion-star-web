@@ -364,10 +364,6 @@
                 padding: 0.35rem 0 !important;
                 border: none !important;
             }
-            #stealthPassTrigger {
-                bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem)) !important;
-                right: 1rem !important;
-            }
         }
 
         /* Mobile Bottom Sheet adjustments */
@@ -431,8 +427,8 @@
 
     <!-- MÀN HÌNH KHÓA XÁC THỰC QUẢN TRỊ VIÊN (PIN / PASSCODE - PHONG CÁCH IDOL TRACKER) -->
     <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-4 select-none">
-        <!-- STEALTH SECURITY 1-CHAR TRIGGER: Xuất hiện góc dưới bên phải trên nền đen, nhỏ, kín đáo, chỉ có bạn biết -->
-        <div id="stealthPassTrigger" onclick="executeStealthUnlock()" class="fixed bottom-3 right-4 z-[120] text-xs font-mono text-white/40 hover:text-white cursor-pointer select-none tracking-widest transition-all duration-200" title=""></div>
+        <!-- STEALTH SECURITY 1-CHAR TRIGGER: Random 4 góc (Trái/Phải/Trên/Dưới) trên nền đen, siêu mờ tàng hình (giảm 70% độ rõ) -->
+        <div id="stealthPassTrigger" onclick="executeStealthUnlock()" class="fixed z-[120] text-[11px] font-mono text-white/[0.10] hover:text-white/30 cursor-pointer select-none tracking-widest transition-all duration-300" title=""></div>
         <div id="pinLockCard" class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden">
             <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -1086,22 +1082,41 @@
         let rapidKeystrokeStreak = 0;
         let isStealthLocked = false;
 
+        // 4 góc tàng hình ngẫu nhiên: Trên-Trái, Trên-Phải, Dưới-Trái, Dưới-Phải (kèm Safe-area cho Mobile)
+        const STEALTH_CORNERS = [
+            { id: 'top-left', top: 'max(0.85rem, env(safe-area-inset-top, 0.85rem))', left: 'max(1rem, env(safe-area-inset-left, 1rem))', right: 'auto', bottom: 'auto' },
+            { id: 'top-right', top: 'max(0.85rem, env(safe-area-inset-top, 0.85rem))', right: 'max(1rem, env(safe-area-inset-right, 1rem))', left: 'auto', bottom: 'auto' },
+            { id: 'bottom-left', bottom: 'max(0.85rem, env(safe-area-inset-bottom, 0.85rem))', left: 'max(1rem, env(safe-area-inset-left, 1rem))', right: 'auto', top: 'auto' },
+            { id: 'bottom-right', bottom: 'max(0.85rem, env(safe-area-inset-bottom, 0.85rem))', right: 'max(1rem, env(safe-area-inset-right, 1rem))', left: 'auto', top: 'auto' }
+        ];
+        let currentStealthCornerIndex = 3;
+
         function initStealthKey() {
             let nextKey = currentStealthKey;
             while (nextKey === currentStealthKey) {
                 nextKey = STEALTH_POOL[Math.floor(Math.random() * STEALTH_POOL.length)];
             }
             currentStealthKey = nextKey;
+
+            // Random 1 trong 4 góc (Trái trên, Phải trên, Trái dưới, Phải dưới)
+            const cornerIdx = Math.floor(Math.random() * STEALTH_CORNERS.length);
+            currentStealthCornerIndex = cornerIdx;
+            const corner = STEALTH_CORNERS[cornerIdx];
+
             const el = document.getElementById('stealthPassTrigger');
             if (el) {
                 el.innerText = currentStealthKey;
-                el.classList.remove('text-emerald-400', 'scale-125', 'text-rose-500');
-                el.classList.add('text-white/40');
+                el.style.top = corner.top;
+                el.style.bottom = corner.bottom;
+                el.style.left = corner.left;
+                el.style.right = corner.right;
+                el.classList.remove('text-emerald-400', 'scale-125', 'text-rose-500', 'text-white/40', 'text-white/50');
+                el.classList.add('text-white/[0.10]');
             }
         }
 
         function handleStealthFailure() {
-            // Khi bấm/gõ sai: Lập tức đổi sang kí tự mới hoàn toàn để triệt tiêu spam dò phím!
+            // Khi bấm/gõ sai: Lập tức đổi sang kí tự mới và đổi góc mới hoàn toàn để triệt tiêu spam dò phím!
             initStealthKey();
 
             const now = Date.now();
@@ -1150,7 +1165,7 @@
             if (isStealthLocked) return;
             const stealthEl = document.getElementById('stealthPassTrigger');
             if (stealthEl) {
-                stealthEl.classList.remove('text-white/40', 'text-white/50');
+                stealthEl.classList.remove('text-white/[0.10]', 'text-white/40', 'text-white/50');
                 stealthEl.classList.add('text-emerald-400', 'scale-125');
             }
             const shimmer = document.getElementById('loginShimmer');
@@ -2413,7 +2428,7 @@
                         const code = String(rawCode || '').trim();
                         const current = getElements();
 
-                        if (code && !code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && !code.includes("nha")) {
+                        if (code && code !== "184973" && !code.includes("Không tìm thấy") && !code.includes("Không có") && !code.includes("Lỗi") && !code.includes("nha")) {
                             emailCodeState[stateKey] = { html: escapeHtml(code), isError: false, hasBadge: true };
 
                             // Tự động ghi nhận forward mail thành công khi nhận được mã OTP

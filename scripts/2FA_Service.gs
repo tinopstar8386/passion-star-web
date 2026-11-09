@@ -573,8 +573,46 @@ function getConfigDevices() {
 }
 
 /**
+ * Kiểm tra xem một email/tin nhắn cụ thể có thực sự gửi cho targetEmail hay không.
+ * Phòng chống 100% việc nhiều tài khoản chung 1 Gmail Thread bị lấy nhầm mã của nhau.
+ */
+function isMessageForTarget(msg, cleanEmail, username) {
+  if (!msg || !cleanEmail) return false;
+
+  const to = (msg.getTo() || "").toLowerCase();
+  const cc = (msg.getCc() || "").toLowerCase();
+  const bcc = (msg.getBcc() || "").toLowerCase();
+  const subject = (msg.getSubject() || "").toLowerCase();
+  const body = (msg.getPlainBody() || "").toLowerCase();
+
+  // 1. Kiểm tra địa chỉ email đầy đủ trong các trường cơ bản
+  if (to.includes(cleanEmail) || cc.includes(cleanEmail) || bcc.includes(cleanEmail) || subject.includes(cleanEmail) || body.includes(cleanEmail)) {
+    return true;
+  }
+
+  // 2. Kiểm tra username (nếu username dài >= 6 ký tự)
+  if (username && username.length >= 6) {
+    if (to.includes(username) || subject.includes(username) || body.includes(username)) {
+      return true;
+    }
+  }
+
+  // 3. Kiểm tra sâu trong Raw Headers (RFC 822) nơi lưu Delivered-To, X-Forwarded-For, X-Original-To
+  try {
+    const raw = (msg.getRawContent() || "").toLowerCase();
+    if (raw.includes(cleanEmail)) return true;
+    if (username && username.length >= 6 && (raw.includes("delivered-to: " + username) || raw.includes("for <" + username) || raw.includes("for " + username))) {
+      return true;
+    }
+  } catch (e) {}
+
+  return false;
+}
+
+/**
  * Quét Gmail tìm mã OTP xác thực email được forward về tino.hohr@gmail.com
  * CHỈ lấy mã từ email mới nhất nhận trong vòng 1 tiếng, hoặc trong cùng ngày hôm nay.
+ * BẮT BUỘC tin nhắn phải thuộc về CHÍNH XÁC targetEmail (không lấy nhầm mã của tài khoản khác trong cùng thread).
  * Bỏ qua hoàn toàn các email cũ của các ngày trước đó để tránh lấy sai mã hết hạn.
  */
 function getEmailVerificationCode(targetEmail) {
@@ -607,6 +645,12 @@ function getEmailVerificationCode(targetEmail) {
       for (let thread of threads) {
         const msgs = thread.getMessages();
         for (let msg of msgs) {
+          // BƯỚC SỐNG CÒN 1: Bắt buộc tin nhắn này phải thuộc về chính xác targetEmail!
+          // Triệt tiêu 100% tình trạng 2 tài khoản khác nhau trong cùng thread bị lấy nhầm mã của nhau!
+          if (!isMessageForTarget(msg, clean, username)) {
+            continue;
+          }
+
           const msgDate = msg.getDate();
           if (!msgDate) continue;
 
@@ -614,9 +658,8 @@ function getEmailVerificationCode(targetEmail) {
           const diffMs = nowMs - msgTime;
           const msgDayStr = Utilities.formatDate(msgDate, "Asia/Ho_Chi_Minh", "yyyy-MM-dd");
 
-          // Điều kiện 1: Trong vòng 1 tiếng (<= 60 phút)
+          // BƯỚC SỐNG CÒN 2: Bắt buộc trong vòng 1 tiếng hoặc trong cùng ngày hôm nay!
           const isWithin1Hour = diffMs >= 0 && diffMs <= oneHourMs;
-          // Điều kiện 2: Trong cùng ngày hôm nay
           const isToday = (msgDayStr === todayStr);
 
           // Bỏ qua hoàn toàn mail cũ từ ngày hôm trước trở về trước
@@ -686,7 +729,7 @@ function getEmailVerificationCode(targetEmail) {
 /**
  * Kiểm tra trạng thái kết nối Forward mail về tino.hohr@gmail.com
  * Nếu có bất kỳ email nào trong hòm thư liên quan đến địa chỉ này -> Xác nhận ĐÃ KẾT NỐI (hasMail: true)
- * TUYỆT ĐỐI KHÔNG gán mã OTP cũ của ngày trước hoặc quá 1 tiếng làm mã hiển thị,
+ * TUYỆT ĐỐI KHÔNG gán mã OTP cũ của ngày trước hoặc của tài khoản khác làm mã hiển thị,
  * chỉ trả về mã OTP nếu email đó mới nhận trong vòng 1 tiếng / hôm nay, ngược lại trả về code: "Đã kết nối"
  */
 function checkEmailForwardStatus(targetEmail) {
@@ -710,39 +753,46 @@ function checkEmailForwardStatus(targetEmail) {
   for (let q of searchQueries) {
     try {
       const threads = GmailApp.search(q, 0, 5);
-      if (threads && threads.length > 0) {
-        const msgs = threads[0].getMessages();
-        const latestMsg = msgs[msgs.length - 1];
-        const body = latestMsg.getPlainBody() + " " + latestMsg.getSubject();
-        const msgDate = latestMsg.getDate();
-        const msgTime = msgDate ? msgDate.getTime() : 0;
-        const msgDayStr = msgDate ? Utilities.formatDate(msgDate, "Asia/Ho_Chi_Minh", "yyyy-MM-dd") : "";
+      for (let thread of threads) {
+        const msgs = thread.getMessages();
+        // Lặp từ tin nhắn mới nhất trong thread ngược về trước
+        for (let j = msgs.length - 1; j >= 0; j--) {
+          const msg = msgs[j];
+          if (!isMessageForTarget(msg, clean, username)) {
+            continue;
+          }
 
-        // Kiểm tra xem email mới nhất có trong vòng 1 tiếng hoặc trong ngày hôm nay hay không
-        const isRecent = msgDate && ((nowMs - msgTime) <= oneHourMs || msgDayStr === todayStr);
+          const body = msg.getPlainBody() + " " + msg.getSubject();
+          const msgDate = msg.getDate();
+          const msgTime = msgDate ? msgDate.getTime() : 0;
+          const msgDayStr = msgDate ? Utilities.formatDate(msgDate, "Asia/Ho_Chi_Minh", "yyyy-MM-dd") : "";
 
-        let foundCode = "Đã kết nối";
-        if (isRecent) {
-          const mTikTok = body.match(/([0-9]{6})\s+is your (?:verification )?code/i);
-          const mGoogleForward = body.match(/confirmation code[\s\:\-]+([0-9]{8,10})/i);
-          const mPrefix = body.match(/(?:mã|code|otp|verification|xác thực|confirmation)[\s\:\-]*([0-9]{4,8})/i);
-          const m6 = body.match(/\b\d{6}\b/);
-          const m4 = body.match(/\b\d{4}\b/);
+          // Kiểm tra xem email này có trong vòng 1 tiếng hoặc trong ngày hôm nay hay không
+          const isRecent = msgDate && ((nowMs - msgTime) <= oneHourMs || msgDayStr === todayStr);
 
-          if (mTikTok) foundCode = mTikTok[1];
-          else if (mGoogleForward) foundCode = mGoogleForward[1];
-          else if (mPrefix) foundCode = mPrefix[1];
-          else if (m6) foundCode = m6[0];
-          else if (m4) foundCode = m4[0];
+          let foundCode = "Đã kết nối";
+          if (isRecent) {
+            const mTikTok = body.match(/([0-9]{6})\s+is your (?:verification )?code/i);
+            const mGoogleForward = body.match(/confirmation code[\s\:\-]+([0-9]{8,10})/i);
+            const mPrefix = body.match(/(?:mã|code|otp|verification|xác thực|confirmation)[\s\:\-]*([0-9]{4,8})/i);
+            const m6 = body.match(/\b\d{6}\b/);
+            const m4 = body.match(/\b\d{4}\b/);
+
+            if (mTikTok) foundCode = mTikTok[1];
+            else if (mGoogleForward) foundCode = mGoogleForward[1];
+            else if (mPrefix) foundCode = mPrefix[1];
+            else if (m6) foundCode = m6[0];
+            else if (m4) foundCode = m4[0];
+          }
+
+          return {
+            hasMail: true,
+            code: foundCode,
+            subject: msg.getSubject(),
+            date: msgDate ? msgDate.toISOString() : "",
+            isRecent: isRecent
+          };
         }
-
-        return {
-          hasMail: true,
-          code: foundCode,
-          subject: latestMsg.getSubject(),
-          date: msgDate ? msgDate.toISOString() : "",
-          isRecent: isRecent
-        };
       }
     } catch (e) {}
   }
