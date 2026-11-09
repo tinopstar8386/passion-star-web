@@ -108,6 +108,7 @@
         /* Cyber Matrix Background & Stealth Unlock Trigger Styles */
         #loginScreen {
             position: fixed !important;
+            inset: 0 !important;
             top: 0 !important;
             left: 0 !important;
             right: 0 !important;
@@ -118,8 +119,20 @@
             z-index: 99999 !important;
             background-color: #050811 !important;
             display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
         #loginScreen.hidden {
+            display: none !important;
+        }
+        #authenticatedAppContent {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            min-height: 100vh;
+        }
+        #loginScreen:not(.hidden) ~ #authenticatedAppContent,
+        #authenticatedAppContent.hidden {
             display: none !important;
         }
         #loginMatrixCanvas {
@@ -854,8 +867,10 @@
         </div>
     </div>
 
-    <!-- TOP NAVIGATION BAR (CHUẨN PHONG CÁCH IDOL TRACKER) -->
-    <header id="mainHeader" class="bg-slate-900 text-white sticky top-0 z-50 shadow-md border-b border-slate-800 safe-top">
+    <!-- KHUNG ỨNG DỤNG ĐÃ XÁC THỰC (BẢO VỆ TUYỆT ĐỐI KHÔNG LỘ KHI CHƯA MỞ KHÓA) -->
+    <div id="authenticatedAppContent" class="flex flex-col flex-1 w-full min-h-screen">
+        <!-- TOP NAVIGATION BAR (CHUẨN PHONG CÁCH IDOL TRACKER) -->
+        <header id="mainHeader" class="bg-slate-900 text-white sticky top-0 z-50 shadow-md border-b border-slate-800 safe-top">
         <div class="w-full max-w-[1600px] mx-auto px-3 sm:px-5 lg:px-6 py-2 sm:py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
             <!-- Brand & Title Row -->
             <div class="flex items-center justify-between gap-2 w-full sm:w-auto">
@@ -1197,6 +1212,7 @@
             </div>
         </section>
     </main>
+    </div>
 
     <!-- KỊCH BẢN JAVASCRIPT -->
     <script>
@@ -1266,29 +1282,33 @@
                 body: JSON.stringify({ action: action, payload: payload })
             })
             .then(async res => {
+                if (!res.ok) {
+                    return runScriptJSONP(action, payload);
+                }
                 const text = await res.text();
                 let jsonRes;
                 try {
                     jsonRes = JSON.parse(text);
                 } catch (parseErr) {
-                    const snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-                    const err = new Error("Máy chủ trả về lỗi: " + (snippet || "Kiểm tra lại quyền Deploy API_URL"));
-                    err.isServerError = true;
-                    throw err;
+                    return runScriptJSONP(action, payload);
                 }
                 if (jsonRes.status === 'error') {
-                    const err = new Error(jsonRes.message);
-                    err.isServerError = true;
-                    throw err;
+                    if (jsonRes.message && jsonRes.message.includes("AUTH_FAILED")) {
+                        const err = new Error(jsonRes.message);
+                        throw err;
+                    }
+                    return runScriptJSONP(action, payload);
                 }
                 // Tự động fallback sang JSONP trực tiếp tới Google Apps Script nếu proxy không có trường data
-                if (jsonRes && jsonRes.data === undefined && action === 'getSheetData') {
-                    return runScriptJSONP(action, payload);
+                if (action === 'getSheetData' && (!jsonRes || !Array.isArray(jsonRes.data) || jsonRes.data.length === 0)) {
+                    if (payload && payload.sheetName !== 'Acc Idol mới') {
+                        return runScriptJSONP(action, payload);
+                    }
                 }
                 return jsonRes.data;
             })
             .catch(err => {
-                if (err.isServerError || (err.message && err.message.includes("AUTH_FAILED"))) {
+                if (err.message && err.message.includes("AUTH_FAILED")) {
                     throw err;
                 }
                 return runScriptJSONP(action, payload);
@@ -1481,12 +1501,10 @@
             }
             // Mật mã xác thực ủy quyền bảo mật máy chủ
             sessionPass = "11fbfb0a6a696da38da248f9568be2c32c43bd89812696fccc1d068ba41b8bf5";
-            setTimeout(() => {
-                proceedToMainScreen(shimmer, btn, passInput);
-                loadData();
-                fetchConfigDevices();
-                showToast('Xác thực bảo mật thành công!', 'success');
-            }, 200);
+            proceedToMainScreen(shimmer, btn, passInput);
+            loadData();
+            fetchConfigDevices();
+            showToast('Xác thực bảo mật thành công!', 'success');
         }
 
         // ================= TRẠNG THÁI KIỂM TRA FORWARD MAIL VỀ tino.hohr@gmail.com =================
@@ -1801,20 +1819,35 @@
 
         function proceedToMainScreen(shimmer, btn, passInput) {
             stopMatrixBackground();
-            shimmer.classList.add('opacity-0');
-            shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
-            passInput.value = '';
-            passInput.disabled = false;
-            passInput.blur();
+            if (shimmer) {
+                shimmer.classList.add('opacity-0');
+                shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
+            }
+            if (passInput) {
+                passInput.value = '';
+                passInput.disabled = false;
+                passInput.blur();
+            }
             resetViewportScroll();
-            document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                document.getElementById('loginScreen').classList.add('hidden');
-                document.body.classList.remove('overflow-hidden');
-                resetViewportScroll();
-            }, 400);
-            btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
-            btn.disabled = false;
+
+            const loginScreen = document.getElementById('loginScreen');
+            if (loginScreen) {
+                loginScreen.classList.add('opacity-0', 'pointer-events-none');
+                loginScreen.classList.add('hidden');
+                loginScreen.style.setProperty('display', 'none', 'important');
+            }
+            const authContent = document.getElementById('authenticatedAppContent');
+            if (authContent) {
+                authContent.classList.remove('hidden');
+                authContent.style.setProperty('display', 'flex', 'important');
+            }
+            document.body.classList.remove('overflow-hidden');
+            resetViewportScroll();
+
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
+                btn.disabled = false;
+            }
         }
 
         async function checkLogin() {
@@ -1866,12 +1899,20 @@
                 .then(async (data) => {
                     sessionPass = input;
                     proceedToMainScreen(shimmer, btn, passInput);
-                    if (window.db && window.fs) {
+                    let loadedData = sanitizeAccountData(data);
+                    if ((!loadedData || loadedData.length === 0) && currentSheetName !== 'Acc Idol mới') {
+                        try {
+                            const directData = await runScriptJSONP('getSheetData', { sheetName: currentSheetName, pass: input });
+                            const cleanDirect = sanitizeAccountData(directData);
+                            if (cleanDirect && cleanDirect.length > 0) loadedData = cleanDirect;
+                        } catch (e) {}
+                    }
+                    if (window.db && window.fs && loadedData && loadedData.length > 0) {
                         await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", "auth_config"), { validHash: input });
                         const safeID = currentSheetName.replace(/\s+/g, '_');
-                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: data });
+                        await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: loadedData });
                     }
-                    allData = data;
+                    allData = loadedData;
                     document.getElementById('tableContainer').classList.remove('hidden');
                     renderTable(allData);
                     resetTimer();
@@ -1904,11 +1945,21 @@
             initStealthKey();
             initMatrixBackground();
             document.body.classList.add('overflow-hidden');
-            document.getElementById('loginScreen').classList.remove('hidden');
-            setTimeout(() => {
-                document.getElementById('loginScreen').classList.remove('opacity-0', 'pointer-events-none');
-                resetViewportScroll();
-            }, 10);
+
+            const authContent = document.getElementById('authenticatedAppContent');
+            if (authContent) {
+                authContent.classList.add('hidden');
+                authContent.style.setProperty('display', 'none', 'important');
+            }
+
+            const loginScreen = document.getElementById('loginScreen');
+            if (loginScreen) {
+                loginScreen.classList.remove('hidden');
+                loginScreen.style.setProperty('display', 'flex', 'important');
+                loginScreen.classList.remove('opacity-0', 'pointer-events-none');
+            }
+            resetViewportScroll();
+
             document.getElementById('tableContainer').classList.add('hidden');
             document.getElementById('dataTableBody').innerHTML = '';
             allData = [];
@@ -1956,6 +2007,15 @@
 
                     let loadedData = sanitizeAccountData(data);
 
+                    // Nếu mảng rỗng nhưng sheet là Passion Star hoặc sheet lớn, thử nạp lại qua JSONP trực tiếp
+                    if ((!loadedData || loadedData.length === 0) && reqSheetName !== 'Acc Idol mới') {
+                        try {
+                            const directData = await runScriptJSONP('getSheetData', { sheetName: reqSheetName, pass: sessionPass });
+                            const cleanDirect = sanitizeAccountData(directData);
+                            if (cleanDirect && cleanDirect.length > 0) loadedData = cleanDirect;
+                        } catch (e) {}
+                    }
+
                     // Dự phòng nếu máy chủ trả về mảng rỗng: Kiểm tra bộ nhớ đệm Firestore
                     if ((!loadedData || loadedData.length === 0) && window.db && window.fs) {
                         try {
@@ -1987,6 +2047,18 @@
                         lockApp();
                         return;
                     }
+
+                    // Cứu hộ tự động bằng JSONP trực tiếp tới Google Apps Script
+                    try {
+                        const directData = await runScriptJSONP('getSheetData', { sheetName: reqSheetName, pass: sessionPass });
+                        const cleanDirect = sanitizeAccountData(directData);
+                        if (cleanDirect && cleanDirect.length > 0) {
+                            allData = cleanDirect;
+                            const kw = document.getElementById('searchInput').value.trim();
+                            if (kw) filterData(); else renderTable(allData);
+                            return;
+                        }
+                    } catch (e) {}
 
                     // DỰ PHÒNG NGOẠI TUYẾN (Offline Fallback): Chỉ nạp cache nếu mất mạng hoặc lỗi máy chủ
                     if (window.db && window.fs) {

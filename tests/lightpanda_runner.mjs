@@ -92,7 +92,18 @@ export async function launchBrowser({
  * Kết nối CDP WebSocket và cung cấp helper sendCdp
  */
 export async function connectSession(browserInfo, targetUrl = null) {
-    let targets = await fetch(`http://127.0.0.1:${browserInfo.port}/json`).then(r => r.json());
+    let targets = null;
+    for (let retry = 0; retry < 15; retry++) {
+        try {
+            targets = await fetch(`http://127.0.0.1:${browserInfo.port}/json`).then(r => r.json());
+            if (targets && targets.length > 0) break;
+        } catch (e) {
+            await new Promise(r => setTimeout(r, 200));
+        }
+    }
+    if (!targets) {
+        targets = await fetch(`http://127.0.0.1:${browserInfo.port}/json`).then(r => r.json());
+    }
     let pageTarget = targets.find(t => t.type === 'page');
 
     if (!pageTarget) {
