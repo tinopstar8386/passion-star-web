@@ -1430,7 +1430,6 @@
             renderToggles();
             renderDailyTable();
             saveNewOrderToFirebase(teams);
-            autoSaveDailyTimeline(true);
         };
 
         // === HÀM AN TOÀN HTML ===
@@ -1440,29 +1439,6 @@
         }
 
         // === BẢO TOÀN DỮ LIỆU SỐNG CÒN: CẤU HÌNH GỐC & CƠ CHẾ LƯU CHỐNG MẤT KHI F5 ===
-        // === CAU HINH TANG MAC DINH CHO TUNG NHOM / IDOL ===
-        // Mac dinh: Royen:one, Orion, Fashion -> Tang 2 ('2')
-        //           Miracle, Elris, Angelik -> Tang G ('G')
-        function getDefaultRoomForTeam(name, fallbackIdx = 0) {
-            if (!name) return (fallbackIdx % 2 === 0 ? '2' : 'G');
-            const clean = String(name).toLowerCase().replace(/[\s:_ -]/g, '');
-
-            // Royen:one, Orion, Fashion -> Tang 2
-            if (clean.includes('royen')) return '2';
-            if (clean.includes('orion')) return '2';
-            if (clean.includes('fashion')) return '2';
-
-            // Miracle, Elris, Angelik -> Tang G
-            if (clean.includes('miracle')) return 'G';
-            if (clean.includes('elris') || clean.includes('bee')) return 'G';
-            if (clean.includes('angelik')) return 'G';
-
-            // Nhom khac neu co (vi du Bnart / Vnart)
-            if (clean.includes('bnart') || clean.includes('vnart')) return 'G';
-
-            return (fallbackIdx % 2 === 0 ? 'G' : '2');
-        }
-
         const DEFAULT_ROOMS_DATA = [
             { name: 'B.eternal - Tầng 3', acc: '@angelinangelik', voca: '6:00', mkp: '6:00-7:55', live: '8:00', list: ['2 MC Toby, Chip', 'BEE', 'BETERNAL', 'ANGELIK', 'ASTRAX'] },
             { name: 'Bnart - Tầng 5', acc: '@b.eternal_no1', voca: '8:00', mkp: '8:00-8:55', live: '9:00', list: ['LYNN', 'CARROT', 'NORA', 'JUDY'] },
@@ -1483,11 +1459,11 @@
                             voca: room.voca || '8:00', 
                             mkp: room.mkp || '8:00-8:55', 
                             live: room.live || '9:00',
-                            room: getDefaultRoomForTeam(item, idx)
+                            room: (idx % 2 === 0 ? 'G' : '2')
                         };
                     }
                     if (item && typeof item === 'object') {
-                        if (!item.room) item.room = getDefaultRoomForTeam(item.name, idx);
+                        if (!item.room) item.room = (idx % 2 === 0 ? 'G' : '2');
                     }
                     return item;
                 });
@@ -1660,28 +1636,6 @@
         const LOCAL_STORAGE_KEY_DAILY = 'ps_timeline_daily_data';
         let firestoreDailyDebounceTimer = null;
 
-<<<<<<< HEAD
-        const DEFAULT_DAILY_TEAMS = [
-            { name: "Royen:one", shift: "07:20", duration: 40, liveDelay: 5, room: "2", calcMode: "auto", isActiveOriginal: true, isTraffic: true },
-            { name: "Orion", shift: "07:20", duration: 40, liveDelay: 30, room: "2", calcMode: "auto", isActiveOriginal: true, isTraffic: true },
-            { name: "Miracle", shift: "08:00", duration: 40, liveDelay: 5, room: "G", calcMode: "auto", isActiveOriginal: true, isTraffic: false },
-            { name: "Angelik", shift: "08:00", duration: 40, liveDelay: 5, room: "G", calcMode: "auto", isActiveOriginal: true, isTraffic: false },
-            { name: "Fashion", shift: "08:40", duration: 20, liveDelay: 5, room: "2", calcMode: "auto", isActiveOriginal: true, isTraffic: false },
-            { name: "Elris", shift: "08:40", duration: 40, liveDelay: 5, room: "G", calcMode: "auto", isActiveOriginal: true, isTraffic: false }
-        ];
-
-        function getDailyTimelinePayload() {
-            return {
-                teams: teams.map((t, idx) => ({
-                    name: t.name,
-                    shift: t.shift,
-                    duration: t.duration,
-                    liveDelay: t.liveDelay,
-                    room: t.room || getDefaultRoomForTeam(t.name, idx),
-                    calcMode: t.calcMode || 'auto',
-                    isActiveOriginal: t.isActiveOriginal !== undefined ? t.isActiveOriginal : true,
-                    isTraffic: !!t.isTraffic
-=======
         const DEFAULT_DAILY_TEAMS = [
             { name: "Royen:One", shift: "07:20", duration: 40, liveDelay: 5, room: "2", calcMode: "auto", isActiveOriginal: true, isTraffic: true },
             { name: "Elris", shift: "07:20", duration: 40, liveDelay: 5, room: "G", calcMode: "auto", isActiveOriginal: true, isTraffic: false },
@@ -1703,7 +1657,6 @@
                     calcMode: t.calcMode || 'auto',
                     isActiveOriginal: t.isActiveOriginal !== undefined ? t.isActiveOriginal : true,
                     isTraffic: !!t.isTraffic
->>>>>>> 550b12b (chore: auto-sync local changes 11.11.2026 17:56:49.97)
                 })),
                 activeStatus: activeStatus,
                 timingMode: document.getElementById('dailyTimingMode')?.value || 'two_rooms',
@@ -1768,25 +1721,9 @@
             try {
                 const ref = window.fs.doc(window.db, "system_config", "timeline_daily");
                 await window.fs.setDoc(ref, payload, { merge: true });
-
-                // Dong bo truong room vao collection timeline_teams cho tung nhom
-                if (Array.isArray(payload.teams) && window.fs.writeBatch) {
-                    try {
-                        const batch = window.fs.writeBatch(window.db);
-                        payload.teams.forEach(t => {
-                            if (t && t.name) {
-                                const tRef = window.fs.doc(window.db, "timeline_teams", t.name);
-                                batch.set(tRef, { room: t.room || getDefaultRoomForTeam(t.name) }, { merge: true });
-                            }
-                        });
-                        await batch.commit();
-                    } catch(bErr) {
-                        console.warn("Loi batch room timeline_teams:", bErr);
-                    }
-                }
-                console.log("\u0110\u00E3 \u0111\u1ED3ng b\u1ED9 Timeline H\u00E0ng Ng\u00E0y l\u00EAn Firestore!");
+                console.log("Đã đồng bộ Timeline Hàng Ngày lên Firestore!");
             } catch(err) {
-                console.warn("Loi syncDailyTimelineToFirestore:", err);
+                console.warn("Lỗi syncDailyTimelineToFirestore:", err);
             }
         }
 
@@ -1828,103 +1765,64 @@
             );
         };
 
-        function applyDailyTimelineData(data, shouldAutoSave = false) {
-            if (!data) return false;
-            if (Array.isArray(data.teams) && data.teams.length > 0) {
-                teams = data.teams;
-                teams.forEach((t, idx) => {
-                    if (!t.room) t.room = getDefaultRoomForTeam(t.name, idx);
-                });
-                activeStatus = Array.isArray(data.activeStatus) ? data.activeStatus : teams.map(t => t.isActiveOriginal !== undefined ? t.isActiveOriginal : true);
-                
-                if (data.timingMode) {
-                    const select = document.getElementById('dailyTimingMode');
-                    if (select) select.value = data.timingMode;
-                    const container = document.getElementById('allParallelTimeContainer');
-                    if (container) container.style.display = data.timingMode === 'all_parallel' ? 'flex' : 'none';
-                }
-                if (data.allParallelTime) {
-                    const inp = document.getElementById('allParallelTime');
-                    if (inp) inp.value = data.allParallelTime;
-                }
-                if (data.dateSelect) {
-                    const dSelect = document.getElementById('dailyDateSelect');
-                    if (dSelect) dSelect.value = data.dateSelect;
-                }
-                if (data.datePickerVal) {
-                    const dPicker = document.getElementById('dailyDatePicker');
-                    if (dPicker) dPicker.value = data.datePickerVal;
-                }
-                if (data.customDateText) {
-                    const dText = document.getElementById('dailyCustomDateInput');
-                    if (dText) dText.value = data.customDateText;
-                    const disp = document.getElementById('display-date');
-                    if (disp) disp.innerText = data.customDateText;
-                }
-                if (data.footer !== undefined) {
-                    const footerInp = document.getElementById('dailyFooterInput');
-                    if (footerInp) footerInp.value = data.footer;
-                    const footerOut = document.getElementById('outDailyFooter');
-                    if (footerOut) {
-                        footerOut.innerText = data.footer;
-                        footerOut.style.display = data.footer.trim() === '' ? 'none' : 'block';
-                    }
-                }
-                if (data.showDailyMakeupRoom !== undefined) {
-                    const el = document.getElementById('showDailyMakeupRoom');
-                    if (el) el.checked = !!data.showDailyMakeupRoom;
-                }
-                if (data.pdfOrientation) {
-                    const pdfSelect = document.getElementById('pdfOrientationDaily');
-                    if (pdfSelect) pdfSelect.value = data.pdfOrientation;
-                }
-                updateDailySaveStatusUI(data.lastUpdated);
-                renderToggles();
-                renderDailyTable();
-                if (shouldAutoSave) {
-                    autoSaveDailyTimeline(false);
-                }
-                return true;
-            }
-            return false;
-        }
-
         function loadSavedDailyTimeline() {
             try {
                 const raw = localStorage.getItem(LOCAL_STORAGE_KEY_DAILY);
                 if (raw) {
                     const data = JSON.parse(raw);
-                    return applyDailyTimelineData(data, false);
+                    if (Array.isArray(data.teams) && data.teams.length > 0) {
+                        teams = data.teams;
+                        activeStatus = Array.isArray(data.activeStatus) ? data.activeStatus : teams.map(t => t.isActiveOriginal);
+                        
+                        if (data.timingMode) {
+                            const select = document.getElementById('dailyTimingMode');
+                            if (select) select.value = data.timingMode;
+                            const container = document.getElementById('allParallelTimeContainer');
+                            if (container) container.style.display = data.timingMode === 'all_parallel' ? 'flex' : 'none';
+                        }
+                        if (data.allParallelTime) {
+                            const inp = document.getElementById('allParallelTime');
+                            if (inp) inp.value = data.allParallelTime;
+                        }
+                        if (data.dateSelect) {
+                            const dSelect = document.getElementById('dailyDateSelect');
+                            if (dSelect) dSelect.value = data.dateSelect;
+                        }
+                        if (data.datePickerVal) {
+                            const dPicker = document.getElementById('dailyDatePicker');
+                            if (dPicker) dPicker.value = data.datePickerVal;
+                        }
+                        if (data.customDateText) {
+                            const dText = document.getElementById('dailyCustomDateInput');
+                            if (dText) dText.value = data.customDateText;
+                            const disp = document.getElementById('display-date');
+                            if (disp) disp.innerText = data.customDateText;
+                        }
+                        if (data.footer !== undefined) {
+                            const footerInp = document.getElementById('dailyFooterInput');
+                            if (footerInp) footerInp.value = data.footer;
+                            const footerOut = document.getElementById('outDailyFooter');
+                            if (footerOut) {
+                                footerOut.innerText = data.footer;
+                                footerOut.style.display = data.footer.trim() === '' ? 'none' : 'block';
+                            }
+                        }
+                        if (data.showDailyMakeupRoom !== undefined) {
+                            const el = document.getElementById('showDailyMakeupRoom');
+                            if (el) el.checked = !!data.showDailyMakeupRoom;
+                        }
+            if (data.pdfOrientation) {
+                            const pdfSelect = document.getElementById('pdfOrientationDaily');
+                            if (pdfSelect) pdfSelect.value = data.pdfOrientation;
+                        }
+                        updateDailySaveStatusUI(data.lastUpdated);
+                        return true;
+                    }
                 }
             } catch(e) {
-                console.warn("Loi loadSavedDailyTimeline:", e);
+                console.warn("Lỗi loadSavedDailyTimeline:", e);
             }
             return false;
-        }
-
-        const ROOM_DEFAULT_MIGRATION_KEY = 'ps_room_defaults_v20261109';
-        function checkAndMigrateDefaultRooms() {
-            const hasMigrated = localStorage.getItem(ROOM_DEFAULT_MIGRATION_KEY);
-            if (!hasMigrated) {
-                let changed = false;
-                if (Array.isArray(teams) && teams.length > 0) {
-                    teams.forEach((t, idx) => {
-                        const targetRoom = getDefaultRoomForTeam(t.name, idx);
-                        const clean = String(t.name || '').toLowerCase().replace(/[\s:_ -]/g, '');
-                        const isCoreTeam = clean.includes('royen') || clean.includes('orion') || clean.includes('fashion') || clean.includes('miracle') || clean.includes('elris') || clean.includes('bee') || clean.includes('angelik');
-                        if (isCoreTeam && t.room !== targetRoom) {
-                            t.room = targetRoom;
-                            changed = true;
-                        }
-                    });
-                }
-                localStorage.setItem(ROOM_DEFAULT_MIGRATION_KEY, 'true');
-                if (changed) {
-                    renderToggles();
-                    renderDailyTable();
-                    autoSaveDailyTimeline(true);
-                }
-            }
         }
 
         window.onDailyTimingModeChange = function() {
@@ -1939,24 +1837,11 @@
 
         window.toggleTeamRoom = function(index) {
             if (!teams[index]) return;
-            const newRoom = (teams[index].room === '2') ? 'G' : '2';
-            teams[index].room = newRoom;
+            teams[index].room = (teams[index].room === '2') ? 'G' : '2';
             renderToggles();
             renderDailyTable();
-            autoSaveDailyTimeline(true);
-
-            // Luu truc tiep vao doc timeline_teams tren Firestore neu co ket noi
-            if (window.db && window.fs && teams[index].name) {
-                try {
-                    const teamRef = window.fs.doc(window.db, "timeline_teams", teams[index].name);
-                    window.fs.setDoc(teamRef, { room: newRoom }, { merge: true }).catch(err => {
-                        console.warn("Loi setDoc room timeline_teams:", err);
-                    });
-                } catch(e) {
-                    console.warn("Loi setDoc room:", e);
-                }
-            }
-            showToast(`Nh\u00F3m ${teams[index].name} chuy\u1EC3n sang ${newRoom === '2' ? 'T\u1EA6NG 2' : 'T\u1EA6NG G'}`, 'info', 1500);
+            autoSaveDailyTimeline();
+            showToast(`Nhóm ${teams[index].name} chuyển sang ${teams[index].room === '2' ? 'TẦNG 2' : 'TẦNG G'}`, 'info', 1500);
         };
 
         
@@ -1992,7 +1877,7 @@
                         duration: Number(teams[index].duration) || 0,
                         liveDelay: Number(teams[index].liveDelay) || 0,
                         order: index + 1,
-                        room: teams[index].room || getDefaultRoomForTeam(newName, index),
+                        room: teams[index].room || "G",
                         calcMode: teams[index].calcMode || "auto"
                     };
                     
@@ -2207,14 +2092,14 @@
                     voca: roomsData[r].voca || '8:00',
                     mkp: roomsData[r].mkp || '8:00-8:55',
                     live: roomsData[r].live || '9:00',
-                    room: getDefaultRoomForTeam(idol, idx) === '2' ? 'G' : '2'
+                    room: '2'
                 };
                 roomsData[r].list[idx] = idol;
             } else {
                 idol.room = (idol.room === '2' ? 'G' : '2');
             }
             generateEventTable();
-            autoSaveEventTimeline(true);
+            autoSaveEventTimeline();
             showToast(`Đã chuyển sang ${idol.room === '2' ? 'TẦNG 2' : 'TẦNG G'}`, 'info', 1200);
         };
 
@@ -2789,7 +2674,7 @@
             container.innerHTML = ''; shiftContainer.innerHTML = '';
             
             teams.forEach((team, index) => {
-                const room = team.room ? (team.room === '2' ? '2' : 'G') : getDefaultRoomForTeam(team.name, index);
+                const room = team.room === '2' ? '2' : 'G';
                 team.room = room;
                 const calcMode = team.calcMode || 'auto';
                 team.calcMode = calcMode;
@@ -2855,19 +2740,6 @@
         }
         function dragLeaveDailyTable(e) { const row = e.target.closest('tr'); if(row) row.classList.remove('drag-over'); }
 
-<<<<<<< HEAD
-        async function saveNewOrderToFirebase(sortedTeamsArray) {
-            if(!window.db || !window.fs) return;
-            
-            const batch = window.fs.writeBatch(window.db);
-            sortedTeamsArray.forEach((team, index) => {
-                if (!team || !team.name) return;
-                const teamRef = window.fs.doc(window.db, "timeline_teams", team.name); 
-                batch.set(teamRef, { 
-                    order: index + 1, 
-                    room: team.room || getDefaultRoomForTeam(team.name, index) 
-                }, { merge: true }); 
-=======
         async function saveNewOrderToFirebase(sortedTeamsArray) {
             if(!window.db || !window.fs) return;
             
@@ -2884,7 +2756,6 @@
                     room: team.room || "G",
                     calcMode: team.calcMode || "auto"
                 }, { merge: true }); 
->>>>>>> 550b12b (chore: auto-sync local changes 11.11.2026 17:56:49.97)
             });
             
             try {
@@ -2957,7 +2828,7 @@
             
             teams.forEach((team, index) => {
                 if (activeStatus[index]) {
-                    const room = team.room ? (team.room === '2' ? '2' : 'G') : getDefaultRoomForTeam(team.name, index);
+                    const room = team.room === '2' ? '2' : 'G';
                     team.room = room;
                     const shiftMinutes = timeToMinutes(team.shift);
                     let startMakeup;
@@ -3024,13 +2895,17 @@
             checkLiveStatus();
         }
 
-        window.updateDailyFooter = function() {
-            const footerText = document.getElementById('dailyFooterInput').value;
+        function updateDailyFooter() {
+            const footerInp = document.getElementById('dailyFooterInput');
+            const footerText = footerInp ? footerInp.value : '';
             const footerEl = document.getElementById('outDailyFooter');
-            footerEl.innerText = footerText;
-            footerEl.style.display = footerText.trim() === '' ? 'none' : 'block';
+            if (footerEl) {
+                footerEl.innerText = footerText;
+                footerEl.style.display = footerText.trim() === '' ? 'none' : 'block';
+            }
             autoSaveDailyTimeline();
         }
+        window.updateDailyFooter = updateDailyFooter;
 
         // === TAB LỊCH THI ĐẤU ===
         function changeRoomCount() { renderRoomsConfig(); generateEventTable(); }
@@ -3169,7 +3044,7 @@
                             const iVoca = typeof idol === 'object' ? idol.voca : roomsData[0].voca;
                             const iMkp = typeof idol === 'object' ? idol.mkp : roomsData[0].mkp;
                             const iLive = typeof idol === 'object' ? idol.live : roomsData[0].live;
-                            const iRoom = (typeof idol === 'object' && idol.room) ? idol.room : getDefaultRoomForTeam(iName, idolIndex);
+                            const iRoom = (typeof idol === 'object' && idol.room) ? idol.room : (idolIndex % 2 === 0 ? 'G' : '2');
                             const roomBadgeHtml = iRoom === '2'
                                 ? `<span class="badge badge-room badge-room-2" onclick="toggleIdolRoom(0, ${idolIndex})" title="Bấm để đổi phòng: TẦNG G / TẦNG 2" style="cursor:pointer;">TẦNG&nbsp;2</span>`
                                 : `<span class="badge badge-room badge-room-g" onclick="toggleIdolRoom(0, ${idolIndex})" title="Bấm để đổi phòng: TẦNG G / TẦNG 2" style="cursor:pointer;">TẦNG&nbsp;G</span>`;
@@ -3204,7 +3079,7 @@
                             const iVoca = typeof idol === 'object' ? idol.voca : roomsData[r].voca;
                             const iMkp = typeof idol === 'object' ? idol.mkp : roomsData[r].mkp;
                             const iLive = typeof idol === 'object' ? idol.live : roomsData[r].live;
-                            const iRoom = (typeof idol === 'object' && idol.room) ? idol.room : getDefaultRoomForTeam(iName, i);
+                            const iRoom = (typeof idol === 'object' && idol.room) ? idol.room : (i % 2 === 0 ? 'G' : '2');
                             const roomBadgeHtml = iRoom === '2'
                                 ? `<span class="badge badge-room badge-room-2" onclick="toggleIdolRoom(${r}, ${i})" title="Bấm để đổi phòng: TẦNG G / TẦNG 2" style="cursor:pointer;">TẦNG&nbsp;2</span>`
                                 : `<span class="badge badge-room badge-room-g" onclick="toggleIdolRoom(${r}, ${i})" title="Bấm để đổi phòng: TẦNG G / TẦNG 2" style="cursor:pointer;">TẦNG&nbsp;G</span>`;
@@ -3261,7 +3136,7 @@
                             const iVoca = typeof idol === 'object' ? idol.voca : roomsData[0].voca;
                             const iMkp = typeof idol === 'object' ? idol.mkp : roomsData[0].mkp;
                             const iLive = typeof idol === 'object' ? idol.live : roomsData[0].live;
-                            const iRoom = (typeof idol === 'object' && idol.room) ? idol.room : getDefaultRoomForTeam(iName, idolIndex);
+                            const iRoom = (typeof idol === 'object' && idol.room) ? idol.room : (idolIndex % 2 === 0 ? 'G' : '2');
                             const roomBadgeHtml = iRoom === '2'
                                 ? `<span class="badge badge-room badge-room-2" onclick="toggleIdolRoom(0, ${idolIndex})" title="Bấm để đổi phòng: TẦNG G / TẦNG 2" style="cursor:pointer;">TẦNG&nbsp;2</span>`
                                 : `<span class="badge badge-room badge-room-g" onclick="toggleIdolRoom(0, ${idolIndex})" title="Bấm để đổi phòng: TẦNG G / TẦNG 2" style="cursor:pointer;">TẦNG&nbsp;G</span>`;
@@ -3295,7 +3170,7 @@
                     const iVoca = typeof idol === 'object' ? idol.voca : roomsData[r].voca;
                     const iMkp = typeof idol === 'object' ? idol.mkp : roomsData[r].mkp;
                     const iLive = typeof idol === 'object' ? idol.live : roomsData[r].live;
-                    const iRoom = (typeof idol === 'object' && idol.room) ? idol.room : getDefaultRoomForTeam(iName, i);
+                    const iRoom = (typeof idol === 'object' && idol.room) ? idol.room : (i % 2 === 0 ? 'G' : '2');
                     const roomBadgeHtml = iRoom === '2'
                         ? `<span class="badge badge-room badge-room-2" onclick="toggleIdolRoom(${r}, ${i})" title="Bấm để đổi phòng: TẦNG G / TẦNG 2" style="cursor:pointer;">TẦNG&nbsp;2</span>`
                         : `<span class="badge badge-room badge-room-g" onclick="toggleIdolRoom(${r}, ${i})" title="Bấm để đổi phòng: TẦNG G / TẦNG 2" style="cursor:pointer;">TẦNG&nbsp;G</span>`;
@@ -3578,7 +3453,6 @@
             teams = JSON.parse(JSON.stringify(DEFAULT_DAILY_TEAMS));
             activeStatus = teams.map(t => t.isActiveOriginal !== undefined ? t.isActiveOriginal : true);
         }
-        checkAndMigrateDefaultRooms();
         renderToggles();
         renderDailyTable();
         const hasSavedEvent = loadSavedEventTimeline();
@@ -3647,35 +3521,6 @@
                             }
                         } catch (eventSyncErr) {
                             console.warn("Lỗi đồng bộ Cloud Firestore timeline_event:", eventSyncErr);
-                        }
-
-                        // Dong bo hai chieu Lich Hang Ngay voi Cloud Firestore
-                        try {
-                            const dailyDocRef = window.fs.doc(window.db, "system_config", "timeline_daily");
-                            const dailyDocSnap = await window.fs.getDoc(dailyDocRef);
-                            if (dailyDocSnap.exists()) {
-                                const remoteDaily = dailyDocSnap.data();
-                                const localRaw = localStorage.getItem(LOCAL_STORAGE_KEY_DAILY);
-                                const localDaily = localRaw ? JSON.parse(localRaw) : null;
-                                const remoteTime = remoteDaily && remoteDaily.lastUpdated ? new Date(remoteDaily.lastUpdated).getTime() : 0;
-                                const localTime = localDaily && localDaily.lastUpdated ? new Date(localDaily.lastUpdated).getTime() : 0;
-
-                                if (!localDaily || remoteTime > localTime) {
-                                    applyDailyTimelineData(remoteDaily, false);
-                                    localStorage.setItem(LOCAL_STORAGE_KEY_DAILY, JSON.stringify(remoteDaily));
-                                    updateDailySaveStatusUI(remoteDaily.lastUpdated);
-                                    console.log("\u0110\u00E3 c\u1EADp nh\u1EADt L\u1ECBch H\u00E0ng Ng\u00E0y m\u1EDBi nh\u1EA5t t\u1EEB Cloud Firestore!");
-                                } else if (localDaily && localTime > remoteTime) {
-                                    syncDailyTimelineToFirestore(localDaily);
-                                }
-                            } else {
-                                const localRaw = localStorage.getItem(LOCAL_STORAGE_KEY_DAILY);
-                                if (localRaw) {
-                                    syncDailyTimelineToFirestore(JSON.parse(localRaw));
-                                }
-                            }
-                        } catch (dailySyncErr) {
-                            console.warn("Loi sync Cloud Firestore timeline_daily:", dailySyncErr);
                         }
 
                         const teamSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "timeline_teams"));
@@ -3804,15 +3649,6 @@
                             const existing = teams.find(item => String(item.name || '').toLowerCase() === tName.toLowerCase());
                             const defaultTeam = DEFAULT_DAILY_TEAMS.find(d => String(d.name).toLowerCase() === tName.toLowerCase());
 
-<<<<<<< HEAD
-                            const finalName = t.name || t.id;
-                            const defaultRoom = getDefaultRoomForTeam(finalName, idx);
-                            const room = (localTeam && localTeam.room) ? localTeam.room : (t.room ? t.room : (existing?.room ? existing.room : defaultRoom));
-                            const calcMode = (localTeam && localTeam.calcMode) ? localTeam.calcMode : (t.calcMode ? t.calcMode : (existing?.calcMode ? existing.calcMode : 'auto'));
-                            const currentShift = (localTeam && localTeam.shift) ? localTeam.shift : (t.shift ? t.shift : (existing?.shift ? existing.shift : (t.shift || '08:00')));
-                            const currentDur = (localTeam && localTeam.duration !== undefined) ? localTeam.duration : ((t.duration !== undefined) ? Number(t.duration) : ((existing && existing.duration !== undefined) ? existing.duration : 0));
-                            const currentLiveDelay = (localTeam && localTeam.liveDelay !== undefined) ? localTeam.liveDelay : ((t.liveDelay !== undefined) ? Number(t.liveDelay) : ((existing && existing.liveDelay !== undefined) ? existing.liveDelay : 0));
-=======
                             const finalName = t.name || t.id;
                             const room = (localTeam && localTeam.room) ? localTeam.room : (existing?.room ? existing.room : (t.room || (defaultTeam?.room || (idx % 2 === 0 ? 'G' : '2'))));
                             const calcMode = (localTeam && localTeam.calcMode) ? localTeam.calcMode : (existing?.calcMode ? existing.calcMode : (t.calcMode || 'auto'));
@@ -3832,7 +3668,6 @@
                                     ? Number(existing.liveDelay) 
                                     : (t.liveDelay !== undefined && Number(t.liveDelay) >= 0 ? Number(t.liveDelay) : (defaultTeam?.liveDelay !== undefined ? defaultTeam.liveDelay : 5)));
                             const currentLiveDelay = Number(rawLiveDelay) >= 0 ? Number(rawLiveDelay) : 5;
->>>>>>> 550b12b (chore: auto-sync local changes 11.11.2026 17:56:49.97)
 
                             return {
                                 name: finalName, 
@@ -3849,28 +3684,8 @@
                         });
                         
                         activeStatus = teams.map(t => t.isActiveOriginal); 
-                        checkAndMigrateDefaultRooms();
                         updateDailyDateDisplay(); 
-                        showToast("\u0110\u00E3 \u0111\u1ED3ng b\u1ED9 d\u1EEF li\u1EC7u th\u00E0nh c\u00F4ng!", "success", 2000);
-
-                        // Dong bo dam bao room trong Firestore collection timeline_teams luon day du
-                        if (window.fs && window.fs.writeBatch && timelineData.length > 0) {
-                            try {
-                                const b = window.fs.writeBatch(window.db);
-                                let needBatch = false;
-                                teams.forEach((tm) => {
-                                    const rawDoc = timelineData.find(d => String(d.name || d.id || '').toLowerCase() === String(tm.name).toLowerCase());
-                                    if (!rawDoc || !rawDoc.room || rawDoc.room !== tm.room) {
-                                        const dRef = window.fs.doc(window.db, "timeline_teams", tm.name);
-                                        b.set(dRef, { room: tm.room }, { merge: true });
-                                        needBatch = true;
-                                    }
-                                });
-                                if (needBatch) {
-                                    b.commit().catch(e => console.warn("Loi sync initial rooms to timeline_teams:", e));
-                                }
-                            } catch(e) {}
-                        }
+                        showToast("Đã đồng bộ dữ liệu thành công!", "success", 2000);
 
                         // Realtime sync từ Firebase collection off_leaves, off_groups, và system_config
                         try {
