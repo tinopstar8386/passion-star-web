@@ -1660,6 +1660,7 @@
         const LOCAL_STORAGE_KEY_DAILY = 'ps_timeline_daily_data';
         let firestoreDailyDebounceTimer = null;
 
+<<<<<<< HEAD
         const DEFAULT_DAILY_TEAMS = [
             { name: "Royen:one", shift: "07:20", duration: 40, liveDelay: 5, room: "2", calcMode: "auto", isActiveOriginal: true, isTraffic: true },
             { name: "Orion", shift: "07:20", duration: 40, liveDelay: 30, room: "2", calcMode: "auto", isActiveOriginal: true, isTraffic: true },
@@ -1680,6 +1681,29 @@
                     calcMode: t.calcMode || 'auto',
                     isActiveOriginal: t.isActiveOriginal !== undefined ? t.isActiveOriginal : true,
                     isTraffic: !!t.isTraffic
+=======
+        const DEFAULT_DAILY_TEAMS = [
+            { name: "Royen:One", shift: "07:20", duration: 40, liveDelay: 5, room: "2", calcMode: "auto", isActiveOriginal: true, isTraffic: true },
+            { name: "Elris", shift: "07:20", duration: 40, liveDelay: 5, room: "G", calcMode: "auto", isActiveOriginal: true, isTraffic: false },
+            { name: "Orion", shift: "08:00", duration: 45, liveDelay: 5, room: "2", calcMode: "auto", isActiveOriginal: true, isTraffic: true },
+            { name: "Angelik", shift: "08:00", duration: 45, liveDelay: 5, room: "G", calcMode: "auto", isActiveOriginal: true, isTraffic: false },
+            { name: "Miracle", shift: "08:40", duration: 40, liveDelay: 5, room: "G", calcMode: "auto", isActiveOriginal: true, isTraffic: false },
+            { name: "BEE", shift: "08:45", duration: 40, liveDelay: 5, room: "2", calcMode: "auto", isActiveOriginal: true, isTraffic: false },
+            { name: "Bnart", shift: "09:20", duration: 40, liveDelay: 5, room: "G", calcMode: "auto", isActiveOriginal: true, isTraffic: false }
+        ];
+
+        function getDailyTimelinePayload() {
+            return {
+                teams: teams.map((t, idx) => ({
+                    name: t.name,
+                    shift: t.shift,
+                    duration: t.duration,
+                    liveDelay: t.liveDelay,
+                    room: t.room || (idx % 2 === 0 ? 'G' : '2'),
+                    calcMode: t.calcMode || 'auto',
+                    isActiveOriginal: t.isActiveOriginal !== undefined ? t.isActiveOriginal : true,
+                    isTraffic: !!t.isTraffic
+>>>>>>> 550b12b (chore: auto-sync local changes 11.11.2026 17:56:49.97)
                 })),
                 activeStatus: activeStatus,
                 timingMode: document.getElementById('dailyTimingMode')?.value || 'two_rooms',
@@ -2831,6 +2855,7 @@
         }
         function dragLeaveDailyTable(e) { const row = e.target.closest('tr'); if(row) row.classList.remove('drag-over'); }
 
+<<<<<<< HEAD
         async function saveNewOrderToFirebase(sortedTeamsArray) {
             if(!window.db || !window.fs) return;
             
@@ -2842,6 +2867,24 @@
                     order: index + 1, 
                     room: team.room || getDefaultRoomForTeam(team.name, index) 
                 }, { merge: true }); 
+=======
+        async function saveNewOrderToFirebase(sortedTeamsArray) {
+            if(!window.db || !window.fs) return;
+            
+            const batch = window.fs.writeBatch(window.db);
+            sortedTeamsArray.forEach((team, index) => {
+                if (!team || !team.name) return;
+                const teamRef = window.fs.doc(window.db, "timeline_teams", team.name); 
+                batch.set(teamRef, { 
+                    name: team.name,
+                    order: index + 1,
+                    shift: team.shift || "08:00",
+                    duration: (Number(team.duration) > 0) ? Number(team.duration) : 40,
+                    liveDelay: (Number(team.liveDelay) >= 0) ? Number(team.liveDelay) : 5,
+                    room: team.room || "G",
+                    calcMode: team.calcMode || "auto"
+                }, { merge: true }); 
+>>>>>>> 550b12b (chore: auto-sync local changes 11.11.2026 17:56:49.97)
             });
             
             try {
@@ -2944,8 +2987,12 @@
                         }
                     }
 
-                    const endMakeup = startMakeup + team.duration;
-                    const liveTime = endMakeup + team.liveDelay;
+                    const teamDur = (Number(team.duration) > 0) ? Number(team.duration) : 40;
+                    team.duration = teamDur;
+                    const teamDelay = (Number(team.liveDelay) >= 0) ? Number(team.liveDelay) : 5;
+                    team.liveDelay = teamDelay;
+                    const endMakeup = startMakeup + teamDur;
+                    const liveTime = endMakeup + teamDelay;
 
                     // Cập nhật các mốc thời gian cho nhóm tiếp theo
                     roomFreeTime[room] = endMakeup;
@@ -3632,11 +3679,40 @@
                         }
 
                         const teamSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "timeline_teams"));
-                        let timelineData = [];
+                        let rawTimelineData = [];
                         teamSnapshot.forEach((doc) => { 
-                            timelineData.push({ id: doc.id, ...doc.data() }); 
+                            rawTimelineData.push({ id: doc.id, ...doc.data() }); 
                         });
-                        timelineData.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+                        rawTimelineData.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+                        // KHỬ TRÙNG LẶP (DEDUPLICATE) THEO TÊN (CASE-INSENSITIVE)
+                        // Khắc phục triệt để lỗi cùng 1 nhóm bị 2 dòng (ví dụ Royen:One và Royen:one)
+                        let seenTeamNames = new Map();
+                        let duplicateDocsToDelete = [];
+                        let timelineData = [];
+
+                        rawTimelineData.forEach(item => {
+                            const rawName = String(item.name || item.id || "").trim();
+                            const cleanKey = rawName.toLowerCase();
+                            if (!cleanKey) return;
+
+                            if (!seenTeamNames.has(cleanKey)) {
+                                seenTeamNames.set(cleanKey, item);
+                                timelineData.push(item);
+                            } else {
+                                duplicateDocsToDelete.push(item.id);
+                            }
+                        });
+
+                        // Tự động xóa các document bị trùng tên hoa/thường trên Firestore
+                        if (duplicateDocsToDelete.length > 0 && window.fs && window.fs.deleteDoc) {
+                            duplicateDocsToDelete.forEach(async (dupId) => {
+                                try {
+                                    await window.fs.deleteDoc(window.fs.doc(window.db, "timeline_teams", dupId));
+                                    console.log("Đã dọn dẹp document trùng trên Firestore:", dupId);
+                                } catch(e) {}
+                            });
+                        }
                         
                         const empSnapshot = await window.fs.getDocs(window.fs.collection(window.db, "off_employees"));
                         let offEmployees = [];
@@ -3726,7 +3802,9 @@
                             // Ưu tiên bảo toàn cấu hình người dùng đã lưu tại vị trí idx
                             const localTeam = localDailyTeams ? localDailyTeams.find(item => item && String(item.name || '').toLowerCase() === tName.toLowerCase()) : null;
                             const existing = teams.find(item => String(item.name || '').toLowerCase() === tName.toLowerCase());
+                            const defaultTeam = DEFAULT_DAILY_TEAMS.find(d => String(d.name).toLowerCase() === tName.toLowerCase());
 
+<<<<<<< HEAD
                             const finalName = t.name || t.id;
                             const defaultRoom = getDefaultRoomForTeam(finalName, idx);
                             const room = (localTeam && localTeam.room) ? localTeam.room : (t.room ? t.room : (existing?.room ? existing.room : defaultRoom));
@@ -3734,6 +3812,27 @@
                             const currentShift = (localTeam && localTeam.shift) ? localTeam.shift : (t.shift ? t.shift : (existing?.shift ? existing.shift : (t.shift || '08:00')));
                             const currentDur = (localTeam && localTeam.duration !== undefined) ? localTeam.duration : ((t.duration !== undefined) ? Number(t.duration) : ((existing && existing.duration !== undefined) ? existing.duration : 0));
                             const currentLiveDelay = (localTeam && localTeam.liveDelay !== undefined) ? localTeam.liveDelay : ((t.liveDelay !== undefined) ? Number(t.liveDelay) : ((existing && existing.liveDelay !== undefined) ? existing.liveDelay : 0));
+=======
+                            const finalName = t.name || t.id;
+                            const room = (localTeam && localTeam.room) ? localTeam.room : (existing?.room ? existing.room : (t.room || (defaultTeam?.room || (idx % 2 === 0 ? 'G' : '2'))));
+                            const calcMode = (localTeam && localTeam.calcMode) ? localTeam.calcMode : (existing?.calcMode ? existing.calcMode : (t.calcMode || 'auto'));
+                            const currentShift = (localTeam && localTeam.shift) ? localTeam.shift : (existing?.shift ? existing.shift : (t.shift || defaultTeam?.shift || '08:00'));
+                            
+                            // Bảo đảm thời lượng makeup không bao giờ bị 0 phút
+                            const rawDur = (localTeam && Number(localTeam.duration) > 0) 
+                                ? Number(localTeam.duration) 
+                                : ((existing && Number(existing.duration) > 0) 
+                                    ? Number(existing.duration) 
+                                    : (Number(t.duration) > 0 ? Number(t.duration) : (defaultTeam?.duration || 40)));
+                            const currentDur = Number(rawDur) > 0 ? Number(rawDur) : 40;
+
+                            const rawLiveDelay = (localTeam && localTeam.liveDelay !== undefined && Number(localTeam.liveDelay) >= 0) 
+                                ? Number(localTeam.liveDelay) 
+                                : ((existing && existing.liveDelay !== undefined && Number(existing.liveDelay) >= 0) 
+                                    ? Number(existing.liveDelay) 
+                                    : (t.liveDelay !== undefined && Number(t.liveDelay) >= 0 ? Number(t.liveDelay) : (defaultTeam?.liveDelay !== undefined ? defaultTeam.liveDelay : 5)));
+                            const currentLiveDelay = Number(rawLiveDelay) >= 0 ? Number(rawLiveDelay) : 5;
+>>>>>>> 550b12b (chore: auto-sync local changes 11.11.2026 17:56:49.97)
 
                             return {
                                 name: finalName, 
