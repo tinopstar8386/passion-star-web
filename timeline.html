@@ -1185,6 +1185,24 @@
                         <input type="text" id="allParallelTime" value="8:00" onchange="renderDailyTable(); autoSaveDailyTimeline();" style="width: 70px; padding: 4px; text-align: center; border-radius: 4px; border: 1px solid var(--border); font-weight: bold; background: var(--bg-card); color: var(--text-main);">
                     </div>
 
+                    <!-- TINH CHỈNH GIỜ BẮT ĐẦU MAKEUP TÁCH BIỆT GIỜ VÔ CA -->
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-size: 11px; font-weight: 800; color: var(--text-main);">⏱️ Tinh chỉnh BĐ Makeup vs Giờ vô ca (phút):</span>
+                            <button type="button" onclick="setDailyMakeupOffset(0)" title="Đặt lại về 0 (trùng giờ vô ca)" style="padding: 2px 6px; font-size: 10px; font-weight: 700; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); cursor: pointer;">↺ 0p</button>
+                        </div>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <button type="button" onclick="nudgeDailyMakeupOffset(-15)" style="padding: 4px 6px; font-size: 10px; font-weight: 800; border-radius: 5px; border: 1px solid var(--border); background: var(--bg-card); color: #ef4444; cursor: pointer;">-15p</button>
+                            <button type="button" onclick="nudgeDailyMakeupOffset(-5)" style="padding: 4px 6px; font-size: 10px; font-weight: 800; border-radius: 5px; border: 1px solid var(--border); background: var(--bg-card); color: #ef4444; cursor: pointer;">-5p</button>
+                            <input type="number" id="dailyMakeupOffset" value="0" onchange="onDailyMakeupOffsetChange()" style="flex: 1; min-width: 44px; padding: 4px; text-align: center; border-radius: 5px; border: 1.5px solid #6366f1; font-weight: 800; font-size: 12px; background: var(--bg-card); color: var(--text-main);" title="Âm = makeup sớm hơn giờ vô ca, Dương = makeup trễ hơn giờ vô ca">
+                            <button type="button" onclick="nudgeDailyMakeupOffset(5)" style="padding: 4px 6px; font-size: 10px; font-weight: 800; border-radius: 5px; border: 1px solid var(--border); background: var(--bg-card); color: #10b981; cursor: pointer;">+5p</button>
+                            <button type="button" onclick="nudgeDailyMakeupOffset(15)" style="padding: 4px 6px; font-size: 10px; font-weight: 800; border-radius: 5px; border: 1px solid var(--border); background: var(--bg-card); color: #10b981; cursor: pointer;">+15p</button>
+                        </div>
+                        <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
+                            Số âm (vd <b>-15</b>) = makeup trước giờ vô ca; số dương (vd <b>+10</b>) = makeup sau giờ vô ca.
+                        </div>
+                    </div>
+
                     <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4; margin-top: 4px;">
                         💡 <b>Chế độ 2 Phòng:</b> Tầng G & Tầng 2 chạy song song (chung giờ). Các ca cùng phòng sẽ tự động cộng tiếp. Nhấp nút <b>[Tầng G/2]</b> hoặc <b>[Cùng giờ/Cộng tiếp]</b> trên từng nhóm để tùy biến.
                     </div>
@@ -1651,6 +1669,7 @@
                 teams: teams.map((t, idx) => ({
                     name: t.name,
                     shift: t.shift,
+                    makeupStart: t.makeupStart || '',
                     duration: t.duration,
                     liveDelay: t.liveDelay,
                     room: t.room || (idx % 2 === 0 ? 'G' : '2'),
@@ -1661,6 +1680,7 @@
                 activeStatus: activeStatus,
                 timingMode: document.getElementById('dailyTimingMode')?.value || 'two_rooms',
                 allParallelTime: document.getElementById('allParallelTime')?.value || '8:00',
+                makeupOffset: Number(document.getElementById('dailyMakeupOffset')?.value) || 0,
                 dateSelect: document.getElementById('dailyDateSelect')?.value || 'tomorrow',
                 datePickerVal: document.getElementById('dailyDatePicker')?.value || '',
                 customDateText: document.getElementById('dailyCustomDateInput')?.value || '',
@@ -1751,6 +1771,8 @@
                     if (timingSelect) timingSelect.value = 'two_rooms';
                     const timeContainer = document.getElementById('allParallelTimeContainer');
                     if (timeContainer) timeContainer.style.display = 'none';
+                    const offsetInput = document.getElementById('dailyMakeupOffset');
+                    if (offsetInput) offsetInput.value = 0;
 
                     const footerInput = document.getElementById('dailyFooterInput');
                     if (footerInput) footerInput.value = '';
@@ -1783,6 +1805,10 @@
                         if (data.allParallelTime) {
                             const inp = document.getElementById('allParallelTime');
                             if (inp) inp.value = data.allParallelTime;
+                        }
+                        if (data.makeupOffset !== undefined) {
+                            const offInp = document.getElementById('dailyMakeupOffset');
+                            if (offInp) offInp.value = Number(data.makeupOffset) || 0;
                         }
                         if (data.dateSelect) {
                             const dSelect = document.getElementById('dailyDateSelect');
@@ -1874,6 +1900,7 @@
                     const teamPayload = {
                         name: newName,
                         shift: teams[index].shift || "08:00",
+                        makeupStart: teams[index].makeupStart || "",
                         duration: Number(teams[index].duration) || 0,
                         liveDelay: Number(teams[index].liveDelay) || 0,
                         order: index + 1,
@@ -2657,6 +2684,17 @@
             return parseInt(h) * 60 + (parseInt(m) || 0);
         }
 
+        function parseValidTimeMinutes(timeStr) {
+            if (timeStr === null || timeStr === undefined) return null;
+            const clean = String(timeStr).trim();
+            if (!clean || !/^\d{1,2}:\d{1,2}$/.test(clean)) return null;
+            const [hStr, mStr] = clean.split(':');
+            const h = parseInt(hStr, 10);
+            const m = parseInt(mStr, 10);
+            if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+            return h * 60 + m;
+        }
+
         function updateAllTables() {
             document.getElementById('thDailyVoca').innerText = document.getElementById('hdVoca').value;
             document.getElementById('thDailyMkp').innerText = document.getElementById('hdMkp').value;
@@ -2709,6 +2747,17 @@
                                 <input type="text" class="num-input" style="width:55px; text-align: center;" value="${team.shift}" onchange="updateShift(${index}, this.value)">
                             </div>
                         </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px; border-top: 1px dashed var(--border);">
+                            <span style="font-size:10px; font-weight:700; color: ${team.makeupStart ? '#f59e0b' : 'var(--text-muted)'};">
+                                💄 BĐ MKP: ${team.makeupStart ? '<span style="color:#d97706;">(Riêng)</span>' : '(Tự động)'}
+                            </span>
+                            <div style="display: flex; align-items: center; gap: 3px;">
+                                <button type="button" onclick="nudgeTeamMakeupStart(${index}, -5)" title="Lùi giờ bắt đầu makeup 5 phút" style="padding: 2px 5px; font-size: 10px; font-weight: 800; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-input); color: #ef4444; cursor: pointer;">-5</button>
+                                <input type="text" class="num-input" placeholder="Tự động" style="width: 56px; text-align: center; font-size: 11px; ${team.makeupStart ? 'border-color: #f59e0b; color: #b45309; font-weight: 800;' : ''}" value="${team.makeupStart || ''}" onchange="updateTeamMakeupStart(${index}, this.value)" title="Nhập giờ bắt đầu makeup riêng (vd: 07:35), để trống để tự động">
+                                <button type="button" onclick="nudgeTeamMakeupStart(${index}, 5)" title="Tăng giờ bắt đầu makeup 5 phút" style="padding: 2px 5px; font-size: 10px; font-weight: 800; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-input); color: #10b981; cursor: pointer;">+5</button>
+                                ${team.makeupStart ? `<button type="button" onclick="updateTeamMakeupStart(${index}, '')" title="Xóa giờ riêng, quay về tự động" style="padding: 2px 5px; font-size: 10px; font-weight: 800; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-muted); cursor: pointer;">↺</button>` : ''}
+                            </div>
+                        </div>
                     </div>`;
                 
                 shiftContainer.innerHTML += `
@@ -2728,6 +2777,104 @@
         window.updateDuration = function(index, val) { teams[index].duration = parseInt(val) || 0; renderDailyTable(); autoSaveDailyTimeline(); }
         window.updateLiveDelay = function(index, val) { teams[index].liveDelay = parseInt(val) || 0; renderDailyTable(); autoSaveDailyTimeline(); }
         window.updateShift = function(index, val) { teams[index].shift = val; renderDailyTable(); renderToggles(); autoSaveDailyTimeline(); }
+
+        window.updateTeamMakeupStart = function(index, val) {
+            if (!teams[index]) return;
+            const trimmed = String(val || '').trim();
+            if (!trimmed || trimmed.toLowerCase() === 'auto') {
+                teams[index].makeupStart = '';
+                renderToggles();
+                renderDailyTable();
+                autoSaveDailyTimeline();
+                showToast(`Đã đặt lại giờ BĐ Makeup của ${teams[index].name} về Tự động`, 'info', 1500);
+                return;
+            }
+            const parsed = parseValidTimeMinutes(trimmed);
+            if (parsed === null) {
+                showToast('Định dạng giờ không hợp lệ! Hãy nhập dạng H:MM (vd: 7:35 hoặc 07:35)', 'error', 2500);
+                renderToggles();
+                return;
+            }
+            teams[index].makeupStart = formatTime(parsed);
+            renderToggles();
+            renderDailyTable();
+            autoSaveDailyTimeline();
+            showToast(`Đã đặt giờ BĐ Makeup ${teams[index].name}: ${teams[index].makeupStart}`, 'success', 1600);
+        };
+
+        window.nudgeTeamMakeupStart = function(index, deltaMinutes) {
+            if (!teams[index]) return;
+            const currentCustom = parseValidTimeMinutes(teams[index].makeupStart);
+            const fallbackBase = (typeof teams[index]._lastComputedStart === 'number')
+                ? teams[index]._lastComputedStart
+                : timeToMinutes(teams[index].shift);
+            const base = (currentCustom !== null) ? currentCustom : fallbackBase;
+            let next = (base + deltaMinutes) % (24 * 60);
+            if (next < 0) next += 24 * 60;
+            teams[index].makeupStart = formatTime(next);
+            renderToggles();
+            renderDailyTable();
+            autoSaveDailyTimeline();
+        };
+
+        window.setDailyMakeupOffset = function(val) {
+            const inp = document.getElementById('dailyMakeupOffset');
+            if (inp) inp.value = Number(val) || 0;
+            renderDailyTable();
+            autoSaveDailyTimeline();
+            showToast(`Đã đặt độ lệch giờ Makeup: ${Number(val) || 0} phút`, 'info', 1500);
+        };
+
+        window.nudgeDailyMakeupOffset = function(delta) {
+            const inp = document.getElementById('dailyMakeupOffset');
+            const cur = inp ? (Number(inp.value) || 0) : 0;
+            const next = cur + delta;
+            if (inp) inp.value = next;
+            renderDailyTable();
+            autoSaveDailyTimeline();
+        };
+
+        window.onDailyMakeupOffsetChange = function() {
+            renderDailyTable();
+            autoSaveDailyTimeline();
+        };
+
+        window.updateDailyMakeupInline = function(index, rawText) {
+            if (!teams[index]) return;
+            const clean = String(rawText || '').trim();
+            if (!clean || clean.toLowerCase() === 'auto') {
+                teams[index].makeupStart = '';
+                renderToggles();
+                renderDailyTable();
+                autoSaveDailyTimeline();
+                return;
+            }
+            if (clean.includes('-')) {
+                const parts = clean.split('-').map(s => s.trim());
+                const sMin = parseValidTimeMinutes(parts[0]);
+                const eMin = parseValidTimeMinutes(parts[1]);
+                if (sMin !== null) {
+                    teams[index].makeupStart = formatTime(sMin);
+                    if (eMin !== null && eMin > sMin) {
+                        teams[index].duration = eMin - sMin;
+                    }
+                    renderToggles();
+                    renderDailyTable();
+                    autoSaveDailyTimeline();
+                    return;
+                }
+            }
+            const singleMin = parseValidTimeMinutes(clean);
+            if (singleMin !== null) {
+                teams[index].makeupStart = formatTime(singleMin);
+                renderToggles();
+                renderDailyTable();
+                autoSaveDailyTimeline();
+                return;
+            }
+            showToast('Định dạng không hợp lệ (vd: 7:35 hoặc 7:35 - 8:15)', 'error', 2200);
+            renderDailyTable();
+        };
 
         let dragDailyIdx = null;
         function startDragDailyTable(e, idx) {
@@ -2751,6 +2898,7 @@
                     name: team.name,
                     order: index + 1,
                     shift: team.shift || "08:00",
+                    makeupStart: team.makeupStart || "",
                     duration: (Number(team.duration) > 0) ? Number(team.duration) : 40,
                     liveDelay: (Number(team.liveDelay) >= 0) ? Number(team.liveDelay) : 5,
                     room: team.room || "G",
@@ -2831,33 +2979,41 @@
                     const room = team.room === '2' ? '2' : 'G';
                     team.room = room;
                     const shiftMinutes = timeToMinutes(team.shift);
+                    const makeupOffset = Number(document.getElementById('dailyMakeupOffset')?.value) || 0;
+                    const customMakeupStart = parseValidTimeMinutes(team.makeupStart);
+                    const baseMakeupMinutes = Math.max(0, shiftMinutes + makeupOffset);
                     let startMakeup;
-                    let displayShiftMinutes;
+                    let displayShiftMinutes = shiftMinutes;
 
-                    if (timingMode === 'all_parallel') {
+                    if (customMakeupStart !== null) {
+                        // Giờ bắt đầu Makeup tinh chỉnh riêng (tách biệt hoàn toàn với Giờ vô ca)
+                        startMakeup = customMakeupStart;
+                        if (timingMode === 'all_parallel') {
+                            displayShiftMinutes = allParallelMinutes;
+                        }
+                    } else if (timingMode === 'all_parallel') {
                         startMakeup = allParallelMinutes; 
                         displayShiftMinutes = allParallelMinutes;
                     } else if (timingMode === 'sequential') {
-                        displayShiftMinutes = shiftMinutes;
-                        startMakeup = Math.max(sequentialEndTime, shiftMinutes);
+                        startMakeup = Math.max(sequentialEndTime, baseMakeupMinutes);
                     } else {
                         // CHẾ ĐỘ 2 PHÒNG (TẦNG G & TẦNG 2 SONG SONG, CÙNG PHÒNG CỘNG TIẾP)
-                        displayShiftMinutes = shiftMinutes;
                         const calcMode = team.calcMode || 'auto';
 
                         if (calcMode === 'same' && lastTeamStartTime > 0) {
                             // Tùy chỉnh: Cùng giờ với nhóm liền trước
-                            startMakeup = Math.max(lastTeamStartTime, shiftMinutes);
+                            startMakeup = Math.max(lastTeamStartTime, baseMakeupMinutes);
                         } else if (calcMode === 'next' && lastTeamEndTime > 0) {
                             // Tùy chỉnh: Ép cộng tiếp sau khi nhóm trước hoàn thành
-                            startMakeup = Math.max(lastTeamEndTime, shiftMinutes);
+                            startMakeup = Math.max(lastTeamEndTime, baseMakeupMinutes);
                         } else {
                             // Tự động theo phòng: Các ca trong cùng phòng cộng tiếp, 2 phòng chạy song song độc lập
                             const currentRoomFree = roomFreeTime[room] || 0;
-                            startMakeup = Math.max(currentRoomFree, shiftMinutes);
+                            startMakeup = Math.max(currentRoomFree, baseMakeupMinutes);
                         }
                     }
 
+                    team._lastComputedStart = startMakeup;
                     const teamDur = (Number(team.duration) > 0) ? Number(team.duration) : 40;
                     team.duration = teamDur;
                     const teamDelay = (Number(team.liveDelay) >= 0) ? Number(team.liveDelay) : 5;
@@ -2887,7 +3043,7 @@
                             <td class="team-name daily-team-name" ondblclick="openEditTeamNameModal(${index})" title="Nhấp đúp để đổi tên nhóm" style="text-align: left; color: var(--text-main); font-weight: 900; padding-left: 20px; cursor: pointer;">${team.name}</td>
                             ${showDailyRoom ? `<td style="text-align: center;">${roomBadgeHtml}</td>` : ''}
                             <td><span class="badge badge-shift">${formatTime(displayShiftMinutes)}</span></td>
-                            <td><span class="badge badge-makeup">${formatTime(startMakeup)} - ${formatTime(endMakeup)}</span></td>
+                            <td><span class="badge badge-makeup" contenteditable="true" onfocus="const tr=this.closest('tr'); if(tr) tr.setAttribute('draggable','false');" onblur="const tr=this.closest('tr'); if(tr) tr.setAttribute('draggable', canDragNow()?'true':'false'); updateDailyMakeupInline(${index}, this.innerText);" onkeydown="handleContentEditableKey(event)" title="Nhấp để sửa giờ bắt đầu Makeup (vd: 7:35 hoặc 7:35 - 8:15)">${formatTime(startMakeup)} - ${formatTime(endMakeup)}</span></td>
                             <td><span class="badge badge-live">${formatTime(liveTime)}</span></td>
                         </tr>`;
                 }
@@ -3653,6 +3809,7 @@
                             const room = (localTeam && localTeam.room) ? localTeam.room : (existing?.room ? existing.room : (t.room || (defaultTeam?.room || (idx % 2 === 0 ? 'G' : '2'))));
                             const calcMode = (localTeam && localTeam.calcMode) ? localTeam.calcMode : (existing?.calcMode ? existing.calcMode : (t.calcMode || 'auto'));
                             const currentShift = (localTeam && localTeam.shift) ? localTeam.shift : (existing?.shift ? existing.shift : (t.shift || defaultTeam?.shift || '08:00'));
+                            const currentMakeupStart = (localTeam && localTeam.makeupStart !== undefined) ? localTeam.makeupStart : ((existing && existing.makeupStart !== undefined) ? existing.makeupStart : (t.makeupStart || ''));
                             
                             // Bảo đảm thời lượng makeup không bao giờ bị 0 phút
                             const rawDur = (localTeam && Number(localTeam.duration) > 0) 
@@ -3672,6 +3829,7 @@
                             return {
                                 name: finalName, 
                                 shift: currentShift, 
+                                makeupStart: currentMakeupStart,
                                 duration: currentDur, 
                                 liveDelay: currentLiveDelay,
                                 room: room,
