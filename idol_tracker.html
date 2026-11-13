@@ -2933,7 +2933,7 @@
                         </div>
                         <div class="sm:col-span-3">
                             <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                                Áp Dụng Từ <i class="fa-solid fa-clock-rotate-left text-indigo-500" title="Chọn thời điểm bắt đầu chuyển nhóm (không làm ảnh hưởng tuần cũ)"></i>
+                                Áp Dụng Từ <i class="fa-solid fa-clock-rotate-left text-indigo-500" title="Idol mới chọn 'Từ tuần tiếp theo' sẽ chưa tính vào tuần hiện tại; Idol cũ đổi nhóm sẽ giữ nguyên nhóm ở các tuần trước"></i>
                             </label>
                             <select id="accEffectiveWeek" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
                                 <option value="ALL">Áp dụng tất cả các tuần</option>
@@ -3358,9 +3358,51 @@ service cloud.firestore {
             return rawGroupName;
         }
 
+        function getActiveWeekMonday(targetWeek = null) {
+            if (targetWeek && targetWeek !== 'ALL') return targetWeek;
+            if (typeof selectedWeekMonday !== 'undefined' && selectedWeekMonday && selectedWeekMonday !== 'ALL') {
+                return selectedWeekMonday;
+            }
+            return currentRealtimeMonday;
+        }
+
+        function inferAccountStartWeek(acc) {
+            if (!acc) return '';
+            if (typeof acc.startWeek === 'string') return acc.startWeek;
+            // Tương thích ngược: Idol mới thêm trước đây chọn "Từ tuần tiếp theo" chỉ lưu groupHistory 1 mốc trùng initialGroup
+            const isDefaultAcc = typeof DEFAULT_ACCOUNTS !== 'undefined' && DEFAULT_ACCOUNTS.some(d => d.id === acc.id);
+            if (!isDefaultAcc && acc.groupHistory && typeof acc.groupHistory === 'object') {
+                const keys = Object.keys(acc.groupHistory).sort();
+                if (keys.length === 1) {
+                    const onlyWeek = keys[0];
+                    const histGrp = String(acc.groupHistory[onlyWeek] || '').toUpperCase();
+                    const initGrp = String(acc.initialGroup || acc.groupName || '').toUpperCase();
+                    if (histGrp && histGrp === initGrp) {
+                        return onlyWeek;
+                    }
+                }
+            }
+            return '';
+        }
+
+        function isAccountActiveInWeek(acc, weekMondayStr = null) {
+            if (!acc) return false;
+            const targetMon = getActiveWeekMonday(weekMondayStr);
+            const startMon = inferAccountStartWeek(acc);
+            if (startMon && /^\d{4}-\d{2}-\d{2}$/.test(startMon)) {
+                return targetMon >= startMon;
+            }
+            return true;
+        }
+
+        function getAccountsForWeek(weekMondayStr = null) {
+            const targetMon = getActiveWeekMonday(weekMondayStr);
+            return accounts.filter(acc => isAccountActiveInWeek(acc, targetMon));
+        }
+
         function extractCleanGroupName(acc, targetWeek = null) {
             if (!acc) return 'Angelik';
-            const weekMon = targetWeek || (typeof selectedWeekMonday !== 'undefined' && selectedWeekMonday !== 'ALL' ? selectedWeekMonday : currentRealtimeMonday);
+            const weekMon = getActiveWeekMonday(targetWeek);
 
             // 1. Kiểm tra lịch sử chuyển nhóm theo mốc thời gian tuần (Time-scoped Personnel Transfers)
             if (acc.groupHistory && typeof acc.groupHistory === 'object' && Object.keys(acc.groupHistory).length > 0) {
@@ -3675,6 +3717,7 @@ service cloud.firestore {
         try {
             const initialWeeksMap = JSON.parse(localStorage.getItem('ps_bypass_weeks_map') || '{}');
             const initialPrivateMap = JSON.parse(localStorage.getItem('ps_private_accounts_map') || '{}');
+            const initialSchedulesMap = JSON.parse(localStorage.getItem('ps_account_schedules_map') || '{}');
             accounts.forEach(acc => {
                 if (initialWeeksMap[acc.id]) {
                     acc.bypassedWeeks = initialWeeksMap[acc.id];
@@ -3683,6 +3726,13 @@ service cloud.firestore {
                 if (privEntry && typeof privEntry === 'object') {
                     acc.isPrivate = !!privEntry.isPrivate;
                     acc.privateNote = privEntry.privateNote || '';
+                }
+                const schedEntry = initialSchedulesMap[acc.id];
+                if (schedEntry && typeof schedEntry === 'object') {
+                    if (typeof schedEntry.startWeek === 'string') acc.startWeek = schedEntry.startWeek;
+                    if (schedEntry.effectiveWeek) acc.effectiveWeek = schedEntry.effectiveWeek;
+                    if (schedEntry.initialGroup) acc.initialGroup = schedEntry.initialGroup;
+                    if (schedEntry.groupHistory) acc.groupHistory = schedEntry.groupHistory;
                 }
             });
         } catch (e) {}
@@ -4599,16 +4649,18 @@ service cloud.firestore {
         // ============================================================================
         // A3. LẤY DANH SÁCH NHÓM & TỰ ĐẾM TIÊU ĐỀ ĐỘNG (YÊU CẦU 6)
         // ============================================================================
-        function getUniqueGroupNames() {
+        function getUniqueGroupNames(targetWeek = null) {
+            const activeWeek = getActiveWeekMonday(targetWeek);
+            const weekAccounts = getAccountsForWeek(activeWeek);
             const set = new Set();
             const defaultOrder = ['Angelik', 'Fashion', 'Royen:One', 'Bnart', 'BEE', 'Orion'];
             defaultOrder.forEach(g => {
-                if (accounts.some(a => extractCleanGroupName(a).toUpperCase() === g.toUpperCase())) {
+                if (weekAccounts.some(a => extractCleanGroupName(a, activeWeek).toUpperCase() === g.toUpperCase())) {
                     set.add(g);
                 }
             });
-            accounts.forEach(a => {
-                const g = extractCleanGroupName(a);
+            weekAccounts.forEach(a => {
+                const g = extractCleanGroupName(a, activeWeek);
                 if (g && ![...set].some(existing => existing.toUpperCase() === g.toUpperCase())) {
                     set.add(g);
                 }
@@ -4620,11 +4672,13 @@ service cloud.firestore {
         }
 
         function updateDynamicTitlesAndCounts() {
-            const uniqueGroups = getUniqueGroupNames();
+            const activeWeek = getActiveWeekMonday();
+            const weekAccounts = getAccountsForWeek(activeWeek);
+            const uniqueGroups = getUniqueGroupNames(activeWeek);
             const groupCount = uniqueGroups.length;
-            const idolCount = accounts.filter(a => a.role !== 'GROUP').length;
-            const groupChannelCount = accounts.filter(a => a.role === 'GROUP').length;
-            const totalAccounts = accounts.length;
+            const idolCount = weekAccounts.filter(a => a.role !== 'GROUP').length;
+            const groupChannelCount = weekAccounts.filter(a => a.role === 'GROUP').length;
+            const totalAccounts = weekAccounts.length;
 
             // 1. Header Badge
             const headerBadge = document.getElementById('headerGroupAndIdolBadge');
@@ -4688,7 +4742,7 @@ service cloud.firestore {
                 `;
                 uniqueGroups.forEach(g => {
                     const theme = getGroupTheme(g);
-                    const grpAccounts = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === g.toUpperCase());
+                    const grpAccounts = weekAccounts.filter(a => extractCleanGroupName(a, activeWeek).toUpperCase() === g.toUpperCase());
                     const grpChannels = grpAccounts.filter(a => a.role === 'GROUP').length;
                     const grpIdols = grpAccounts.filter(a => a.role !== 'GROUP').length;
                     menuHtml += `
@@ -5100,6 +5154,54 @@ service cloud.firestore {
             });
             try {
                 localStorage.setItem(PRIVATE_ACCOUNTS_STORAGE_KEY, JSON.stringify(localMap));
+            } catch (e) {}
+        }
+
+        const ACCOUNT_SCHEDULES_STORAGE_KEY = 'ps_account_schedules_map';
+
+        function saveAccountScheduleState(accData) {
+            if (!accData || !accData.id) return;
+            try {
+                const map = JSON.parse(localStorage.getItem(ACCOUNT_SCHEDULES_STORAGE_KEY) || '{}');
+                map[accData.id] = {
+                    startWeek: typeof accData.startWeek === 'string' ? accData.startWeek : '',
+                    effectiveWeek: accData.effectiveWeek || 'ALL',
+                    initialGroup: accData.initialGroup || accData.groupName || '',
+                    groupName: accData.groupName || '',
+                    groupHistory: accData.groupHistory && typeof accData.groupHistory === 'object' ? accData.groupHistory : {}
+                };
+                localStorage.setItem(ACCOUNT_SCHEDULES_STORAGE_KEY, JSON.stringify(map));
+            } catch (e) {}
+        }
+
+        function hydrateAccountScheduleState(accList, syncFromCloud = false) {
+            if (!Array.isArray(accList)) return;
+            let map = {};
+            try {
+                map = JSON.parse(localStorage.getItem(ACCOUNT_SCHEDULES_STORAGE_KEY) || '{}');
+            } catch (e) { map = {}; }
+            accList.forEach(acc => {
+                if (!acc || !acc.id) return;
+                const localEntry = map[acc.id];
+                if (syncFromCloud && typeof acc.startWeek === 'string') {
+                    map[acc.id] = {
+                        startWeek: acc.startWeek,
+                        effectiveWeek: acc.effectiveWeek || (acc.startWeek || 'ALL'),
+                        initialGroup: acc.initialGroup || acc.groupName || '',
+                        groupName: acc.groupName || '',
+                        groupHistory: acc.groupHistory || {}
+                    };
+                } else if (localEntry && typeof localEntry === 'object') {
+                    if (typeof acc.startWeek !== 'string') acc.startWeek = localEntry.startWeek || '';
+                    if (!acc.effectiveWeek) acc.effectiveWeek = localEntry.effectiveWeek || 'ALL';
+                    if (localEntry.initialGroup && !acc.initialGroup) acc.initialGroup = localEntry.initialGroup;
+                    if (localEntry.groupHistory && (!acc.groupHistory || Object.keys(acc.groupHistory).length === 0)) {
+                        acc.groupHistory = localEntry.groupHistory;
+                    }
+                }
+            });
+            try {
+                localStorage.setItem(ACCOUNT_SCHEDULES_STORAGE_KEY, JSON.stringify(map));
             } catch (e) {}
         }
 
@@ -5520,8 +5622,9 @@ service cloud.firestore {
         }
 
         function getMissingAccountsForWeek(weekMondayStr, mode = 'POSTED') {
-            const targetWeek = weekMondayStr === 'ALL' ? currentRealtimeMonday : weekMondayStr;
+            const targetWeek = getActiveWeekMonday(weekMondayStr);
             return accounts.filter(acc => {
+                if (!isAccountActiveInWeek(acc, targetWeek)) return false;
                 if (isAccountBypassedForWeek(acc, targetWeek)) return false;
                 const prog = getAccountWeeklyProgress(acc.id, targetWeek);
                 return mode === 'POSTED' ? !prog.isDonePosted : !prog.isDoneTotal;
@@ -5685,14 +5788,15 @@ service cloud.firestore {
             const isGroupMode = !!currentOperatorGroup;
             const targetGroupUpper = isGroupMode ? currentOperatorGroup.toUpperCase() : null;
 
+            const weekAccounts = getAccountsForWeek(activeWeek);
             let missingList = getMissingAccountsForWeek(activeWeek, sidebarKpiMode);
             let missingPostedList = getMissingAccountsForWeek(activeWeek, 'POSTED');
-            let targetAccounts = accounts;
+            let targetAccounts = weekAccounts;
 
             if (isGroupMode) {
-                missingList = missingList.filter(a => extractCleanGroupName(a).toUpperCase() === targetGroupUpper);
-                missingPostedList = missingPostedList.filter(a => extractCleanGroupName(a).toUpperCase() === targetGroupUpper);
-                targetAccounts = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === targetGroupUpper);
+                missingList = missingList.filter(a => extractCleanGroupName(a, activeWeek).toUpperCase() === targetGroupUpper);
+                missingPostedList = missingPostedList.filter(a => extractCleanGroupName(a, activeWeek).toUpperCase() === targetGroupUpper);
+                targetAccounts = weekAccounts.filter(a => extractCleanGroupName(a, activeWeek).toUpperCase() === targetGroupUpper);
             }
 
             const missingPostedCount = missingPostedList.length;
@@ -5838,9 +5942,10 @@ service cloud.firestore {
                     : `Tuần kiểm tra: Thứ 2 (${formatDateVN(weekMondayStr)}) → Chủ Nhật (${formatDateVN(sunStr)}) • Toàn Hệ Thống`;
             }
 
+            const weekAccounts = getAccountsForWeek(weekMondayStr);
             const targetAccounts = isGroupMode
-                ? accounts.filter(a => extractCleanGroupName(a).toUpperCase() === targetGroupUpper)
-                : accounts;
+                ? weekAccounts.filter(a => extractCleanGroupName(a, weekMondayStr).toUpperCase() === targetGroupUpper)
+                : weekAccounts;
 
             let missingPosted = getMissingAccountsForWeek(weekMondayStr, 'POSTED');
             if (isGroupMode) {
@@ -5858,7 +5963,7 @@ service cloud.firestore {
                         <i class="fa-solid fa-circle-check text-3xl text-emerald-500 mb-2"></i>
                         <p class="font-extrabold text-sm sm:text-base">🎉 Tuyệt vời! 100% tài khoản đã đủ bài!</p>
                         <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-                            ${isGroupMode ? `Tất cả ${targetAccounts.length} tài khoản của Nhóm <strong>${currentOperatorGroup}</strong>` : `Tất cả ${accounts.length} tài khoản trên hệ thống`} đã đạt tối thiểu 2 bài trong tuần này.
+                            ${isGroupMode ? `Tất cả ${targetAccounts.length} tài khoản của Nhóm <strong>${currentOperatorGroup}</strong>` : `Tất cả ${targetAccounts.length} tài khoản áp dụng trong tuần`} đã đạt tối thiểu 2 bài trong tuần này.
                         </p>
                     </div>
                 `;
@@ -5982,6 +6087,7 @@ service cloud.firestore {
                         localStorage.setItem('ps_bypass_weeks_map', JSON.stringify(localWeeksMap));
                     } catch (e) {}
                     hydrateAccountsPrivateState(loadedAccounts, true);
+                    hydrateAccountScheduleState(loadedAccounts, true);
 
                     if (loadedAccounts.length > 0) {
                         const staleErrorAccounts = [];
@@ -6573,7 +6679,7 @@ service cloud.firestore {
                 expandedGroupCards.delete(grpName);
                 if (accordionEl) accordionEl.classList.remove('is-open');
                 if (chevronEl) chevronEl.classList.remove('rotate-180', 'text-pink-500');
-                const grpAccs = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
+                const grpAccs = getAccountsForWeek().filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
                 if (btnTextEl) btnTextEl.textContent = `Xem ${grpAccs.length} thành viên`;
             }
 
@@ -6603,7 +6709,7 @@ service cloud.firestore {
                     expandedGroupCards.delete(grpName);
                     if (accordionEl) accordionEl.classList.remove('is-open');
                     if (chevronEl) chevronEl.classList.remove('rotate-180', 'text-pink-500');
-                    const grpAccs = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
+                    const grpAccs = getAccountsForWeek().filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
                     if (btnTextEl) btnTextEl.textContent = `Xem ${grpAccs.length} thành viên`;
                 }
             });
@@ -6625,12 +6731,14 @@ service cloud.firestore {
             const groupSelectEl = document.getElementById('directoryGroupSelect');
             const selectedGroupFilter = groupSelectEl ? groupSelectEl.value : 'ALL';
 
+            const weekAccounts = getAccountsForWeek(activeWeek);
             const missingKpiCount = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
-            const doneKpiCount = accounts.length - missingKpiCount;
-            const privateCount = accounts.filter(a => isAccountPrivate(a)).length;
+            const doneKpiCount = weekAccounts.length - missingKpiCount;
+            const privateCount = weekAccounts.filter(a => isAccountPrivate(a)).length;
 
+            const GROUP_NAMES = getUniqueGroupNames(activeWeek);
             const tabAll = document.getElementById('dirTabAll');
-            if (tabAll) tabAll.textContent = `Tất cả ${getUniqueGroupNames().length} Nhóm (${accounts.length})`;
+            if (tabAll) tabAll.textContent = `Tất cả ${GROUP_NAMES.length} Nhóm (${weekAccounts.length})`;
             const tabMissing = document.getElementById('dirTabMissingKpi');
             if (tabMissing) tabMissing.textContent = isWeekOverdueOrExpired(activeWeek) ? `🚨 Bị Phạt (${missingKpiCount})` : `⚠️ Chưa đủ bài (${missingKpiCount})`;
             const tabDone = document.getElementById('dirTabDoneKpi');
@@ -6638,7 +6746,6 @@ service cloud.firestore {
             const tabPrivate = document.getElementById('dirTabPrivate');
             if (tabPrivate) tabPrivate.textContent = `🔒 Riêng tư (${privateCount})`;
 
-            const GROUP_NAMES = getUniqueGroupNames();
             const targetGroups = selectedGroupFilter === 'ALL'
                 ? GROUP_NAMES
                 : GROUP_NAMES.filter(g => g.toUpperCase() === selectedGroupFilter.toUpperCase());
@@ -6649,8 +6756,8 @@ service cloud.firestore {
                 const theme = getGroupTheme(grpName);
                 const cleanGrpId = String(grpName).replace(/[^a-zA-Z0-9]/g, '_');
                 
-                // Lọc danh sách account thuộc nhóm này
-                let grpAccounts = accounts.filter(acc => extractCleanGroupName(acc).toUpperCase() === grpName.toUpperCase());
+                // Lọc danh sách account thuộc nhóm này và đang hoạt động trong activeWeek
+                let grpAccounts = weekAccounts.filter(acc => extractCleanGroupName(acc, activeWeek).toUpperCase() === grpName.toUpperCase());
 
                 // SẮP XẾP: Kênh nhóm (Official Group) luôn đứng đầu tiên, sau đó đến các Idol
                 grpAccounts.sort((a, b) => {
@@ -7737,20 +7844,21 @@ service cloud.firestore {
             const currentVal = sel.value || 'ALL';
 
             let html = '';
+            const activeList = (selectedWeekMonday === 'ALL') ? accounts : getAccountsForWeek(selectedWeekMonday);
             if (!keyword) {
                 const isAllActive = currentVal === 'ALL';
-                const grpCount = accounts.filter(a => a.role === 'GROUP').length;
-                const idolCount = accounts.filter(a => a.role !== 'GROUP').length;
+                const grpCount = activeList.filter(a => a.role === 'GROUP').length;
+                const idolCount = activeList.filter(a => a.role !== 'GROUP').length;
                 html += `
                     <button type="button" onclick="selectTableAccountFilter('ALL')"
                         class="w-full px-3 py-2 rounded-xl text-left text-xs font-bold transition flex items-center justify-between ${isAllActive ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'}">
-                        <span>👤 Tất cả ${grpCount} Nhóm & ${idolCount} Idol (${accounts.length})</span>
+                        <span>👤 Tất cả ${grpCount} Nhóm & ${idolCount} Idol (${activeList.length})</span>
                         ${isAllActive ? '<i class="fa-solid fa-check text-indigo-600 text-[10px]"></i>' : ''}
                     </button>
                 `;
             }
 
-            accounts.forEach(a => {
+            activeList.forEach(a => {
                 const gName = extractCleanGroupName(a);
                 const iName = extractCleanIdolName(a);
                 const hay = `${gName} ${iName} ${a.handle}`.toLowerCase();
@@ -7781,8 +7889,9 @@ service cloud.firestore {
             if (!container || !sel) return;
             const currentVal = sel.value;
 
+            const activeList = (selectedWeekMonday === 'ALL') ? accounts : getAccountsForWeek(selectedWeekMonday);
             let html = '';
-            accounts.forEach(a => {
+            activeList.forEach(a => {
                 const gName = extractCleanGroupName(a);
                 const iName = extractCleanIdolName(a);
                 const hay = `${gName} ${iName} ${a.handle}`.toLowerCase();
@@ -7815,15 +7924,16 @@ service cloud.firestore {
             const currentPostAcc = postAccountSelect.value;
             const currentFilterAcc = filterAccountSelect.value || 'ALL';
 
+            const activeList = (selectedWeekMonday === 'ALL') ? accounts : getAccountsForWeek(selectedWeekMonday);
             // Nếu đang ở Link Nhóm Riêng (?group=...), CHỈ cho phép chọn Idol & Kênh của nhóm đó (Vấn đề 2)
-            const groupAccounts = accounts.filter(a => {
+            const groupAccounts = activeList.filter(a => {
                 if (a.role !== 'GROUP') return false;
                 if (currentOperatorGroup) {
                     return extractCleanGroupName(a).toUpperCase() === currentOperatorGroup.toUpperCase();
                 }
                 return true;
             });
-            const idolAccounts = accounts.filter(a => {
+            const idolAccounts = activeList.filter(a => {
                 if (a.role !== 'IDOL') return false;
                 if (currentOperatorGroup) {
                     return extractCleanGroupName(a).toUpperCase() === currentOperatorGroup.toUpperCase();
@@ -7861,10 +7971,10 @@ service cloud.firestore {
                 postAccountSelect.value = currentPostAcc;
             }
 
-            const grpCount = accounts.filter(a => a.role === 'GROUP').length;
-            const idolCount = accounts.filter(a => a.role !== 'GROUP').length;
-            let filterOptionsHtml = `<option value="ALL">👤 Tất cả ${grpCount} Nhóm & ${idolCount} Idol (${accounts.length})</option>`;
-            accounts.forEach(a => {
+            const grpCount = activeList.filter(a => a.role === 'GROUP').length;
+            const idolCount = activeList.filter(a => a.role !== 'GROUP').length;
+            let filterOptionsHtml = `<option value="ALL">👤 Tất cả ${grpCount} Nhóm & ${idolCount} Idol (${activeList.length})</option>`;
+            activeList.forEach(a => {
                 const gName = escapeHtml(extractCleanGroupName(a));
                 const iName = escapeHtml(extractCleanIdolName(a));
                 const safeH = escapeHtml(a.handle);
@@ -7905,7 +8015,8 @@ service cloud.firestore {
         function updateDashboardStats() {
             try {
                 const activeWeek = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
-                const totalAcc = accounts.length;
+                const weekAccounts = getAccountsForWeek(activeWeek);
+                const totalAcc = weekAccounts.length;
                 const missingPosted = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
                 const missingTotal = getMissingAccountsForWeek(activeWeek, 'ALL').length;
                 const donePosted = totalAcc - missingPosted;
@@ -7958,7 +8069,7 @@ service cloud.firestore {
 
                 const elCheckedToday = document.getElementById('statCheckedToday');
                 if (elCheckedToday) {
-                    const checkedCount = accounts.filter(a => a.checkedToday).length;
+                    const checkedCount = weekAccounts.filter(a => a.checkedToday).length;
                     elCheckedToday.textContent = `${checkedCount}/${totalAcc}`;
                     const uncheckedAlert = document.getElementById('statUncheckedAlert');
                     if (uncheckedAlert) {
@@ -9692,7 +9803,7 @@ service cloud.firestore {
         // ============================================================================
         // 12. QUẢN LÝ TÀI KHOẢN, XUẤT GOOGLE SHEETS & COPY BÁO CÁO (THỨ 1, 2, 3, 6, 7)
         // ============================================================================
-        function populateEffectiveWeeks() {
+        function populateEffectiveWeeks(extraWeekMonday = '') {
             const accSelect = document.getElementById('accEffectiveWeek');
             const renameSelect = document.getElementById('renameEffectiveWeek');
             if (!accSelect && !renameSelect) return;
@@ -9708,10 +9819,21 @@ service cloud.firestore {
                 { value: next2Mon, label: `🚀 Từ 2 tuần tới (${formatShortDateVN(next2Mon)} - ${formatShortDateVN(addDaysStr(next2Mon, 6))})` }
             ];
 
+            if (extraWeekMonday && extraWeekMonday !== 'ALL' && /^\d{4}-\d{2}-\d{2}$/.test(extraWeekMonday) && !options.some(o => o.value === extraWeekMonday)) {
+                options.push({
+                    value: extraWeekMonday,
+                    label: `📆 Từ tuần ${formatShortDateVN(extraWeekMonday)} - ${formatShortDateVN(addDaysStr(extraWeekMonday, 6))}`
+                });
+            }
+
             if (accSelect) {
                 const currentVal = accSelect.value;
-                accSelect.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
-                if (currentVal) accSelect.value = currentVal;
+                accSelect.innerHTML = options.map(o => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
+                if (extraWeekMonday && [...accSelect.options].some(o => o.value === extraWeekMonday)) {
+                    accSelect.value = extraWeekMonday;
+                } else if (currentVal && [...accSelect.options].some(o => o.value === currentVal)) {
+                    accSelect.value = currentVal;
+                }
             }
 
             if (renameSelect) {
@@ -9893,6 +10015,11 @@ service cloud.firestore {
             const effWeekEl = document.getElementById('accEffectiveWeek');
             const effectiveWeek = effWeekEl ? effWeekEl.value : 'ALL';
 
+            const existingStartWeek = existingAcc ? inferAccountStartWeek(existingAcc) : '';
+            const prevGroupBeforeEff = existingAcc
+                ? (existingAcc.initialGroup || extractCleanGroupName(existingAcc, effectiveWeek !== 'ALL' ? addDaysStr(effectiveWeek, -7) : currentRealtimeMonday) || existingAcc.groupName || groupName)
+                : groupName;
+
             const accData = {
                 id: accId,
                 role,
@@ -9906,21 +10033,38 @@ service cloud.firestore {
                 bypassReason: isBypassed ? bypassReason : '',
                 isPrivate,
                 privateNote,
-                initialGroup: existingAcc ? (existingAcc.initialGroup || existingAcc.groupName || groupName) : groupName,
+                effectiveWeek,
+                startWeek: '',
+                initialGroup: prevGroupBeforeEff,
                 groupHistory: existingAcc && existingAcc.groupHistory ? { ...existingAcc.groupHistory } : {},
                 order: existingAcc && existingAcc.order ? existingAcc.order : accounts.length + 1
             };
 
             if (effectiveWeek !== 'ALL') {
-                accData.groupHistory[effectiveWeek] = groupName;
+                const isNewAccount = !existingAcc;
+                const wasDelayedAccount = Boolean(existingStartWeek);
+                const sameGroupInFuture = existingAcc && prevGroupBeforeEff.toUpperCase() === groupName.toUpperCase() && effectiveWeek > currentRealtimeMonday;
+
+                if (isNewAccount || wasDelayedAccount || sameGroupInFuture) {
+                    // Idol mới thêm (hoặc Idol chưa tới tuần áp dụng) -> chỉ bắt đầu tính KPI/hiển thị từ effectiveWeek trở đi
+                    accData.startWeek = effectiveWeek;
+                    accData.initialGroup = groupName;
+                    accData.groupHistory = { [effectiveWeek]: groupName };
+                } else {
+                    // Idol đã hoạt động từ trước chuyển sang nhóm khác từ effectiveWeek -> các tuần cũ vẫn giữ initialGroup
+                    accData.startWeek = '';
+                    accData.groupHistory[effectiveWeek] = groupName;
+                }
                 accData.groupName = groupName;
             } else {
+                accData.startWeek = '';
                 accData.groupName = groupName;
                 accData.initialGroup = groupName;
                 accData.groupHistory = {};
             }
 
             savePrivateAccountState(accId, isPrivate, privateNote);
+            saveAccountScheduleState(accData);
 
             const idx = accounts.findIndex(a => a.id === accId);
             if (idx >= 0) accounts[idx] = accData;
@@ -9932,15 +10076,21 @@ service cloud.firestore {
             renderModalAccountsList();
             resetAccountForm();
 
+            const futureMsgSuffix = (accData.startWeek && accData.startWeek > getActiveWeekMonday())
+                ? ` (Chỉ áp dụng từ tuần ${formatShortDateVN(accData.startWeek)} — tuần hiện tại chưa tính)`
+                : '';
+
             if (db) {
                 try {
                     const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', accId);
                     await setDoc(accDocRef, accData);
-                    showToast(`✅ Đã lưu tài khoản ${fullName} lên Firebase!`, 'success');
+                    showToast(`✅ Đã lưu tài khoản ${fullName}${futureMsgSuffix} lên Firebase!`, 'success');
                 } catch (err) {
                     console.error('Lỗi lưu tài khoản Firebase:', err);
                     showToast('⚠️ Lỗi khi lưu lên Firebase: ' + (err.message || 'Lỗi mạng'), 'error');
                 }
+            } else {
+                showToast(`✅ Đã lưu tài khoản ${fullName}${futureMsgSuffix}!`, 'success');
             }
         }
 
@@ -9983,10 +10133,13 @@ service cloud.firestore {
                 else privateWrapEl.classList.add('hidden');
             }
 
+            const savedStartWeek = inferAccountStartWeek(acc);
+            const savedHistWeeks = (acc.groupHistory && typeof acc.groupHistory === 'object') ? Object.keys(acc.groupHistory).sort() : [];
+            const savedEffWeek = savedStartWeek || (savedHistWeeks.length > 0 ? savedHistWeeks[savedHistWeeks.length - 1] : 'ALL') || 'ALL';
             const effWeekEl = document.getElementById('accEffectiveWeek');
             if (effWeekEl) {
-                populateEffectiveWeeks();
-                effWeekEl.value = 'ALL';
+                populateEffectiveWeeks(savedEffWeek);
+                effWeekEl.value = savedEffWeek;
             }
 
             document.getElementById('accountFormHeading').textContent = `✏️ Đang sửa: ${extractCleanGroupName(acc)} - ${extractCleanIdolName(acc)}`;
@@ -10120,6 +10273,8 @@ service cloud.firestore {
                 row.className = 'p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition border-b border-slate-100 dark:border-slate-800/80 last:border-b-0';
                 
                 const isAccPrivate = isAccountPrivate(acc);
+                const accStartWeek = inferAccountStartWeek(acc);
+                const isFutureForActiveWeek = Boolean(accStartWeek && accStartWeek > getActiveWeekMonday());
                 const safeId = escapeHtml(acc.id);
                 const safeGName = escapeHtml(gName);
                 const safeIName = escapeHtml(iName);
@@ -10138,6 +10293,12 @@ service cloud.firestore {
                         <span>Riêng tư${safePrivNote ? ': ' + safePrivNote : ''}</span>
                     </span>
                 ` : '';
+                const scheduleTag = accStartWeek ? `
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${isFutureForActiveWeek ? 'bg-indigo-100 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-200 border-indigo-300 dark:border-indigo-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'} border inline-flex items-center gap-1">
+                        <i class="fa-solid fa-calendar-day text-[9px]"></i>
+                        <span>Từ tuần ${formatShortDateVN(accStartWeek)}${isFutureForActiveWeek ? ' (Chưa áp tuần này)' : ''}</span>
+                    </span>
+                ` : '';
 
                 row.innerHTML = `
                     <div class="flex flex-wrap items-center gap-2">
@@ -10152,6 +10313,7 @@ service cloud.firestore {
                         </a>
                         ${subTag}
                         ${privateTag}
+                        ${scheduleTag}
                     </div>
                     <div class="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
                         <button type="button" onclick="toggleAccountPrivate('${safeId}')" class="px-2.5 py-1.5 rounded-lg ${isAccPrivate ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-amber-950/60 text-slate-600 hover:text-amber-700 dark:text-slate-300 dark:hover:text-amber-300'} text-xs font-bold transition cursor-pointer flex items-center gap-1" title="${isAccPrivate ? 'Bấm để gỡ đánh dấu Riêng tư' : 'Đánh dấu Tài khoản Riêng tư'}">
@@ -10233,7 +10395,7 @@ service cloud.firestore {
                 let totalCompletedOverall = 0;
 
                 GROUP_NAMES.forEach(grpName => {
-                    let grpAccounts = accounts.filter(acc => extractCleanGroupName(acc).toUpperCase() === grpName.toUpperCase());
+                    let grpAccounts = getAccountsForWeek(activeWeek).filter(acc => extractCleanGroupName(acc, activeWeek).toUpperCase() === grpName.toUpperCase());
                     grpAccounts.sort((a, b) => {
                         if (a.role === 'GROUP' && b.role !== 'GROUP') return -1;
                         if (a.role !== 'GROUP' && b.role === 'GROUP') return 1;
@@ -10630,7 +10792,7 @@ service cloud.firestore {
             const plainRows = [];
             let htmlRows = '';
 
-            const sortedAccounts = [...accounts].sort((a, b) => {
+            const sortedAccounts = [...getAccountsForWeek(activeWeek)].sort((a, b) => {
                 const grpA = (a.groupName || '').toUpperCase();
                 const grpB = (b.groupName || '').toUpperCase();
                 if (grpA !== grpB) return grpA.localeCompare(grpB);
@@ -11716,7 +11878,8 @@ service cloud.firestore {
         }
 
         async function scanGroupAccountsApify(grpName) {
-            const allGrpAccounts = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
+            const targetWeekMonday = getActiveWeekMonday();
+            const allGrpAccounts = getAccountsForWeek(targetWeekMonday).filter(a => extractCleanGroupName(a, targetWeekMonday).toUpperCase() === grpName.toUpperCase());
             if (allGrpAccounts.length === 0) return;
             const grpAccounts = allGrpAccounts.filter(a => !isAccountPrivate(a));
             const privateSkipped = allGrpAccounts.length - grpAccounts.length;
@@ -11729,8 +11892,6 @@ service cloud.firestore {
                 showToast(`⚠️ Đang có tiến trình dò bài cho "${apifyScanManager.targetName}" đang chạy! Vui lòng chờ hoàn tất trong giây lát.`, 'warning');
                 return;
             }
-
-            const targetWeekMonday = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
             showToast(`🤖 Đang dùng Apify dò bài cho ${grpAccounts.length} kênh công khai nhóm ${grpName}${privateSkipped > 0 ? ` (bỏ qua ${privateSkipped} kênh Riêng tư)` : ''}...`);
 
             const allHandles = [];
@@ -11860,10 +12021,11 @@ service cloud.firestore {
             const weekSelect = document.getElementById('apifyScanWeekSelect');
             const targetWeekMonday = weekSelect ? weekSelect.value : currentRealtimeMonday;
 
+            const activeWeekAccounts = getAccountsForWeek(targetWeekMonday);
             let targetAccounts = [];
             let scopeLabel = '';
             if (scope === 'MISSING') {
-                targetAccounts = accounts.filter(a => {
+                targetAccounts = activeWeekAccounts.filter(a => {
                     const prog = getAccountWeeklyProgress(a.id, targetWeekMonday);
                     return !prog.isDonePosted && !prog.isBypassed;
                 });
@@ -11875,10 +12037,10 @@ service cloud.firestore {
             } else if (scope === 'GROUP') {
                 const grpSelect = document.getElementById('apifyGroupSelect');
                 const selectedGrp = grpSelect ? grpSelect.value : '';
-                targetAccounts = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === selectedGrp.toUpperCase());
+                targetAccounts = activeWeekAccounts.filter(a => extractCleanGroupName(a, targetWeekMonday).toUpperCase() === selectedGrp.toUpperCase());
                 scopeLabel = `Nhóm ${selectedGrp} (${targetAccounts.length} kênh)`;
             } else {
-                targetAccounts = [...accounts];
+                targetAccounts = [...activeWeekAccounts];
                 scopeLabel = `Toàn Bộ Hệ Thống (${targetAccounts.length} kênh)`;
             }
 
@@ -13066,7 +13228,7 @@ service cloud.firestore {
 
         Object.assign(window, {
             openAccountModal, closeAccountModal, openCloudHelpModal, closeCloudHelpModal,
-            escapeHtml, safeTikTokHref, isAccountPrivate, toggleAccountFormPrivateNote, toggleAccountPrivate, toggleAccountPrivateFromModal,
+            escapeHtml, safeTikTokHref, isAccountPrivate, toggleAccountFormPrivateNote, toggleAccountPrivate, toggleAccountPrivateFromModal, getActiveWeekMonday, isAccountActiveInWeek, getAccountsForWeek,
             exportToCSV, scrollToPostForm, resetDailyChecks, resetPostForm, handlePostSubmit,
             updateFormAccountPreview, setCategoryQuick, setRoleFilter, setDirectoryFilter,
             renderAccountsGrid, renderPostsTable, handleAccountSubmit, resetAccountForm,
