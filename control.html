@@ -2,9 +2,15 @@
 <html lang="vi" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Control Center">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="format-detection" content="telephone=no">
   <title>Passion Star | Control Center</title>
   <link rel="icon" href="./icon/control.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icon/png/control.png">
 
   <!-- Google Fonts: Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,15 +75,33 @@
       color: var(--text-main);
       font-family: 'Plus Jakarta Sans', sans-serif;
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       margin: 0;
-      padding: 24px 16px;
+      padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+      -webkit-text-size-adjust: 100%;
       position: relative;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
+    }
+
+    button, a {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (max-width: 768px) {
+      input, select, textarea, .form-control, .form-select {
+        font-size: 16px !important;
+      }
+      .toast-container {
+        left: 16px !important;
+        right: 16px !important;
+        bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+      }
     }
 
     /* Ambient Background Glow */
@@ -945,11 +969,14 @@
       script: {
         run: (function() {
           const makeApiCall = async (action, args, callback, failCallback) => {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20000);
             try {
-              const res = await fetch(API_URL, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
-                body: JSON.stringify({ action: action, args: args }) 
+              const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: action, args: args }),
+                signal: controller.signal
               });
               const textRes = await res.text();
               let result;
@@ -965,9 +992,12 @@
                 if (failCallback) failCallback(new Error(result.error)); 
                 else showToast("Lỗi: " + result.error, "error"); 
               }
-            } catch(e) { 
-              if (failCallback) failCallback(e); 
-              else showToast("Lỗi kết nối máy chủ", "error"); 
+            } catch(e) {
+              const err = (e && e.name === 'AbortError') ? new Error("Quá thời gian kết nối máy chủ (20s)") : e;
+              if (failCallback) failCallback(err);
+              else showToast(err.message || "Lỗi kết nối máy chủ", "error");
+            } finally {
+              clearTimeout(timer);
             }
           };
 
@@ -992,9 +1022,25 @@
 
     let groupsData = {};
 
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[s]));
+    }
+
+    function sanitizeHttpUrl(url) {
+      try {
+        const u = new URL(String(url));
+        return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : '#';
+      } catch {
+        return '#';
+      }
+    }
+
     /* --- TOAST NOTIFICATION --- */
     function showToast(message, type = 'success') {
       const container = document.getElementById('toastContainer');
+      if (!container) return;
       const toast = document.createElement('div');
       toast.className = `modern-toast ${type}`;
       
@@ -1004,7 +1050,7 @@
       
       toast.innerHTML = `
         ${icon}
-        <span class="flex-grow-1">${message}</span>
+        <span class="flex-grow-1">${escapeHtml(message)}</span>
         <div class="toast-progress-bar" style="animation-duration: 3.2s;"></div>
       `;
       container.appendChild(toast);
@@ -1118,7 +1164,7 @@
         idols.forEach(idol => {
           const badge = document.createElement('span');
           badge.className = 'idol-tag-badge';
-          badge.innerHTML = `<i class="bi bi-star-fill text-warning"></i> ${idol.trim()}`;
+          badge.innerHTML = `<i class="bi bi-star-fill text-warning"></i> ${escapeHtml(idol.trim())}`;
           container.appendChild(badge);
         });
       } else {
@@ -1256,6 +1302,7 @@
     /* --- CELEBRATION CONFETTI --- */
     function fireConfetti() {
       if (typeof confetti !== 'function') return;
+      if (typeof confetti !== 'function') return;
       const count = 200;
       const defaults = { origin: { y: 0.7 } };
       function fire(particleRatio, opts) {
@@ -1298,12 +1345,12 @@
 
               <div class="otp-ticket mb-3">
                 <div class="text-muted small fw-semibold text-uppercase mb-1">Mã Xác Thực OTP</div>
-                <div class="otp-code-display mb-2" onclick="copySingleString('${res.code}', 'Mã OTP')">${res.code}</div>
+                <div class="otp-code-display mb-2" onclick="copySingleString('${escapeHtml(res.code)}', 'Mã OTP')">${escapeHtml(res.code)}</div>
                 <div class="d-flex justify-content-center gap-2">
-                  <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" onclick="copySingleString('${res.code}', 'Mã OTP')">
+                  <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" onclick="copySingleString('${escapeHtml(res.code)}', 'Mã OTP')">
                     <i class="bi bi-copy me-1"></i> Copy Mã
                   </button>
-                  <a href="${res.link}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold">
+                  <a href="${escapeHtml(sanitizeHttpUrl(res.link))}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold">
                     <i class="bi bi-box-arrow-up-right me-1"></i> Mở Form
                   </a>
                 </div>
@@ -1327,7 +1374,7 @@
             outputArea.innerHTML = `
               <div class="alert alert-danger mb-0 d-flex align-items-center gap-2">
                 <i class="bi bi-x-circle-fill fs-5"></i>
-                <span class="fw-semibold">${res.message || "Không thể cấp mã!"}</span>
+                <span class="fw-semibold">${escapeHtml(res.message || "Không thể cấp mã!")}</span>
               </div>
             `;
           }
@@ -1354,7 +1401,7 @@
             outputArea.innerHTML = `
               <div class="alert alert-success mb-0 d-flex align-items-center gap-2">
                 <i class="bi bi-check-circle-fill fs-5"></i>
-                <span class="fw-semibold">${res.message}</span>
+                <span class="fw-semibold">${escapeHtml(res.message)}</span>
               </div>
             `;
           } else {
@@ -1388,13 +1435,13 @@
           outputArea.innerHTML = `
             <div class="d-flex align-items-center justify-content-between mb-3">
               <h6 class="fw-bold mb-0" style="color: var(--text-main);">
-                <i class="bi bi-link-45deg fs-5 text-primary"></i> Liên Kết Bảng - Team <b>${res.name}</b>
+                <i class="bi bi-link-45deg fs-5 text-primary"></i> Liên Kết Bảng - Team <b>${escapeHtml(res.name)}</b>
               </h6>
             </div>
 
             <div class="mb-3">
               ${res.link1 ? `
-                <a href="${res.link1}" target="_blank" class="link-tile">
+                <a href="${escapeHtml(sanitizeHttpUrl(res.link1))}" target="_blank" rel="noopener noreferrer" class="link-tile">
                   <div class="d-flex align-items-center gap-3">
                     <i class="bi bi-file-earmark-spreadsheet-fill text-success fs-4"></i>
                     <div>
@@ -1407,7 +1454,7 @@
               ` : ''}
 
               ${res.link2 ? `
-                <a href="${res.link2}" target="_blank" class="link-tile">
+                <a href="${escapeHtml(sanitizeHttpUrl(res.link2))}" target="_blank" rel="noopener noreferrer" class="link-tile">
                   <div class="d-flex align-items-center gap-3">
                     <i class="bi bi-file-earmark-spreadsheet-fill text-info fs-4"></i>
                     <div>
@@ -1484,7 +1531,7 @@
             outputArea.innerHTML = `
               <div class="alert alert-success mb-0 d-flex align-items-center gap-2">
                 <i class="bi bi-check-circle-fill fs-5"></i>
-                <span class="fw-semibold">${res.message}</span>
+                <span class="fw-semibold">${escapeHtml(res.message)}</span>
               </div>
             `;
             document.getElementById('emailInput').value = "";
@@ -1494,7 +1541,7 @@
             outputArea.innerHTML = `
               <div class="alert alert-danger mb-0 d-flex align-items-center gap-2">
                 <i class="bi bi-x-circle-fill fs-5"></i>
-                <span class="fw-semibold">${res.message}</span>
+                <span class="fw-semibold">${escapeHtml(res.message)}</span>
               </div>
             `;
           }

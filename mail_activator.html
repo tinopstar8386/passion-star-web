@@ -2,10 +2,16 @@
 <html lang="vi" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Mail Activator">
+    <meta name="theme-color" content="#06070b">
+    <meta name="format-detection" content="telephone=no">
     <title>Passion Star | Trình Tự Động Kích Hoạt Mail & Đăng Ký Newsletters</title>
     <!-- Favicon -->
     <link rel="icon" href="./icon/newsletter.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon/png/newsletter.png">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -62,17 +68,27 @@
             background-color: var(--bg-base);
             color: var(--text-primary);
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             position: relative;
             overflow-x: hidden;
-            padding-bottom: 70px;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: calc(70px + env(safe-area-inset-bottom));
+            -webkit-text-size-adjust: 100%;
+        }
+
+        button, a, .chip-btn {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* Ambient Glow Background */
         .ambient-bg {
             position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            inset: 0;
+            width: 100%;
+            height: 100%;
             z-index: 0;
             pointer-events: none;
             background: 
@@ -299,7 +315,7 @@
             border-radius: 14px;
             padding: 14px 16px 14px 46px;
             color: #fff;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 500;
             outline: none;
             transition: var(--transition-smooth);
@@ -512,6 +528,9 @@
         @media (max-width: 768px) {
             .sources-grid {
                 grid-template-columns: 1fr;
+                max-height: none;
+                overflow-y: visible;
+                padding-right: 0;
             }
         }
 
@@ -727,6 +746,18 @@
             to { opacity: 1; transform: translateX(0); }
         }
 
+        @media (max-width: 640px) {
+            .toast-container {
+                left: 16px;
+                right: 16px;
+                bottom: calc(16px + env(safe-area-inset-bottom));
+            }
+            .custom-toast {
+                min-width: 0;
+                width: 100%;
+            }
+        }
+
         #hiddenDispatchContainer {
             display: none;
             position: absolute;
@@ -832,19 +863,19 @@
                         <span>Mở Nhanh Hộp Thư Của Bạn</span>
                     </div>
                     <div class="webmail-grid">
-                        <a href="https://mail.google.com" target="_blank" class="webmail-link">
+                        <a href="https://mail.google.com" target="_blank" rel="noopener noreferrer" class="webmail-link">
                             <i class="fa-brands fa-google" style="color: #ea4335;"></i>
                             <span>Gmail</span>
                         </a>
-                        <a href="https://outlook.live.com/mail/" target="_blank" class="webmail-link">
+                        <a href="https://outlook.live.com/mail/" target="_blank" rel="noopener noreferrer" class="webmail-link">
                             <i class="fa-brands fa-microsoft" style="color: #0078d4;"></i>
                             <span>Outlook</span>
                         </a>
-                        <a href="https://mail.yahoo.com" target="_blank" class="webmail-link">
+                        <a href="https://mail.yahoo.com" target="_blank" rel="noopener noreferrer" class="webmail-link">
                             <i class="fa-brands fa-yahoo" style="color: #6001d2;"></i>
                             <span>Yahoo</span>
                         </a>
-                        <a href="https://www.icloud.com/mail" target="_blank" class="webmail-link">
+                        <a href="https://www.icloud.com/mail" target="_blank" rel="noopener noreferrer" class="webmail-link">
                             <i class="fa-brands fa-apple" style="color: #94a3b8;"></i>
                             <span>iCloud</span>
                         </a>
@@ -1035,6 +1066,21 @@
         // ==========================================================
         // 2. RENDER GIAO DIỆN NGUỒN NEWSLETTERS
         // ==========================================================
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, s => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[s]));
+        }
+
+        function sanitizeHttpUrl(url) {
+            try {
+                const u = new URL(String(url));
+                return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : '#';
+            } catch {
+                return '#';
+            }
+        }
+
         function renderSources() {
             const container = document.getElementById('sourcesGridContainer');
             if (!container) return;
@@ -1046,21 +1092,21 @@
                 card.id = `card-${src.id}`;
                 card.innerHTML = `
                     <div class="source-top-row">
-                        <div class="source-icon" style="background: ${src.iconBg}">
-                            <i class="fa-solid ${src.icon}"></i>
+                        <div class="source-icon" style="background: ${escapeHtml(src.iconBg)}">
+                            <i class="fa-solid ${escapeHtml(src.icon)}"></i>
                         </div>
                         <div class="source-title-wrap">
-                            <div class="source-name" title="${src.name}">${src.name}</div>
+                            <div class="source-name" title="${escapeHtml(src.name)}">${escapeHtml(src.name)}</div>
                             <span class="badge-pill badge-soi"><i class="fa-solid fa-check"></i> Không Cần Confirm</span>
-                            <span class="badge-pill badge-daily">${src.frequency}</span>
+                            <span class="badge-pill badge-daily">${escapeHtml(src.frequency)}</span>
                         </div>
                     </div>
-                    <div class="source-desc">${src.desc}</div>
+                    <div class="source-desc">${escapeHtml(src.desc)}</div>
                     <div class="source-action-row">
                         <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 600;">
                             <i class="fa-solid fa-circle-check"></i> Single Opt-In Tự Động
                         </span>
-                        <a href="${src.domain}" target="_blank" class="btn-visit-site">
+                        <a href="${escapeHtml(sanitizeHttpUrl(src.domain))}" target="_blank" rel="noopener noreferrer" class="btn-visit-site">
                             <span>Trang gốc</span> <i class="fa-solid fa-arrow-up-right-from-square"></i>
                         </a>
                     </div>
@@ -1127,18 +1173,22 @@
             let completed = 0;
 
             // 1. Thử gọi qua Backend Serverless API (Vercel hoặc Local Server Node.js)
+            try {
             let serverlessDone = false;
-            const endpoints = [
-                '/api/auto-subscribe',
-                'http://localhost:3000/api/auto-subscribe'
-            ];
+            const endpoints = ['/api/auto-subscribe'];
+            if (window.location.protocol !== 'https:' && window.location.hostname === 'localhost') {
+                endpoints.push('http://localhost:3000/api/auto-subscribe');
+            }
 
             for (const endpoint of endpoints) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 6000);
                 try {
                     const apiRes = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: email })
+                        body: JSON.stringify({ email: email }),
+                        signal: controller.signal
                     });
                     if (apiRes.ok) {
                         const data = await apiRes.json();
@@ -1158,6 +1208,8 @@
                     }
                 } catch (e) {
                     // Thử endpoint tiếp theo
+                } finally {
+                    clearTimeout(timer);
                 }
             }
 
@@ -1188,9 +1240,16 @@
             }
             showToast(`Đã tự động đăng ký thành công cả ${total} nguồn cho ${email}!`, 'success');
 
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> <span>KÍCH HOẠT LẠI HOẶC NHẬP EMAIL KHÁC</span>`;
-            isRunning = false;
+            } catch (err) {
+                console.error('runAutomatedRegistration error:', err);
+                showToast('Có lỗi xảy ra khi đăng ký, vui lòng thử lại!', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> <span>KÍCH HOẠT LẠI HOẶC NHẬP EMAIL KHÁC</span>`;
+                }
+                isRunning = false;
+            }
         }
 
         // ==========================================================
@@ -1281,10 +1340,13 @@
             if (type === 'ok') { tagClass = 'tag-ok'; tagText = 'OK'; }
             if (type === 'run') { tagClass = 'tag-run'; tagText = 'RUN'; }
 
-            row.innerHTML = `
-                <span class="log-tag ${tagClass}">${tagText}</span>
-                <span>${message}</span>
-            `;
+            const tagEl = document.createElement('span');
+            tagEl.className = `log-tag ${tagClass}`;
+            tagEl.textContent = tagText;
+            const msgEl = document.createElement('span');
+            msgEl.textContent = String(message ?? '');
+            row.appendChild(tagEl);
+            row.appendChild(msgEl);
             logs.appendChild(row);
             logs.scrollTop = logs.scrollHeight;
         }
@@ -1307,10 +1369,12 @@
             if (type === 'success') icon = 'fa-circle-check';
             if (type === 'error') icon = 'fa-triangle-exclamation';
 
-            toast.innerHTML = `
-                <i class="fa-solid ${icon}"></i>
-                <span>${message}</span>
-            `;
+            const iconEl = document.createElement('i');
+            iconEl.className = `fa-solid ${icon}`;
+            const msgEl = document.createElement('span');
+            msgEl.textContent = String(message ?? '');
+            toast.appendChild(iconEl);
+            toast.appendChild(msgEl);
 
             container.appendChild(toast);
 

@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <link rel="icon" href="./icon/off.svg" type="image/svg+xml">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lịch Off PS">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="format-detection" content="telephone=no">
+  <title>Quản Lý Lịch Off - Passion Star</title>
+  <link rel="apple-touch-icon" sizes="180x180" href="./icon/png/off.png">
   <base target="_top">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +32,11 @@
     :root { --bg-color: #f8fafc; --card-bg: #ffffff; --border-color: #cbd5e1; --text-main: #0f172a; --off-bg: #ef4444; --pending-bg: #d97706; --table-header: #f1f5f9; --row-hover: #e2e8f0; --cell-off: #fee2e2; --cell-pend: #fef3c7; --teacher-color: #d97706;}
     body.dark-mode { --bg-color: #0f172a; --card-bg: #1e293b; --border-color: #334155; --text-main: #f8fafc; --table-header: #1e293b; --row-hover: #334155; --cell-off: transparent; --cell-pend: transparent; --teacher-color: #fbbf24;}
     
-    body { font-family: 'Inter', sans-serif; padding: 0; background-color: var(--bg-color); color: var(--text-main); margin: 0; transition: background 0.3s, color 0.3s; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', sans-serif; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0; background-color: var(--bg-color); color: var(--text-main); margin: 0; min-height: 100dvh; min-height: 100dvh; transition: background 0.3s, color 0.3s; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+    button, a { touch-action: manipulation; }
+    @media (max-width: 768px) {
+      input, select, textarea { font-size: 16px !important; }
+    }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; border: 3px solid var(--bg-color); }
@@ -949,7 +960,7 @@
     .app-layout {
       display: flex;
       width: 100vw;
-      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
       background: #f8fafc;
     }
@@ -958,7 +969,7 @@
     .app-sidebar {
       width: var(--sidebar-w);
       min-width: var(--sidebar-w);
-      height: 100vh;
+      height: 100dvh;
       background: #ffffff;
       border-right: 1px solid var(--border-light);
       display: flex;
@@ -1280,7 +1291,7 @@
     .app-main {
       flex: 1;
       min-width: 0;
-      height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -3139,7 +3150,7 @@
        ========================================================================= */
     /* KHUNG CHÍNH KHÔNG CUỘN NGOÀI - CHỈ BẢNG CUỘN TRONG */
     .app-main {
-      height: 100vh !important;
+      height: 100dvh !important;
       display: flex !important;
       flex-direction: column !important;
       overflow: hidden !important;
@@ -3670,7 +3681,7 @@
         overflow-x: auto !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
-        max-height: calc(100vh - 200px) !important;
+        max-height: calc(100dvh - 200px) !important;
         padding: 0 2px !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -10206,7 +10217,7 @@ function initMobileCalSwipeGesture() {
       let defaultStart = new Date(displayYear, displayMonth, 1), defaultEnd = new Date(displayYear, displayMonth + 1, 0);
       document.querySelector('input[name="exportMode"][value="group"]').checked = true; toggleExportMode(); populateExportPeople(); 
       if (fpInstance) fpInstance.destroy(); 
-      fpInstance = flatpickr("#exportDateRange", { mode: "range", dateFormat: "d/m/Y", locale: "vn", defaultDate: [defaultStart, defaultEnd], monthSelectorType: "static", disableMobile: true });
+      if (typeof flatpickr === 'function') fpInstance = flatpickr("#exportDateRange", { mode: "range", dateFormat: "d/m/Y", locale: "vn", defaultDate: [defaultStart, defaultEnd], monthSelectorType: "static", disableMobile: true });
     }
     function closeExportModal() { document.getElementById('exportModal').classList.remove('active'); }
     
@@ -10238,7 +10249,8 @@ function initMobileCalSwipeGesture() {
       let renderScale = isMobileView() ? 2 : (window.devicePixelRatio > 1 ? window.devicePixelRatio * 2 : 3);
 
       setTimeout(() => {
-        html2canvas(exportContainer, { backgroundColor: "#ffffff", scale: renderScale, useCORS: true, logging: false }).then(canvas => {
+        if (typeof html2canvas !== 'function') { alert('Thư viện xuất ảnh chưa sẵn sàng (kiểm tra kết nối mạng).'); return; }
+      html2canvas(exportContainer, { backgroundColor: "#ffffff", scale: renderScale, useCORS: true, logging: false }).then(canvas => {
           let sdStr = `${startDate.getDate()}_${startDate.getMonth()+1}`, edStr = `${endDate.getDate()}_${endDate.getMonth()+1}`;
           let fileNameGroup = (groupFilter === "CUSTOM") ? "TuyChinh" : normalizeGroupName(groupFilter.replace("ROLE:","").replace("GROUP:",""));
           let fileName = `LichNghi_${fileNameGroup}_${sdStr}_den_${edStr}.png`;

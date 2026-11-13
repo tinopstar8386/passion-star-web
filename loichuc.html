@@ -5,11 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Chúc Mừng Idol">
+    <meta name="theme-color" content="#131722">
+    <meta name="format-detection" content="telephone=no">
     <!-- Fonts & Libraries -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <title>Workspace Chúc Mừng Idol</title>
     <link rel="icon" href="./icon/chucmung.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon/png/chucmung.png">
     <link href="https://cdn.jsdelivr.net/npm/air-datepicker@3.3.5/air-datepicker.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/air-datepicker@3.3.5/air-datepicker.min.js"></script>
 
@@ -38,7 +42,7 @@
       }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
       html { overflow-x: hidden; width: 100%; max-width: 100%; }
-      body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-main); color: var(--text-primary); margin: 0; padding: 25px; width: 100%; max-width: 100%; min-height: 100vh; position: relative; z-index: 0; overflow-x: hidden; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; }
+      body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-main); color: var(--text-primary); margin: 0; padding: 25px; width: 100%; max-width: 100%; min-height: 100vh; min-height: 100dvh; position: relative; z-index: 0; overflow-x: hidden; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; }
       body::before { content: ""; position: fixed; top: -20%; left: 10%; width: 80%; height: 60vh; background: radial-gradient(ellipse at top, var(--ambient-color), transparent 70%); opacity: 0.15; z-index: -1; transition: background 1s ease; pointer-events: none; }
 
       ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -157,7 +161,7 @@
          ========================================================= */
    @media screen and (max-width: 768px) {
         body {
-          padding: 10px 12px calc(95px + env(safe-area-inset-bottom, 24px)) 12px;
+          padding: calc(10px + env(safe-area-inset-top, 0px)) 12px calc(95px + env(safe-area-inset-bottom, 24px)) 12px;
         }
 
         .topbar {
@@ -217,7 +221,7 @@
 
         /* Thanh lọc gọn gàng, không chiếm diện tích khi cuộn */
         .sticky-header {
-          top: 6px;
+          top: calc(6px + env(safe-area-inset-top, 0px));
           padding: 10px;
           gap: 8px;
           background: rgba(30, 34, 48, 0.94);
@@ -329,7 +333,7 @@
           height: 125px !important;
         }
         .msg-box {
-          font-size: 15px !important;
+          font-size: 16px !important;
           height: 140px;
           padding: 10px 12px;
           line-height: 1.45;
@@ -465,17 +469,39 @@
       // ==========================================
       const API_URL = "/api/proxy-loichuc";
 
+      function escapeHtml(str) {
+        return String(str ?? '').replace(/[&<>"']/g, s => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[s]));
+      }
+
       function runScript(action, payload = {}) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 20000);
         return fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: action, payload: payload })
+          body: JSON.stringify({ action: action, payload: payload }),
+          signal: controller.signal
         })
-        .then(res => res.json())
-        .then(res => {
-          if (res.status === 'error') throw new Error(res.message);
-          return res.data;
-        });
+        .then(async res => {
+          const text = await res.text();
+          let data;
+          try { data = JSON.parse(text); } catch {
+            throw new Error(`Lỗi phản hồi máy chủ (HTTP ${res.status})`);
+          }
+          if (!res.ok || data.status === 'error') {
+            throw new Error(data.message || `HTTP ${res.status}`);
+          }
+          return data.data;
+        })
+        .catch(err => {
+          if (err && err.name === 'AbortError') {
+            throw new Error('Quá thời gian kết nối máy chủ (20s). Vui lòng thử lại.');
+          }
+          throw err;
+        })
+        .finally(() => clearTimeout(timer));
       }
 
       // ==========================================
@@ -1050,9 +1076,9 @@
           let st = getTierStyle(tierStr);
           copyToClipboard(msg, st.a);
           
-          if (st.c === 'epic-100k') confetti({ particleCount: 50, spread: 80, colors: ['#fef08a'], shapes: ['star'] });
-          else if (st.c === 'epic-500k') confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
-          else confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: [st.a, '#ffffff'] });
+          if (st.c === 'epic-100k') if (typeof confetti === "function") confetti({ particleCount: 50, spread: 80, colors: ['#fef08a'], shapes: ['star'] });
+          else if (st.c === 'epic-500k') if (typeof confetti === "function") confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
+          else if (typeof confetti === "function") confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: [st.a, '#ffffff'] });
           
           showToast("Đã copy lời chúc tạo nhanh!");
       }
@@ -1094,11 +1120,12 @@
         document.getElementById('datePicker').value = todayStr;
         lastRequestedDate = todayStr;
 
+        if (typeof AirDatepicker === 'undefined') return;
         dpInstance = new AirDatepicker('#datePicker', {
           locale: localeVi,
           autoClose: true,
           isMobile: window.innerWidth <= 768,
-          container: 'body',
+          // container handled by AirDatepicker
           selectedDates: [today],
           dateFormat: 'yyyy-MM-dd',
           onSelect: function({formattedDate}) {
@@ -1124,7 +1151,10 @@
         let container = document.getElementById('toast-container');
         let toast = document.createElement('div');
         toast.className = 'toast';
-        toast.innerHTML = `✅ <span>${msg}</span>`;
+        const span = document.createElement('span');
+        span.textContent = String(msg ?? '');
+        toast.textContent = '✅ ';
+        toast.appendChild(span);
         container.appendChild(toast);
         setTimeout(() => { toast.classList.add('fade-out'); setTimeout(()=> toast.remove(), 350); }, 2400);
       }
@@ -1133,8 +1163,8 @@
         clearAllToasts();
         document.getElementById('app').innerHTML = `
           <div class="status-box">
-            <p class="status-box-title">⚠️ ${titleText}</p>
-            <p class="status-box-sub" style="text-align: left; background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: 10px; font-size: 12px; word-break: break-word;">${subText}</p>
+            <p class="status-box-title">⚠️ ${escapeHtml(titleText)}</p>
+            <p class="status-box-sub" style="text-align: left; background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: 10px; font-size: 12px; word-break: break-word;">${escapeHtml(subText)}</p>
             <div class="status-box-actions">
               <button class="btn btn-sec" style="padding: 10px 14px; flex: unset;" onclick="openDatePicker()">📅 Chọn ngày khác</button>
               <button class="btn btn-main" style="padding: 10px 14px; flex: unset; --accent: #3b82f6; --accent-bg: rgba(59,130,246,0.25);" onclick="forceRefreshData()">🔄 Thử tải lại</button>
@@ -1257,8 +1287,11 @@
           let numA = parseInt((a || "").replace(/[^0-9]/g, '')) || 0;
           let numB = parseInt((b || "").replace(/[^0-9]/g, '')) || 0;
           return numA - numB;
-        }).forEach(tier => { 
-          filterSelect.innerHTML += `<option value="${tier}">${tier}</option>`; 
+        }).forEach(tier => {
+          const opt = document.createElement('option');
+          opt.value = tier;
+          opt.textContent = tier;
+          filterSelect.appendChild(opt);
         });
       }
 
@@ -1316,7 +1349,7 @@
               <div class="card ${st.c} card-nav" id="card-${item.id}" style="--accent:${st.a}; --accent-bg:${st.b}; --accent-border:${st.a}55; animation-delay: ${delay}s;" data-idx="${idx}">
                 <div class="card-header">
                   <div style="display:flex; align-items:center; gap:10px;">
-                    <h3 class="idol-name">${item.name}</h3><span class="badge">${st.i} ${item.tier}</span>
+                    <h3 class="idol-name">${escapeHtml(item.name)}</h3><span class="badge">${st.i} ${escapeHtml(item.tier)}</span>
                   </div>
                   <label class="toggle-switch" title="Bật/Tắt Trợ Lý">
                     <span class="toggle-label">Trợ lý</span>
@@ -1325,8 +1358,8 @@
                   </label>
                 </div>
 
-                <div class="coin-info"><span style="opacity:0.7">Điểm: </span> <span class="coin-val" style="margin-left:4px;">${item.coin}</span></div>
-                <textarea id="msg-${item.id}" class="msg-box" spellcheck="false">${item.message}</textarea>
+                <div class="coin-info"><span style="opacity:0.7">Điểm: </span> <span class="coin-val" style="margin-left:4px;">${escapeHtml(item.coin)}</span></div>
+                <textarea id="msg-${escapeHtml(item.id)}" class="msg-box" spellcheck="false">${escapeHtml(item.message)}</textarea>
                 
                 <div class="action-group">
                   <button class="btn btn-main btn-do-copy" onclick="handleCopy('${item.id}', ${item.row}, ${item.col}, '${st.c}', '${st.a}')">📋 Copy</button>
@@ -1338,11 +1371,11 @@
               <div class="card done card-nav" style="animation-delay: ${delay}s;" data-idx="${idx}">
                 <div class="card-header">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <h3 class="idol-name">${item.name}</h3>
-                        <span class="badge" style="color:#94a3b8; border-color:#475569">${st.i} ${item.tier}</span>
+                        <h3 class="idol-name">${escapeHtml(item.name)}</h3>
+                        <span class="badge" style="color:#94a3b8; border-color:#475569">${st.i} ${escapeHtml(item.tier)}</span>
                     </div>
                 </div>
-                <textarea id="msg-${item.id}" class="msg-box" readonly>${item.message}</textarea>
+                <textarea id="msg-${escapeHtml(item.id)}" class="msg-box" readonly>${escapeHtml(item.message)}</textarea>
                 <div class="action-group">
                   <button class="btn btn-sec" onclick="copyOnly('${item.id}')">🔄 Copy Lại</button>
                   <button class="btn btn-sec" onclick="handleUndo('${item.id}', ${item.row}, ${item.col})">↩ Hoàn tác</button>
@@ -1391,9 +1424,9 @@
         
         copyToClipboard(finalMessage, particleColor);
         
-        if (tierClass === 'epic-100k') confetti({ particleCount: 50, spread: 80, colors: ['#fef08a'], shapes: ['star'] });
-        else if (tierClass === 'epic-500k') confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
-        else confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: [particleColor, '#ffffff'] });
+        if (tierClass === 'epic-100k') if (typeof confetti === "function") confetti({ particleCount: 50, spread: 80, colors: ['#fef08a'], shapes: ['star'] });
+        else if (tierClass === 'epic-500k') if (typeof confetti === "function") confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
+        else if (typeof confetti === "function") confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: [particleColor, '#ffffff'] });
         
         showToast("Đã lưu vào bộ nhớ tạm!");
 

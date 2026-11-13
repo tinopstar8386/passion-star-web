@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Timeline Makeup">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="format-detection" content="telephone=no">
     <title>Timeline Makeup Passion Star</title>
     <link rel="icon" href="./icon/timeline.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon/png/timeline.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap&subset=vietnamese" rel="stylesheet">
@@ -246,7 +252,7 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0; padding: 0;
             display: flex; flex-direction: column;
-            height: 100vh; overflow: hidden;
+            height: 100vh; height: 100dvh; overflow: hidden; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
             background: var(--bg-page);
             color: var(--text-main);
             transition: background 0.3s ease;
@@ -276,7 +282,11 @@
         .tab-btn.active { background: var(--bg-panel); color: var(--text-main); box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-weight: 700; border: 1px solid var(--border); }
 
         /* === VIEW CONTAINERS (GỐC PC) === */
-        .view-container { display: none; height: calc(100vh - 70px); width: 100%; }
+        .view-container { display: none; height: calc(100vh - 70px); height: calc(100dvh - 70px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); width: 100%; }
+        button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        @media (max-width: 768px) {
+            input, select, textarea { font-size: 16px !important; }
+        }
         .view-container.active { display: flex; animation: fadeUp 0.3s ease forwards; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-row { animation: slideFadeIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; }
@@ -3477,7 +3487,8 @@
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
             // html2canvas tự đo chiều cao thực tế của phần tử (KHÔNG truyền height cứng ép crop)
-            const canvas = await html2canvas(clone, {
+            if (typeof html2canvas !== 'function') { alert('Thư viện xuất ảnh chưa sẵn sàng (kiểm tra kết nối mạng).'); return; }
+        const canvas = await html2canvas(clone, {
                 scale: 2,
                 useCORS: true,
                 backgroundColor: bgColor,
@@ -3555,7 +3566,8 @@
             try {
                 const canvas = await renderPCQualityCanvas(id, isEcoMode);
                 const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                const { jsPDF } = window.jspdf;
+                if (!window.jspdf || !window.jspdf.jsPDF) { alert('Thư viện xuất PDF chưa sẵn sàng (kiểm tra kết nối mạng).'); return; }
+        const { jsPDF } = window.jspdf;
                 
                 // Quyết định khổ giấy A4 Dọc hay Ngang tối ưu nhất để fit trọn vẹn 1 trang duy nhất
                 let finalOrientation = 'p';

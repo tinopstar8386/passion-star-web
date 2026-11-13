@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#090d16">
     <title>Tra cứu Tài khoản & 2FA Security System - Passion Star</title>
     <link rel="icon" href="./icon/2fa.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon/png/2fa.png">
 
     <!-- Tailwind CSS with Dark Mode -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -51,6 +52,15 @@
         html.dark body {
             background-color: #090d16;
             color: #f1f5f9;
+        }
+        button, a {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        @media (max-width: 768px) {
+            input, select, textarea {
+                font-size: 16px !important;
+            }
         }
         .tiktok-gradient {
             background: linear-gradient(135deg, #00f2fe 0%, #4facfe 45%, #ff0844 100%);
@@ -1038,11 +1048,14 @@
             if (window.location.protocol === 'file:' || window.location.protocol === 'content:') {
                 return runScriptJSONP(action, payload);
             }
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 15000);
             return fetch(API_URL, {
                 method: 'POST',
                 redirect: 'follow',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: action, payload: payload })
+                body: JSON.stringify({ action: action, payload: payload }),
+                signal: controller.signal
             })
             .then(async res => {
                 const text = await res.text();
@@ -1067,7 +1080,8 @@
                     throw err;
                 }
                 return runScriptJSONP(action, payload);
-            });
+            })
+            .finally(() => clearTimeout(timer));
         }
 
         let allData = [];
