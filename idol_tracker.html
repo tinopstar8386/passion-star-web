@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Passion Tracker">
     <meta name="format-detection" content="telephone=no">
     <meta name="theme-color" content="#090d16">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon/png/idol_tracker.png">
     <title>Passion Media Tracker - Quản Lý & Theo Dõi TikTok Theo Tuần</title>
     <!-- Tailwind CSS with Dark Mode -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -383,6 +384,7 @@
         /* Ngăn chặn Safari iOS tự động zoom khi bấm vào ô input (font-size < 16px sẽ bị auto-zoom) */
         @media screen and (max-width: 768px) {
             input[type="text"],
+            input[type="url"],
             input[type="password"],
             input[type="date"],
             input[type="search"],
@@ -1389,10 +1391,13 @@
                     <button onclick="setDirectoryFilter('MISSING_KPI')" id="dirTabMissingKpi" class="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer">
                         ⚠️ Chưa đủ 2 bài
                     </button>
-                    <button onclick="setDirectoryFilter('DONE_KPI')" id="dirTabDoneKpi" class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer">
+                    <button onclick="setDirectoryFilter('DONE_KPI')" id="dirTabDoneKpi" class="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer shrink-0 whitespace-nowrap">
                         ✅ Đã đủ bài (&ge;2 bài)
                     </button>
-                    <button onclick="setDirectoryFilter('GROUP')" id="dirTabGroup" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition cursor-pointer">
+                    <button onclick="setDirectoryFilter('PRIVATE')" id="dirTabPrivate" class="px-3 py-1.5 rounded-lg text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer shrink-0 whitespace-nowrap">
+                        🔒 Riêng tư (0)
+                    </button>
+                    <button onclick="setDirectoryFilter('GROUP')" id="dirTabGroup" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition cursor-pointer shrink-0 whitespace-nowrap">
                         👥 6 Kênh Nhóm
                     </button>
                     <button onclick="setDirectoryFilter('IDOL')" id="dirTabIdol" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 transition cursor-pointer">
@@ -1679,6 +1684,12 @@
                             <span id="idolModalKpiBadge" class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                                 0/2 bài
                             </span>
+                            <button type="button" id="idolModalPrivateBtn" onclick="toggleAccountPrivateFromModal()"
+                                class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-700/80 hover:bg-amber-500/30 text-slate-200 border border-slate-500/40 transition cursor-pointer inline-flex items-center gap-1"
+                                title="Đánh dấu / bỏ đánh dấu Tài khoản Riêng tư (cần tự lấy link TikTok)">
+                                <i class="fa-solid fa-lock-open text-[10px]"></i>
+                                <span>Đánh dấu Riêng tư</span>
+                            </button>
                         </div>
                         <div class="flex items-center gap-3 mt-1">
                             <a id="idolModalHandleLink" href="#" target="_blank" rel="noopener noreferrer"
@@ -1727,6 +1738,23 @@
                                 <span id="toggleIdolAddFormText">Thêm Bài Đăng Mới</span>
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Cảnh báo Tài khoản Riêng tư (Private) cần tự lấy link -->
+                    <div id="idolModalPrivateBanner" class="hidden p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div class="min-w-0">
+                            <div class="text-xs font-black text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-lock text-amber-600 dark:text-amber-400 shrink-0"></i>
+                                <span>Tài khoản đang set RIÊNG TƯ (Private) — Hãy tự mở TikTok copy link bài đăng</span>
+                            </div>
+                            <div id="idolModalPrivateNoteText" class="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5 break-words hidden"></div>
+                        </div>
+                        <a id="idolModalPrivateOpenLink" href="#" target="_blank" rel="noopener noreferrer"
+                            class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold transition inline-flex items-center justify-center gap-1.5 shrink-0 shadow-xs">
+                            <i class="fa-brands fa-tiktok"></i>
+                            <span>Mở TikTok Tự Lấy Link</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        </a>
                     </div>
 
                     <!-- Dán nhanh link video cho riêng Idol này -->
@@ -2935,6 +2963,28 @@
                                 class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500">
                         </div>
                     </div>
+
+                    <!-- Đánh dấu Tài khoản Riêng tư (Private) để tự lấy link thủ công -->
+                    <div class="p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/25 border border-amber-200/90 dark:border-amber-800/70 space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <label for="accIsPrivate" class="flex items-center gap-2.5 cursor-pointer select-none min-w-0">
+                                <input type="checkbox" id="accIsPrivate" onchange="toggleAccountFormPrivateNote(this.checked)"
+                                    class="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-amber-300 cursor-pointer shrink-0">
+                                <span class="text-xs font-extrabold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-lock text-amber-600 dark:text-amber-400 shrink-0"></i>
+                                    <span>Tài khoản Riêng tư (Private — đánh dấu để tự vào TikTok lấy link)</span>
+                                </span>
+                            </label>
+                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 shrink-0 hidden sm:inline-block">
+                                Tự lấy link
+                            </span>
+                        </div>
+                        <div id="accPrivateNoteWrapper" class="hidden">
+                            <input type="text" id="accPrivateNote" maxlength="200"
+                                placeholder="Ghi chú riêng tư (VD: Nick khóa 18+, follow bằng @... để tự lấy link)..."
+                                class="w-full px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700/80 text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-amber-500">
+                        </div>
+                    </div>
                 </form>
 
                 <!-- KHU VỰC ĐỔI TÊN / BIỆT HIỆU NHÓM THEO TUẦN (ACCORDION DÀNH CHO ADMIN) -->
@@ -3624,9 +3674,15 @@ service cloud.firestore {
         let accounts = [...DEFAULT_ACCOUNTS];
         try {
             const initialWeeksMap = JSON.parse(localStorage.getItem('ps_bypass_weeks_map') || '{}');
+            const initialPrivateMap = JSON.parse(localStorage.getItem('ps_private_accounts_map') || '{}');
             accounts.forEach(acc => {
                 if (initialWeeksMap[acc.id]) {
                     acc.bypassedWeeks = initialWeeksMap[acc.id];
+                }
+                const privEntry = initialPrivateMap[acc.id];
+                if (privEntry && typeof privEntry === 'object') {
+                    acc.isPrivate = !!privEntry.isPrivate;
+                    acc.privateNote = privEntry.privateNote || '';
                 }
             });
         } catch (e) {}
@@ -4975,6 +5031,131 @@ service cloud.firestore {
             };
         }
 
+        // Tiện ích bảo mật XSS & Chuẩn hóa đường dẫn an toàn
+        function escapeHtml(rawStr) {
+            if (rawStr === null || rawStr === undefined) return '';
+            return String(rawStr)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function safeTikTokHref(rawUrl, fallbackHandle = '') {
+            const candidate = String(rawUrl || '').trim();
+            if (/^https?:\/\//i.test(candidate)) {
+                return candidate;
+            }
+            const cleanH = String(fallbackHandle || '').replace(/^@/, '').trim();
+            if (cleanH) {
+                return 'https://www.tiktok.com/@' + encodeURIComponent(cleanH);
+            }
+            return 'https://www.tiktok.com/';
+        }
+
+        const PRIVATE_ACCOUNTS_STORAGE_KEY = 'ps_private_accounts_map';
+
+        function loadPrivateAccountsMap() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(PRIVATE_ACCOUNTS_STORAGE_KEY) || '{}');
+                return (parsed && typeof parsed === 'object') ? parsed : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function savePrivateAccountState(accId, isPrivate, privateNote = '') {
+            if (!accId) return;
+            try {
+                const map = loadPrivateAccountsMap();
+                if (isPrivate) {
+                    map[accId] = { isPrivate: true, privateNote: String(privateNote || '').trim() };
+                } else {
+                    delete map[accId];
+                }
+                localStorage.setItem(PRIVATE_ACCOUNTS_STORAGE_KEY, JSON.stringify(map));
+            } catch (e) {}
+        }
+
+        function hydrateAccountsPrivateState(accList, syncFromCloud = false) {
+            if (!Array.isArray(accList)) return;
+            const localMap = loadPrivateAccountsMap();
+            accList.forEach(acc => {
+                if (!acc || !acc.id) return;
+                if (syncFromCloud && typeof acc.isPrivate === 'boolean') {
+                    acc.privateNote = acc.isPrivate ? String(acc.privateNote || '').trim() : '';
+                    if (acc.isPrivate) {
+                        localMap[acc.id] = { isPrivate: true, privateNote: acc.privateNote };
+                    } else {
+                        delete localMap[acc.id];
+                    }
+                } else if (localMap[acc.id] && typeof localMap[acc.id] === 'object') {
+                    acc.isPrivate = !!localMap[acc.id].isPrivate;
+                    acc.privateNote = localMap[acc.id].privateNote || '';
+                } else {
+                    acc.isPrivate = !!acc.isPrivate;
+                    acc.privateNote = acc.privateNote || '';
+                }
+            });
+            try {
+                localStorage.setItem(PRIVATE_ACCOUNTS_STORAGE_KEY, JSON.stringify(localMap));
+            } catch (e) {}
+        }
+
+        function isAccountPrivate(acc) {
+            return Boolean(acc && acc.isPrivate);
+        }
+
+        function toggleAccountFormPrivateNote(isChecked) {
+            const wrapper = document.getElementById('accPrivateNoteWrapper');
+            if (!wrapper) return;
+            if (isChecked) {
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
+            }
+        }
+
+        async function toggleAccountPrivate(accId, optionalNote = undefined) {
+            const acc = getAccountById(accId);
+            if (!acc) return;
+            const nextPrivate = !acc.isPrivate;
+            const nextNote = nextPrivate
+                ? (optionalNote !== undefined ? String(optionalNote).trim() : String(acc.privateNote || '').trim())
+                : '';
+
+            acc.isPrivate = nextPrivate;
+            acc.privateNote = nextNote;
+            savePrivateAccountState(acc.id, nextPrivate, nextNote);
+
+            renderAllUI();
+            renderModalAccountsList();
+            if (currentModalAccountId === acc.id) {
+                renderIdolModalContent(acc.id, true);
+            }
+
+            if (nextPrivate) {
+                showToast(`🔒 Đã đánh dấu ${acc.handle} là Tài khoản Riêng tư — Nhớ tự vào TikTok lấy link!`, 'warning');
+            } else {
+                showToast(`🔓 Đã gỡ đánh dấu Riêng tư cho ${acc.handle} (Tài khoản Công khai).`, 'success');
+            }
+
+            if (db && typeof doc === 'function' && typeof setDoc === 'function') {
+                try {
+                    const accDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'accounts', acc.id);
+                    await setDoc(accDocRef, { isPrivate: nextPrivate, privateNote: nextNote }, { merge: true });
+                } catch (err) {
+                    console.warn('Không đồng bộ được trạng thái Riêng tư lên Firebase:', err);
+                }
+            }
+        }
+
+        async function toggleAccountPrivateFromModal() {
+            if (!currentModalAccountId) return;
+            return toggleAccountPrivate(currentModalAccountId);
+        }
+
         // Hệ thống Dropdown Hiện Đại (Mượt mà, đóng tự động khi click ra ngoài)
         function toggleModernDropdown(arg1, arg2) {
             let event = null;
@@ -5058,9 +5239,9 @@ service cloud.firestore {
             return clean;
         }
 
-        // Đã gỡ bỏ toàn bộ cơ chế quét kênh tự động theo yêu cầu người dùng
+        // Kiểm tra tài khoản đang bật Riêng tư (Private) cần tự vào TikTok lấy link
         function hasActiveScanAlert(acc) {
-            return false;
+            return Boolean(acc && acc.isPrivate);
         }
 
         function getPostWeekMonday(post) {
@@ -5564,9 +5745,16 @@ service cloud.firestore {
                     ? `<div class="text-[11px] text-sky-600 font-medium mt-1"><i class="fa-solid fa-clock mr-1"></i>Có ${prog.scheduledCount} bài đang lên lịch/chờ duyệt</div>`
                     : '';
 
-                const privateNote = hasActiveScanAlert(acc)
-                    ? `<div class="text-[10px] text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded mt-1 font-semibold"><i class="fa-solid fa-lock mr-1"></i>${acc.scanMessage || 'Kênh riêng tư / Không quét được'}</div>`
+                const escapedPrivateNote = escapeHtml(acc.privateNote || '');
+                const privateNote = isAccountPrivate(acc)
+                    ? `<div class="text-[10px] text-amber-800 dark:text-amber-200 bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300/80 dark:border-amber-700/80 px-2 py-1 rounded-lg mt-1 font-bold flex items-center gap-1.5"><i class="fa-solid fa-lock text-amber-600 shrink-0"></i><span class="truncate">${escapedPrivateNote ? ('Riêng tư: ' + escapedPrivateNote) : 'Tài khoản Riêng tư — Tự vào TikTok lấy link'}</span></div>`
                     : '';
+
+                const safeId = escapeHtml(acc.id);
+                const safeIdolShort = escapeHtml(idolShort);
+                const safeGrpName = escapeHtml(grpName);
+                const safeHandle = escapeHtml(acc.handle);
+                const safeUrl = escapeHtml(safeTikTokHref(acc.url, acc.handle));
 
                 const item = document.createElement('div');
                 item.className = `p-3 rounded-xl border ${countUsed === 0 ? 'bg-rose-50/40 border-rose-200' : 'bg-amber-50/40 border-amber-200'} flex flex-col gap-1.5 transition hover:shadow-xs`;
@@ -5574,28 +5762,29 @@ service cloud.firestore {
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-1.5 min-w-0">
                             <span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded border shrink-0 ${isGroup ? 'bg-slate-900 text-white border-slate-900' : theme.badgeBg}">
-                                ${isGroup ? ('NHÓM ' + grpName.toUpperCase()) : (theme.icon + ' ' + grpName)}
+                                ${isGroup ? ('NHÓM ' + safeGrpName.toUpperCase()) : (theme.icon + ' ' + safeGrpName)}
                             </span>
-                            <span class="font-extrabold text-xs sm:text-sm text-slate-900 truncate">${isGroup ? 'Kênh Nhóm' : idolShort}</span>
+                            <span class="font-extrabold text-xs sm:text-sm text-slate-900 truncate">${isGroup ? 'Kênh Nhóm' : safeIdolShort}</span>
                         </div>
                         ${statusBadge}
                     </div>
                     <div class="flex items-center justify-between gap-2 mt-0.5">
-                        <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
-                            onclick="markAccountCheckedOnVisit('${acc.id}')"
+                        <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
+                            onclick="markAccountCheckedOnVisit('${safeId}')"
                             class="text-xs font-semibold text-pink-600 hover:underline inline-flex items-center gap-1 truncate">
                             <i class="fa-brands fa-tiktok text-[10px]"></i>
-                            <span>${acc.handle}</span>
+                            <span>${safeHandle}</span>
                         </a>
                         <div class="flex items-center gap-1 shrink-0">
-                            <button onclick="openIdolDetailModal('${acc.id}', true)"
+                            <button onclick="openIdolDetailModal('${safeId}', true)"
                                 class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-pink-600 text-white text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
-                                title="Mở form thêm bài mới để bù KPI cho ${idolShort}">
+                                title="Mở form thêm bài mới để bù KPI cho ${safeIdolShort}">
                                 <i class="fa-solid fa-plus text-[10px]"></i>
                                 <span>+ Bù ${missingNum}</span>
                             </button>
                         </div>
                     </div>
+                    ${privateNote}
                     ${schedNote}
                 `;
                 container.appendChild(item);
@@ -5792,6 +5981,7 @@ service cloud.firestore {
                         });
                         localStorage.setItem('ps_bypass_weeks_map', JSON.stringify(localWeeksMap));
                     } catch (e) {}
+                    hydrateAccountsPrivateState(loadedAccounts, true);
 
                     if (loadedAccounts.length > 0) {
                         const staleErrorAccounts = [];
@@ -6297,7 +6487,7 @@ service cloud.firestore {
             const iconClass = type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-exclamation text-white';
 
             toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl border-l-4 ${bgClass} text-xs sm:text-sm font-medium transition-all duration-300`;
-            toast.innerHTML = `<i class="fa-solid ${iconClass}"></i><span>${message}</span>`;
+            toast.innerHTML = `<i class="fa-solid ${iconClass}"></i><span>${escapeHtml(message)}</span>`;
             container.appendChild(toast);
 
             setTimeout(() => {
@@ -6327,6 +6517,7 @@ service cloud.firestore {
                 ALL: document.getElementById('dirTabAll'),
                 MISSING_KPI: document.getElementById('dirTabMissingKpi'),
                 DONE_KPI: document.getElementById('dirTabDoneKpi'),
+                PRIVATE: document.getElementById('dirTabPrivate'),
                 PRIVATE_LOG: document.getElementById('dirTabPrivateLog'),
                 GROUP: document.getElementById('dirTabGroup'),
                 IDOL: document.getElementById('dirTabIdol')
@@ -6336,15 +6527,15 @@ service cloud.firestore {
                 const btn = tabMap[key];
                 if (!btn) return;
                 if (key === filterType) {
-                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition';
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs transition cursor-pointer shrink-0 whitespace-nowrap';
                 } else if (key === 'MISSING_KPI') {
-                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 hover:bg-rose-50 transition';
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer shrink-0 whitespace-nowrap';
                 } else if (key === 'DONE_KPI') {
-                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition';
-                } else if (key === 'PRIVATE_LOG') {
-                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-800 hover:bg-amber-50 transition';
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer shrink-0 whitespace-nowrap';
+                } else if (key === 'PRIVATE' || key === 'PRIVATE_LOG') {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer shrink-0 whitespace-nowrap';
                 } else {
-                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition';
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer shrink-0 whitespace-nowrap';
                 }
             });
 
@@ -6436,6 +6627,7 @@ service cloud.firestore {
 
             const missingKpiCount = getMissingAccountsForWeek(activeWeek, 'POSTED').length;
             const doneKpiCount = accounts.length - missingKpiCount;
+            const privateCount = accounts.filter(a => isAccountPrivate(a)).length;
 
             const tabAll = document.getElementById('dirTabAll');
             if (tabAll) tabAll.textContent = `Tất cả ${getUniqueGroupNames().length} Nhóm (${accounts.length})`;
@@ -6443,6 +6635,8 @@ service cloud.firestore {
             if (tabMissing) tabMissing.textContent = isWeekOverdueOrExpired(activeWeek) ? `🚨 Bị Phạt (${missingKpiCount})` : `⚠️ Chưa đủ bài (${missingKpiCount})`;
             const tabDone = document.getElementById('dirTabDoneKpi');
             if (tabDone) tabDone.textContent = `✅ Đã đủ KPI (${doneKpiCount})`;
+            const tabPrivate = document.getElementById('dirTabPrivate');
+            if (tabPrivate) tabPrivate.textContent = `🔒 Riêng tư (${privateCount})`;
 
             const GROUP_NAMES = getUniqueGroupNames();
             const targetGroups = selectedGroupFilter === 'ALL'
@@ -6472,8 +6666,9 @@ service cloud.firestore {
                     if (currentDirectoryFilter === 'IDOL' && acc.role !== 'IDOL') return false;
                     if (currentDirectoryFilter === 'MISSING_KPI' && prog.isDonePosted) return false;
                     if (currentDirectoryFilter === 'DONE_KPI' && !prog.isDonePosted) return false;
+                    if (currentDirectoryFilter === 'PRIVATE' && !isAccountPrivate(acc)) return false;
                     if (keyword) {
-                        const hay = `${acc.name} ${extractCleanIdolName(acc)} ${acc.handle} ${acc.subHandle || ''} ${grpName}`.toLowerCase();
+                        const hay = `${acc.name} ${extractCleanIdolName(acc)} ${acc.handle} ${acc.subHandle || ''} ${acc.privateNote || ''} ${grpName}`.toLowerCase();
                         if (!hay.includes(keyword)) return false;
                     }
                     return true;
@@ -6499,6 +6694,14 @@ service cloud.firestore {
                     const isDone = prog.isDonePosted;
                     const isAccBypassed = isAccountBypassedForWeek(acc, activeWeek);
                     const accBypassReason = getAccountBypassReasonForWeek(acc, activeWeek);
+                    const isAccPrivate = isAccountPrivate(acc);
+                    const safeAccId = escapeHtml(acc.id);
+                    const safeIdolShort = escapeHtml(idolShort);
+                    const safeGrpName = escapeHtml(grpName);
+                    const safeHandle = escapeHtml(acc.handle);
+                    const safeUrl = escapeHtml(safeTikTokHref(acc.url, acc.handle));
+                    const safePrivateNote = escapeHtml(acc.privateNote || '');
+                    const safeBypassReason = escapeHtml(accBypassReason || 'Miễn tính KPI');
 
                     const target = prog.targetKpi;
                     let kpiBadge = '';
@@ -6554,7 +6757,7 @@ service cloud.firestore {
                         </div>`;
                     }
 
-                    // Tách biệt nổi bật thẻ hoàn thành đủ KPI hoặc Báo đỏ khi BỊ PHẠT
+                    // Tách biệt nổi bật thẻ hoàn thành đủ KPI, Tài khoản Riêng tư hoặc Báo đỏ khi BỊ PHẠT
                     let cardHighlightClass = '';
                     if (isAccBypassed) {
                         cardHighlightClass = 'bg-purple-50/20 dark:bg-purple-950/20 text-slate-800 dark:text-slate-100 border-2 border-dashed border-purple-400/80 dark:border-purple-600/80 shadow-2xs';
@@ -6565,6 +6768,8 @@ service cloud.firestore {
                     } else if (prog.isPenalized) {
                         // BÁO ĐỎ TOÀN DIỆN THẺ (VIỀN ĐỎ & NỀN HỒNG ĐỎ PHÁT SÁNG) KHI BỊ PHẠT
                         cardHighlightClass = 'bg-rose-50/80 dark:bg-rose-950/40 text-slate-900 dark:text-rose-100 border-2 border-rose-500 dark:border-rose-500 shadow-md ring-2 ring-rose-500/20';
+                    } else if (isAccPrivate && !isGroupChannel) {
+                        cardHighlightClass = 'bg-amber-50/40 dark:bg-amber-950/25 text-slate-800 dark:text-slate-100 border-2 border-amber-400/90 dark:border-amber-500/80 shadow-xs';
                     } else if (isGroupChannel) {
                         cardHighlightClass = 'bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-indigo-400/60 shadow-md';
                     } else if (prog.postedCount === 1) {
@@ -6574,30 +6779,45 @@ service cloud.firestore {
                     }
 
                     // Kênh phụ hiển thị ngay cạnh nick chính tinh tế, không làm lệch hàng hay đè badge (Thứ 3 - Hình 3)
-                    const subHandleHtml = acc.subHandle ? `
+                    const cleanSub = acc.subHandle ? escapeHtml(String(acc.subHandle).replace(/^@/, '')) : '';
+                    const subHandleHtml = cleanSub ? `
                         <span class="text-slate-300 dark:text-slate-600 shrink-0 font-normal">•</span>
-                        <a href="https://www.tiktok.com/@${acc.subHandle.replace(/^@/, '')}" target="_blank" rel="noopener noreferrer"
+                        <a href="https://www.tiktok.com/@${encodeURIComponent(String(acc.subHandle).replace(/^@/, ''))}" target="_blank" rel="noopener noreferrer"
                            class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:text-pink-600 dark:hover:text-pink-400 truncate max-w-[150px] transition"
-                           title="Kênh phụ: @${acc.subHandle.replace(/^@/, '')}">
+                           title="Kênh phụ: @${cleanSub}">
                             <i class="fa-brands fa-tiktok text-[9px] text-pink-500 shrink-0"></i>
-                            <span class="truncate">Phụ: @${acc.subHandle.replace(/^@/, '')}</span>
+                            <span class="truncate">Phụ: @${cleanSub}</span>
                             <i class="fa-solid fa-arrow-up-right-from-square text-[8px] opacity-60 shrink-0"></i>
                         </a>
                     ` : '';
 
+                    const privateBannerHtml = isAccPrivate ? `
+                        <div class="mt-2 px-2.5 py-1.5 rounded-xl bg-amber-100/85 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/80 text-amber-900 dark:text-amber-200 text-[10.5px] font-bold flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-1.5 min-w-0">
+                                <i class="fa-solid fa-lock text-amber-600 dark:text-amber-400 shrink-0"></i>
+                                <span class="truncate">${safePrivateNote ? ('Riêng tư: ' + safePrivateNote) : 'RIÊNG TƯ • Tự vào TikTok lấy link'}</span>
+                            </span>
+                            <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); markAccountCheckedOnVisit('${safeAccId}')"
+                               class="px-1.5 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-white text-[9.5px] font-extrabold shrink-0 whitespace-nowrap transition inline-flex items-center gap-1">
+                                <span>Lấy link</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
+                            </a>
+                        </div>
+                    ` : '';
+
                     return `
-                        <div id="accountCard_${acc.id}" class="rounded-2xl p-2.5 sm:p-3 transition flex flex-col justify-between gap-2.5 overflow-hidden ${cardHighlightClass}">
+                        <div id="accountCard_${safeAccId}" class="rounded-2xl p-2.5 sm:p-3 transition flex flex-col justify-between gap-2.5 overflow-hidden ${cardHighlightClass}">
                             <div>
                                 <!-- Hàng 1: Avatar + Tên Idol bên trái, Badge KPI độc lập bên phải không bị đè (Thứ 3) -->
                                 <div class="flex items-center justify-between gap-2">
                                     <div class="flex items-center gap-2 min-w-0">
-                                        <div class="w-8 h-8 rounded-xl ${isGroupChannel ? 'bg-pink-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'} flex items-center justify-center font-bold text-xs shrink-0">
-                                            ${isGroupChannel ? '👥' : theme.icon}
+                                        <div class="w-8 h-8 rounded-xl ${isGroupChannel ? 'bg-pink-500 text-white' : (isAccPrivate ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-400/50' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300')} flex items-center justify-center font-bold text-xs shrink-0">
+                                            ${isGroupChannel ? '👥' : (isAccPrivate ? '🔒' : theme.icon)}
                                         </div>
                                         <div class="min-w-0">
                                             <div class="flex items-center gap-1.5">
-                                                <h4 class="font-extrabold text-xs sm:text-sm truncate cursor-pointer hover:text-pink-500 transition" onclick="openIdolDetailModal('${acc.id}')">
-                                                    ${isGroupChannel ? grpName : idolShort}
+                                                <h4 class="font-extrabold text-xs sm:text-sm truncate cursor-pointer hover:text-pink-500 transition" onclick="openIdolDetailModal('${safeAccId}')">
+                                                    ${isGroupChannel ? safeGrpName : safeIdolShort}
                                                 </h4>
                                                 ${isGroupChannel ? '<span class="text-[9px] bg-pink-500 text-white px-1.5 py-0.2 rounded font-extrabold shrink-0">NHÓM</span>' : ''}
                                             </div>
@@ -6609,13 +6829,16 @@ service cloud.firestore {
 
                                 <!-- Hàng 2: Nick chính & Kênh phụ nhỏ gọn ngang hàng (Thứ 3) -->
                                 <div class="flex items-center gap-1.5 mt-1 text-[11px] min-w-0 pl-10">
-                                    <a href="${acc.url}" target="_blank" rel="noopener noreferrer" 
+                                    <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" 
+                                       onclick="markAccountCheckedOnVisit('${safeAccId}')"
                                        class="font-bold text-pink-600 dark:text-pink-400 hover:underline truncate max-w-[130px]"
-                                       title="Kênh chính: ${acc.handle}">
-                                        ${acc.handle}
+                                       title="Kênh chính: ${safeHandle}">
+                                        ${safeHandle}
                                     </a>
                                     ${subHandleHtml}
                                 </div>
+
+                                ${privateBannerHtml}
 
                                 <!-- Hàng 3: Danh sách bài đăng tuần này -->
                                 <div class="mt-2.5 border-t border-slate-100 dark:border-slate-800/80 pt-1.5">
@@ -6624,9 +6847,9 @@ service cloud.firestore {
                                         <div class="mt-2 px-2.5 py-1.5 rounded-xl bg-purple-50/90 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800/80 text-purple-800 dark:text-purple-200 text-[11px] font-medium flex items-center justify-between gap-1.5">
                                             <span class="flex items-center gap-1.5 min-w-0">
                                                 <i class="fa-solid fa-shield-halved text-purple-600 dark:text-purple-400 shrink-0 text-xs"></i>
-                                                <span class="truncate"><strong>Lý do bypass:</strong> ${accBypassReason || 'Miễn tính KPI'}</span>
+                                                <span class="truncate"><strong>Lý do bypass:</strong> ${safeBypassReason}</span>
                                             </span>
-                                            <button type="button" onclick="openBypassModal('${acc.id}')" class="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 text-[10px] font-black underline shrink-0 cursor-pointer">Sửa</button>
+                                            <button type="button" onclick="openBypassModal('${safeAccId}')" class="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 text-[10px] font-black underline shrink-0 cursor-pointer">Sửa</button>
                                         </div>
                                     ` : ''}
                                     ${prog.isPenalized ? `
@@ -6645,36 +6868,42 @@ service cloud.firestore {
                             <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 gap-1 mt-auto">
                                 <!-- Cụm 3 nút Admin: Sửa, Xóa, Bypass (Gộp chung 1 toolbar mini siêu gọn, rộng chỉ ~60px) -->
                                 <div class="admin-only-btn inline-flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 shrink-0 shadow-2xs">
-                                    <button type="button" onclick="openAccountModal('${acc.id}')"
+                                    <button type="button" onclick="openAccountModal('${safeAccId}')"
                                         class="h-6 w-5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 text-slate-500 dark:text-slate-400 text-[10px] transition flex items-center justify-center cursor-pointer shrink-0"
                                         title="Chỉnh sửa kênh, chuyển nhóm hoặc thêm kênh phụ">
                                         <i class="fa-solid fa-pen"></i>
                                     </button>
-                                    <button type="button" onclick="deleteAccountWithConfirm('${acc.id}')"
+                                    <button type="button" onclick="deleteAccountWithConfirm('${safeAccId}')"
                                         class="h-6 w-5 rounded-md hover:bg-white dark:hover:bg-slate-700 hover:text-rose-600 text-slate-400 dark:text-slate-500 text-[10px] transition flex items-center justify-center cursor-pointer shrink-0"
                                         title="Xóa tài khoản này khỏi danh bạ">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
-                                    <button type="button" onclick="openBypassModal('${acc.id}')"
+                                    <button type="button" onclick="openBypassModal('${safeAccId}')"
                                         class="h-6 w-5 rounded-md ${isAccBypassed ? 'bg-purple-600 text-white shadow-2xs font-bold' : 'hover:bg-white dark:hover:bg-slate-700 text-slate-400 dark:text-slate-500 hover:text-purple-600'} text-[10px] transition flex items-center justify-center cursor-pointer shrink-0"
-                                        title="${isAccBypassed ? 'Bypass KPI ĐANG BẬT: ' + (accBypassReason || 'Miễn KPI') + ' (Bấm để xem/sửa lý do/tắt)' : 'Bypass KPI: Miễn tính chỉ tiêu KPI cho bạn này'}">
+                                        title="${isAccBypassed ? 'Bypass KPI ĐANG BẬT: ' + safeBypassReason + ' (Bấm để xem/sửa lý do/tắt)' : 'Bypass KPI: Miễn tính chỉ tiêu KPI cho bạn này'}">
                                         <i class="fa-solid fa-shield-halved"></i>
                                     </button>
                                 </div>
 
-                                <!-- Cụm nút Vận Hành: Dò Bài, Thêm & Chi Tiết (Thiết kế siêu tinh gọn để không bao giờ bị lệch hay chạm viền) -->
+                                <!-- Cụm nút Vận Hành: Khóa Riêng Tư, Dò Bài, Thêm & Chi Tiết -->
                                 <div class="flex items-center gap-1 ml-auto shrink-0 flex-nowrap pr-0.5">
-                                    <button type="button" id="btnCardScanApify_${acc.id}" onclick="scanSingleAccountApify('${acc.id}')"
-                                        class="h-6 px-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-950/40 hover:bg-cyan-100 dark:hover:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800 text-[9.5px] font-bold transition flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap shrink-0" title="Tự dò bài TikTok mới nhất tuần này qua Apify">
-                                        <i class="fa-solid fa-wand-magic-sparkles text-[8px] text-cyan-600 dark:text-cyan-400"></i>
-                                        <span>Dò</span>
+                                    <button type="button" id="btnCardPrivate_${safeAccId}" onclick="event.stopPropagation(); toggleAccountPrivate('${safeAccId}')"
+                                        class="h-6 w-6 rounded-lg ${isAccPrivate ? 'bg-amber-500 text-white border border-amber-600 shadow-2xs' : 'bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/50 text-slate-500 dark:text-slate-400 hover:text-amber-600 border border-slate-200/70 dark:border-slate-700/70'} text-[10px] transition flex items-center justify-center cursor-pointer shrink-0"
+                                        title="${isAccPrivate ? 'ĐANG RIÊNG TƯ (Tự lấy link) — Bấm để gỡ đánh dấu' : 'Đánh dấu Tài khoản Riêng tư (Private)'}">
+                                        <i class="fa-solid ${isAccPrivate ? 'fa-lock' : 'fa-lock-open'} text-[9px]"></i>
                                     </button>
-                                    <button type="button" onclick="openIdolDetailModal('${acc.id}', true)"
+                                    <button type="button" id="btnCardScanApify_${safeAccId}" onclick="scanSingleAccountApify('${safeAccId}')"
+                                        class="h-6 px-1.5 rounded-lg ${isAccPrivate ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700/80' : 'bg-cyan-50 dark:bg-cyan-950/40 hover:bg-cyan-100 dark:hover:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800'} border text-[9.5px] font-bold transition flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap shrink-0"
+                                        title="${isAccPrivate ? 'Tài khoản Riêng tư — Không quét tự động được, tự vào TikTok lấy link' : 'Tự dò bài TikTok mới nhất tuần này qua Apify'}">
+                                        <i class="fa-solid ${isAccPrivate ? 'fa-hand-pointer text-[8px] text-amber-600 dark:text-amber-400' : 'fa-wand-magic-sparkles text-[8px] text-cyan-600 dark:text-cyan-400'}"></i>
+                                        <span>${isAccPrivate ? 'Tự lấy' : 'Dò'}</span>
+                                    </button>
+                                    <button type="button" onclick="openIdolDetailModal('${safeAccId}', true)"
                                         class="h-6 px-1.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-[9.5px] font-bold transition flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap shrink-0 shadow-2xs" title="Thêm bài đăng cho kênh này">
                                         <i class="fa-solid fa-plus text-[8px]"></i>
                                         <span>Thêm</span>
                                     </button>
-                                    <button type="button" onclick="openIdolDetailModal('${acc.id}')"
+                                    <button type="button" onclick="openIdolDetailModal('${safeAccId}')"
                                         class="h-6 w-6 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold transition flex items-center justify-center cursor-pointer whitespace-nowrap shrink-0 border border-slate-200/60 dark:border-slate-700/60 shadow-2xs" title="Xem chi tiết và lịch sử bài đăng">
                                         <i class="fa-solid fa-eye text-[9px]"></i>
                                     </button>
@@ -7237,12 +7466,43 @@ service cloud.firestore {
                 titleEl.textContent = isGroup ? `${grpName} (Kênh Nhóm Chính Thức)` : `${grpName} - ${idolShort}`;
             }
             if (handleLinkEl && handleTextEl) {
-                handleLinkEl.href = acc.url;
+                handleLinkEl.href = safeTikTokHref(acc.url, acc.handle);
                 handleLinkEl.onclick = () => markAccountCheckedOnVisit(acc.id);
                 handleTextEl.textContent = acc.handle;
             }
             if (weekSummaryEl) {
                 weekSummaryEl.textContent = `Tuần ${formatShortDateVN(activeWeek)} → ${formatShortDateVN(sunStr)}: ${prog.postedCount} đã đăng ${prog.scheduledCount > 0 ? `• ${prog.scheduledCount} lên lịch` : ''}`;
+            }
+
+            const privateBtnEl = document.getElementById('idolModalPrivateBtn');
+            const privateBannerEl = document.getElementById('idolModalPrivateBanner');
+            const privateNoteTextEl = document.getElementById('idolModalPrivateNoteText');
+            const privateOpenLinkEl = document.getElementById('idolModalPrivateOpenLink');
+            if (privateBtnEl) {
+                if (isAccountPrivate(acc)) {
+                    privateBtnEl.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500 hover:bg-amber-400 text-white border border-amber-300 transition cursor-pointer inline-flex items-center gap-1 shadow-xs';
+                    privateBtnEl.innerHTML = '<i class="fa-solid fa-lock text-[10px]"></i><span>Đang Riêng tư (Bấm gỡ)</span>';
+                } else {
+                    privateBtnEl.className = 'text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-700/80 hover:bg-amber-500/30 text-slate-200 border border-slate-500/40 transition cursor-pointer inline-flex items-center gap-1';
+                    privateBtnEl.innerHTML = '<i class="fa-solid fa-lock-open text-[10px]"></i><span>Đánh dấu Riêng tư</span>';
+                }
+            }
+            if (privateBannerEl) {
+                if (isAccountPrivate(acc)) {
+                    privateBannerEl.classList.remove('hidden');
+                    if (privateOpenLinkEl) privateOpenLinkEl.href = safeTikTokHref(acc.url, acc.handle);
+                    if (privateNoteTextEl) {
+                        if (acc.privateNote) {
+                            privateNoteTextEl.textContent = `Ghi chú: ${acc.privateNote}`;
+                            privateNoteTextEl.classList.remove('hidden');
+                        } else {
+                            privateNoteTextEl.textContent = '';
+                            privateNoteTextEl.classList.add('hidden');
+                        }
+                    }
+                } else {
+                    privateBannerEl.classList.add('hidden');
+                }
             }
 
             // Tính danh sách bài đăng theo tuần hiện tại và toàn bộ lịch sử của Idol này
@@ -7496,14 +7756,18 @@ service cloud.firestore {
                 const hay = `${gName} ${iName} ${a.handle}`.toLowerCase();
                 if (keyword && !hay.includes(keyword)) return;
                 const isActive = currentVal === a.id;
+                const safeG = escapeHtml(gName);
+                const safeI = escapeHtml(iName);
+                const safeId = escapeHtml(a.id);
+                const safeH = escapeHtml(a.handle);
                 const label = a.role === 'GROUP'
-                    ? `👥 [NHÓM ${gName.toUpperCase()}] Kênh Nhóm`
-                    : `🌟 [${gName}] ▸ ${iName}`;
+                    ? `👥 [NHÓM ${safeG.toUpperCase()}] Kênh Nhóm`
+                    : `🌟 [${safeG}] ▸ ${safeI}`;
                 html += `
-                    <button type="button" onclick="selectTableAccountFilter('${a.id}')"
+                    <button type="button" onclick="selectTableAccountFilter('${safeId}')"
                         class="w-full px-3 py-1.5 rounded-xl text-left text-xs transition flex items-center justify-between gap-2 ${isActive ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'}">
                         <span class="truncate">${label}</span>
-                        <span class="text-[10px] text-pink-600 font-semibold shrink-0">${a.handle}</span>
+                        <span class="text-[10px] text-pink-600 font-semibold shrink-0">${safeH}</span>
                     </button>
                 `;
             });
@@ -7524,14 +7788,18 @@ service cloud.firestore {
                 const hay = `${gName} ${iName} ${a.handle}`.toLowerCase();
                 if (keyword && !hay.includes(keyword)) return;
                 const isActive = currentVal === a.id;
+                const safeG = escapeHtml(gName);
+                const safeI = escapeHtml(iName);
+                const safeId = escapeHtml(a.id);
+                const safeH = escapeHtml(a.handle);
                 const label = a.role === 'GROUP'
-                    ? `👥 [NHÓM ${gName.toUpperCase()}] Kênh Nhóm`
-                    : `🌟 [${gName}] ▸ ${iName}`;
+                    ? `👥 [NHÓM ${safeG.toUpperCase()}] Kênh Nhóm`
+                    : `🌟 [${safeG}] ▸ ${safeI}`;
                 html += `
-                    <button type="button" onclick="selectPostAccountValue('${a.id}')"
+                    <button type="button" onclick="selectPostAccountValue('${safeId}')"
                         class="w-full px-3 py-1.5 rounded-xl text-left text-xs transition flex items-center justify-between gap-2 ${isActive ? 'bg-pink-50 text-pink-700 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'}">
                         <span class="truncate">${label}</span>
-                        <span class="text-[10px] text-indigo-600 font-semibold shrink-0">${a.handle}</span>
+                        <span class="text-[10px] text-indigo-600 font-semibold shrink-0">${safeH}</span>
                     </button>
                 `;
             });
@@ -7567,8 +7835,8 @@ service cloud.firestore {
             if (groupAccounts.length > 0) {
                 formOptionsHtml += `<optgroup label="👥 6 TÀI KHOẢN NHÓM CHÍNH THỨC">`;
                 groupAccounts.forEach(a => {
-                    const gName = extractCleanGroupName(a);
-                    formOptionsHtml += `<option value="${a.id}">[NHÓM ${gName.toUpperCase()}] • Kênh Nhóm (${a.handle})</option>`;
+                    const gName = escapeHtml(extractCleanGroupName(a));
+                    formOptionsHtml += `<option value="${escapeHtml(a.id)}">[NHÓM ${gName.toUpperCase()}] • Kênh Nhóm (${escapeHtml(a.handle)})</option>`;
                 });
                 formOptionsHtml += `</optgroup>`;
             }
@@ -7578,10 +7846,11 @@ service cloud.firestore {
                 const idolsInGroup = idolAccounts.filter(a => extractCleanGroupName(a).toUpperCase() === gName.toUpperCase());
                 if (idolsInGroup.length > 0) {
                     const theme = getGroupTheme(gName);
-                    formOptionsHtml += `<optgroup label="${theme.icon} NHÓM ${gName.toUpperCase()} (${idolsInGroup.length} IDOL)">`;
+                    const safeG = escapeHtml(gName);
+                    formOptionsHtml += `<optgroup label="${theme.icon} NHÓM ${safeG.toUpperCase()} (${idolsInGroup.length} IDOL)">`;
                     idolsInGroup.forEach(a => {
-                        const iName = extractCleanIdolName(a);
-                        formOptionsHtml += `<option value="${a.id}">${gName} ▸ ${iName} (${a.handle})</option>`;
+                        const iName = escapeHtml(extractCleanIdolName(a));
+                        formOptionsHtml += `<option value="${escapeHtml(a.id)}">${safeG} ▸ ${iName} (${escapeHtml(a.handle)})</option>`;
                     });
                     formOptionsHtml += `</optgroup>`;
                 }
@@ -7596,12 +7865,13 @@ service cloud.firestore {
             const idolCount = accounts.filter(a => a.role !== 'GROUP').length;
             let filterOptionsHtml = `<option value="ALL">👤 Tất cả ${grpCount} Nhóm & ${idolCount} Idol (${accounts.length})</option>`;
             accounts.forEach(a => {
-                const gName = extractCleanGroupName(a);
-                const iName = extractCleanIdolName(a);
+                const gName = escapeHtml(extractCleanGroupName(a));
+                const iName = escapeHtml(extractCleanIdolName(a));
+                const safeH = escapeHtml(a.handle);
                 const label = a.role === 'GROUP'
-                    ? `👥 [NHÓM ${gName.toUpperCase()}] Kênh Chính Thức (${a.handle})`
-                    : `🌟 [${gName}] ▸ ${iName} (${a.handle})`;
-                filterOptionsHtml += `<option value="${a.id}">${label}</option>`;
+                    ? `👥 [NHÓM ${gName.toUpperCase()}] Kênh Chính Thức (${safeH})`
+                    : `🌟 [${gName}] ▸ ${iName} (${safeH})`;
+                filterOptionsHtml += `<option value="${escapeHtml(a.id)}">${label}</option>`;
             });
             filterAccountSelect.innerHTML = filterOptionsHtml;
             if (currentFilterAcc === 'ALL' || accounts.some(a => a.id === currentFilterAcc)) {
@@ -7621,8 +7891,8 @@ service cloud.firestore {
             if (previewLink) {
                 if (acc) {
                     previewLink.classList.remove('hidden');
-                    previewLink.href = acc.url;
-                    previewLink.innerHTML = `<span>Mở ${acc.handle}</span> <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>`;
+                    previewLink.href = safeTikTokHref(acc.url, acc.handle);
+                    previewLink.innerHTML = `<span>Mở ${escapeHtml(acc.handle)}</span> <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>`;
                 } else {
                     previewLink.classList.add('hidden');
                     previewLink.innerHTML = '';
@@ -9133,7 +9403,7 @@ service cloud.firestore {
                                 <div class="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate cursor-pointer hover:text-pink-500 transition mt-0.5" onclick="openIdolDetailModal('${acc.id}')">
                                     ${isGroupChannel ? `${grpName} (Official)` : idolShort}
                                 </div>
-                                <a href="${acc.url}" target="_blank" class="text-[11px] font-medium text-pink-600 dark:text-pink-400 hover:underline truncate block">
+                                <a href="${acc.url}" target="_blank" class="text-[11px] font-medium text-pink-600 dark:text-pink-400 hover:underline truncate block" rel="noopener noreferrer">
                                     ${acc.handle}
                                 </a>
                             </div>
@@ -9617,6 +9887,8 @@ service cloud.firestore {
 
             const isBypassed = document.getElementById('accIsBypassed') ? document.getElementById('accIsBypassed').checked : (existingAcc ? !!existingAcc.isBypassed : false);
             const bypassReason = document.getElementById('accBypassReason') ? document.getElementById('accBypassReason').value.trim() : (existingAcc ? (existingAcc.bypassReason || '') : '');
+            const isPrivate = document.getElementById('accIsPrivate') ? document.getElementById('accIsPrivate').checked : (existingAcc ? !!existingAcc.isPrivate : false);
+            const privateNote = isPrivate && document.getElementById('accPrivateNote') ? document.getElementById('accPrivateNote').value.trim() : '';
 
             const effWeekEl = document.getElementById('accEffectiveWeek');
             const effectiveWeek = effWeekEl ? effWeekEl.value : 'ALL';
@@ -9632,6 +9904,8 @@ service cloud.firestore {
                 url,
                 isBypassed,
                 bypassReason: isBypassed ? bypassReason : '',
+                isPrivate,
+                privateNote,
                 initialGroup: existingAcc ? (existingAcc.initialGroup || existingAcc.groupName || groupName) : groupName,
                 groupHistory: existingAcc && existingAcc.groupHistory ? { ...existingAcc.groupHistory } : {},
                 order: existingAcc && existingAcc.order ? existingAcc.order : accounts.length + 1
@@ -9645,6 +9919,8 @@ service cloud.firestore {
                 accData.initialGroup = groupName;
                 accData.groupHistory = {};
             }
+
+            savePrivateAccountState(accId, isPrivate, privateNote);
 
             const idx = accounts.findIndex(a => a.id === accId);
             if (idx >= 0) accounts[idx] = accData;
@@ -9695,6 +9971,16 @@ service cloud.firestore {
             if (bypassWrapEl) {
                 if (acc.isBypassed) bypassWrapEl.classList.remove('hidden');
                 else bypassWrapEl.classList.add('hidden');
+            }
+
+            const isPrivateEl = document.getElementById('accIsPrivate');
+            const privateNoteEl = document.getElementById('accPrivateNote');
+            const privateWrapEl = document.getElementById('accPrivateNoteWrapper');
+            if (isPrivateEl) isPrivateEl.checked = !!acc.isPrivate;
+            if (privateNoteEl) privateNoteEl.value = acc.privateNote || '';
+            if (privateWrapEl) {
+                if (acc.isPrivate) privateWrapEl.classList.remove('hidden');
+                else privateWrapEl.classList.add('hidden');
             }
 
             const effWeekEl = document.getElementById('accEffectiveWeek');
@@ -9795,6 +10081,12 @@ service cloud.firestore {
             if (isBypassedEl) isBypassedEl.checked = false;
             if (bypassReasonEl) bypassReasonEl.value = '';
             if (bypassWrapEl) bypassWrapEl.classList.add('hidden');
+            const isPrivateEl = document.getElementById('accIsPrivate');
+            const privateNoteEl = document.getElementById('accPrivateNote');
+            const privateWrapEl = document.getElementById('accPrivateNoteWrapper');
+            if (isPrivateEl) isPrivateEl.checked = false;
+            if (privateNoteEl) privateNoteEl.value = '';
+            if (privateWrapEl) privateWrapEl.classList.add('hidden');
             const effEl = document.getElementById('accEffectiveWeek');
             if (effEl) effEl.value = 'ALL';
             document.getElementById('accountFormHeading').innerHTML = '<span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span><span>+ Thêm Hoặc Cập Nhật Tài Khoản</span>';
@@ -9827,31 +10119,50 @@ service cloud.firestore {
                 const row = document.createElement('div');
                 row.className = 'p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition border-b border-slate-100 dark:border-slate-800/80 last:border-b-0';
                 
-                const subTag = acc.subHandle ? `
+                const isAccPrivate = isAccountPrivate(acc);
+                const safeId = escapeHtml(acc.id);
+                const safeGName = escapeHtml(gName);
+                const safeIName = escapeHtml(iName);
+                const safeHandle = escapeHtml(acc.handle);
+                const safeSub = escapeHtml(acc.subHandle || '');
+                const safeUrl = escapeHtml(safeTikTokHref(acc.url, acc.handle));
+                const safePrivNote = escapeHtml(acc.privateNote || '');
+                const subTag = safeSub ? `
                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800/60">
-                        Phụ: ${acc.subHandle}
+                        Phụ: ${safeSub}
+                    </span>
+                ` : '';
+                const privateTag = isAccPrivate ? `
+                    <span class="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 inline-flex items-center gap-1" title="${safePrivNote || 'Tài khoản Riêng tư — Tự lấy link'}">
+                        <i class="fa-solid fa-lock text-[9px]"></i>
+                        <span>Riêng tư${safePrivNote ? ': ' + safePrivNote : ''}</span>
                     </span>
                 ` : '';
 
                 row.innerHTML = `
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${isGroup ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100' : theme.badgeBg}">
-                            ${isGroup ? ('👥 NHÓM ' + gName.toUpperCase()) : (theme.icon + ' ' + gName)}
+                            ${isGroup ? ('👥 NHÓM ' + safeGName.toUpperCase()) : (theme.icon + ' ' + safeGName)}
                         </span>
-                        <span class="font-black text-xs sm:text-sm text-slate-900 dark:text-white">${isGroup ? `${gName} (Kênh Nhóm)` : iName}</span>
-                        <a href="${acc.url}" target="_blank" rel="noopener noreferrer"
+                        <span class="font-black text-xs sm:text-sm text-slate-900 dark:text-white">${isGroup ? `${safeGName} (Kênh Nhóm)` : safeIName}</span>
+                        <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
                             class="text-xs font-semibold text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1">
                             <i class="fa-brands fa-tiktok"></i>
-                            <span>${acc.handle}</span>
+                            <span>${safeHandle}</span>
                         </a>
                         ${subTag}
+                        ${privateTag}
                     </div>
                     <div class="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
-                        <button type="button" onclick="editAccountInModal('${acc.id}')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/60 text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 text-xs font-bold transition cursor-pointer flex items-center gap-1">
+                        <button type="button" onclick="toggleAccountPrivate('${safeId}')" class="px-2.5 py-1.5 rounded-lg ${isAccPrivate ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-amber-950/60 text-slate-600 hover:text-amber-700 dark:text-slate-300 dark:hover:text-amber-300'} text-xs font-bold transition cursor-pointer flex items-center gap-1" title="${isAccPrivate ? 'Bấm để gỡ đánh dấu Riêng tư' : 'Đánh dấu Tài khoản Riêng tư'}">
+                            <i class="fa-solid ${isAccPrivate ? 'fa-lock' : 'fa-lock-open'} text-[10px]"></i>
+                            <span>${isAccPrivate ? 'Riêng tư' : 'Công khai'}</span>
+                        </button>
+                        <button type="button" onclick="editAccountInModal('${safeId}')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/60 text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 text-xs font-bold transition cursor-pointer flex items-center gap-1">
                             <i class="fa-solid fa-pen text-[10px]"></i>
                             <span>Sửa</span>
                         </button>
-                        <button type="button" onclick="deleteAccountWithConfirm('${acc.id}')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-600 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-400 text-xs font-bold transition cursor-pointer flex items-center gap-1">
+                        <button type="button" onclick="deleteAccountWithConfirm('${safeId}')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/60 text-slate-600 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-400 text-xs font-bold transition cursor-pointer flex items-center gap-1">
                             <i class="fa-solid fa-trash-can text-[10px]"></i>
                             <span>Xóa</span>
                         </button>
@@ -10435,11 +10746,11 @@ service cloud.firestore {
                 const countColor = prog.postedCount >= targetKpi ? '#15803d' : (prog.postedCount > 0 ? '#b45309' : '#dc2626');
 
                 const linkCell1 = link1
-                    ? `<td style="border: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; border-bottom: 1px dashed #cbd5e1; padding: 6px 12px; text-align: center; vertical-align: middle; background-color: ${baseBg};"><a href="${link1}" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: bold;">查看视频1 (Link 1)</a></td>`
+                    ? `<td style="border: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; border-bottom: 1px dashed #cbd5e1; padding: 6px 12px; text-align: center; vertical-align: middle; background-color: ${baseBg};"><a href="${link1}" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: bold;" rel="noopener noreferrer">查看视频1 (Link 1)</a></td>`
                     : `<td style="border: 1px solid #cbd5e1; border-top: 1px solid #cbd5e1; border-bottom: 1px dashed #cbd5e1; padding: 6px 12px; text-align: center; vertical-align: middle; color: #94a3b8; background-color: ${baseBg};">-</td>`;
 
                 const linkCell2 = link2
-                    ? `<td style="border: 1px solid #cbd5e1; border-top: 1px dashed #cbd5e1; border-bottom: 2px solid #64748b; padding: 6px 12px; text-align: center; vertical-align: middle; background-color: ${baseBg};"><a href="${link2}" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: bold;">查看视频2 (Link 2)</a></td>`
+                    ? `<td style="border: 1px solid #cbd5e1; border-top: 1px dashed #cbd5e1; border-bottom: 2px solid #64748b; padding: 6px 12px; text-align: center; vertical-align: middle; background-color: ${baseBg};"><a href="${link2}" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: bold;" rel="noopener noreferrer">查看视频2 (Link 2)</a></td>`
                     : `<td style="border: 1px solid #cbd5e1; border-top: 1px dashed #cbd5e1; border-bottom: 2px solid #64748b; padding: 6px 12px; text-align: center; vertical-align: middle; color: #94a3b8; font-size: ${isGroup ? '8.5pt' : '10pt'}; background-color: ${baseBg};">${isGroup ? '不考核 (1 bài/tuần)' : '-'}</td>`;
 
                 if (isSeparate) {
@@ -11351,6 +11662,13 @@ service cloud.firestore {
             const grpName = extractCleanGroupName(acc);
             const label = `${grpName} - ${idolName}`;
 
+            if (isAccountPrivate(acc)) {
+                if (!silentToast) {
+                    showToast(`🔒 ${idolName} (${acc.handle}) đang đặt Tài khoản Riêng tư — Không quét tự động được, bạn hãy bấm mở TikTok tự lấy link!`, 'warning');
+                }
+                return { newPosts: 0, discoveredList: [], skippedPrivate: true };
+            }
+
             if (!apifyScanManager.start('SINGLE', accId, label)) {
                 showToast(`⚠️ Đang có tiến trình dò bài cho "${apifyScanManager.targetName}" đang chạy! Vui lòng chờ hoàn tất trong giây lát.`, 'warning');
                 return { newPosts: 0, discoveredList: [] };
@@ -11398,16 +11716,22 @@ service cloud.firestore {
         }
 
         async function scanGroupAccountsApify(grpName) {
-            const grpAccounts = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
-            if (grpAccounts.length === 0) return;
+            const allGrpAccounts = accounts.filter(a => extractCleanGroupName(a).toUpperCase() === grpName.toUpperCase());
+            if (allGrpAccounts.length === 0) return;
+            const grpAccounts = allGrpAccounts.filter(a => !isAccountPrivate(a));
+            const privateSkipped = allGrpAccounts.length - grpAccounts.length;
+            if (grpAccounts.length === 0) {
+                showToast(`🔒 Toàn bộ ${allGrpAccounts.length} kênh nhóm ${grpName} đều đang đánh dấu Riêng tư — Vui lòng mở TikTok tự lấy link!`, 'warning');
+                return;
+            }
 
-            if (!apifyScanManager.start('GROUP', grpName, `Nhóm ${grpName} (${grpAccounts.length} kênh)`)) {
+            if (!apifyScanManager.start('GROUP', grpName, `Nhóm ${grpName} (${grpAccounts.length} kênh công khai)`)) {
                 showToast(`⚠️ Đang có tiến trình dò bài cho "${apifyScanManager.targetName}" đang chạy! Vui lòng chờ hoàn tất trong giây lát.`, 'warning');
                 return;
             }
 
             const targetWeekMonday = selectedWeekMonday === 'ALL' ? currentRealtimeMonday : selectedWeekMonday;
-            showToast(`🤖 Đang dùng Apify dò bài cho tất cả ${grpAccounts.length} kênh nhóm ${grpName}...`);
+            showToast(`🤖 Đang dùng Apify dò bài cho ${grpAccounts.length} kênh công khai nhóm ${grpName}${privateSkipped > 0 ? ` (bỏ qua ${privateSkipped} kênh Riêng tư)` : ''}...`);
 
             const allHandles = [];
             grpAccounts.forEach(a => {
@@ -11563,6 +11887,17 @@ service cloud.firestore {
                 return;
             }
 
+            const privateAccounts = targetAccounts.filter(a => isAccountPrivate(a));
+            if (privateAccounts.length > 0) {
+                targetAccounts = targetAccounts.filter(a => !isAccountPrivate(a));
+                if (targetAccounts.length === 0) {
+                    showToast(`🔒 Cả ${privateAccounts.length} tài khoản được chọn đều đang đánh dấu Riêng tư (Private) — Hãy mở TikTok tự lấy link nhé!`, 'warning');
+                    return;
+                }
+                scopeLabel += ` • bỏ qua ${privateAccounts.length} kênh Riêng tư`;
+                showToast(`🔒 Đã tự động bỏ qua ${privateAccounts.length} tài khoản Riêng tư (cần tự lấy link).`, 'info');
+            }
+
             if (!apifyScanManager.start('BULK', scope, scopeLabel)) {
                 showToast(`⚠️ Đang có tiến trình dò bài cho "${apifyScanManager.targetName}" đang chạy! Vui lòng chờ hoàn tất.`, 'warning');
                 return;
@@ -11645,7 +11980,7 @@ service cloud.firestore {
                                             <strong class="text-white truncate">${d.idolName}</strong>
                                             <span class="text-slate-400 text-[10px] truncate">${d.date} (${d.category})</span>
                                         </div>
-                                        <a href="${d.link || d.cleanUrl}" target="_blank" class="text-cyan-400 hover:underline text-[10px] font-bold shrink-0 flex items-center gap-1">
+                                        <a href="${d.link || d.cleanUrl}" target="_blank" class="text-cyan-400 hover:underline text-[10px] font-bold shrink-0 flex items-center gap-1" rel="noopener noreferrer">
                                             <span>Xem Video</span>
                                             <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
                                         </a>
@@ -12496,7 +12831,7 @@ service cloud.firestore {
                         ${log.foundPosts.map(fp => `
                             <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] bg-slate-900/90 px-2.5 py-1 rounded">
                                 <span class="text-emerald-300 font-semibold">📅 ${formatDateVN(fp.date)} (${fp.time || ''}) • ${fp.category}</span>
-                                <a href="${fp.url}" target="_blank" class="text-cyan-400 hover:underline">${fp.url}</a>
+                                <a href="${fp.url}" target="_blank" class="text-cyan-400 hover:underline" rel="noopener noreferrer">${fp.url}</a>
                             </div>
                         `).join('')}
                        </div>`
@@ -12510,7 +12845,7 @@ service cloud.firestore {
                                 <span class="px-2 py-0.5 rounded text-[10px] font-extrabold border ${badgeClass}">${statusLabel}</span>
                                 <span class="font-extrabold text-cyan-300">[${log.groupName}]</span>
                                 <span class="font-bold text-white">${log.idolName}</span>
-                                <a href="${log.url}" target="_blank" class="text-pink-400 hover:underline">${log.handle}</a>
+                                <a href="${log.url}" target="_blank" class="text-pink-400 hover:underline" rel="noopener noreferrer">${log.handle}</a>
                             </div>
                             <button onclick="scanSingleAccount('${log.accountId}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 text-[11px]">
                                 <i class="fa-solid fa-rotate mr-1"></i>Quét lại
@@ -12731,6 +13066,7 @@ service cloud.firestore {
 
         Object.assign(window, {
             openAccountModal, closeAccountModal, openCloudHelpModal, closeCloudHelpModal,
+            escapeHtml, safeTikTokHref, isAccountPrivate, toggleAccountFormPrivateNote, toggleAccountPrivate, toggleAccountPrivateFromModal,
             exportToCSV, scrollToPostForm, resetDailyChecks, resetPostForm, handlePostSubmit,
             updateFormAccountPreview, setCategoryQuick, setRoleFilter, setDirectoryFilter,
             renderAccountsGrid, renderPostsTable, handleAccountSubmit, resetAccountForm,
