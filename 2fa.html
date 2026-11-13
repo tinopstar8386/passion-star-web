@@ -10,7 +10,6 @@
     <meta name="theme-color" content="#090d16">
     <title>Tra cứu Tài khoản & 2FA Security System - Passion Star</title>
     <link rel="icon" href="./icon/2fa.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" sizes="180x180" href="./icon/png/2fa.png">
 
     <!-- Tailwind CSS with Dark Mode -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -52,15 +51,6 @@
         html.dark body {
             background-color: #090d16;
             color: #f1f5f9;
-        }
-        button, a {
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        @media (max-width: 768px) {
-            input, select, textarea {
-                font-size: 16px !important;
-            }
         }
         .tiktok-gradient {
             background: linear-gradient(135deg, #00f2fe 0%, #4facfe 45%, #ff0844 100%);
@@ -442,7 +432,7 @@
     <!-- MÀN HÌNH KHÓA XÁC THỰC QUẢN TRỊ VIÊN (PIN / PASSCODE - PHONG CÁCH IDOL TRACKER) -->
     <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-4 select-none">
         <!-- STEALTH SECURITY 1-CHAR TRIGGER: Xuất hiện góc dưới bên phải trên nền đen, nhỏ, kín đáo, chỉ có bạn biết -->
-        <div id="stealthPassTrigger" onclick="executeStealthUnlock()" class="fixed bottom-3 right-4 z-[120] text-xs font-mono text-white/40 hover:text-white cursor-pointer select-none tracking-widest transition-all duration-200" title=""></div>
+        <div id="stealthPassTrigger" onclick="executeStealthUnlock()" class="fixed bottom-3 right-4 z-[120] text-xs font-mono text-white/15 hover:text-white/60 cursor-pointer select-none tracking-widest transition-all duration-200" title=""></div>
         <div id="pinLockCard" class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-sm w-full p-6 text-center text-white shadow-2xl relative overflow-hidden">
             <div class="absolute -top-16 -right-16 w-36 h-36 bg-pink-500/10 rounded-full blur-2xl pointer-events-none"></div>
             <div class="absolute -bottom-16 -left-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -1048,14 +1038,11 @@
             if (window.location.protocol === 'file:' || window.location.protocol === 'content:') {
                 return runScriptJSONP(action, payload);
             }
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 15000);
             return fetch(API_URL, {
                 method: 'POST',
                 redirect: 'follow',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: action, payload: payload }),
-                signal: controller.signal
+                body: JSON.stringify({ action: action, payload: payload })
             })
             .then(async res => {
                 const text = await res.text();
@@ -1080,8 +1067,7 @@
                     throw err;
                 }
                 return runScriptJSONP(action, payload);
-            })
-            .finally(() => clearTimeout(timer));
+            });
         }
 
         let allData = [];
@@ -1110,7 +1096,7 @@
             if (el) {
                 el.innerText = currentStealthKey;
                 el.classList.remove('text-emerald-400', 'scale-125', 'text-rose-500');
-                el.classList.add('text-white/40');
+                el.classList.add('text-white/15');
             }
         }
 
@@ -1164,7 +1150,7 @@
             if (isStealthLocked) return;
             const stealthEl = document.getElementById('stealthPassTrigger');
             if (stealthEl) {
-                stealthEl.classList.remove('text-white/40', 'text-white/50');
+                stealthEl.classList.remove('text-white/15', 'text-white/40', 'text-white/50');
                 stealthEl.classList.add('text-emerald-400', 'scale-125');
             }
             const shimmer = document.getElementById('loginShimmer');
