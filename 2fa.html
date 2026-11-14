@@ -459,15 +459,19 @@
             }
         }
 
-        /* Toast Container */
-        .toast-container { position: fixed; bottom: 20px; right: 16px; z-index: 100010; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: calc(100vw - 32px); }
-        .cyber-toast { background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 11px 15px; border-radius: 14px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; backdrop-filter: blur(8px); }
+        /* Toast Container & Urgent Mobile/Desktop Alarm Layout */
+        .toast-container { position: fixed; bottom: 20px; right: 16px; z-index: 100010; display: flex; flex-direction: column; gap: 8px; pointer-events: none; width: min(400px, calc(100vw - 24px)); max-height: 75vh; overflow-y: auto; padding-right: 2px; }
+        .cyber-toast { background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(99, 102, 241, 0.4); color: #f8fafc; padding: 11px 15px; border-radius: 14px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 10px; transform: translateX(120%) scale(0.9); opacity: 0; transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; backdrop-filter: blur(8px); width: 100%; box-sizing: border-box; flex-shrink: 0; }
         .cyber-toast.show { transform: translateX(0) scale(1); opacity: 1; }
         .cyber-toast.success { border-color: rgba(16, 185, 129, 0.5); }
         .cyber-toast.error { border-color: rgba(244, 63, 94, 0.5); }
+        .cyber-toast.alarm-toast { background: linear-gradient(135deg, rgba(69, 10, 26, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%); box-shadow: 0 12px 30px -5px rgba(244, 63, 94, 0.45); pointer-events: auto; }
         .toast-progress { position: absolute; bottom: 0; left: 0; height: 2px; background: #6366f1; width: 100%; animation: toastProgress linear forwards; }
         .cyber-toast.success .toast-progress { background: #10b981; }
         .cyber-toast.error .toast-progress { background: #f43f5e; }
+        @media (max-width: 640px) {
+            .toast-container { left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: auto; max-height: 62vh; }
+        }
         @keyframes toastProgress { 0% { width: 100%; } 100% { width: 0%; } }
 
         /* Checkbox & Batch Bar */
@@ -801,6 +805,7 @@
                     </div>
                 </div>
 
+
                 <!-- Toolbar Lọc & Thao Tác Trong Modal -->
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
                     <div class="inline-flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-xs font-bold shrink-0">
@@ -866,6 +871,14 @@
 
                 <!-- Action Buttons on Mobile: Top-right icon group -->
                 <div class="flex items-center gap-1.5 sm:hidden shrink-0">
+                    <div id="mobileDesktopAppControls" class="hidden items-center gap-1.5">
+                        <button type="button" id="mobileBtnAlwaysOnTop" onclick="toggleDesktopAlwaysOnTop()" class="h-8 w-8 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 flex items-center justify-center active:scale-95 transition cursor-pointer" title="Ghim cửa sổ nổi trên cùng (Alt + Shift + T)">
+                            <i class="fa-solid fa-thumbtack text-xs"></i>
+                        </button>
+                        <button type="button" id="mobileBtnHideToTray" onclick="minimizeToDesktopTray()" class="h-8 w-8 rounded-xl bg-slate-800 text-sky-400 border border-slate-700 flex items-center justify-center active:scale-95 transition cursor-pointer" title="Thu nhỏ xuống khay hệ thống (Alt + Shift + A)">
+                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </button>
+                    </div>
                     <button onclick="openForwardModal()" class="h-8 px-2.5 rounded-xl bg-emerald-600 text-white text-[11px] font-extrabold flex items-center gap-1 shadow-sm active:scale-95 transition" title="Kiểm tra Forward Mail">
                         <i class="fa-solid fa-envelope-circle-check text-[10px]"></i>
                         <span>Fwd</span>
@@ -884,6 +897,17 @@
 
             <!-- Right: Action Buttons Row (Desktop Full View) -->
             <div class="hidden sm:flex items-center gap-2 flex-wrap shrink-0">
+                <!-- Desktop App Controls (Chỉ hiển thị khi mở dưới dạng App máy tính) -->
+                <div id="desktopAppControls" class="hidden items-center gap-2 shrink-0">
+                    <button type="button" id="btnAlwaysOnTop" onclick="toggleDesktopAlwaysOnTop()" class="h-9 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0" title="Ghim cửa sổ nổi trên cùng (Phím tắt toàn cục: Alt + Shift + T)">
+                        <i class="fa-solid fa-thumbtack text-indigo-400"></i>
+                        <span>Ghim nổi</span>
+                    </button>
+                    <button type="button" id="btnHideToTray" onclick="minimizeToDesktopTray()" class="h-9 px-3 rounded-xl bg-slate-800 hover:bg-sky-950/60 hover:text-sky-300 text-slate-200 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0" title="Thu nhỏ xuống khay hệ thống góc phải màn hình (Phím tắt toàn cục: Alt + Shift + A)">
+                        <i class="fa-solid fa-window-minimize text-sky-400"></i>
+                        <span>Ẩn Tray</span>
+                    </button>
+                </div>
                 <!-- Forward Status Badge on Header -->
                 <div onclick="openForwardModal()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-bold flex items-center gap-2 shadow-sm shrink-0 whitespace-nowrap cursor-pointer hover:border-emerald-300 transition" title="Bấm để xem chi tiết Forward Mail tino.hohr@gmail.com">
                     <i class="fa-solid fa-envelope-circle-check text-emerald-400 text-sm"></i>
@@ -1163,6 +1187,9 @@
                 </div>
             </div>
 
+            <!-- Banner Cảnh Báo Thiết Bị [TẠM] Quá Hạn / Đang Theo Dõi (PC, Mobile & Desktop App) -->
+            <div id="tempDeviceUrgentBanner" class="hidden mt-4 rounded-2xl border px-3.5 py-3 shadow-xs transition-all"></div>
+
             <!-- Table Container (CHUẨN BẢNG IDOL TRACKER - 100% VỪA KHUNG KHÔNG LĂN CHUỘT NGANG) -->
             <div id="tableContainer" class="mt-4 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs">
                 <div id="tableScrollWrapper" class="w-full">
@@ -1269,8 +1296,8 @@
                     err.isServerError = true;
                     throw err;
                 }
-                // Tự động fallback sang JSONP trực tiếp tới Google Apps Script nếu proxy không có trường data
-                if (jsonRes && jsonRes.data === undefined && action === 'getSheetData') {
+                // Tự động fallback sang JSONP trực tiếp tới Google Apps Script nếu proxy không có status/data hợp lệ
+                if (!jsonRes || (jsonRes.data === undefined && jsonRes.status !== 'success')) {
                     return runScriptJSONP(action, payload);
                 }
                 return jsonRes.data;
@@ -1635,72 +1662,600 @@
             document.addEventListener(evt, resetTimer, true)
         );
 
-        // ================= LOGIC BÁO ĐỘNG PRIME RADIANT =================
-        function triggerPrimeRadiantAlarm(accountIdentifier, deviceName) {
-            if (currentSheetName !== 'Prime Radiant') return;
-            let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
-            if (!alarms.find(a => a.account === accountIdentifier && a.device === deviceName)) {
-                let today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Ho_Chi_Minh'});
-                alarms.push({ account: accountIdentifier, device: deviceName, dateAdded: today });
-                localStorage.setItem('prime_radiant_alarms', JSON.stringify(alarms));
+        // ================= LOGIC BÁO ĐỘNG KHẨN THIẾT BỊ [TẠM] (ALL SHEETS, PC / MOBILE / DESKTOP APP) =================
+        const TEMP_ALARMS_KEY = 'passion_temp_device_alarms';
+        const LEGACY_ALARMS_KEY = 'prime_radiant_alarms';
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        let lastTempAlarmSyncAt = 0;
+
+        function getTodayVN() {
+            return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+        }
+
+        function getYesterdayVN() {
+            return new Date(Date.now() - ONE_DAY_MS).toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' });
+        }
+
+        function isTemporaryDeviceText(text) {
+            return /\[TẠM\]|\[TEMP\]|\(tạm\)/i.test(String(text || ''));
+        }
+
+        function stripTempPrefix(text) {
+            return String(text || '').replace(/\[TẠM\]|\[TEMP\]|\(tạm\)/gi, '').replace(/\s+/g, ' ').trim();
+        }
+
+        function normalizeDeviceText(text) {
+            return String(text || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function splitDeviceList(item) {
+            if (!item) return [];
+            return [item.thietBiIdol, item.thietBiTroLi]
+                .filter(Boolean)
+                .join(',')
+                .split(',')
+                .map(t => t.trim())
+                .filter(Boolean);
+        }
+
+        function getTempAlarmId(sheetName, account, device) {
+            const s = String(sheetName || currentSheetName || '').trim().toLowerCase();
+            const a = String(account || '').trim().toLowerCase();
+            const d = normalizeDeviceText(device).toLowerCase();
+            return `${s}::${a}::${d}`;
+        }
+
+        function loadTempAlarms() {
+            let current = [];
+            try {
+                const raw = localStorage.getItem(TEMP_ALARMS_KEY);
+                if (raw) current = JSON.parse(raw);
+            } catch (_) { current = []; }
+            if (!Array.isArray(current)) current = [];
+
+            // Kế thừa dữ liệu từ key cũ (prime_radiant_alarms) nếu có
+            try {
+                const legacyRaw = localStorage.getItem(LEGACY_ALARMS_KEY);
+                if (legacyRaw) {
+                    const legacy = JSON.parse(legacyRaw);
+                    if (Array.isArray(legacy) && legacy.length > 0) {
+                        const existingIds = new Set(current.map(x => x.id));
+                        legacy.forEach(item => {
+                            if (!item || !item.account || !item.device) return;
+                            const sheet = item.sheetName || 'Prime Radiant';
+                            const id = getTempAlarmId(sheet, item.account, item.device);
+                            if (!existingIds.has(id)) {
+                                existingIds.add(id);
+                                current.push({
+                                    id,
+                                    sheetName: sheet,
+                                    account: item.account,
+                                    email: item.email || '',
+                                    device: item.device,
+                                    dateAdded: item.dateAdded || getYesterdayVN(),
+                                    addedAt: typeof item.addedAt === 'number' ? item.addedAt : (Date.now() - 25 * 3600 * 1000),
+                                    preExisting: false,
+                                    acknowledgedDate: item.acknowledgedDate || ''
+                                });
+                            }
+                        });
+                        localStorage.setItem(TEMP_ALARMS_KEY, JSON.stringify(current));
+                        localStorage.removeItem(LEGACY_ALARMS_KEY);
+                    }
+                }
+            } catch (_) {}
+
+            return current;
+        }
+
+        function saveTempAlarms(alarms, options = {}) {
+            const safeList = Array.isArray(alarms) ? alarms : [];
+            try {
+                localStorage.setItem(TEMP_ALARMS_KEY, JSON.stringify(safeList));
+            } catch (_) {}
+
+            if (options.syncFirestore && window.db && window.fs) {
+                window.fs.setDoc(
+                    window.fs.doc(window.db, "2fa_cache", "temp_device_alarms"),
+                    { alarms: safeList, updatedAt: Date.now() }
+                ).catch(() => {});
             }
         }
 
-        function checkPrimeRadiantAlarms() {
-            document.querySelectorAll('.alarm-toast').forEach(el => el.remove());
-            if (currentSheetName !== 'Prime Radiant') return;
-            let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
-            if (alarms.length === 0) return;
+        async function syncTempAlarmsFromFirestore(force = false) {
+            if (!window.db || !window.fs) return;
+            const now = Date.now();
+            if (!force && (now - lastTempAlarmSyncAt) < 15000) return;
+            lastTempAlarmSyncAt = now;
 
-            let remainingAlarms = [];
-            let today = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Ho_Chi_Minh'});
-            alarms.forEach(alarm => {
-                let accountData = allData.find(item => (item.tenIdol || item.email) === alarm.account);
-                if (accountData) {
-                    let mangThietBi = [accountData.thietBiIdol, accountData.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim());
-                    if (mangThietBi.includes(alarm.device)) {
-                        remainingAlarms.push(alarm);
-                        if (alarm.dateAdded !== today) showPersistentAlarmToast(alarm);
+            try {
+                const snap = await window.fs.getDoc(window.fs.doc(window.db, "2fa_cache", "temp_device_alarms"));
+                if (!snap.exists()) return;
+                const remoteAlarms = snap.data()?.alarms;
+                if (!Array.isArray(remoteAlarms)) return;
+
+                const localAlarms = loadTempAlarms();
+                const mergedMap = new Map();
+                localAlarms.forEach(a => { if (a && a.id) mergedMap.set(a.id, a); });
+
+                remoteAlarms.forEach(remote => {
+                    if (!remote || !remote.id) return;
+                    const local = mergedMap.get(remote.id);
+                    if (!local) {
+                        mergedMap.set(remote.id, remote);
+                    } else if (local.preExisting && !remote.preExisting) {
+                        // Ưu tiên mốc thời gian thực từ máy đã tạo
+                        mergedMap.set(remote.id, remote);
+                    } else if (typeof remote.addedAt === 'number' && typeof local.addedAt === 'number' && remote.addedAt > local.addedAt && !remote.preExisting && local.preExisting) {
+                        mergedMap.set(remote.id, remote);
                     }
-                }
-            });
-            localStorage.setItem('prime_radiant_alarms', JSON.stringify(remainingAlarms));
+                });
+
+                saveTempAlarms(Array.from(mergedMap.values()), { syncFirestore: false });
+            } catch (_) {}
         }
 
-        function showPersistentAlarmToast(alarm) {
+        function isTempAlarmOverdue(alarm, nowMs = Date.now(), todayVN = getTodayVN()) {
+            if (!alarm) return false;
+            if (alarm.preExisting === true) return true;
+            if (alarm.dateAdded && alarm.dateAdded !== todayVN) return true;
+            if (typeof alarm.addedAt === 'number' && (nowMs - alarm.addedAt) >= ONE_DAY_MS) return true;
+            return false;
+        }
+
+        function formatAlarmOverdueReason(alarm, nowMs = Date.now(), todayVN = getTodayVN()) {
+            if (!alarm) return 'Đã quá hạn';
+            if (alarm.preExisting) return 'Thiết bị [TẠM] tồn đọng từ trước — Cần out ngay!';
+            const elapsedHours = typeof alarm.addedAt === 'number'
+                ? Math.max(0, Math.floor((nowMs - alarm.addedAt) / 3600000))
+                : 24;
+            if (alarm.dateAdded && alarm.dateAdded !== todayVN && elapsedHours < 24) {
+                return `Đã qua ngày mới (từ ${alarm.dateAdded}) — Cần out thiết bị!`;
+            }
+            return `Đã quá ${elapsedHours} tiếng (từ ${alarm.dateAdded || 'hôm trước'}) — Cần out ngay!`;
+        }
+
+        function isDeviceOverdueInTable(item, deviceText) {
+            if (!item || !isTemporaryDeviceText(deviceText)) return false;
+            const account = item.tenIdol || item.email || '';
+            const id = getTempAlarmId(currentSheetName, account, deviceText);
+            const alarms = loadTempAlarms();
+            const match = alarms.find(a => a.id === id);
+            // Nếu thiết bị [TẠM] đã có sẵn trên Sheet mà chưa từng lưu timestamp -> coi là quá hạn cần out ngay
+            if (!match) return true;
+            return isTempAlarmOverdue(match);
+        }
+
+        function findRowIndexForAlarm(alarm) {
+            if (!alarm || !Array.isArray(allData)) return -1;
+            const accKey = String(alarm.account || '').trim().toLowerCase();
+            const emailKey = String(alarm.email || '').trim().toLowerCase();
+            return allData.findIndex(item => {
+                if (!item) return false;
+                const iEmail = String(item.email || '').trim().toLowerCase();
+                const iName = String(item.tenIdol || '').trim().toLowerCase();
+                const iLabel = String(item.tenIdol || item.email || '').trim().toLowerCase();
+                if (emailKey && iEmail && iEmail === emailKey) return true;
+                return iLabel === accKey || (iName && iName === accKey);
+            });
+        }
+
+        function triggerPrimeRadiantAlarm(accountIdentifier, deviceName, options = {}) {
+            if (!deviceName) return;
+            const sheetName = options.sheetName || currentSheetName;
+            // Chỉ theo dõi thiết bị [TẠM] (hoặc truyền forceTrack)
+            if (!options.forceTrack && !isTemporaryDeviceText(deviceName)) return;
+
+            const alarms = loadTempAlarms();
+            const id = getTempAlarmId(sheetName, accountIdentifier, deviceName);
+            const today = getTodayVN();
+            const now = Date.now();
+            const existingIdx = alarms.findIndex(a => a.id === id);
+
+            if (existingIdx === -1) {
+                alarms.push({
+                    id,
+                    sheetName,
+                    account: accountIdentifier,
+                    email: options.email || '',
+                    device: normalizeDeviceText(deviceName),
+                    dateAdded: today,
+                    addedAt: now,
+                    preExisting: false,
+                    acknowledgedDate: ''
+                });
+            } else if (options.isJustAdded) {
+                alarms[existingIdx] = {
+                    ...alarms[existingIdx],
+                    sheetName,
+                    account: accountIdentifier,
+                    email: options.email || alarms[existingIdx].email || '',
+                    device: normalizeDeviceText(deviceName),
+                    dateAdded: today,
+                    addedAt: now,
+                    preExisting: false,
+                    acknowledgedDate: ''
+                };
+            }
+            saveTempAlarms(alarms, { syncFirestore: true });
+        }
+
+        function removeTempAlarmForDevice(accountIdentifier, deviceName, sheetName = currentSheetName) {
+            const targetId = getTempAlarmId(sheetName, accountIdentifier, deviceName);
+            const alarms = loadTempAlarms().filter(a => a.id !== targetId);
+            saveTempAlarms(alarms, { syncFirestore: true });
+            document.querySelectorAll('.alarm-toast').forEach(el => {
+                if (el.getAttribute('data-alarm-id') === targetId) el.remove();
+            });
+        }
+
+        function playUrgentAlarmBeep() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                if (ctx.state === 'suspended') ctx.resume();
+                const now = ctx.currentTime;
+                [0, 0.22].forEach(offset => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(784, now + offset);
+                    osc.frequency.exponentialRampToValueAtTime(523.25, now + offset + 0.16);
+                    gain.gain.setValueAtTime(0.14, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.18);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.19);
+                });
+            } catch (_) {}
+        }
+
+        function renderTempDeviceUrgentBanner(overdueAlarms, trackingAlarms) {
+            const banner = document.getElementById('tempDeviceUrgentBanner');
+            if (!banner) return;
+
+            if ((!overdueAlarms || overdueAlarms.length === 0) && (!trackingAlarms || trackingAlarms.length === 0)) {
+                banner.classList.add('hidden');
+                banner.innerHTML = '';
+                syncStickyHeaderTop();
+                return;
+            }
+
+            banner.classList.remove('hidden');
+            banner.innerHTML = '';
+
+            if (overdueAlarms.length > 0) {
+                banner.className = 'mt-4 rounded-2xl border border-rose-400/70 dark:border-rose-500/60 bg-gradient-to-r from-rose-50 via-amber-50/70 to-rose-50 dark:from-rose-950/60 dark:via-slate-900 dark:to-rose-950/40 px-3.5 py-3 shadow-sm transition-all';
+
+                const topRow = document.createElement('div');
+                topRow.className = 'flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+
+                const titleWrap = document.createElement('div');
+                titleWrap.className = 'flex items-center gap-2 text-rose-700 dark:text-rose-300 text-xs sm:text-sm font-extrabold';
+                titleWrap.innerHTML = `<i class="fa-solid fa-bell text-rose-500 animate-bounce shrink-0"></i><span>CẢNH BÁO GẤP: Có ${overdueAlarms.length} thiết bị [TẠM] đã qua ngày / quá 24h cần OUT ngay!</span>`;
+                topRow.appendChild(titleWrap);
+
+                const btnReopen = document.createElement('button');
+                btnReopen.type = 'button';
+                btnReopen.className = 'self-start sm:self-auto px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0';
+                btnReopen.innerHTML = '<i class="fa-solid fa-bell-concierge"></i><span>Hiện Toast Khẩn</span>';
+                btnReopen.addEventListener('click', () => checkPrimeRadiantAlarms({ forcePopup: true }));
+                topRow.appendChild(btnReopen);
+                banner.appendChild(topRow);
+
+                const chipsWrap = document.createElement('div');
+                chipsWrap.className = 'mt-2 flex flex-wrap gap-1.5';
+                overdueAlarms.forEach(({ alarm, rowIndex }) => {
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-500/50 text-[11px] font-bold text-slate-800 dark:text-slate-100 hover:border-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition cursor-pointer max-w-full';
+                    chip.innerHTML = `<span class="text-rose-600 dark:text-rose-400 shrink-0">${escapeHtml(alarm.account)}</span><span class="text-slate-400">•</span><span class="truncate text-amber-700 dark:text-amber-300">${escapeHtml(stripTempPrefix(alarm.device))}</span><span class="text-[10px] text-rose-500 shrink-0">[Mở &amp; Out]</span>`;
+                    chip.addEventListener('click', () => focusAndOpenTempDeviceRow(alarm, rowIndex));
+                    chipsWrap.appendChild(chip);
+                });
+                banner.appendChild(chipsWrap);
+            } else {
+                banner.className = 'mt-4 rounded-2xl border border-amber-300/80 dark:border-amber-500/40 bg-amber-50/80 dark:bg-amber-950/30 px-3.5 py-2.5 shadow-2xs transition-all';
+                banner.innerHTML = `
+                    <div class="flex items-center justify-between gap-2 text-xs text-amber-800 dark:text-amber-300 font-semibold">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-clock text-amber-500 shrink-0"></i><span>Đang theo dõi <b>${trackingAlarms.length}</b> thiết bị <b>[TẠM]</b> hôm nay — Hệ thống sẽ tự động báo khẩn sau khi qua ngày hoặc đủ 24 giờ.</span></span>
+                    </div>`;
+            }
+            syncStickyHeaderTop();
+        }
+
+        function focusAndOpenTempDeviceRow(alarm, knownRowIndex = -1) {
+            const rowIndex = knownRowIndex >= 0 ? knownRowIndex : findRowIndexForAlarm(alarm);
+            if (rowIndex >= 0) {
+                const tr = document.querySelector(`tr[data-index="${rowIndex}"]`);
+                if (tr) tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                openDeviceEditor(rowIndex);
+                return;
+            }
+            if (alarm && alarm.sheetName && alarm.sheetName !== currentSheetName) {
+                const tabBtns = Array.from(document.querySelectorAll('.sheet-tab-pill'));
+                const targetBtn = tabBtns.find(b => b.textContent.trim().includes(alarm.sheetName));
+                if (targetBtn) switchTab(alarm.sheetName, targetBtn);
+                showToast(`Đang chuyển sang bảng ${alarm.sheetName} để tháo thiết bị...`, 'info');
+            }
+        }
+
+        function quickRemoveTempDevice(alarm, toastEl) {
+            const rowIndex = findRowIndexForAlarm(alarm);
+            if (rowIndex < 0 || !allData[rowIndex]) {
+                focusAndOpenTempDeviceRow(alarm, -1);
+                return;
+            }
+            const item = allData[rowIndex];
+            const currentDevices = splitDeviceList(item);
+            const targetNorm = normalizeDeviceText(alarm.device).toLowerCase();
+            const remainingDevices = currentDevices.filter(d => normalizeDeviceText(d).toLowerCase() !== targetNorm);
+
+            if (remainingDevices.length === currentDevices.length) {
+                removeTempAlarmForDevice(alarm.account, alarm.device, alarm.sheetName || currentSheetName);
+                checkPrimeRadiantAlarms({ silent: true });
+                return;
+            }
+
+            const newDeviceString = remainingDevices.join(', ');
+            const actionBtn = toastEl ? toastEl.querySelector('.alarm-quick-remove-btn') : null;
+            if (actionBtn) {
+                actionBtn.disabled = true;
+                actionBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xóa...';
+            }
+
+            runScript('updateDeviceToMasterSheet', {
+                targetEmail: item.email,
+                targetTiktok: item.tiktokId,
+                targetName: item.tenIdol,
+                newDeviceString: newDeviceString,
+                pass: sessionPass
+            })
+            .then(() => {
+                runScript('logDeviceAction', {
+                    account: item.tenIdol || item.email,
+                    actionType: 'Out thiết bị [TẠM]',
+                    device: alarm.device,
+                    pass: sessionPass
+                }).catch(() => {});
+
+                allData[rowIndex].thietBiIdol = newDeviceString;
+                allData[rowIndex].thietBiTroLi = "";
+                syncCurrentSheetToFirebase();
+                removeTempAlarmForDevice(alarm.account, alarm.device, alarm.sheetName || currentSheetName);
+                updateRowDeviceCell(rowIndex);
+                checkPrimeRadiantAlarms({ silent: true });
+                showToast(`✅ Đã xóa thiết bị [TẠM] khỏi ${item.tenIdol || item.email}!`, 'success', 4000);
+            })
+            .catch(err => {
+                if (actionBtn) {
+                    actionBtn.disabled = false;
+                    actionBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> <span>Out / Xóa Máy</span>';
+                }
+                showToast('Lỗi khi xóa thiết bị: ' + err.message, 'error');
+            });
+        }
+
+        function checkPrimeRadiantAlarms(options = {}) {
+            if (options.forcePopup) {
+                document.querySelectorAll('.alarm-toast').forEach(el => el.remove());
+            }
+
+            const nowMs = Date.now();
+            const today = getTodayVN();
+            const yesterday = getYesterdayVN();
+            let alarms = loadTempAlarms();
+            const currentRows = Array.isArray(allData) ? allData : [];
+
+            // Tạo danh sách thiết bị [TẠM] hiện hữu trên bảng đang mở
+            const activeTempMap = new Map();
+            currentRows.forEach((item, rowIndex) => {
+                if (!item) return;
+                const account = item.tenIdol || item.email || '';
+                const devices = splitDeviceList(item);
+                devices.forEach(devText => {
+                    if (isTemporaryDeviceText(devText)) {
+                        const id = getTempAlarmId(currentSheetName, account, devText);
+                        activeTempMap.set(id, { item, rowIndex, account, devText });
+                    }
+                });
+            });
+
+            // 1. Dọn các alarm thuộc bảng hiện tại nếu thiết bị đã bị xóa hoặc đã tắt [TẠM]
+            let mutated = false;
+            const prevLen = alarms.length;
+            if (currentRows.length > 0) {
+                alarms = alarms.filter(alarm => {
+                    if (!alarm || !alarm.id) return false;
+                    const sheet = alarm.sheetName || currentSheetName;
+                    if (sheet === currentSheetName) {
+                        return activeTempMap.has(alarm.id);
+                    }
+                    return true;
+                });
+                if (alarms.length !== prevLen) mutated = true;
+            }
+
+            // 2. Tự động nhận diện các thiết bị [TẠM] đã có sẵn trên Sheet nhưng chưa có timestamp
+            const alarmMap = new Map(alarms.map(a => [a.id, a]));
+            activeTempMap.forEach((info, id) => {
+                if (!alarmMap.has(id)) {
+                    const entry = {
+                        id,
+                        sheetName: currentSheetName,
+                        account: info.account,
+                        email: info.item.email || '',
+                        device: normalizeDeviceText(info.devText),
+                        dateAdded: yesterday,
+                        addedAt: nowMs - (25 * 3600 * 1000),
+                        preExisting: true,
+                        acknowledgedDate: ''
+                    };
+                    alarms.push(entry);
+                    alarmMap.set(id, entry);
+                    mutated = true;
+                }
+            });
+
+            // 3. Phân loại quá hạn vs đang theo dõi trong ngày
+            const overdueInSheet = [];
+            const trackingInSheet = [];
+            const overdueOtherSheets = [];
+
+            alarms.forEach(alarm => {
+                if (!alarm) return;
+                const isThisSheet = (alarm.sheetName || currentSheetName) === currentSheetName;
+                const overdue = isTempAlarmOverdue(alarm, nowMs, today);
+                if (isThisSheet) {
+                    const activeInfo = activeTempMap.get(alarm.id);
+                    if (!activeInfo) return;
+                    if (overdue) overdueInSheet.push({ alarm, rowIndex: activeInfo.rowIndex });
+                    else trackingInSheet.push({ alarm, rowIndex: activeInfo.rowIndex });
+                } else if (overdue) {
+                    overdueOtherSheets.push({ alarm, rowIndex: -1 });
+                }
+            });
+
+            // Dọn toast trên DOM nếu thiết bị tương ứng không còn quá hạn / đã bị xóa
+            const activeOverdueIds = new Set([
+                ...overdueInSheet.map(x => x.alarm.id),
+                ...overdueOtherSheets.map(x => x.alarm.id)
+            ]);
+            document.querySelectorAll('.alarm-toast').forEach(el => {
+                const tid = el.getAttribute('data-alarm-id');
+                if (tid && !activeOverdueIds.has(tid)) el.remove();
+            });
+
+            if (mutated || options.syncFirestore) {
+                saveTempAlarms(alarms, { syncFirestore: Boolean(options.syncFirestore) });
+            }
+
+            renderTempDeviceUrgentBanner(overdueInSheet, trackingInSheet);
+
+            // Cập nhật badge đỏ trực tiếp trong các ô thiết bị đang quá hạn
+            overdueInSheet.forEach(({ rowIndex }) => {
+                if (rowIndex >= 0) updateRowDeviceCell(rowIndex);
+            });
+
+            // 4. Bật Toast báo động đỏ khẩn cấp
+            const allOverdue = [...overdueInSheet, ...overdueOtherSheets];
+            let newToastsShown = 0;
+            allOverdue.forEach(({ alarm, rowIndex }) => {
+                if (!options.forcePopup && alarm.acknowledgedDate === today) return;
+                const alreadyVisible = Array.from(document.querySelectorAll('.alarm-toast'))
+                    .some(el => el.getAttribute('data-alarm-id') === alarm.id);
+                if (!alreadyVisible) {
+                    showPersistentAlarmToast(alarm, rowIndex, nowMs, today);
+                    newToastsShown++;
+                }
+            });
+
+            if (newToastsShown > 0 && !options.silent) {
+                playUrgentAlarmBeep();
+                triggerHaptic('warning');
+
+                // Đánh thức cửa sổ Desktop App nếu đang chạy chế độ App
+                if (window.__isPassionDesktopApp && typeof sendDesktopCommand === 'function') {
+                    const summary = allOverdue.slice(0, 3).map(x => `${x.alarm.account}: ${stripTempPrefix(x.alarm.device)}`).join(' | ');
+                    sendDesktopCommand('urgentAlarm', {
+                        count: allOverdue.length,
+                        summary: summary,
+                        bringToFront: true
+                    }).catch(() => {});
+                }
+            }
+        }
+
+        function showPersistentAlarmToast(alarm, rowIndex = -1, nowMs = Date.now(), todayVN = getTodayVN()) {
             const container = document.getElementById('toastContainer');
-            const toastId = 'alarm_' + Date.now() + Math.floor(Math.random() * 1000);
+            if (!container || !alarm) return;
+
+            const toastId = 'alarm_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
             const toast = document.createElement('div');
-            toast.className = `cyber-toast error alarm-toast !border-rose-500 pointer-events-auto`;
+            toast.className = 'cyber-toast error alarm-toast !border-rose-500';
             toast.id = toastId;
+            toast.setAttribute('data-alarm-id', alarm.id);
+
+            const reasonText = formatAlarmOverdueReason(alarm, nowMs, todayVN);
+            const sheetBadge = alarm.sheetName ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-200 border border-rose-400/30 font-bold">${escapeHtml(alarm.sheetName)}</span>` : '';
+
             toast.innerHTML = `
-                <div class="flex items-start gap-3 w-full relative">
-                    <i class="fa-solid fa-triangle-exclamation text-rose-500 text-2xl animate-pulse mt-1"></i>
-                    <div class="flex flex-col gap-1 w-full pr-4">
-                        <span class="font-bold text-rose-500 uppercase text-[11px] tracking-wider">Báo động Prime Radiant</span>
-                        <span class="text-xs text-white">Tài khoản: <b class="text-indigo-300">${escapeHtml(alarm.account)}</b></span>
-                        <span class="text-xs text-white">Thiết bị mới: <b class="text-rose-300">${escapeHtml(alarm.device)}</b></span>
-                        <span class="text-[10px] text-rose-400 italic mt-0.5">⚠️ Yêu cầu logout thiết bị trong vòng 1 ngày!</span>
+                <div class="flex items-start gap-2.5 w-full relative">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-400 text-xl animate-pulse mt-0.5 shrink-0"></i>
+                    <div class="flex flex-col gap-1 min-w-0 flex-1 pr-6">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-extrabold text-rose-400 uppercase text-[11px] tracking-wider">BÁO ĐỘNG THIẾT BỊ TẠM</span>
+                            ${sheetBadge}
+                        </div>
+                        <span class="text-xs text-white truncate">Tài khoản: <b class="text-indigo-300">${escapeHtml(alarm.account)}</b></span>
+                        <span class="text-xs text-white break-words">Thiết bị: <b class="text-amber-300">${escapeHtml(alarm.device)}</b></span>
+                        <span class="text-[11px] text-rose-300 font-semibold">${escapeHtml(reasonText)}</span>
+                        <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
+                            <button type="button" class="alarm-open-editor-btn px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition flex items-center gap-1 cursor-pointer">
+                                <i class="fa-solid fa-up-right-from-square text-[10px]"></i><span>Mở &amp; Tháo Máy</span>
+                            </button>
+                            ${rowIndex >= 0 ? `<button type="button" class="alarm-quick-remove-btn px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"><i class="fa-solid fa-trash-can text-[10px]"></i><span>Out / Xóa Máy</span></button>` : ''}
+                        </div>
                     </div>
-                    <button type="button" onclick="acknowledgeAlarm('${escapeHtml(alarm.account).replace(/'/g, "\'")}','${escapeHtml(alarm.device).replace(/'/g, "\'")}', '${toastId}')" class="absolute -right-1 -top-1 text-slate-400 hover:text-rose-400 w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 border border-slate-600">
-                        <i class="fa-solid fa-xmark text-sm"></i>
+                    <button type="button" class="alarm-dismiss-btn absolute -right-1 -top-1 text-slate-300 hover:text-white w-7 h-7 flex items-center justify-center rounded-full bg-slate-800/90 border border-slate-600 cursor-pointer" title="Tạm ẩn cảnh báo hôm nay">
+                        <i class="fa-solid fa-xmark text-xs"></i>
                     </button>
                 </div>`;
+
+            const openBtn = toast.querySelector('.alarm-open-editor-btn');
+            if (openBtn) {
+                openBtn.addEventListener('click', () => focusAndOpenTempDeviceRow(alarm, rowIndex));
+            }
+            const quickRemoveBtn = toast.querySelector('.alarm-quick-remove-btn');
+            if (quickRemoveBtn) {
+                quickRemoveBtn.addEventListener('click', () => quickRemoveTempDevice(alarm, toast));
+            }
+            const dismissBtn = toast.querySelector('.alarm-dismiss-btn');
+            if (dismissBtn) {
+                dismissBtn.addEventListener('click', () => acknowledgeAlarm(alarm.id, toastId));
+            }
+
             container.appendChild(toast);
             setTimeout(() => toast.classList.add('show'), 10);
         }
 
-        function acknowledgeAlarm(account, device, toastId) {
-            let alarms = JSON.parse(localStorage.getItem('prime_radiant_alarms') || '[]');
-            alarms = alarms.filter(a => !(a.account === account && a.device === device));
-            localStorage.setItem('prime_radiant_alarms', JSON.stringify(alarms));
+        function acknowledgeAlarm(alarmIdOrAccount, toastIdOrDevice, maybeToastId) {
+            let targetId = alarmIdOrAccount;
+            let toastId = toastIdOrDevice;
+            if (maybeToastId !== undefined) {
+                targetId = getTempAlarmId(currentSheetName, alarmIdOrAccount, toastIdOrDevice);
+                toastId = maybeToastId;
+            }
+
+            const today = getTodayVN();
+            const alarms = loadTempAlarms().map(a => {
+                if (a.id === targetId) return { ...a, acknowledgedDate: today };
+                return a;
+            });
+            saveTempAlarms(alarms, { syncFirestore: true });
+
             const toast = document.getElementById(toastId);
             if (toast) {
                 toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 400);
-                showToast('Đã ghi nhận tắt cảnh báo thiết bị', 'success');
+                setTimeout(() => toast.remove(), 350);
+                showToast('Đã tạm ẩn cảnh báo hôm nay (vẫn ghim nhắc trên đầu bảng)', 'info', 3000);
             }
         }
+
+        // Tự động kiểm tra lại khi qua ngày / đủ 24h hoặc khi quay lại ứng dụng
+        setInterval(() => {
+            if (sessionPass && Array.isArray(allData) && allData.length > 0) {
+                checkPrimeRadiantAlarms({ fromTimer: true });
+            }
+        }, 60000);
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && sessionPass && Array.isArray(allData) && allData.length > 0) {
+                syncTempAlarmsFromFirestore().finally(() => checkPrimeRadiantAlarms());
+            }
+        });
 
         function syncStickyHeaderTop() {
             const mainHeader = document.getElementById('mainHeader');
@@ -1863,7 +2418,7 @@
                     renderTable(allData);
                     resetTimer();
                     fetchConfigDevices();
-                    checkPrimeRadiantAlarms();
+                    syncTempAlarmsFromFirestore().finally(() => checkPrimeRadiantAlarms({ syncFirestore: true }));
                     showToast('Đăng nhập thành công', 'success');
                 })
                 .catch(error => {
@@ -1888,6 +2443,9 @@
             sessionPass = "";
             currentlyExpandedRowIndex = -1;
             closeMobileSidebar();
+            document.querySelectorAll('.alarm-toast').forEach(el => el.remove());
+            const urgentBanner = document.getElementById('tempDeviceUrgentBanner');
+            if (urgentBanner) urgentBanner.classList.add('hidden');
             initStealthKey();
             initMatrixBackground();
             document.getElementById('loginScreen').classList.remove('hidden');
@@ -1957,6 +2515,7 @@
                     allData = loadedData;
                     const kw = document.getElementById('searchInput').value.trim();
                     if (kw) filterData(); else renderTable(allData);
+                    syncTempAlarmsFromFirestore().finally(() => checkPrimeRadiantAlarms({ syncFirestore: true }));
 
                     // Chỉ lưu vào Firestore cache khi có dữ liệu thật (tránh ghi đè mảng rỗng)
                     if (allData && allData.length > 0 && window.db && window.fs) {
@@ -1982,6 +2541,7 @@
                             if (docSnap.exists() && docSnap.data().dataArray && docSnap.data().dataArray.length > 0) {
                                 allData = sanitizeAccountData(docSnap.data().dataArray);
                                 renderTable(allData);
+                                syncTempAlarmsFromFirestore().finally(() => checkPrimeRadiantAlarms());
                                 showToast('Đang hiển thị bản lưu ngoại tuyến (Offline)', 'error');
                                 return;
                             }
@@ -2013,7 +2573,7 @@
                     allData = loadedData;
                     renderTable(allData);
                     resetTimer();
-                    checkPrimeRadiantAlarms();
+                    syncTempAlarmsFromFirestore(true).finally(() => checkPrimeRadiantAlarms({ syncFirestore: true }));
                     if (allData && allData.length > 0 && window.db && window.fs) {
                         const safeID = currentSheetName.replace(/\s+/g, '_');
                         await window.fs.setDoc(window.fs.doc(window.db, "2fa_cache", safeID), { dataArray: allData });
@@ -2032,6 +2592,7 @@
                             if (docSnap.exists() && docSnap.data().dataArray && docSnap.data().dataArray.length > 0) {
                                 allData = sanitizeAccountData(docSnap.data().dataArray);
                                 renderTable(allData);
+                                syncTempAlarmsFromFirestore().finally(() => checkPrimeRadiantAlarms());
                                 showToast('Đang hiển thị bản lưu ngoại tuyến (Offline)', 'error');
                                 return;
                             }
@@ -2084,8 +2645,8 @@
         function closeMobileSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobileOverlay');
-            sidebar.classList.add('-translate-x-full');
-            overlay.classList.add('hidden');
+            if (sidebar) sidebar.classList.add('-translate-x-full');
+            if (overlay) overlay.classList.add('hidden');
         }
 
         function toggleSidebar() {
@@ -2559,11 +3120,10 @@
         }
 
         // Mục 41: Boss Key Camouflage (Ctrl + F1)
-        function toggleBossKey() {
+        function setBossKeyState(show, syncDesktop = true) {
             const overlay = document.getElementById('bossCamouflageOverlay');
             if (!overlay) return;
-            const isHidden = overlay.classList.contains('hidden');
-            if (isHidden) {
+            if (show) {
                 overlay.classList.remove('hidden');
                 overlay.classList.add('flex');
                 populateBossGrid();
@@ -2571,6 +3131,15 @@
                 overlay.classList.remove('flex');
                 overlay.classList.add('hidden');
             }
+            if (syncDesktop && window.__isPassionDesktopApp && typeof sendDesktopCommand === 'function') {
+                sendDesktopCommand('bossKeySynced', { value: show }).catch(() => {});
+            }
+        }
+        function toggleBossKey() {
+            const overlay = document.getElementById('bossCamouflageOverlay');
+            if (!overlay) return;
+            const willShow = overlay.classList.contains('hidden');
+            setBossKeyState(willShow, true);
         }
         window.addEventListener('keydown', (e) => {
             // Mục 41: Boss Key sang Ctrl + F1 (và giữ Ctrl + ~ dự phòng)
@@ -3238,7 +3807,11 @@
                             showToast('Hết thời gian chờ (30s). Chưa có mail mới.', 'error');
                         }
                     })
-                    .catch(() => {
+                    .catch((err) => {
+                        if (!(err && err.message && err.message.includes('AUTH_FAILED')) && attempts < maxAttempts) {
+                            setTimeout(pollCode, intervalTime);
+                            return;
+                        }
                         emailCodeState[stateKey] = { html: "LỖI QUÉT", isError: true, hasBadge: false };
                         const current = getElements();
                         if (current.currentBtn) {
@@ -3249,7 +3822,7 @@
                             current.valSpan.innerText = "LỖI QUÉT";
                             current.valSpan.classList.add('text-rose-500');
                         }
-                        showToast('Lỗi kết nối hòm thư', 'error');
+                        showToast('Lỗi kết nối hòm thư' + (err && err.message ? ': ' + err.message : ''), 'error');
                     });
             }
 
@@ -3607,13 +4180,20 @@
 
         async function getTargetAccountsForScope(scope) {
             let list = [];
+            const pushAccount = (sheet, item) => {
+                const em = (item.email || '').trim();
+                if (em && em.includes('@') && !em.toLowerCase().includes('dang nh')) {
+                    list.push({
+                        sheet: sheet,
+                        team: item.team || '',
+                        idol: item.tenIdol || '',
+                        email: em
+                    });
+                }
+            };
+
             if (scope === 'current') {
-                (allData || []).forEach(item => {
-                    const em = (item.email || '').trim();
-                    if (em && em.includes('@') && !em.toLowerCase().includes('dang nh')) {
-                        list.push({ sheet: currentSheetName, team: item.team || '', idol: item.tenIdol || '', email: em });
-                    }
-                });
+                (allData || []).forEach(item => pushAccount(currentSheetName, item));
                 return list;
             }
 
@@ -3624,24 +4204,14 @@
             for (const sName of sheets) {
                 const isCurrent = (sName === currentSheetName || (sName === 'Velion' && currentSheetName === 'Velion Technologies'));
                 if (isCurrent && allData && allData.length > 0) {
-                    allData.forEach(item => {
-                        const em = (item.email || '').trim();
-                        if (em && em.includes('@') && !em.toLowerCase().includes('dang nh')) {
-                            list.push({ sheet: sName, team: item.team || '', idol: item.tenIdol || '', email: em });
-                        }
-                    });
+                    allData.forEach(item => pushAccount(sName, item));
                 } else {
                     try {
                         const reqSName = (sName === 'Velion' ? 'Velion Technologies' : sName);
                         const res = await runScript('getSheetData', { sheetName: reqSName, pass: sessionPass });
                         const cleanRes = sanitizeAccountData(res);
                         if (Array.isArray(cleanRes)) {
-                            cleanRes.forEach(item => {
-                                const em = (item.email || '').trim();
-                                if (em && em.includes('@') && !em.toLowerCase().includes('dang nh')) {
-                                    list.push({ sheet: sName, team: item.team || '', idol: item.tenIdol || '', email: em });
-                                }
-                            });
+                            cleanRes.forEach(item => pushAccount(sName, item));
                         }
                     } catch (e) {
                         console.warn('Lỗi đọc sheet ' + sName, e);
@@ -4172,25 +4742,35 @@
                 let hiddenCount = mangThietBi.length - displayLimit;
 
                 visibleDevices.forEach((text, tbIndex) => {
-                    let formattedText = escapeHtml(text);
+                    const isTemporary = isTemporaryDeviceText(text);
+                    const isOverdue = isTemporary && isDeviceOverdueInTable(item, text);
+                    const cleanDisplayText = stripTempPrefix(text);
+                    let formattedText = escapeHtml(cleanDisplayText);
                     let roleHtml = '';
-                    if (text.includes(':')) {
-                        let parts = text.split(':');
+                    if (cleanDisplayText.includes(':')) {
+                        let parts = cleanDisplayText.split(':');
                         roleHtml = `<span class="font-bold text-slate-800 dark:text-slate-100 mr-1">${escapeHtml(parts[0])}:</span>`;
                         formattedText = escapeHtml(parts.slice(1).join(':')).trim();
-                    } else if (text.includes('-')) {
-                        let parts = text.split('-');
+                    } else if (cleanDisplayText.includes('-')) {
+                        let parts = cleanDisplayText.split('-');
                         roleHtml = `<span class="font-bold text-slate-800 dark:text-slate-100 mr-1">${escapeHtml(parts[0])} -</span>`;
                         formattedText = escapeHtml(parts.slice(1).join('-')).trim();
                     }
 
-                    const isTemporary = text.includes('[TẠM]') || text.includes('[TEMP]') || text.toLowerCase().includes('(tạm)');
-                    const tempBadge = isTemporary ? '<span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-500 border border-amber-400/30 shrink-0 animate-pulse"><i class="fa-solid fa-clock-rotate-left text-[8px]"></i> Tạm</span>' : '';
-                    const cleanDeviceText = text.replace(/\[TẠM\]|\[TEMP\]/gi, '').trim();
-                    const osIconClass = getDeviceIconClass(cleanDeviceText);
+                    const tempBadge = isTemporary
+                        ? (isOverdue
+                            ? '<span class="inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/50 shrink-0 animate-pulse" title="Thiết bị tạm quá 24h hoặc đã qua ngày mới — Cần out ngay!"><i class="fa-solid fa-triangle-exclamation text-[8px]"></i> Out ngay</span>'
+                            : '<span class="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-500 border border-amber-400/30 shrink-0 animate-pulse"><i class="fa-solid fa-clock-rotate-left text-[8px]"></i> Tạm</span>')
+                        : '';
+                    const osIconClass = getDeviceIconClass(cleanDisplayText);
+                    const tagBorderClass = isOverdue
+                        ? 'border-rose-500/80 dark:border-rose-500/70 bg-rose-50/70 dark:bg-rose-950/30'
+                        : (isTemporary
+                            ? 'border-amber-400/60 dark:border-amber-500/50 bg-white dark:bg-[#1e293b]'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e293b]');
 
                     thietBiHtml += `
-                    <div class="device-tag-item group inline-flex items-center gap-1.5 px-2 py-0.5 bg-white dark:bg-[#1e293b] border ${isTemporary ? 'border-amber-400/60 dark:border-amber-500/50' : 'border-slate-200 dark:border-slate-700'} rounded-lg shadow-2xs relative overflow-hidden transition-all duration-200 hover:border-indigo-400 max-w-full">
+                    <div class="device-tag-item group inline-flex items-center gap-1.5 px-2 py-0.5 border ${tagBorderClass} rounded-lg shadow-2xs relative overflow-hidden transition-all duration-200 hover:border-indigo-400 max-w-full">
                         <i class="${osIconClass} text-[10px] shrink-0"></i>
                         <span class="text-[11px] text-slate-700 dark:text-slate-300 leading-tight truncate">${roleHtml}${formattedText}</span>
                         ${tempBadge}
@@ -4278,8 +4858,17 @@
                 .then(() => {
                     allData[rowIndex].thietBiIdol = finalString;
                     allData[rowIndex].thietBiTroLi = "";
+                    const accName = item.tenIdol || item.email;
+                    if (isTemporaryDeviceText(oldDevice) && (!newVal || !isTemporaryDeviceText(newVal) || normalizeDeviceText(newVal).toLowerCase() !== normalizeDeviceText(oldDevice).toLowerCase())) {
+                        removeTempAlarmForDevice(accName, oldDevice, currentSheetName);
+                    }
+                    if (newVal && isTemporaryDeviceText(newVal)) {
+                        const changed = !isTemporaryDeviceText(oldDevice) || normalizeDeviceText(newVal).toLowerCase() !== normalizeDeviceText(oldDevice).toLowerCase();
+                        triggerPrimeRadiantAlarm(accName, newVal, { isJustAdded: changed, sheetName: currentSheetName, email: item.email });
+                    }
                     syncCurrentSheetToFirebase();
                     updateRowDeviceCell(rowIndex);
+                    checkPrimeRadiantAlarms({ silent: true });
                     window.scrollTo({ top: savedScrollY, behavior: 'instant' });
                     showToast(newVal ? 'Đã cập nhật thiết bị' : 'Đã xóa thiết bị', 'success');
                 })
@@ -4306,8 +4895,12 @@
                     runScript('logDeviceAction', { account: item.tenIdol || item.email, actionType: 'Xóa thiết bị', device: deletedDevice, pass: sessionPass }).catch(() => {});
                     allData[rowIndex].thietBiIdol = finalString;
                     allData[rowIndex].thietBiTroLi = "";
+                    if (isTemporaryDeviceText(deletedDevice)) {
+                        removeTempAlarmForDevice(item.tenIdol || item.email, deletedDevice, currentSheetName);
+                    }
                     syncCurrentSheetToFirebase();
                     updateRowDeviceCell(rowIndex);
+                    checkPrimeRadiantAlarms({ silent: true });
                     window.scrollTo({ top: savedScrollY, behavior: 'instant' });
                     showToast('Đã xóa thiết bị', 'success');
                 })
@@ -4332,17 +4925,20 @@
                 addDeviceRow('', '', true, '');
             } else {
                 mangThietBi.forEach(tb => {
-                    let text = tb.trim(), role = "", device = text;
-                    if (text.includes(':')) {
-                        let parts = text.split(':');
-                        role = parts[0].trim();
-                        device = parts.slice(1).join(':').trim();
-                    } else if (text.includes('-')) {
-                        let parts = text.split('-');
-                        role = parts[0].trim();
-                        device = parts.slice(1).join('-').trim();
+                    let text = tb.trim();
+                    const isTemp = isTemporaryDeviceText(text);
+                    const cleanText = stripTempPrefix(text);
+                    let role = "", device = cleanText;
+                    if (cleanText.includes(':')) {
+                        let parts = cleanText.split(':');
+                        role = stripTempPrefix(parts[0]);
+                        device = stripTempPrefix(parts.slice(1).join(':'));
+                    } else if (cleanText.includes('-')) {
+                        let parts = cleanText.split('-');
+                        role = stripTempPrefix(parts[0]);
+                        device = stripTempPrefix(parts.slice(1).join('-'));
                     }
-                    addDeviceRow(role, device, false, text);
+                    addDeviceRow(role, device, false, text, isTemp);
                 });
             }
 
@@ -4464,7 +5060,7 @@
         function addDeviceRow(role, device, isNew = true, originalFullText = "", isTemp = false) {
             const container = document.getElementById('deviceListContainer');
             const rowId = 'dev_row_' + Date.now() + Math.floor(Math.random() * 1000);
-            if (originalFullText && (originalFullText.includes('[TẠM]') || originalFullText.includes('[TEMP]'))) {
+            if (originalFullText && isTemporaryDeviceText(originalFullText)) {
                 isTemp = true;
             }
             let html = `
@@ -4532,35 +5128,54 @@
             btn.disabled = true;
 
             let resultArr = [], logsToPush = [], currentOriginals = [];
-            for (let row of document.getElementById('deviceListContainer').children) {
-                let role = row.querySelector('.role-input').value.trim();
-                let device = row.querySelector('.device-input').value.trim();
-                const isTempChecked = row.querySelector('.temp-checkbox') && row.querySelector('.temp-checkbox').checked;
-                let fullText = role ? `${role}: ${device}` : device;
-                if (isTempChecked && !fullText.includes('[TẠM]')) {
-                    fullText = `[TẠM] ${fullText}`;
-                }
-                let isNew = row.getAttribute('data-isnew') === "true";
-                let original = row.getAttribute('data-original');
+            let alarmsToTrigger = [], alarmsToRemove = [];
+            const targetIndex = currentEditIndex;
+            const item = allData[targetIndex];
+            const accLabel = item ? (item.tenIdol || item.email) : '';
 
-                if (fullText) {
-                    resultArr.push(fullText);
-                    if (isNew) {
-                        logsToPush.push({ action: 'Thêm thiết bị', dev: fullText });
-                        triggerPrimeRadiantAlarm(allData[currentEditIndex].tenIdol || allData[currentEditIndex].email, fullText);
-                    } else {
-                        currentOriginals.push(original);
+            for (let row of document.getElementById('deviceListContainer').children) {
+                let role = stripTempPrefix(row.querySelector('.role-input').value);
+                let device = stripTempPrefix(row.querySelector('.device-input').value);
+                const isTempChecked = row.querySelector('.temp-checkbox') && row.querySelector('.temp-checkbox').checked;
+                let baseText = (role && device) ? `${role}: ${device}` : (device || role);
+                if (!baseText) continue;
+
+                let fullText = isTempChecked ? `[TẠM] ${baseText}` : baseText;
+                let isNew = row.getAttribute('data-isnew') === "true";
+                let original = row.getAttribute('data-original') || "";
+
+                resultArr.push(fullText);
+                if (isNew) {
+                    logsToPush.push({ action: 'Thêm thiết bị', dev: fullText });
+                    if (isTempChecked) {
+                        alarmsToTrigger.push({ dev: fullText, isJustAdded: true });
+                    }
+                } else {
+                    currentOriginals.push(original);
+                    const wasTemp = isTemporaryDeviceText(original);
+                    const sameNormalized = normalizeDeviceText(original).toLowerCase() === normalizeDeviceText(fullText).toLowerCase();
+                    if (wasTemp && (!isTempChecked || !sameNormalized)) {
+                        alarmsToRemove.push(original);
+                    }
+                    if (isTempChecked) {
+                        alarmsToTrigger.push({
+                            dev: fullText,
+                            isJustAdded: !wasTemp || !sameNormalized
+                        });
                     }
                 }
             }
 
             originalDevicesForLog.forEach(orig => {
-                if (!currentOriginals.includes(orig)) logsToPush.push({ action: 'Xóa thiết bị', dev: orig });
+                if (!currentOriginals.includes(orig)) {
+                    logsToPush.push({ action: 'Xóa thiết bị', dev: orig });
+                    if (isTemporaryDeviceText(orig)) {
+                        alarmsToRemove.push(orig);
+                    }
+                }
             });
 
             const finalString = resultArr.join(', ');
-            const targetIndex = currentEditIndex;
-            const item = allData[targetIndex];
             const savedScrollY = window.scrollY;
 
             runScript('updateDeviceToMasterSheet', { targetEmail: item.email, targetTiktok: item.tiktokId, targetName: item.tenIdol, newDeviceString: finalString, pass: sessionPass })
@@ -4570,10 +5185,23 @@
                     });
                     allData[targetIndex].thietBiIdol = finalString;
                     allData[targetIndex].thietBiTroLi = "";
+
+                    alarmsToRemove.forEach(oldDev => {
+                        removeTempAlarmForDevice(accLabel, oldDev, currentSheetName);
+                    });
+                    alarmsToTrigger.forEach(a => {
+                        triggerPrimeRadiantAlarm(accLabel, a.dev, {
+                            isJustAdded: a.isJustAdded,
+                            sheetName: currentSheetName,
+                            email: item.email
+                        });
+                    });
+
                     syncCurrentSheetToFirebase();
 
                     // Cập nhật ô thiết bị ngay tại hàng đó mà không render lại toàn bộ trang
                     updateRowDeviceCell(targetIndex);
+                    checkPrimeRadiantAlarms({ silent: true });
 
                     if (document.activeElement) document.activeElement.blur();
                     closeDeviceEditor();
@@ -4595,6 +5223,137 @@
                     btn.disabled = false;
                 });
         }
+
+        // ================= CẦU NỐI DESKTOP APP (LIGHTWEIGHT DESKTOP BRIDGE) =================
+        window.__isPassionDesktopApp = false;
+        let desktopBridgeInitialized = false;
+        let desktopWebEventSeq = 0;
+
+        function isDesktopAppMode() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                return params.get('desktop') === '1';
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function updateAlwaysOnTopUI(isTop) {
+            const desktopBtn = document.getElementById('btnAlwaysOnTop');
+            const mobileBtn = document.getElementById('mobileBtnAlwaysOnTop');
+
+            if (desktopBtn) {
+                if (isTop) {
+                    desktopBtn.className = "h-9 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold border border-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.55)] transition flex items-center gap-1.5 cursor-pointer shrink-0";
+                    desktopBtn.innerHTML = '<i class="fa-solid fa-thumbtack text-cyan-200 rotate-45 transition-transform"></i><span>Đang ghim</span>';
+                } else {
+                    desktopBtn.className = "h-9 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0";
+                    desktopBtn.innerHTML = '<i class="fa-solid fa-thumbtack text-indigo-400"></i><span>Ghim nổi</span>';
+                }
+            }
+            if (mobileBtn) {
+                if (isTop) {
+                    mobileBtn.className = "h-8 w-8 rounded-xl bg-indigo-600 text-white border border-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.5)] flex items-center justify-center active:scale-95 transition cursor-pointer";
+                } else {
+                    mobileBtn.className = "h-8 w-8 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 flex items-center justify-center active:scale-95 transition cursor-pointer";
+                }
+            }
+        }
+
+        function sendDesktopCommand(type, extra = {}) {
+            if (!window.__isPassionDesktopApp) return Promise.resolve(null);
+            return fetch('/api/desktop/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, ...extra })
+            }).then(res => res.json());
+        }
+
+        function toggleDesktopAlwaysOnTop() {
+            if (!window.__isPassionDesktopApp) return;
+            sendDesktopCommand('toggleTopMost')
+                .then(res => {
+                    if (res && res.state) {
+                        updateAlwaysOnTopUI(Boolean(res.state.alwaysOnTop));
+                    }
+                })
+                .catch(err => showToast('Không thể kết nối Desktop Controller: ' + err.message, 'error'));
+        }
+
+        function minimizeToDesktopTray() {
+            if (!window.__isPassionDesktopApp) return;
+            sendDesktopCommand('hideToTray').catch(() => {});
+        }
+
+        async function pollDesktopWebEvents() {
+            while (window.__isPassionDesktopApp) {
+                try {
+                    const res = await fetch(`/api/desktop/poll-web?since=${desktopWebEventSeq}`, { cache: 'no-store' });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (typeof data.seq === 'number' && data.seq > desktopWebEventSeq) {
+                            desktopWebEventSeq = data.seq;
+                        }
+                        if (Array.isArray(data.events)) {
+                            for (const evt of data.events) {
+                                if (evt.id > desktopWebEventSeq) desktopWebEventSeq = evt.id;
+                                if (evt.type === 'topMostChanged') {
+                                    const isTop = Boolean(evt.value);
+                                    updateAlwaysOnTopUI(isTop);
+                                    showToast(isTop ? '📌 Đã ghim cửa sổ nổi trên cùng' : '📌 Đã bỏ ghim cửa sổ', 'info', 2200);
+                                } else if (evt.type === 'toggleBossKey') {
+                                    setBossKeyState(Boolean(evt.value), false);
+                                } else if (evt.type === 'lockApp') {
+                                    setBossKeyState(false, false);
+                                    if (typeof lockApp === 'function') lockApp();
+                                    showToast('🔒 Đã khóa bảo mật màn hình PIN', 'info', 2500);
+                                } else if (evt.type === 'toast' && evt.message) {
+                                    showToast(evt.message, evt.level || 'info');
+                                }
+                            }
+                        }
+                    } else {
+                        await new Promise(r => setTimeout(r, 1500));
+                    }
+                } catch (_) {
+                    await new Promise(r => setTimeout(r, 1500));
+                }
+            }
+        }
+
+        function initDesktopAppBridge() {
+            if (desktopBridgeInitialized || !isDesktopAppMode()) return;
+            desktopBridgeInitialized = true;
+            window.__isPassionDesktopApp = true;
+            document.title = 'Passion 2FA Hub • Desktop App';
+
+            const desktopControls = document.getElementById('desktopAppControls');
+            if (desktopControls) {
+                desktopControls.classList.remove('hidden');
+                desktopControls.classList.add('flex');
+            }
+            const mobileControls = document.getElementById('mobileDesktopAppControls');
+            if (mobileControls) {
+                mobileControls.classList.remove('hidden');
+                mobileControls.classList.add('flex');
+            }
+            syncStickyHeaderTop();
+
+            fetch('/api/desktop/state', { cache: 'no-store' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data) {
+                        updateAlwaysOnTopUI(Boolean(data.alwaysOnTop));
+                        desktopWebEventSeq = Number(data.webSeq || 0);
+                    }
+                })
+                .catch(() => {})
+                .finally(() => {
+                    pollDesktopWebEvents();
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', initDesktopAppBridge);
 
         // Tối ưu cuộn cảm ứng tự nhiên chuẩn iOS Safari
         document.addEventListener('gesturestart', function(e) {

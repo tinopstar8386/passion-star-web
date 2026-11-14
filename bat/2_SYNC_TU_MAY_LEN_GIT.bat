@@ -23,7 +23,7 @@ echo.
 
 :DO_PUSH
 echo [*] Buoc 3: Dang dong bo commit moi nhat tu GitHub truoc khi day...
-git pull --rebase --autostash origin main
+git pull --rebase -X theirs --autostash origin main
 echo.
 echo [*] Buoc 4: Dang day toan bo code len GitHub (origin main)...
 echo.
