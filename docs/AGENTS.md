@@ -4,6 +4,15 @@ This document instructs all AI assistants (Antigravity, Gemini Code Assist, Curs
 
 ---
 
+## 🚨 MANDATORY DIRECTIVE: READ & MAINTAIN `spec.md` BEFORE CODING
+
+Whenever you plan to modify, refactor, rewrite, or add any code in this repository:
+1. **You MUST read `spec.md` (or `docs/SPEC.md`) and the module-specific spec under `docs/specs/<module>.spec.md` BEFORE editing source code.**
+2. **Preserve all documented invariants and contracts:** API actions/endpoints, Firestore collections (`passionstar-2014d`), `localStorage`/`sessionStorage` keys, admin PIN `'0908'` & SHA-256 auth flows, Dark Glassmorphism UI, and the strict ban on native `alert()`/`confirm()`/`prompt()`. Never commit raw secrets (`GH013` protection).
+3. **Update specifications on every behavioral change:** Whenever you add/change features, endpoints, storage keys, or UI workflows, update the corresponding `docs/specs/<module>.spec.md` and `spec.md`/`docs/SPEC.md`.
+
+---
+
 ## 🚨 MANDATORY DIRECTIVE: UPDATE PROGRESS ON EVERY CODE CHANGE
 
 Whenever you modify, add, fix, refactor, or delete code in this repository:

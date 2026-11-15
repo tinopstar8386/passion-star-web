@@ -50,6 +50,7 @@ Tất cả các file thực thi tự động `.bat` được đặt gọn gàng 
 ---
 
 ## 📋 Tài Liệu Quy Chuẩn (`docs/`)
+- Đặc tả kỹ thuật toàn bộ dự án & từng module (bắt buộc đọc trước khi sửa code): [**`spec.md`**](../spec.md) / [**`docs/SPEC.md`**](SPEC.md) và thư mục [**`docs/specs/`**](specs/).
 - Xem chi tiết tiến độ và nhật ký cập nhật tại: [**`docs/PROGRESS.md`**](PROGRESS.md).
 - Quy tắc phát triển và tiêu chuẩn kỹ thuật: [**`docs/AGENTS.md`**](AGENTS.md) / [**`docs/GEMINI.md`**](GEMINI.md).
 - Hướng dẫn Animate UI: [**`docs/ANIMATE_UI_GUIDE.md`**](ANIMATE_UI_GUIDE.md).
