@@ -2344,19 +2344,28 @@
 
         function proceedToMainScreen(shimmer, btn, passInput) {
             stopMatrixBackground();
-            shimmer.classList.add('opacity-0');
-            shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
-            passInput.value = '';
-            passInput.disabled = false;
-            passInput.blur();
+            if (shimmer) {
+                shimmer.classList.add('opacity-0');
+                shimmer.classList.remove('animate-[shimmer_1.5s_infinite]');
+            }
+            if (passInput) {
+                passInput.value = '';
+                passInput.disabled = false;
+                passInput.blur();
+            }
             resetViewportScroll();
-            document.getElementById('loginScreen').classList.add('opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                document.getElementById('loginScreen').classList.add('hidden');
-                resetViewportScroll();
-            }, 400);
-            btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
-            btn.disabled = false;
+            const loginScreen = document.getElementById('loginScreen');
+            if (loginScreen) {
+                loginScreen.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    loginScreen.classList.add('hidden');
+                    resetViewportScroll();
+                }, 400);
+            }
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> <span>Xác thực hệ thống</span>';
+                btn.disabled = false;
+            }
         }
 
         async function checkLogin() {
@@ -2442,6 +2451,7 @@
         function lockApp() {
             sessionPass = "";
             currentlyExpandedRowIndex = -1;
+            emailCodeState = {};
             closeMobileSidebar();
             document.querySelectorAll('.alarm-toast').forEach(el => el.remove());
             const urgentBanner = document.getElementById('tempDeviceUrgentBanner');
@@ -3235,11 +3245,10 @@
                     if (b) {
                         b.disabled = false;
                         b.classList.remove('opacity-75', 'cursor-not-allowed');
-                        b.innerHTML = `
-                            <i class="fa-solid fa-envelope-open-text text-xs"></i>
-                            <span class="md:hidden text-[11px] font-bold">Lấy mã</span>
-                            <span id="mail-badge-${index}" class="hidden absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce">1</span>
-                        `;
+                        const item = allData[index];
+                        const stateKey = item && item.email ? (item.email.trim().toLowerCase() + '_' + index) : '';
+                        const keepBadge = Boolean(stateKey && emailCodeState[stateKey] && emailCodeState[stateKey].hasBadge);
+                        b.innerHTML = getDefaultMailBtnInnerHTML(index, keepBadge);
                     }
                 } else {
                     updateBtnDisplay();
@@ -3310,7 +3319,7 @@
                 const codeBoxClass = savedMailState ? "shrink-0 w-full max-w-[220px] mt-1.5 overflow-hidden transition-all duration-300" : "hidden shrink-0 w-full max-w-[220px] mt-1.5 overflow-hidden transition-all duration-300 opacity-0 transform -translate-y-2";
                 const codeValContent = savedMailState ? savedMailState.html : "------";
                 const codeValClass = savedMailState && savedMailState.isError ? "font-mono text-xs font-bold text-rose-500 tracking-wider" : "font-mono text-xs font-bold text-white tracking-wider";
-                const badgeClass = savedMailState && savedMailState.hasBadge ? "absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce" : "hidden absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce";
+                const badgeClass = savedMailState && savedMailState.hasBadge ? "flex absolute -top-1.5 -right-1.5 h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce" : "hidden absolute -top-1.5 -right-1.5 h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce";
 
                 html += `
                     <tr class="hover:bg-indigo-50/30 dark:hover:bg-slate-800/60 transition flex flex-col md:table-row bg-white dark:bg-slate-800 md:bg-transparent border border-slate-200 dark:border-slate-700 md:border-none md:border-b rounded-xl md:rounded-none shadow-sm md:shadow-none mb-3 md:mb-0 relative" data-index="${index}" style="animation-delay: ${Math.min(loopIndex * 0.02, 0.3)}s">
@@ -3356,10 +3365,10 @@
                                     <a href="https://mail.google.com/mail/u/0/#search/to%3A${encodeURIComponent(item.email || '')}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="1-Click mở Gmail tìm mail tài khoản này" class="text-slate-400 hover:text-red-500 active:text-red-600 transition cursor-pointer p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center"><i class="fa-brands fa-google text-xs"></i></a>
                                     <button type="button" onclick="event.stopPropagation(); copyFieldByIndex(${index}, 'email', 'Email')" title="Sao chép email" class="text-slate-400 hover:text-indigo-600 active:text-indigo-600 transition cursor-pointer p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-regular fa-copy text-xs"></i></button>
                                     <button type="button" onclick="event.stopPropagation(); togglePlainTextByIndex('email-text-${index}', ${index}, 'email', this)" title="Hiện/Ẩn email" class="text-slate-400 hover:text-indigo-600 active:text-indigo-600 transition cursor-pointer p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid fa-eye-slash text-xs"></i></button>
-                                    <button type="button" id="mail-btn-${index}" onclick="event.stopPropagation(); fetchEmailCodeByIndex(${index}, this)" title="Quét hộp thư lấy mã" class="relative text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 transition cursor-pointer px-2 py-0.5 rounded shadow-2xs flex items-center gap-1">
+                                    <button type="button" id="mail-btn-${index}" onclick="event.stopPropagation(); fetchEmailCodeByIndex(${index}, this)" title="Quét hộp thư lấy mã (bấm để tắt số 1 nếu đang có mã mới)" class="relative text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 transition cursor-pointer px-2 py-0.5 rounded shadow-2xs flex items-center gap-1">
                                         <i class="fa-solid fa-envelope-open-text text-xs"></i>
                                         <span class="text-[11px] font-bold">Lấy mã</span>
-                                        <span id="mail-badge-${index}" class="${badgeClass}">1</span>
+                                        <span id="mail-badge-${index}" onclick="event.stopPropagation(); dismissMailBadge(${index}, true);" title="Bấm để tắt thông báo mã mới" class="${badgeClass} cursor-pointer z-10">1</span>
                                     </button>
                                 </div>
                             </div>
@@ -3374,10 +3383,10 @@
                             </div>
 
                             <!-- KHUNG OTP MÃ CODE -->
-                            <div id="code-box-${index}" class="${codeBoxClass}">
+                            <div id="code-box-${index}" onclick="dismissMailBadge(${index}, false)" class="${codeBoxClass}">
                                 <div class="bg-slate-900 border border-indigo-500/50 rounded-lg px-2.5 py-1.5 flex items-center justify-between shadow-[0_0_12px_rgba(99,102,241,0.4)] relative overflow-hidden w-full md:max-w-[220px]">
                                     <div class="flex items-center gap-1 relative z-10"><i class="fa-solid fa-shield-halved text-indigo-400 text-[10px]"></i><span class="text-[9px] font-bold text-indigo-300 uppercase tracking-wider">OTP</span></div>
-                                    <div class="flex items-center gap-1.5 relative z-10"><span id="code-val-${index}" onclick="event.stopPropagation(); copyRawText(this.innerText, 'OTP Mail')" class="copy-trigger cursor-pointer ${codeValClass}">${codeValContent}</span><button type="button" onclick="event.stopPropagation(); showOtpHistoryPopover(${index}, '${escapeHtml(item.email)}', this)" class="text-slate-400 hover:text-indigo-400 transition cursor-pointer p-1 rounded" title="Xem 3 mã OTP gần nhất"><i class="fa-solid fa-clock-rotate-left text-xs"></i></button><button type="button" onclick="event.stopPropagation(); copyRawText(document.getElementById('code-val-${index}').innerText, 'OTP Mail', this)" class="text-slate-300 hover:text-white transition cursor-pointer p-1 bg-white/10 rounded" title="Sao chép mã"><i class="fa-regular fa-copy text-xs"></i></button></div>
+                                    <div class="flex items-center gap-1.5 relative z-10"><span id="code-val-${index}" onclick="event.stopPropagation(); dismissMailBadge(${index}, false); copyRawText(this.innerText, 'OTP Mail')" class="copy-trigger cursor-pointer ${codeValClass}">${codeValContent}</span><button type="button" onclick="event.stopPropagation(); dismissMailBadge(${index}, false); showOtpHistoryPopover(${index}, '${escapeHtml(item.email)}', this)" class="text-slate-400 hover:text-indigo-400 transition cursor-pointer p-1 rounded" title="Xem 3 mã OTP gần nhất"><i class="fa-solid fa-clock-rotate-left text-xs"></i></button><button type="button" onclick="event.stopPropagation(); dismissMailBadge(${index}, false); copyRawText(document.getElementById('code-val-${index}').innerText, 'OTP Mail', this)" class="text-slate-300 hover:text-white transition cursor-pointer p-1 bg-white/10 rounded" title="Sao chép mã"><i class="fa-regular fa-copy text-xs"></i></button></div>
                                 </div>
                             </div>
                         </td>
@@ -3688,9 +3697,46 @@
             copyToClipboard(text, label);
         }
 
+        function getDefaultMailBtnInnerHTML(index, hasBadge = false) {
+            const badgeStateClass = hasBadge ? 'flex' : 'hidden';
+            return `
+                <i class="fa-solid fa-envelope-open-text text-xs"></i>
+                <span class="text-[11px] font-bold">Lấy mã</span>
+                <span id="mail-badge-${index}" onclick="event.stopPropagation(); dismissMailBadge(${index}, true);" title="Bấm để tắt thông báo mã mới" class="${badgeStateClass} cursor-pointer absolute -top-1.5 -right-1.5 z-10 h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce">1</span>
+            `;
+        }
+
+        function dismissMailBadge(index, showToastOnDismiss = true) {
+            const item = allData[index];
+            const email = item ? (item.email || '') : '';
+            const stateKey = email ? (email.trim().toLowerCase() + '_' + index) : '';
+
+            const badge = document.getElementById(`mail-badge-${index}`);
+            if (badge) {
+                badge.classList.add('hidden');
+                badge.classList.remove('flex');
+            }
+
+            let dismissedCode = '';
+            if (stateKey && emailCodeState[stateKey]) {
+                emailCodeState[stateKey].hasBadge = false;
+                const codeValEl = document.getElementById(`code-val-${index}`);
+                dismissedCode = codeValEl ? codeValEl.innerText.trim() : '';
+            }
+
+            if (showToastOnDismiss && dismissedCode && !dismissedCode.includes('------')) {
+                showToast(`✓ Đã tắt thông báo mã mới (OTP: ${dismissedCode})`, 'success', 2200);
+            }
+        }
+
         function fetchEmailCodeByIndex(index, btn) {
             const item = allData[index];
             const email = item ? (item.email || '') : '';
+            const stateKey = email ? (email.trim().toLowerCase() + '_' + index) : '';
+            if (stateKey && emailCodeState[stateKey] && emailCodeState[stateKey].hasBadge) {
+                dismissMailBadge(index, true);
+                return;
+            }
             fetchEmailCodeUI(email, index, btn);
         }
 
@@ -3701,11 +3747,6 @@
             if (btn && btn.getAttribute('data-polling') === 'true') return;
 
             const stateKey = email.trim().toLowerCase() + '_' + index;
-            const defaultBtnHTML = `
-                <i class="fa-solid fa-envelope-open-text text-xs"></i>
-                <span class="md:hidden text-[11px] font-bold">Lấy mã</span>
-                <span id="mail-badge-${index}" class="hidden absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-sm animate-bounce">1</span>
-            `;
 
             function getElements() {
                 return {
@@ -3764,24 +3805,25 @@
 
                             if (current.currentBtn) {
                                 current.currentBtn.removeAttribute('data-polling');
-                                current.currentBtn.innerHTML = defaultBtnHTML;
+                                current.currentBtn.innerHTML = getDefaultMailBtnInnerHTML(index, true);
                             }
                             if (current.box) current.box.classList.remove('hidden', 'opacity-0', '-translate-y-2');
                             if (current.valSpan) {
                                 current.valSpan.innerText = code;
                                 current.valSpan.classList.remove('text-rose-500');
                             }
-                            // Mục 11: Tự động sao chép mã OTP vào clipboard
-                            copyToClipboard(code, 'Mã OTP');
+                            // Chỉ hiện code lên dòng, bật badge '1', phát âm báo & hiện Toast (KHÔNG tự copy vào clipboard)
                             // Mục 20: Phát âm thanh thông báo nhẹ
                             playOtpSuccessChime();
                             // Mục 33: Rung phản hồi haptic
                             triggerHaptic('success');
                             // Mục 13: Lưu vào lịch sử 3 mã gần nhất
                             recordOtpHistory(email, code);
-                            showToast(`⚡ Đã tự động sao chép mã OTP [${code}] vào Clipboard!`, 'success');
                             const newBadge = document.getElementById(`mail-badge-${index}`);
-                            if (newBadge) newBadge.classList.remove('hidden');
+                            if (newBadge) {
+                                newBadge.classList.remove('hidden');
+                                newBadge.classList.add('flex');
+                            }
 
                             // Cập nhật huy hiệu forward của dòng hiện tại
                             const rowBadge = document.querySelector(`span[onclick*="checkSingleRowForward(${index},"]`);
@@ -3798,7 +3840,7 @@
                             emailCodeState[stateKey] = { html: "KHÔNG CÓ MÃ", isError: true, hasBadge: false };
                             if (current.currentBtn) {
                                 current.currentBtn.removeAttribute('data-polling');
-                                current.currentBtn.innerHTML = defaultBtnHTML;
+                                current.currentBtn.innerHTML = getDefaultMailBtnInnerHTML(index, false);
                             }
                             if (current.valSpan) {
                                 current.valSpan.innerText = "KHÔNG CÓ MÃ";
@@ -3816,7 +3858,7 @@
                         const current = getElements();
                         if (current.currentBtn) {
                             current.currentBtn.removeAttribute('data-polling');
-                            current.currentBtn.innerHTML = defaultBtnHTML;
+                            current.currentBtn.innerHTML = getDefaultMailBtnInnerHTML(index, false);
                         }
                         if (current.valSpan) {
                             current.valSpan.innerText = "LỖI QUÉT";

@@ -109,11 +109,12 @@ Thứ tự cố định 6 tab trong UI (`switchTab`):
 
 ### 5.4. Lấy Mã OTP Email Realtime & Chống Spam
 - **Quy trình `fetchEmailCodeUI` / `fetchEmailCodeByIndex` / `pollCode`:**
-  - Polling tối đa **6 lần**, mỗi lần cách nhau **5 giây** (gọi action GAS tìm email mới nhất thuộc target email).
+  - Nếu dòng đang có huy hiệu số `1` nhấp nháy (`#mail-badge-${index}` với `hasBadge = true`), bấm trực tiếp vào số `1`, nút `Lấy mã`, hoặc `#code-box-${index}` sẽ gọi `dismissMailBadge()` để **tắt badge `1`** (ẩn ngay trên giao diện và cập nhật `emailCodeState[stateKey].hasBadge = false`, không kích hoạt poll lại hay đếm rate-limit).
+  - Khi bấm lấy mã (`hasBadge = false`), polling tối đa **6 lần**, mỗi lần cách nhau **5 giây** qua action GAS `getEmailVerificationCode`.
   - **Chặn mã rác cố định:** Nếu mã bắt được là `"184973"`, bỏ qua/không nhận làm OTP hợp lệ.
   - **Rate Limit chống spam:** Bấm lấy mã >= 3 lần trong vòng 4 giây (`checkMailRateLimit`) -> kích hoạt khóa nút **20 giây** (`startRateLimit20s`).
-  - **Phản hồi thành công:** Tự động copy mã OTP vào clipboard, phát âm thanh thông báo (`playOtpSuccessChime`), rung haptic trên thiết bị hỗ trợ (`triggerHaptic`), và lưu vào lịch sử tối đa 3 mã gần nhất (`recordOtpHistory`, `getOtpHistory`, `showOtpHistoryPopover`).
-  - Có `pingMailboxHealth()` để kiểm tra sức khỏe hộp thư trung tâm.
+  - **Phản hồi thành công:** Hiển thị mã trong `#code-box-${index}`, bật badge `1` nhấp nháy, phát âm thanh thông báo (`playOtpSuccessChime`), rung haptic (`triggerHaptic`), lưu vào lịch sử tối đa 3 mã gần nhất (`recordOtpHistory`, `getOtpHistory`, `showOtpHistoryPopover`), và **hiển thị toast chứa mã OTP** (`showToast`) — **KHÔNG tự động sao chép vào clipboard** (giữ nguyên thao tác copy thủ công nếu bấm trực tiếp vào mã hoặc nút copy).
+  - Có `pingMailboxHealth()` để kiểm tra sức khỏe hộp thư trung tâm khi bấm thủ công (không chạy nền tự động để tránh ảnh hưởng quota GAS).
 
 ### 5.5. Kiểm Tra Forward Mail (`#forwardModal`)
 - Kho danh sách miễn kiểm tra cố định `PRE_VERIFIED_FORWARD_EMAILS` (31 email đã xác minh trước).
@@ -154,7 +155,7 @@ Thứ tự cố định 6 tab trong UI (`switchTab`):
 2. **Giữ CSS Isolation màn hình khóa** (`#loginScreen:not(.hidden) ~ #authenticatedAppContent { display: none !important; }`), hiệu ứng Matrix (`stopMatrixBackground` khi mở khóa), Stealth Pass (56 ký tự, 4 góc không decoy, anti-spam `<450ms` streak >= 2 khóa 3s), auto-lock (300s / 15m), và Boss Key (`Ctrl+F1` / `Ctrl+\``, đồng bộ với Desktop App qua `setBossKeyState`).
 3. **Giữ Dual Rescue API:** `/api/proxy` -> `runScriptJSONP` (`GAS_DIRECT_URL`) -> Firestore `2fa_cache`, kèm biến `currentFetchRequestId` ngăn race condition khi chuyển tab nhanh.
 4. **Giữ tỷ lệ 8 cột bảng chính (3% / 9% / 21% / 18% / 13% / 18% / 6% / 12%)**, `overflow-x: clip !important`, sticky header đồng bộ qua `syncStickyHeaderTop()`, kéo dãn cột, 7 dòng skeleton, và viền tối `#334155`/`#283548`.
-5. **Giữ logic Email OTP:** 6 lần poll * 5 giây, **chặn mã `"184973"`**, rate-limit 3 click / 4s khóa 20s, auto-copy + chime + haptic + lưu lịch sử tối đa 3 mã.
+5. **Giữ logic Email OTP:** 6 lần poll * 5 giây qua `getEmailVerificationCode`, **chặn mã `"184973"`**, rate-limit 3 click / 4s khóa 20s, **KHÔNG tự động copy clipboard** (chỉ hiện mã + badge `1` bấm tắt được via `dismissMailBadge` + chime + haptic + toast mã OTP + lưu lịch sử tối đa 3 mã; giữ quét thủ công không chạy ngầm nền).
 6. **Giữ logic Forward Check:** danh sách 31 email `PRE_VERIFIED_FORWARD_EMAILS`, 4 worker song song trong `#forwardModal`, Alt/Shift+Click toggle thủ công, copy email chưa forward và xuất `.txt`.
 7. **Giữ toàn bộ nghiệp vụ Thiết bị & Cảnh báo `[TẠM]` + Desktop App:** `[TẠM]`, `Config` custom dropdown + `#staffNamesDataList`, cảnh báo quá hạn 24h / qua ngày VN liên sheet (`passion_temp_device_alarms` + Firestore `2fa_cache/temp_device_alarms`, banner `#tempDeviceUrgentBanner`, toast `.alarm-toast`, `quickRemoveTempDevice`), audit log cả local lẫn GAS, và cầu nối `?desktop=1` (`/api/desktop/*`).
 8. **Không dùng native `alert`/`confirm`/`prompt`** và giữ nguyên Mobile Card + swipe trái/phải.

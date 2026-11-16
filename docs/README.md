@@ -41,6 +41,7 @@ Tất cả các file thực thi tự động `.bat` được đặt gọn gàng 
 | [`idol_tracker.html`](../idol_tracker.html) | **Idol Media Tracker** | Quản lý clip TikTok theo tuần, KPI, báo cáo song ngữ Trung - Việt |
 | [`task_media.html`](../task_media.html) | **Quản Lý Task Media** | Lịch sản xuất media, phân công nhân sự & deadline |
 | [`smartpaste.html`](../smartpaste.html) | **Smart Paste Studio** | Trợ lý dán thông minh cho ô Merge 2 hàng Excel & Google Sheets |
+| [`money.html`](../money.html) | **Tino Money (MB & Tiền Mặt)** | Quản lý dòng tiền Vô/Ra, Ví Tiền Mặt & MB Bank tối ưu iPhone PWA |
 | [`dashboard.html`](../dashboard.html) | **KPI Dashboard** | Báo cáo hiệu suất team vận hành |
 | [`loichuc.html`](../loichuc.html) | **Workspace Lời Chúc** | Quản lý mẫu lời chúc Idol đạt mốc thưởng |
 | [`tonkhomakeup.html`](../tonkhomakeup.html) | **Tồn Kho Makeup** | Xuất - nhập - tồn vật tư trang điểm |
