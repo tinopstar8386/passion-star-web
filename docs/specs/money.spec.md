@@ -1,8 +1,8 @@
-# 📘 TINO MONEY — ĐẶC TẢ KỸ THUẬT CHI TIẾT (`money.html`)
+# 📘 TINO MONEY — ĐẶC TẢ KỸ THUẬT CHI TIẾT (`money/index.html`)
 
-- **File nguồn chính:** `money.html` (Vanilla HTML/CSS/JS + Tailwind CDN + Lucide Icons + `AnimateKit`)
-- **PWA & Offline:** `manifest-money.json`, `sw-money.js`, `icon/tino_money.svg`, `icon/png/tino_money.png` (`180x180`), `icon/png/tino_money_512.png` (`512x512`)
-- **Mục đích:** Quản lý tiền mặt, tiền ngân hàng **MB Bank**, dòng tiền Vô/Ra/Chuyển ví nội bộ trên nền tảng **iPhone View trực quan** và cài đặt ra **Màn hình chính iPhone (PWA Standalone)** tại `https://passion-star-webapp.vercel.app/money.html`.
+- **File nguồn chính:** `money/index.html` (Vanilla HTML/CSS/JS + Tailwind CDN + Lucide Icons + `AnimateKit`)
+- **PWA & Offline:** `money/manifest.json`, `money/sw.js`, `money/icon/tino_money.svg`, `money/icon/tino_money.png` (`180x180`), `money/icon/tino_money_512.png` (`512x512`)
+- **Mục đích:** Quản lý tiền mặt, tiền ngân hàng **MB Bank**, dòng tiền Vô/Ra/Chuyển ví nội bộ trên nền tảng **iPhone View trực quan** và cài đặt ra **Màn hình chính iPhone (PWA Standalone)** tại `https://passion-star-webapp.vercel.app/money/`.
 
 ---
 
@@ -13,10 +13,10 @@
    - `apple-mobile-web-app-capable`: `yes`
    - `apple-mobile-web-app-status-bar-style`: `black-translucent`
    - `apple-mobile-web-app-title`: `Tino Money`
-   - `link[rel="apple-touch-icon"][sizes="180x180"]`: `./icon/png/tino_money.png`
-   - `link[rel="manifest"]`: `./manifest-money.json`
-2. **Service Worker Riêng Biệt (`sw-money.js`):**
-   - Tách riêng khỏi `manifest.json` của `2fa.html`, cache `money.html`, `manifest-money.json`, `animate-kit/*` và bộ `icon/tino_money*` để mở tức thì từ Màn hình chính iPhone mà không ảnh hưởng các module khác.
+   - `link[rel="apple-touch-icon"][sizes="180x180"]`: `./icon/tino_money.png`
+   - `link[rel="manifest"]`: `./manifest.json`
+2. **Service Worker Riêng Biệt (`money/sw.js`):**
+   - Tách riêng trong thư mục `money/`, không ảnh hưởng `manifest.json` của `2fa.html`; cache `money/index.html`, `money/manifest.json`, `../animate-kit/*` và bộ `money/icon/tino_money*` để mở tức thì từ Màn hình chính iPhone mà không ảnh hưởng các module khác.
 3. **Quy tắc Chống Zoom & Chống Cuộn Ngang (QTSC):**
    - Toàn bộ thẻ `<input>`, `<select>`, `<textarea>` hiển thị đều đạt `font-size >= 16px` (`#txAmountInput` là `24px`, các input/select/textarea khác là `16px !important`).
    - Trên viewport mobile `< 768px`, `document.documentElement.scrollWidth <= window.innerWidth` (0% tràn ngang).
@@ -51,15 +51,16 @@
    - `escapeHtml(str)`, `showToast(message, type)`, `showGlassConfirm(...)`: Chống XSS 100% và cấm hoàn toàn native `alert`/`confirm`/`prompt`.
 4. **Bảo mật PIN & Tiện ích MB Bank:**
    - `pressPinDigit(digit)`, `verifyPinInput(entered)`, `lockAppWithPin()`, `togglePinOnStart(enabled)`, `updatePinCode()`: PIN mặc định `'0908'`, sai 5 lần tự khóa 10 giây (`.pin-shake`).
-   - `openVietQrModal()`, `refreshVietQrImage()`, `copyMbAccountNumber()`: Sinh VietQR chuẩn MB Bank (`MB-<STK>-compact2.png`) có fallback offline.
+   - `openVietQrModal()`, `refreshVietQrImage(immediate)`, `renderVietQrToPngBlob()`, `copyVietQrImage()`, `downloadVietQrImage()`, `copyMbAccountNumber()`: Sinh VietQR chuẩn MB Bank (`MB-<STK>-compact2.png`), lấy ảnh PNG thật trực tiếp qua `POST https://api.vietqr.io/v2/generate` (`acqId: '970422'`, có fallback offline canvas) để hiển thị (`data:image/png;base64,...`), hỗ trợ sao chép ảnh QR vào Clipboard và tải xuống file `.png` (kèm Web Share API trên iOS PWA).
+   - `initIosSheetGestures()`, `dismissModalById(id)`: Tương tác thoát modal chuẩn iOS cho toàn bộ 7 modal (`#txModal`, `#smartPasteModal`, `#adjustBalanceModal`, `#vietQrModal`, `#categoryModal`, `#iosInstallModal`, `#glassConfirmModal`): hỗ trợ vuốt xuống (swipe-down), chạm ra ngoài vùng nền tối (tap-outside), nút `Đóng`, nút `X` (`36x36px`), và phím `Escape`.
    - `exportCSV()`, `exportBackupJSON()`, `handleImportBackupFile(ev)`, `seedDemoTransactions()`, `resetAllData(silent)`.
 
 ---
 
 ## 4. Checklist Chống Bỏ Sót Khi Sửa/Nâng Cấp Code
 
-- [ ] **Không dùng `alert()`, `confirm()`, `prompt()`** trong `money.html`.
-- [ ] **Giữ nguyên manifest riêng `manifest-money.json` và `sw-money.js`** (không ghi đè `manifest.json` của `2fa.html`).
+- [ ] **Không dùng `alert()`, `confirm()`, `prompt()`** trong `money/index.html`.
+- [ ] **Giữ nguyên manifest riêng `money/manifest.json` và `money/sw.js`** (không ghi đè `manifest.json` ở thư mục gốc của `2fa.html`).
 - [ ] **Giữ nguyên 5 key lưu trữ** (`tino_finance_*` và `sessionStorage['tino_finance_pin_verified']`).
-- [ ] **Giữ chuẩn Mobile iPhone** (`viewport-fit=cover`, `apple-touch-icon` `./icon/png/tino_money.png` tồn tại trên đĩa, mọi input `>= 16px`, `overflowX === false`).
-- [ ] **Chạy kiểm thử Mobile & PWA sau khi sửa:** `tests/pentest_mobile_all.mjs money.html`.
+- [ ] **Giữ chuẩn Mobile iPhone** (`viewport-fit=cover`, `apple-touch-icon` `./icon/tino_money.png` tồn tại trong `money/icon/`, mọi input `>= 16px`, `overflowX === false`).
+- [ ] **Chạy kiểm thử Mobile & PWA sau khi sửa:** `tests/pentest_mobile_all.mjs money/index.html`.

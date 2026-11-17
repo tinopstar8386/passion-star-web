@@ -1,12 +1,12 @@
-const CACHE_NAME = 'tino-money-passion-pwa-v1';
+const CACHE_NAME = 'tino-money-passion-pwa-v2';
 const CORE_ASSETS = [
-  './money.html',
-  './manifest-money.json',
-  './animate-kit/animate-kit.css',
-  './animate-kit/animate-kit.js',
+  './index.html',
+  './manifest.json',
+  '../animate-kit/animate-kit.css',
+  '../animate-kit/animate-kit.js',
   './icon/tino_money.svg',
-  './icon/png/tino_money.png',
-  './icon/png/tino_money_512.png'
+  './icon/tino_money.png',
+  './icon/tino_money_512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -43,16 +43,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Only handle offline fallback for money.html & its assets; network-first for all same-origin
+  // Only handle offline fallback for money/ & its assets; network-first for all same-origin
   event.respondWith(
     fetch(req)
       .then((res) => {
-        if (res && res.ok && (url.pathname.endsWith('/money.html') || url.pathname.includes('tino_money') || url.pathname.includes('animate-kit') || url.pathname.endsWith('/manifest-money.json'))) {
+        if (res && res.ok && (url.pathname.includes('/money/') || url.pathname.includes('tino_money') || url.pathname.includes('animate-kit'))) {
           const copy = res.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
         }
         return res;
       })
-      .catch(() => caches.match(req).then((cached) => cached || (url.pathname.endsWith('/money.html') ? caches.match('./money.html') : undefined)))
+      .catch(() => caches.match(req).then((cached) => cached || (url.pathname.includes('/money') ? caches.match('./index.html') : undefined)))
   );
 });

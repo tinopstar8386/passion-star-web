@@ -17,7 +17,7 @@ Nhóm module này bao gồm trang chủ cổng ứng dụng (`index.html`), hai 
    - Nhóm Vận hành & Quy trình: `timeline.html`, `off.html`, `loichuc.html`, `sop.html`, `chamdiem.html`, `bbbangiao.html`.
    - Nhóm Media & Tracker: `idol_tracker.html`, `task_media.html`.
    - Nhóm Mua sắm & Tồn kho Makeup: `tonmakeup.html`, `tonkhomakeup.html`.
-   - Nhóm Tiện ích & Tài chính: `money.html`, `mail_activator.html`, `smartpaste.html`.
+   - Nhóm Tiện ích & Tài chính: `money/index.html`, `mail_activator.html`, `smartpaste.html`.
 4. **Task Manager gắn Google Sheets (`fetchTasks`, `renderTasks`, `addTask`, `completeTask`):**
    - `GET ?action=getTasks` tải công việc tồn đọng, tự động đánh dấu cảnh báo `.late` (`⚠️ Trễ hạn`) nếu quá `deadline` so với hiện tại.
    - `POST` (`mode: 'no-cors'`, action `addTask` và `completeTask`), đợi `1500ms`/`1000ms` rồi gọi lại `fetchTasks()`. *(Lưu ý: `addTask`/`completeTask` trong bản cũ đang dùng `alert()`, cần thay bằng `showToast` nếu nâng cấp).*
@@ -72,7 +72,7 @@ Thư viện UMD zero-dependency gắn vào `window.AnimateKit`, tự động kh�
 
 ## 5. Danh Sách Bất Biến & Checklist Không Được Miss Khi Code Lại
 
-1. **`index.html`:** Giữ đầy đủ **17 thẻ `.app-card` với đúng `href` và `data-name` tìm kiếm** (bao gồm `money.html`), đồng hồ realtime 1s, và kết nối `GOOGLE_SCRIPT_URL` cho Task Manager (`getTasks`, `addTask`, `completeTask`).
+1. **`index.html`:** Giữ đầy đủ **17 thẻ `.app-card` với đúng `href` và `data-name` tìm kiếm** (bao gồm `money/index.html`), đồng hồ realtime 1s, và kết nối `GOOGLE_SCRIPT_URL` cho Task Manager (`getTasks`, `addTask`, `completeTask`).
 2. **`bbbangiao.html`:** Giữ định dạng in A4 (`.page-a4`, `@media print`), đồng bộ ngày 3 vị trí (`updateDateText`), thêm/xóa người đại diện & tự điền vùng chữ ký (`syncNames`), hàm đọc tiền tiếng Việt `BigInt` (`formatCurrency` + `docTien`), và payload `processHandoverData`.
 3. **`log.html`:** Giữ đúng 2 lựa chọn đặc biệt `"__NO_TEAM__"` và `"__CUSTOM_IDOL__"` giúp trợ lý khai báo nhanh Idol mới, theme key `formTheme`, và `webSubmitLog`.
 4. **`animate-kit`:** Giữ chuẩn UMD + `AnimateKit.init()` tự quét `data-animate` cho toàn bộ 6 module JS và 2 hiệu ứng CSS thuần (`shimmer`, `glow-border`).
