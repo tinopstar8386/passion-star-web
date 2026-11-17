@@ -492,6 +492,11 @@
         @keyframes pinShake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-9px); } 40%, 80% { transform: translateX(9px); } }
         .pin-shake { animation: pinShake 0.4s ease-in-out; }
 
+        .dropdown-item-active { background-color: #e0e7ff !important; color: #4338ca !important; font-weight: 700; }
+        html.dark .dropdown-item-active { background-color: rgba(99, 102, 241, 0.25) !important; color: #a5b4fc !important; font-weight: 700; }
+        .dropdown-item .dropdown-key-hint { display: none; }
+        .dropdown-item.dropdown-item-active .dropdown-key-hint { display: inline-flex; }
+
         /* Mobile Card Layout (Chuẩn iPhone / iOS Cards) */
         @media (max-width: 767px) {
             #mainTable thead {
@@ -666,6 +671,16 @@
             </div>
 
             <!-- Body -->
+            <div id="deviceQuickSuggestBar" class="px-5 sm:px-6 pt-3 pb-2.5 bg-slate-50/80 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-800 shrink-0">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i>
+                        <span>Đề xuất điền nhanh (1 chạm)</span>
+                    </span>
+                    <span class="text-[10px] text-slate-400 dark:text-slate-500 hidden sm:inline">Chọn người giữ sẽ tự điền tên máy</span>
+                </div>
+                <div id="deviceQuickChipsList" class="flex items-center gap-1.5 overflow-x-auto sm:flex-wrap no-scrollbar pb-0.5"></div>
+            </div>
             <div id="deviceListContainer" class="p-5 sm:p-6 overflow-y-auto custom-scrollbar space-y-3 flex-1"></div>
 
             <!-- Footer -->
@@ -1310,11 +1325,71 @@
             });
         }
 
+        const DEFAULT_CONFIG_DEVICES = [
+            'iPhone 17 Pro Max', 'iPhone 17 Pro', 'iPhone 16 Pro Max', 'iPhone 16',
+            'iPhone 15 Pro Max', 'iPhone 15 Plus', 'iPhone 15',
+            'iPhone 14 Pro Max', 'iPhone 14 Plus',
+            'iPhone 13 Pro Max', 'iPhone 13 Pro', 'iPhone 13',
+            'iPhone 12 Pro Max', 'iPhone 12 Pro', 'iPhone 12',
+            'iPhone 11 Pro Max', 'iPhone 11 Pro', 'iPhone 11',
+            'iPhone XS Max', 'iPhone XS',
+            'Galaxy S24 Ultra', 'Galaxy S23 Ultra', 'Galaxy S22 Ultra',
+            'Samsung Galaxy Note 10+', 'Samsung Galaxy A05s',
+            'Xiaomi 11T', 'Redmi Note 15 Pro 5G', 'Redmi Note 14', 'Redmi Note 11 Pro', 'Redmi Note (Các dòng)',
+            'Oppo Find X6 Pro', 'Oppo A6 Pro', 'Oppo CPH2219',
+            'Vivo V2111', 'Chrome', 'PC / Máy tính MC', 'MacBook'
+        ];
+
+        const DEFAULT_STAFF_DEVICE_MAP = {
+            'Gavin': ['iPhone 17 Pro', 'iPhone XS'],
+            'Tino': ['iPhone 12 Pro Max', 'iPhone XS'],
+            'Minter': ['iPhone XS'],
+            'Yumi': ['iPhone 15 Plus'],
+            'Mandy': ['iPhone 16 Pro Max'],
+            'Súp': ['iPhone 16'],
+            'Randy': ['iPhone 14 Pro Max'],
+            'MC Randy': ['iPhone 14 Pro Max'],
+            'Toby': ['Xiaomi 11T'],
+            'MC Toby': ['Xiaomi 11T'],
+            'Kun': ['Galaxy S22 Ultra'],
+            'Tyson': ['iPhone 15 Pro Max'],
+            'Naul': ['iPhone 15 Pro Max'],
+            'Diva': ['iPhone 15 Pro Max'],
+            'Công Minh': ['iPhone 15 Pro Max'],
+            'Chubi': ['iPhone 15 Pro Max'],
+            'Trly Vận Hành': ['iPhone 15 Pro Max'],
+            'Máy tính MC': ['Chrome'],
+            'MC': ['iPhone 15 Pro Max', 'iPhone 14 Pro Max', 'Xiaomi 11T', 'Chrome'],
+            'Idol': ['iPhone 15 Pro Max', 'iPhone 14 Pro Max', 'iPhone 13 Pro Max', 'iPhone 12 Pro Max', 'iPhone 11 Pro Max', 'iPhone 17 Pro Max', 'iPhone 13', 'iPhone 11'],
+            'Trly': ['iPhone 15 Pro Max', 'iPhone 14 Pro Max', 'iPhone 13 Pro Max', 'iPhone 17 Pro', 'iPhone 12 Pro', 'iPhone 11'],
+            'Trợ lí': ['iPhone 15 Pro Max', 'iPhone 14 Pro Max', 'iPhone 13 Pro Max']
+        };
+
+        const DEFAULT_QUICK_DEVICE_PAIRS = [
+            { role: 'Minter', device: 'iPhone XS' },
+            { role: 'Yumi', device: 'iPhone 15 Plus' },
+            { role: 'Gavin', device: 'iPhone 17 Pro' },
+            { role: 'Gavin', device: 'iPhone XS' },
+            { role: 'Mandy', device: 'iPhone 16 Pro Max' },
+            { role: 'Tino', device: 'iPhone 12 Pro Max' },
+            { role: 'Súp', device: 'iPhone 16' },
+            { role: 'Randy', device: 'iPhone 14 Pro Max' },
+            { role: 'Toby', device: 'Xiaomi 11T' },
+            { role: 'Kun', device: 'Galaxy S22 Ultra' },
+            { role: 'Idol', device: 'iPhone 15 Pro Max' },
+            { role: 'Trly', device: 'iPhone 15 Pro Max' }
+        ];
+
+        const CUSTOM_DEVICES_STORAGE_KEY = 'passion_custom_devices_v1';
+
         let allData = [];
         let currentSheetName = 'Passion Star';
         let sessionPass = "";
         let inactivityTimer;
-        let configDevices = [];
+        let configDevices = [...DEFAULT_CONFIG_DEVICES];
+        let staffDeviceMap = {};
+        let quickDevicePairs = [...DEFAULT_QUICK_DEVICE_PAIRS];
+        let remoteConfigDevicesCache = [];
         let originalDevicesForLog = [];
         let currentlyExpandedRowIndex = -1;
         let emailCodeState = {}; // Lưu trạng thái mã OTP theo email để không bị mất khi bảng đồng bộ lại
@@ -1571,12 +1646,195 @@
         let isForwardScanning = false;
         let forwardScanResults = [];
 
+        function cleanDeviceToken(str) {
+            return String(str || '')
+                .replace(/\[TẠM\]|\[TEMP\]|\(tạm\)/gi, '')
+                .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function parseDeviceEntry(rawText) {
+            const clean = cleanDeviceToken(rawText);
+            if (!clean) return { role: '', device: '' };
+            if (clean.includes(':')) {
+                const idx = clean.indexOf(':');
+                return {
+                    role: cleanDeviceToken(clean.slice(0, idx)),
+                    device: cleanDeviceToken(clean.slice(idx + 1))
+                };
+            }
+            if (clean.includes('-')) {
+                const idx = clean.indexOf('-');
+                return {
+                    role: cleanDeviceToken(clean.slice(0, idx)),
+                    device: cleanDeviceToken(clean.slice(idx + 1))
+                };
+            }
+            return { role: '', device: clean };
+        }
+
+        function getLearnedCustomDevices() {
+            try {
+                const raw = localStorage.getItem(CUSTOM_DEVICES_STORAGE_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function learnCustomDeviceEntries(entriesArray) {
+            if (!Array.isArray(entriesArray) || entriesArray.length === 0) return;
+            const existing = getLearnedCustomDevices();
+            const map = new Map();
+            const addItem = (entry) => {
+                const clean = cleanDeviceToken(entry);
+                if (!clean || /^\d+$/.test(clean)) return;
+                const key = clean.toLowerCase();
+                if (!map.has(key)) map.set(key, clean);
+            };
+            entriesArray.forEach(addItem);
+            existing.forEach(addItem);
+            try {
+                localStorage.setItem(CUSTOM_DEVICES_STORAGE_KEY, JSON.stringify(Array.from(map.values()).slice(0, 100)));
+            } catch (_) {}
+            rebuildDeviceSuggestions();
+        }
+
+        function syncStaffDataListOptions(staffNames) {
+            const dl = document.getElementById('staffNamesDataList');
+            if (!dl) return;
+            dl.innerHTML = staffNames.map(name => `<option value="${escapeHtml(name)}"></option>`).join('');
+        }
+
+        function rebuildDeviceSuggestions(remoteDevices = null) {
+            if (Array.isArray(remoteDevices)) {
+                remoteConfigDevicesCache = remoteDevices.map(cleanDeviceToken).filter(Boolean);
+            }
+
+            const devMap = new Map();
+            const addDeviceName = (dev) => {
+                const clean = cleanDeviceToken(dev);
+                if (!clean || /^\d+$/.test(clean)) return;
+                const key = clean.toLowerCase();
+                if (!devMap.has(key)) devMap.set(key, clean);
+            };
+
+            const staffBucket = new Map();
+            const ensureStaff = (roleName) => {
+                const cleanRole = cleanDeviceToken(roleName);
+                if (!cleanRole || /^\d+$/.test(cleanRole)) return null;
+                const key = cleanRole.toLowerCase();
+                if (!staffBucket.has(key)) {
+                    staffBucket.set(key, { label: cleanRole, devices: new Map() });
+                }
+                return staffBucket.get(key);
+            };
+
+            const pairsMap = new Map();
+            const addPair = (roleName, devName) => {
+                const cleanRole = cleanDeviceToken(roleName);
+                const cleanDev = cleanDeviceToken(devName);
+                if (!cleanDev || /^\d+$/.test(cleanDev)) return;
+                addDeviceName(cleanDev);
+                if (!cleanRole || /^\d+$/.test(cleanRole)) return;
+                const canonicalDev = devMap.get(cleanDev.toLowerCase()) || cleanDev;
+                const bucket = ensureStaff(cleanRole);
+                if (bucket && !bucket.devices.has(canonicalDev.toLowerCase())) {
+                    bucket.devices.set(canonicalDev.toLowerCase(), canonicalDev);
+                }
+                const pairKey = `${cleanRole.toLowerCase()}|${canonicalDev.toLowerCase()}`;
+                if (!pairsMap.has(pairKey)) {
+                    pairsMap.set(pairKey, { role: bucket ? bucket.label : cleanRole, device: canonicalDev });
+                }
+            };
+
+            // 1. Hạt giống thiết bị chuẩn
+            DEFAULT_CONFIG_DEVICES.forEach(addDeviceName);
+
+            // 2. Thiết bị từ sheet Config trên GAS (nếu có)
+            remoteConfigDevicesCache.forEach(raw => {
+                const parsed = parseDeviceEntry(raw);
+                if (parsed.role && parsed.device) addPair(parsed.role, parsed.device);
+                else addDeviceName(parsed.device);
+            });
+
+            // 3. Bản đồ Nhân sự -> Thiết bị chuẩn & danh sách nhân sự mặc định
+            Object.entries(DEFAULT_STAFF_DEVICE_MAP).forEach(([roleName, devs]) => {
+                devs.forEach(d => addPair(roleName, d));
+            });
+            ['Ken', 'Linh', 'Vy', 'Nhi', 'Trâm', 'Bảo', 'Admin'].forEach(ensureStaff);
+            DEFAULT_QUICK_DEVICE_PAIRS.forEach(p => addPair(p.role, p.device));
+
+            // 4. Dữ liệu đã học từ localStorage
+            getLearnedCustomDevices().forEach(raw => {
+                const parsed = parseDeviceEntry(raw);
+                if (parsed.role && parsed.device) addPair(parsed.role, parsed.device);
+                else addDeviceName(parsed.device);
+            });
+
+            // 5. Quét thiết bị thực tế từ bảng dữ liệu hiện tại
+            if (Array.isArray(allData)) {
+                allData.forEach(item => {
+                    if (!item) return;
+                    const raw = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',');
+                    raw.split(',').map(t => t.trim()).filter(Boolean).forEach(tb => {
+                        const parsed = parseDeviceEntry(tb);
+                        if (parsed.role && parsed.device) addPair(parsed.role, parsed.device);
+                        else addDeviceName(parsed.device);
+                    });
+                });
+            }
+
+            configDevices = Array.from(devMap.values());
+            staffDeviceMap = {};
+            const allStaffNames = [];
+            staffBucket.forEach((val) => {
+                staffDeviceMap[val.label] = Array.from(val.devices.values());
+                allStaffNames.push(val.label);
+            });
+            quickDevicePairs = Array.from(pairsMap.values());
+            syncStaffDataListOptions(allStaffNames);
+        }
+
+        function getStaffSuggestionsForRole(roleText) {
+            const clean = cleanDeviceToken(roleText);
+            if (!clean) return [];
+            const normTarget = removeVietnameseTones(clean).toLowerCase();
+            for (const [staffName, devs] of Object.entries(staffDeviceMap)) {
+                if (removeVietnameseTones(staffName).toLowerCase() === normTarget) {
+                    return devs;
+                }
+            }
+            return [];
+        }
+
+        function getCanonicalStaffName(roleText) {
+            const clean = cleanDeviceToken(roleText);
+            if (!clean) return '';
+            const normTarget = removeVietnameseTones(clean).toLowerCase();
+            for (const staffName of Object.keys(staffDeviceMap)) {
+                if (removeVietnameseTones(staffName).toLowerCase() === normTarget) {
+                    return staffName;
+                }
+            }
+            return clean;
+        }
+
         function fetchConfigDevices() {
+            rebuildDeviceSuggestions();
             if (!sessionPass) return;
             runScript('getConfigDevices', { pass: sessionPass })
-                .then(devs => { configDevices = devs; })
+                .then(devs => {
+                    if (Array.isArray(devs) && devs.length > 0) {
+                        rebuildDeviceSuggestions(devs);
+                    }
+                })
                 .catch(err => console.error(err));
         }
+
+        rebuildDeviceSuggestions();
 
         document.addEventListener('keydown', function(e) {
             const loginScreen = document.getElementById('loginScreen');
@@ -1607,22 +1865,28 @@
                 }
             }
             if (e.key === 'Escape') {
+                const globalDrop = document.getElementById('globalDeviceDropdown');
+                if (globalDrop && !globalDrop.classList.contains('hidden')) {
+                    globalDrop.classList.add('hidden');
+                    delete globalDrop.dataset.activeIndex;
+                    delete globalDrop.dataset.navigated;
+                    return;
+                }
                 if (!document.getElementById('deviceModal').classList.contains('hidden')) closeDeviceEditor();
                 if (!document.getElementById('scanModal').classList.contains('hidden')) closeScanModal();
                 if (!document.getElementById('forwardModal')?.classList.contains('hidden')) closeForwardModal();
                 const activeInlineInputs = document.querySelectorAll('input[id^="inline-edit-"]');
                 if (activeInlineInputs.length > 0) renderTable(allData);
-                const globalDrop = document.getElementById('globalDeviceDropdown');
-                if (globalDrop) globalDrop.classList.add('hidden');
             }
         });
 
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('.device-input') && !e.target.closest('#globalDeviceDropdown')) {
+            if (!e.target.closest('.device-input') && !e.target.closest('.role-input') && !e.target.closest('input[id^="inline-edit-"]') && !e.target.closest('#globalDeviceDropdown')) {
                 const globalDrop = document.getElementById('globalDeviceDropdown');
                 if (globalDrop) {
                     globalDrop.classList.add('hidden');
                     delete globalDrop.dataset.activeIndex;
+                    delete globalDrop.dataset.navigated;
                 }
             }
         });
@@ -2282,6 +2546,7 @@
             syncStickyHeaderTop();
             initStealthKey();
             initMatrixBackground();
+            rebuildDeviceSuggestions();
         });
 
         window.onload = function() {
@@ -3261,6 +3526,7 @@
             const countEl = document.getElementById('recordCount');
             if (countEl) countEl.innerText = data.length;
             updateQuickStats();
+            rebuildDeviceSuggestions();
 
             if (data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-slate-400 dark:text-slate-500">Không có dữ liệu trong trang tính <b>${currentSheetName}</b>.</td></tr>`;
@@ -4866,11 +5132,15 @@
             tagElem.outerHTML = `
             <div class="inline-flex items-center gap-1.5 px-1.5 py-1 bg-white dark:bg-[#1e293b] border-2 border-indigo-400 rounded-full shadow-md z-10">
                 <input type="text" id="inline-edit-${rowIndex}-${tbIndex}" value="${escapeHtml(currentText)}"
-                       class="w-36 px-2 text-[12px] bg-transparent outline-none text-slate-700 dark:text-slate-200 font-medium"
-                       onkeypress="if(event.key==='Enter') saveInlineEdit(${rowIndex}, ${tbIndex})">
+                       data-row-index="${rowIndex}" data-tb-index="${tbIndex}" autocomplete="off"
+                       placeholder="Người giữ: Tên máy..."
+                       class="w-40 px-2 text-[12px] bg-transparent outline-none text-slate-700 dark:text-slate-200 font-medium"
+                       onfocus="showCustomDropdown(this, 'inline')"
+                       oninput="filterCustomDropdown(this)"
+                       onkeydown="handleInlineDropdownKey(event, ${rowIndex}, ${tbIndex}, this)">
                 <div class="flex items-center gap-1 pr-0.5">
-                    <button type="button" onclick="saveInlineEdit(${rowIndex}, ${tbIndex})" class="w-6 h-6 flex items-center justify-center bg-indigo-500 text-white rounded-full"><i class="fa-solid fa-check text-[10px]"></i></button>
-                    <button type="button" onclick="updateRowDeviceCell(${rowIndex})" class="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-500 rounded-full cursor-pointer"><i class="fa-solid fa-xmark text-[10px]"></i></button>
+                    <button type="button" onclick="saveInlineEdit(${rowIndex}, ${tbIndex})" class="w-6 h-6 flex items-center justify-center bg-indigo-500 text-white rounded-full cursor-pointer" title="Lưu"><i class="fa-solid fa-check text-[10px]"></i></button>
+                    <button type="button" onclick="cancelInlineEdit(${rowIndex})" class="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-500 rounded-full cursor-pointer" title="Hủy"><i class="fa-solid fa-xmark text-[10px]"></i></button>
                 </div>
             </div>`;
             const input = document.getElementById(`inline-edit-${rowIndex}-${tbIndex}`);
@@ -4878,9 +5148,15 @@
             input.setSelectionRange(input.value.length, input.value.length);
         }
 
+        function cancelInlineEdit(rowIndex) {
+            hideGlobalDropdown();
+            updateRowDeviceCell(rowIndex);
+        }
+
         function saveInlineEdit(rowIndex, tbIndex) {
+            hideGlobalDropdown();
             const input = document.getElementById(`inline-edit-${rowIndex}-${tbIndex}`);
-            const newVal = input.value.trim();
+            const newVal = input.value.replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '').trim();
             const item = allData[rowIndex];
             let mangThietBi = [item.thietBiIdol, item.thietBiTroLi].filter(Boolean).join(',').split(',').map(t => t.trim()).filter(Boolean);
             let oldDevice = mangThietBi[tbIndex];
@@ -4900,6 +5176,7 @@
                 .then(() => {
                     allData[rowIndex].thietBiIdol = finalString;
                     allData[rowIndex].thietBiTroLi = "";
+                    if (newVal) learnCustomDeviceEntries([newVal]);
                     const accName = item.tenIdol || item.email;
                     if (isTemporaryDeviceText(oldDevice) && (!newVal || !isTemporaryDeviceText(newVal) || normalizeDeviceText(newVal).toLowerCase() !== normalizeDeviceText(oldDevice).toLowerCase())) {
                         removeTempAlarmForDevice(accName, oldDevice, currentSheetName);
@@ -4956,6 +5233,8 @@
         let currentEditIndex = -1;
         function openDeviceEditor(index) {
             currentEditIndex = index;
+            rebuildDeviceSuggestions();
+            renderDeviceQuickChips();
             const item = allData[index];
             document.getElementById('editDeviceTarget').innerText = `Tài khoản: ${item.tenIdol || item.email}`;
             document.getElementById('deviceListContainer').innerHTML = '';
@@ -4969,18 +5248,8 @@
                 mangThietBi.forEach(tb => {
                     let text = tb.trim();
                     const isTemp = isTemporaryDeviceText(text);
-                    const cleanText = stripTempPrefix(text);
-                    let role = "", device = cleanText;
-                    if (cleanText.includes(':')) {
-                        let parts = cleanText.split(':');
-                        role = stripTempPrefix(parts[0]);
-                        device = stripTempPrefix(parts.slice(1).join(':'));
-                    } else if (cleanText.includes('-')) {
-                        let parts = cleanText.split('-');
-                        role = stripTempPrefix(parts[0]);
-                        device = stripTempPrefix(parts.slice(1).join('-'));
-                    }
-                    addDeviceRow(role, device, false, text, isTemp);
+                    const parsed = parseDeviceEntry(text);
+                    addDeviceRow(parsed.role, parsed.device, false, text, isTemp);
                 });
             }
 
@@ -4994,84 +5263,477 @@
             const modal = document.getElementById('deviceModal');
             modal.classList.add('opacity-0');
             document.getElementById('deviceModalContent').classList.add('scale-95');
-            const globalDrop = document.getElementById('globalDeviceDropdown');
-            if (globalDrop) globalDrop.classList.add('hidden');
+            hideGlobalDropdown();
             setTimeout(() => { modal.classList.remove('flex'); modal.classList.add('hidden'); }, 300);
         }
 
+        function renderDeviceQuickChips() {
+            const wrap = document.getElementById('deviceQuickChipsList');
+            if (!wrap) return;
+            const pairs = (quickDevicePairs && quickDevicePairs.length > 0 ? quickDevicePairs : DEFAULT_QUICK_DEVICE_PAIRS).slice(0, 16);
+            wrap.innerHTML = pairs.map(p => `
+                <button type="button"
+                        data-role="${escapeHtml(p.role)}"
+                        data-device="${escapeHtml(p.device)}"
+                        onclick="applyQuickDeviceChip(this.dataset.role, this.dataset.device)"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 transition shadow-2xs shrink-0 cursor-pointer active:scale-95">
+                    <i class="${getDeviceIconClass(p.device)} text-[10px]"></i>
+                    <span class="font-bold text-indigo-600 dark:text-indigo-400">${escapeHtml(p.role)}:</span>
+                    <span>${escapeHtml(p.device)}</span>
+                </button>
+            `).join('');
+        }
+
+        function applyQuickDeviceChip(role, device) {
+            const container = document.getElementById('deviceListContainer');
+            if (!container) return;
+            const rows = Array.from(container.querySelectorAll('.device-row'));
+            const normRole = cleanDeviceToken(role).toLowerCase();
+            const normDev = cleanDeviceToken(device).toLowerCase();
+
+            // Kiểm tra trùng lặp
+            for (const row of rows) {
+                const rVal = cleanDeviceToken(row.querySelector('.role-input')?.value || '').toLowerCase();
+                const dVal = cleanDeviceToken(row.querySelector('.device-input')?.value || '').toLowerCase();
+                if (rVal === normRole && dVal === normDev) {
+                    const devEl = row.querySelector('.device-input');
+                    flashInputHighlight(devEl);
+                    if (typeof showToast === 'function') showToast('Thiết bị này đã có trong danh sách', 'info', 2000);
+                    return;
+                }
+            }
+
+            // Tìm hàng trống hoặc hàng cùng Người giữ nhưng chưa có tên máy
+            let targetRow = rows.find(row => {
+                const rVal = cleanDeviceToken(row.querySelector('.role-input')?.value || '');
+                const dVal = cleanDeviceToken(row.querySelector('.device-input')?.value || '');
+                return !rVal && !dVal;
+            });
+            if (!targetRow) {
+                targetRow = rows.find(row => {
+                    const rVal = cleanDeviceToken(row.querySelector('.role-input')?.value || '').toLowerCase();
+                    const dVal = cleanDeviceToken(row.querySelector('.device-input')?.value || '');
+                    return rVal === normRole && !dVal;
+                });
+            }
+
+            if (targetRow) {
+                const roleEl = targetRow.querySelector('.role-input');
+                const devEl = targetRow.querySelector('.device-input');
+                if (roleEl) roleEl.value = role;
+                if (devEl) {
+                    devEl.value = device;
+                    delete devEl.dataset.autofilled;
+                    flashInputHighlight(devEl);
+                }
+                if (roleEl) flashInputHighlight(roleEl);
+            } else {
+                addDeviceRow(role, device, true, '', false);
+                const newRows = container.querySelectorAll('.device-row');
+                const lastRow = newRows[newRows.length - 1];
+                if (lastRow) {
+                    const devEl = lastRow.querySelector('.device-input');
+                    flashInputHighlight(devEl);
+                    lastRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }
+            triggerHaptic('light');
+        }
+
         let activeDeviceInput = null;
+        let activeDropdownMode = 'device';
+        let dropdownScrollBound = false;
+
         function initGlobalDropdown() {
             let drop = document.getElementById('globalDeviceDropdown');
             if (!drop) {
                 drop = document.createElement('div');
                 drop.id = 'globalDeviceDropdown';
-                drop.className = 'fixed bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg shadow-2xl z-[100005] max-h-[180px] overflow-y-auto hidden custom-scrollbar py-1';
+                drop.className = 'fixed bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[100005] max-h-[240px] overflow-y-auto hidden custom-scrollbar py-1';
                 document.body.appendChild(drop);
+            }
+            if (!dropdownScrollBound) {
+                dropdownScrollBound = true;
+                window.addEventListener('scroll', (e) => {
+                    const d = document.getElementById('globalDeviceDropdown');
+                    if (!d || d.classList.contains('hidden')) return;
+                    if (e.target === d || (e.target && typeof e.target.closest === 'function' && e.target.closest('#globalDeviceDropdown'))) return;
+                    hideGlobalDropdown();
+                }, true);
             }
             return drop;
         }
 
-        function showCustomDropdown(inputElem) {
-            activeDeviceInput = inputElem;
-            const drop = initGlobalDropdown();
-            if (configDevices.length > 0) {
-                drop.innerHTML = configDevices.map((d, dIdx) =>
-                    `<div class="dropdown-item px-3 py-2 text-[13px] hover:bg-indigo-50 dark:hover:bg-slate-700 cursor-pointer text-slate-700 dark:text-slate-300" onclick="selectDeviceOptionByIndex(${dIdx})">${escapeHtml(d)}</div>`
-                ).join('');
-            } else {
-                drop.innerHTML = `<div class="px-3 py-2 text-[13px] text-slate-400 italic">Đang tải cấu hình...</div>`;
+        function hideGlobalDropdown() {
+            const drop = document.getElementById('globalDeviceDropdown');
+            if (drop) {
+                drop.classList.add('hidden');
+                delete drop.dataset.activeIndex;
+                delete drop.dataset.navigated;
             }
+        }
+
+        function normalizeDeviceSearch(str) {
+            let s = removeVietnameseTones(str || '').toLowerCase().trim();
+            s = s.replace(/\bip\s*(\d+)/g, 'iphone $1');
+            s = s.replace(/(\d+)\s*prm\b/g, '$1 pro max');
+            s = s.replace(/(\d+)\s*pm\b/g, '$1 pro max');
+            s = s.replace(/\b(\d+)\s*p\b/g, '$1 pro');
+            return s.replace(/\s+/g, ' ').trim();
+        }
+
+        function matchesDeviceQuery(searchableText, query) {
+            const normQuery = normalizeDeviceSearch(query);
+            if (!normQuery) return true;
+            const normText = normalizeDeviceSearch(searchableText);
+            if (normText.includes(normQuery)) return true;
+            const compactText = normText.replace(/\s+/g, '');
+            const compactQuery = normQuery.replace(/\s+/g, '');
+            if (compactText.includes(compactQuery)) return true;
+            const tokens = normQuery.split(' ').filter(Boolean);
+            return tokens.every(t => normText.includes(t) || compactText.includes(t));
+        }
+
+        function positionGlobalDropdown(inputElem, drop, mode) {
             const rect = inputElem.getBoundingClientRect();
-            drop.style.top = (rect.bottom + 4) + 'px';
-            drop.style.left = rect.left + 'px';
-            drop.style.width = rect.width + 'px';
+            const minW = mode === 'role' ? 250 : (mode === 'inline' ? 260 : 240);
+            const width = Math.min(Math.max(rect.width, minW), window.innerWidth - 20);
+            const left = Math.max(10, Math.min(rect.left, window.innerWidth - width - 10));
+            drop.style.width = width + 'px';
+            drop.style.left = left + 'px';
+
+            const spaceBelow = window.innerHeight - rect.bottom - 12;
+            const spaceAbove = rect.top - 12;
+            if (spaceBelow < 160 && spaceAbove > spaceBelow) {
+                const maxH = Math.min(240, spaceAbove);
+                drop.style.maxHeight = maxH + 'px';
+                drop.style.top = 'auto';
+                drop.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+            } else {
+                drop.style.maxHeight = Math.min(240, Math.max(140, spaceBelow)) + 'px';
+                drop.style.bottom = 'auto';
+                drop.style.top = (rect.bottom + 4) + 'px';
+            }
+        }
+
+        function showCustomDropdown(inputElem, mode = 'device') {
+            if (!configDevices || configDevices.length === 0) {
+                rebuildDeviceSuggestions();
+            }
+            activeDeviceInput = inputElem;
+            activeDropdownMode = mode || 'device';
+            const drop = initGlobalDropdown();
+            delete drop.dataset.navigated;
+            delete drop.dataset.activeIndex;
+
+            let html = '';
+
+            if (activeDropdownMode === 'role') {
+                const staffNames = Object.keys(staffDeviceMap);
+                // Ưu tiên các nhân sự đã có thiết bị mặc định lên đầu
+                staffNames.sort((a, b) => {
+                    const aHas = (staffDeviceMap[a] && staffDeviceMap[a].length > 0) ? 0 : 1;
+                    const bHas = (staffDeviceMap[b] && staffDeviceMap[b].length > 0) ? 0 : 1;
+                    return aHas - bHas;
+                });
+
+                html += `<div class="dropdown-section-header px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700/80" data-section="roles">👤 Chọn người giữ (Tự điền máy)</div>`;
+                html += staffNames.map(roleName => {
+                    const devs = staffDeviceMap[roleName] || [];
+                    const primaryDev = devs[0] || '';
+                    const searchMeta = `${roleName} ${devs.join(' ')}`;
+                    return `
+                        <div class="dropdown-item px-3 py-2 text-[12px] hover:bg-indigo-50 dark:hover:bg-slate-700/80 cursor-pointer flex items-center justify-between gap-2 text-slate-700 dark:text-slate-200 transition-colors"
+                             data-section="roles" data-mode="role"
+                             data-role="${escapeHtml(roleName)}"
+                             data-device="${escapeHtml(primaryDev)}"
+                             data-value="${escapeHtml(roleName)}"
+                             data-search="${escapeHtml(searchMeta)}"
+                             onmousedown="event.preventDefault()"
+                             onclick="selectDropdownItem(this)">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="fa-solid fa-user-tag text-indigo-500 text-[11px] shrink-0"></i>
+                                <span class="font-bold truncate">${escapeHtml(roleName)}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                ${primaryDev ? `<span class="text-[11px] text-slate-400 dark:text-slate-400 truncate max-w-[130px]">${escapeHtml(primaryDev)}</span>` : ''}
+                                <span class="dropdown-key-hint text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold">Tab / Enter</span>
+                            </div>
+                        </div>`;
+                }).join('');
+            } else if (activeDropdownMode === 'inline') {
+                const pairs = quickDevicePairs && quickDevicePairs.length > 0 ? quickDevicePairs : DEFAULT_QUICK_DEVICE_PAIRS;
+                html += `<div class="dropdown-section-header px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700/80" data-section="pairs">⚡ Đề xuất nhanh (Người giữ : Máy)</div>`;
+                html += pairs.map(p => {
+                    const pairVal = `${p.role}: ${p.device}`;
+                    return `
+                        <div class="dropdown-item px-3 py-2 text-[12px] hover:bg-indigo-50 dark:hover:bg-slate-700/80 cursor-pointer flex items-center justify-between gap-2 text-slate-700 dark:text-slate-200 transition-colors"
+                             data-section="pairs" data-mode="pair"
+                             data-role="${escapeHtml(p.role)}"
+                             data-device="${escapeHtml(p.device)}"
+                             data-value="${escapeHtml(pairVal)}"
+                             data-search="${escapeHtml(pairVal)}"
+                             onmousedown="event.preventDefault()"
+                             onclick="selectDropdownItem(this)">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="${getDeviceIconClass(p.device)} text-[11px] shrink-0"></i>
+                                <span class="truncate"><b class="text-indigo-600 dark:text-indigo-400">${escapeHtml(p.role)}:</b> ${escapeHtml(p.device)}</span>
+                            </div>
+                            <span class="dropdown-key-hint text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold shrink-0">Tab / Enter</span>
+                        </div>`;
+                }).join('');
+
+                html += `<div class="dropdown-section-header px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/80 border-y border-slate-100 dark:border-slate-700/80" data-section="devices">📱 Tên thiết bị đề xuất</div>`;
+                html += configDevices.map(d => `
+                    <div class="dropdown-item px-3 py-2 text-[12px] hover:bg-indigo-50 dark:hover:bg-slate-700/80 cursor-pointer flex items-center justify-between gap-2 text-slate-700 dark:text-slate-200 transition-colors"
+                         data-section="devices" data-mode="device"
+                         data-role=""
+                         data-device="${escapeHtml(d)}"
+                         data-value="${escapeHtml(d)}"
+                         data-search="${escapeHtml(d)}"
+                         onmousedown="event.preventDefault()"
+                         onclick="selectDropdownItem(this)">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i class="${getDeviceIconClass(d)} text-[11px] shrink-0"></i>
+                            <span class="truncate">${escapeHtml(d)}</span>
+                        </div>
+                        <span class="dropdown-key-hint text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold shrink-0">Tab / Enter</span>
+                    </div>`).join('');
+            } else {
+                // Mode 'device'
+                const row = inputElem.closest('.device-row');
+                const currentRole = row ? cleanDeviceToken(row.querySelector('.role-input')?.value || '') : '';
+                const preferredDevs = currentRole ? getStaffSuggestionsForRole(currentRole) : [];
+                const preferredSet = new Set(preferredDevs.map(d => d.toLowerCase()));
+
+                if (preferredDevs.length > 0) {
+                    html += `<div class="dropdown-section-header px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50/70 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-800/40" data-section="preferred">⚡ Máy thường dùng của ${escapeHtml(getCanonicalStaffName(currentRole))}</div>`;
+                    html += preferredDevs.map(d => `
+                        <div class="dropdown-item px-3 py-2 text-[13px] hover:bg-indigo-50 dark:hover:bg-slate-700/80 cursor-pointer flex items-center justify-between gap-2 text-slate-800 dark:text-slate-100 font-semibold transition-colors"
+                             data-section="preferred" data-mode="device" data-preferred="1"
+                             data-role="${escapeHtml(getCanonicalStaffName(currentRole))}"
+                             data-device="${escapeHtml(d)}"
+                             data-value="${escapeHtml(d)}"
+                             data-search="${escapeHtml(d)}"
+                             onmousedown="event.preventDefault()"
+                             onclick="selectDropdownItem(this)">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="${getDeviceIconClass(d)} text-xs shrink-0"></i>
+                                <span class="truncate">${escapeHtml(d)}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 font-bold">Gợi ý</span>
+                                <span class="dropdown-key-hint text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold">Tab / Enter</span>
+                            </div>
+                        </div>`).join('');
+                }
+
+                const otherDevs = configDevices.filter(d => !preferredSet.has(d.toLowerCase()));
+                html += `<div class="dropdown-section-header px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700/80" data-section="devices">📱 Danh sách thiết bị đề xuất</div>`;
+                html += otherDevs.map(d => `
+                    <div class="dropdown-item px-3 py-2 text-[13px] hover:bg-indigo-50 dark:hover:bg-slate-700/80 cursor-pointer flex items-center justify-between gap-2 text-slate-700 dark:text-slate-300 transition-colors"
+                         data-section="devices" data-mode="device"
+                         data-role=""
+                         data-device="${escapeHtml(d)}"
+                         data-value="${escapeHtml(d)}"
+                         data-search="${escapeHtml(d)}"
+                         onmousedown="event.preventDefault()"
+                         onclick="selectDropdownItem(this)">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i class="${getDeviceIconClass(d)} text-xs shrink-0"></i>
+                            <span class="truncate">${escapeHtml(d)}</span>
+                        </div>
+                        <span class="dropdown-key-hint text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold shrink-0">Tab / Enter</span>
+                    </div>`).join('');
+
+                if (!currentRole && quickDevicePairs.length > 0) {
+                    html += `<div class="dropdown-section-header px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 bg-slate-50 dark:bg-slate-800/80 border-y border-slate-100 dark:border-slate-700/80" data-section="pairs">👤 Hoặc tự điền cả Người giữ & Máy</div>`;
+                    html += quickDevicePairs.map(p => {
+                        const pairLabel = `${p.role}: ${p.device}`;
+                        return `
+                            <div class="dropdown-item px-3 py-2 text-[12px] hover:bg-indigo-50 dark:hover:bg-slate-700/80 cursor-pointer flex items-center justify-between gap-2 text-slate-700 dark:text-slate-300 transition-colors"
+                                 data-section="pairs" data-mode="pair"
+                                 data-role="${escapeHtml(p.role)}"
+                                 data-device="${escapeHtml(p.device)}"
+                                 data-value="${escapeHtml(pairLabel)}"
+                                 data-search="${escapeHtml(pairLabel)}"
+                                 onmousedown="event.preventDefault()"
+                                 onclick="selectDropdownItem(this)">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <i class="${getDeviceIconClass(p.device)} text-[11px] shrink-0"></i>
+                                    <span class="truncate"><b class="text-indigo-600 dark:text-indigo-400">${escapeHtml(p.role)}:</b> ${escapeHtml(p.device)}</span>
+                                </div>
+                                <span class="dropdown-key-hint text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold shrink-0">Tab / Enter</span>
+                            </div>`;
+                    }).join('');
+                }
+            }
+
+            drop.innerHTML = html;
+            positionGlobalDropdown(inputElem, drop, activeDropdownMode);
             drop.classList.remove('hidden');
             filterCustomDropdown(inputElem);
         }
 
+        function getDropdownItemFillValue(itemElem, inputElem) {
+            if (!itemElem) return '';
+            const mode = itemElem.dataset.mode;
+            const role = itemElem.dataset.role || '';
+            const dev = itemElem.dataset.device || '';
+            const val = itemElem.dataset.value || '';
+            if (activeDropdownMode === 'inline' && mode === 'device' && inputElem && inputElem.value.includes(':')) {
+                const colonIdx = inputElem.value.indexOf(':');
+                const rolePrefix = inputElem.value.slice(0, colonIdx).trim();
+                if (rolePrefix) return `${rolePrefix}: ${dev || val}`;
+            }
+            if (activeDropdownMode === 'inline' && mode === 'pair') {
+                return `${role}: ${dev}`;
+            }
+            return val || dev;
+        }
+
         function filterCustomDropdown(inputElem) {
-            const drop = document.getElementById('globalDeviceDropdown');
-            if (!drop || drop.classList.contains('hidden')) return;
-            const val = inputElem.value.toLowerCase().trim();
-            const items = drop.querySelectorAll('.dropdown-item');
-            let hasVisible = false;
+            let drop = document.getElementById('globalDeviceDropdown');
+            if (!drop || drop.classList.contains('hidden')) {
+                // Nếu người dùng gõ khi dropdown vừa đóng (ví dụ sau khi Escape), mở lại gợi ý khi gõ
+                if (inputElem && document.activeElement === inputElem && inputElem.value.trim().length > 0) {
+                    const inferredMode = inputElem.classList.contains('role-input')
+                        ? 'role'
+                        : (inputElem.id && inputElem.id.startsWith('inline-edit-') ? 'inline' : 'device');
+                    showCustomDropdown(inputElem, inferredMode);
+                }
+                return;
+            }
+
+            const rawVal = inputElem.value.trim();
+            const normQuery = normalizeDeviceSearch(rawVal);
+            let inlineDevPart = '';
+            if (activeDropdownMode === 'inline' && rawVal.includes(':')) {
+                inlineDevPart = rawVal.slice(rawVal.indexOf(':') + 1).trim();
+            }
+
+            const items = Array.from(drop.querySelectorAll('.dropdown-item'));
+            const visibleItems = [];
+            const visibleSections = new Set();
+
             delete drop.dataset.activeIndex;
+            delete drop.dataset.navigated;
+
+            let bestIdx = -1;
+            let bestScore = 999;
+
             items.forEach(item => {
                 item.classList.remove('dropdown-item-active');
-                if (item.innerText.toLowerCase().includes(val)) {
-                    item.style.display = 'block';
-                    hasVisible = true;
+                const searchSource = item.dataset.search || item.innerText;
+                const itemMode = item.dataset.mode;
+                let matched = matchesDeviceQuery(searchSource, rawVal);
+
+                if (!matched && activeDropdownMode === 'inline' && itemMode === 'device' && rawVal.includes(':')) {
+                    matched = matchesDeviceQuery(item.dataset.device || searchSource, inlineDevPart);
+                }
+
+                if (matched) {
+                    item.style.display = 'flex';
+                    const idx = visibleItems.length;
+                    visibleItems.push(item);
+                    if (item.dataset.section) visibleSections.add(item.dataset.section);
+
+                    if (normQuery) {
+                        const targetText = activeDropdownMode === 'inline'
+                            ? getDropdownItemFillValue(item, inputElem)
+                            : (item.dataset.value || item.dataset.device || '');
+                        const normTarget = normalizeDeviceSearch(targetText);
+                        let score = 4;
+                        if (normTarget === normQuery) score = 1;
+                        else if (normTarget.startsWith(normQuery)) score = 2;
+                        else if (item.dataset.preferred === '1') score = 3;
+                        if (score < bestScore) {
+                            bestScore = score;
+                            bestIdx = idx;
+                        }
+                    }
                 } else {
                     item.style.display = 'none';
                 }
             });
-            if (hasVisible) {
+
+            drop.querySelectorAll('.dropdown-section-header').forEach(hdr => {
+                const sec = hdr.dataset.section;
+                hdr.style.display = visibleSections.has(sec) ? 'block' : 'none';
+            });
+
+            if (visibleItems.length > 0) {
                 drop.classList.remove('hidden');
-                const rect = inputElem.getBoundingClientRect();
-                drop.style.top = (rect.bottom + 4) + 'px';
-                drop.style.left = rect.left + 'px';
+                positionGlobalDropdown(inputElem, drop, activeDropdownMode);
+                if (normQuery && bestIdx >= 0) {
+                    updateDropdownActive(drop, visibleItems, bestIdx);
+                }
             } else {
                 drop.classList.add('hidden');
             }
         }
 
-        function handleDropdownKey(e) {
+        function handleDropdownKey(e, inputElem) {
             const drop = document.getElementById('globalDeviceDropdown');
             if (!drop || drop.classList.contains('hidden')) return;
             const items = Array.from(drop.querySelectorAll('.dropdown-item')).filter(item => item.style.display !== 'none');
             if (items.length === 0) return;
-            let currentIndex = drop.dataset.activeIndex ? parseInt(drop.dataset.activeIndex) : -1;
+            let currentIndex = drop.dataset.activeIndex !== undefined ? parseInt(drop.dataset.activeIndex, 10) : -1;
+
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 currentIndex = currentIndex + 1 >= items.length ? 0 : currentIndex + 1;
+                drop.dataset.navigated = 'true';
                 updateDropdownActive(drop, items, currentIndex);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 currentIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+                drop.dataset.navigated = 'true';
                 updateDropdownActive(drop, items, currentIndex);
+            } else if (e.key === 'Tab' && !e.shiftKey) {
+                const rawVal = (inputElem ? inputElem.value : '').trim();
+                const navigated = drop.dataset.navigated === 'true';
+                if (currentIndex >= 0 && items[currentIndex] && (navigated || rawVal.length > 0)) {
+                    const targetVal = getDropdownItemFillValue(items[currentIndex], inputElem);
+                    if (targetVal && targetVal.toLowerCase() !== rawVal.toLowerCase()) {
+                        e.preventDefault();
+                        selectDropdownItem(items[currentIndex]);
+                        return;
+                    }
+                }
+                hideGlobalDropdown();
             } else if (e.key === 'Enter') {
+                if (currentIndex >= 0 && items[currentIndex]) {
+                    e.preventDefault();
+                    selectDropdownItem(items[currentIndex]);
+                }
+            }
+        }
+
+        function handleInlineDropdownKey(e, rowIndex, tbIndex, inputElem) {
+            const drop = document.getElementById('globalDeviceDropdown');
+            const isOpen = drop && !drop.classList.contains('hidden');
+            const items = isOpen ? Array.from(drop.querySelectorAll('.dropdown-item')).filter(item => item.style.display !== 'none') : [];
+            const currentIndex = (isOpen && drop.dataset.activeIndex !== undefined) ? parseInt(drop.dataset.activeIndex, 10) : -1;
+
+            if (isOpen && items.length > 0 && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Tab')) {
+                handleDropdownKey(e, inputElem);
+                return;
+            }
+
+            if (e.key === 'Enter') {
                 e.preventDefault();
-                if (currentIndex >= 0 && items[currentIndex]) items[currentIndex].click();
+                const rawVal = (inputElem ? inputElem.value : '').trim();
+                const navigated = isOpen && drop.dataset.navigated === 'true';
+                if (isOpen && currentIndex >= 0 && items[currentIndex]) {
+                    const targetVal = getDropdownItemFillValue(items[currentIndex], inputElem);
+                    if (navigated || (rawVal.length > 0 && targetVal.toLowerCase() !== rawVal.toLowerCase())) {
+                        selectDropdownItem(items[currentIndex]);
+                        return;
+                    }
+                }
+                hideGlobalDropdown();
+                saveInlineEdit(rowIndex, tbIndex);
             }
         }
 
@@ -5084,6 +5746,42 @@
             }
         }
 
+        function selectDropdownItem(itemElem) {
+            if (!itemElem) return;
+            const mode = itemElem.dataset.mode || 'device';
+            const role = itemElem.dataset.role || '';
+            const device = itemElem.dataset.device || '';
+
+            if (activeDeviceInput) {
+                if (activeDropdownMode === 'role') {
+                    activeDeviceInput.value = role;
+                    const row = activeDeviceInput.closest('.device-row');
+                    const devInput = row ? row.querySelector('.device-input') : null;
+                    if (devInput && device && (!devInput.value.trim() || devInput.dataset.autofilled === 'true')) {
+                        devInput.value = device;
+                        devInput.dataset.autofilled = 'true';
+                        flashInputHighlight(devInput);
+                    }
+                    activeDeviceInput.focus();
+                } else if (activeDropdownMode === 'inline') {
+                    activeDeviceInput.value = getDropdownItemFillValue(itemElem, activeDeviceInput);
+                    activeDeviceInput.focus();
+                    activeDeviceInput.setSelectionRange(activeDeviceInput.value.length, activeDeviceInput.value.length);
+                } else {
+                    const row = activeDeviceInput.closest('.device-row');
+                    const roleInput = row ? row.querySelector('.role-input') : null;
+                    if (mode === 'pair' && role && roleInput && (!roleInput.value.trim() || roleInput.dataset.autofilled === 'true')) {
+                        roleInput.value = role;
+                        flashInputHighlight(roleInput);
+                    }
+                    activeDeviceInput.value = device || itemElem.dataset.value || '';
+                    delete activeDeviceInput.dataset.autofilled;
+                    activeDeviceInput.focus();
+                }
+            }
+            hideGlobalDropdown();
+        }
+
         function selectDeviceOptionByIndex(dIdx) {
             const val = configDevices[dIdx] || '';
             selectDeviceOption(val);
@@ -5092,10 +5790,46 @@
         function selectDeviceOption(val) {
             if (activeDeviceInput) {
                 activeDeviceInput.value = val;
+                delete activeDeviceInput.dataset.autofilled;
                 activeDeviceInput.focus();
             }
-            const drop = document.getElementById('globalDeviceDropdown');
-            if (drop) drop.classList.add('hidden');
+            hideGlobalDropdown();
+        }
+
+        function flashInputHighlight(elem) {
+            if (!elem) return;
+            elem.classList.add('ring-2', 'ring-indigo-400/70', 'border-indigo-500');
+            setTimeout(() => {
+                elem.classList.remove('ring-2', 'ring-indigo-400/70', 'border-indigo-500');
+            }, 750);
+        }
+
+        function handleRoleInput(roleInput) {
+            filterCustomDropdown(roleInput);
+            const row = roleInput.closest('.device-row');
+            const devInput = row ? row.querySelector('.device-input') : null;
+            if (!devInput) return;
+
+            const rawRole = roleInput.value.trim();
+            if (!rawRole) {
+                if (devInput.dataset.autofilled === 'true') {
+                    devInput.value = '';
+                    delete devInput.dataset.autofilled;
+                }
+                return;
+            }
+
+            const matchedDevs = getStaffSuggestionsForRole(rawRole);
+            if (matchedDevs.length > 0 && (!devInput.value.trim() || devInput.dataset.autofilled === 'true')) {
+                devInput.value = matchedDevs[0];
+                devInput.dataset.autofilled = 'true';
+                flashInputHighlight(devInput);
+            }
+        }
+
+        function handleDeviceInput(devInput) {
+            if (devInput) delete devInput.dataset.autofilled;
+            filterCustomDropdown(devInput);
         }
 
         // Mục 23: Autocomplete Tên nhân viên & Mục 26: Switch Toggle Temporary SIÊU GỌN (Giữ chỗ tối đa cho tên thiết bị)
@@ -5107,16 +5841,18 @@
             }
             let html = `
             <div id="${rowId}" class="device-row flex flex-col sm:flex-row flex-wrap sm:flex-nowrap gap-2 items-stretch sm:items-center bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs" data-isnew="${isNew}" data-original="${escapeHtml(originalFullText)}">
-                <!-- Role / Staff Input (Gọn 95px để nhường chỗ tối đa cho Tên máy) -->
+                <!-- Role / Staff Input (Gọn để nhường chỗ tối đa cho Tên máy + Tự điền thiết bị theo người giữ) -->
                 <div class="flex items-center gap-1.5 w-full sm:w-auto shrink-0">
-                    <input type="text" list="staffNamesDataList" class="role-input w-[calc(35%-0.25rem)] sm:w-24 px-2.5 py-2 text-[12px] bg-white dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-500 font-semibold text-slate-800 dark:text-slate-100" value="${escapeHtml(role)}" placeholder="Người giữ...">
+                    <input type="text" autocomplete="off" class="role-input w-full sm:w-28 px-2.5 py-2 text-[12px] bg-white dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-500 font-semibold text-slate-800 dark:text-slate-100"
+                           value="${escapeHtml(role)}" placeholder="Người giữ..."
+                           onfocus="showCustomDropdown(this, 'role')" oninput="handleRoleInput(this)" onkeydown="handleDropdownKey(event, this)">
                     <span class="font-bold text-slate-400 hidden sm:block">:</span>
                 </div>
                 <!-- Device Input: Chiếm trọn không gian (flex-1) hiển thị đầy đủ tên máy dài như iPhone 17 Pro Max -->
                 <div class="relative flex-1 min-w-0">
-                    <input type="text" class="device-input w-full pl-3 pr-8 py-2 text-[13px] font-medium bg-white dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-500 text-slate-800 dark:text-slate-100"
-                           value="${escapeHtml(device)}" placeholder="Tên thiết bị (iPhone 15 Pro Max, Samsung S24...)"
-                           onfocus="showCustomDropdown(this)" oninput="filterCustomDropdown(this)" onkeydown="handleDropdownKey(event, this)">
+                    <input type="text" autocomplete="off" class="device-input w-full pl-3 pr-8 py-2 text-[13px] font-medium bg-white dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-xl outline-none focus:border-indigo-500 text-slate-800 dark:text-slate-100"
+                           value="${escapeHtml(device)}" placeholder="Tên thiết bị (gõ để xem đề xuất, Tab/Enter tự điền...)"
+                           onfocus="showCustomDropdown(this, 'device')" oninput="handleDeviceInput(this)" onkeydown="handleDropdownKey(event, this)">
                     <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
                         <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
                     </div>
@@ -5176,8 +5912,8 @@
             const accLabel = item ? (item.tenIdol || item.email) : '';
 
             for (let row of document.getElementById('deviceListContainer').children) {
-                let role = stripTempPrefix(row.querySelector('.role-input').value);
-                let device = stripTempPrefix(row.querySelector('.device-input').value);
+                let role = cleanDeviceToken(row.querySelector('.role-input').value);
+                let device = cleanDeviceToken(row.querySelector('.device-input').value);
                 const isTempChecked = row.querySelector('.temp-checkbox') && row.querySelector('.temp-checkbox').checked;
                 let baseText = (role && device) ? `${role}: ${device}` : (device || role);
                 if (!baseText) continue;
@@ -5227,6 +5963,7 @@
                     });
                     allData[targetIndex].thietBiIdol = finalString;
                     allData[targetIndex].thietBiTroLi = "";
+                    learnCustomDeviceEntries(resultArr);
 
                     alarmsToRemove.forEach(oldDev => {
                         removeTempAlarmForDevice(accLabel, oldDev, currentSheetName);

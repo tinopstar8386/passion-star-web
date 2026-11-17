@@ -554,20 +554,81 @@ function updateDeviceToMasterSheet(targetEmail, targetTiktok, targetName, newDev
 }
 
 /**
- * Lấy danh sách thiết bị mẫu từ sheet Config
+ * Lấy danh sách thiết bị mẫu từ sheet Config, kết hợp trích xuất tự động từ sheet Tkhoan và danh sách mặc định
  */
 function getConfigDevices() {
   const ss = getMasterSpreadsheet();
-  const sheet = ss.getSheetByName("Config");
-  if (!sheet) return [];
-
-  const values = sheet.getDataRange().getValues();
   const devices = [];
-  for (let i = 0; i < values.length; i++) {
-    const val = (values[i][0] || "").toString().trim();
-    if (val && !devices.includes(val)) {
-      devices.push(val);
+  const seen = {};
+
+  function pushDevice(val) {
+    const clean = (val || "")
+      .toString()
+      .replace(/\[TẠM\]|\[TEMP\]|\(tạm\)/gi, "")
+      .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!clean || /^\d+$/.test(clean)) return;
+    const key = clean.toLowerCase();
+    if (!seen[key]) {
+      seen[key] = true;
+      devices.push(clean);
     }
+  }
+
+  // 1. Đọc từ sheet Config (nếu có)
+  const configSheet = ss.getSheetByName("Config");
+  if (configSheet) {
+    const values = configSheet.getDataRange().getValues();
+    for (let i = 0; i < values.length; i++) {
+      pushDevice(values[i][0]);
+    }
+  }
+
+  // 2. Trích xuất thiết bị thực tế đang dùng từ sheet Tkhoan (Cột G, H, R, AB)
+  const tkhoanSheet = ss.getSheetByName("Tkhoan");
+  if (tkhoanSheet) {
+    const tValues = tkhoanSheet.getDataRange().getValues();
+    const devCols = [6, 7, 17, 27];
+    for (let i = 0; i < tValues.length; i++) {
+      const row = tValues[i];
+      for (let c = 0; c < devCols.length; c++) {
+        const colIdx = devCols[c];
+        if (row.length <= colIdx) continue;
+        const cell = (row[colIdx] || "").toString().trim();
+        if (!cell || cell.toLowerCase().includes("thiết bị")) continue;
+        const parts = cell.split(",");
+        for (let p = 0; p < parts.length; p++) {
+          let item = parts[p].trim();
+          if (!item) continue;
+          item = item.replace(/\[TẠM\]|\[TEMP\]|\(tạm\)/gi, "").trim();
+          if (item.indexOf(":") !== -1) {
+            item = item.slice(item.indexOf(":") + 1).trim();
+          } else if (item.indexOf("-") !== -1) {
+            item = item.slice(item.indexOf("-") + 1).trim();
+          }
+          pushDevice(item);
+        }
+      }
+    }
+  }
+
+  // 3. Danh sách thiết bị mẫu mặc định dự phòng
+  const defaults = [
+    "iPhone 17 Pro Max", "iPhone 17 Pro", "iPhone 16 Pro Max", "iPhone 16",
+    "iPhone 15 Pro Max", "iPhone 15 Plus", "iPhone 15",
+    "iPhone 14 Pro Max", "iPhone 14 Plus",
+    "iPhone 13 Pro Max", "iPhone 13 Pro", "iPhone 13",
+    "iPhone 12 Pro Max", "iPhone 12 Pro", "iPhone 12",
+    "iPhone 11 Pro Max", "iPhone 11 Pro", "iPhone 11",
+    "iPhone XS Max", "iPhone XS",
+    "Galaxy S24 Ultra", "Galaxy S23 Ultra", "Galaxy S22 Ultra",
+    "Samsung Galaxy Note 10+", "Samsung Galaxy A05s",
+    "Xiaomi 11T", "Redmi Note 15 Pro 5G", "Redmi Note 14", "Redmi Note 11 Pro", "Redmi Note (Các dòng)",
+    "Oppo Find X6 Pro", "Oppo A6 Pro", "Oppo CPH2219", "Vivo V2111", "Chrome", "PC / Máy tính MC", "MacBook"
+  ];
+  for (let d = 0; d < defaults.length; d++) {
+    pushDevice(defaults[d]);
   }
   return devices;
 }
