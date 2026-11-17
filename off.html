@@ -4759,7 +4759,7 @@
           <span style="font-size:0.75rem; color:#64748b;">(Tự động hoặc chọn mẫu)</span>
         </div>
         <div style="display: flex; gap: 8px; margin-top: 5px;">
-          <input type="text" id="newEmpBadge" placeholder="Ví dụ: VNART, BEE, ORION, MC..." style="flex:1; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-weight:700; text-transform:uppercase;">
+          <input type="text" id="newEmpBadge" placeholder="Ví dụ: VNART, BEE, ORION, MC..." style="flex:1; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-weight:700; text-transform:uppercase;" oninput="this.removeAttribute('data-auto')">
           <select id="newEmpBadgeSelect" style="padding:10px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; font-size:0.8rem; font-weight:600;" onchange="onSelectBadgePreset('new')">
             <option value="">-- Mẫu có sẵn --</option>
           </select>
@@ -4850,7 +4850,7 @@
           <span style="font-size:0.75rem; color:#64748b;">(Tự động hoặc chọn mẫu)</span>
         </div>
         <div style="display: flex; gap: 8px; margin-top: 5px;">
-          <input type="text" id="editEmpBadge" placeholder="Ví dụ: VNART, BEE, ORION, MC..." style="flex:1; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-weight:700; text-transform:uppercase;">
+          <input type="text" id="editEmpBadge" placeholder="Ví dụ: VNART, BEE, ORION, MC..." style="flex:1; padding:10px; border-radius:6px; border:1px solid #cbd5e1; font-weight:700; text-transform:uppercase;" oninput="this.removeAttribute('data-auto')">
           <select id="editEmpBadgeSelect" style="padding:10px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; font-size:0.8rem; font-weight:600;" onchange="onSelectBadgePreset('edit')">
             <option value="">-- Mẫu có sẵn --</option>
           </select>
@@ -5763,16 +5763,25 @@
                 const { monthStr, currentListSnapshot } = payload;
                 const batch = fs.writeBatch(db);
                 let badgeChanges = {};
+                let syncedBadges = {};
 
                 for(let d of queue) {
                     if(d.type === 'BADGE') {
-                        badgeChanges[d.name] = d.badgeName;
-                        batch.set(fs.doc(db, "off_employees", safeID(d.name)), { customBadge: d.badgeName }, { merge: true });
+                        const cleanBadge = String(d.badgeName || '').trim().toUpperCase();
+                        badgeChanges[d.name] = cleanBadge;
+                        batch.set(fs.doc(db, "off_employees", safeID(d.name)), { customBadge: cleanBadge }, { merge: true });
+                        if (cleanBadge && badgesData && badgesData[cleanBadge]) {
+                            syncedBadges[cleanBadge] = badgesData[cleanBadge];
+                        }
                     } else if(d.action === 'XÓA') {
                         deleteLeaveBatch(batch, d.name, d.date);
                     } else if(d.action === 'THÊM') {
                         batch.set(fs.doc(db, "off_leaves", safeID(d.name) + "_" + d.date), { name: d.name, role: d.role, date: d.date, status: "Approved", offType: d.offType || 'FULL' });
                     }
+                }
+
+                if (Object.keys(syncedBadges).length > 0) {
+                    batch.set(fs.doc(db, "system_config", "general"), { badges: syncedBadges }, { merge: true });
                 }
 
                 if (Object.keys(badgeChanges).length > 0 && monthStr) {
@@ -5931,14 +5940,15 @@
             }
 
             if (action === 'addEmployee') {
-                const { name, group, role, monthStr, scope = 'CURRENT', currentListSnapshot = [] } = payload;
+                const { name, group, role, customBadge = '', monthStr, scope = 'CURRENT', currentListSnapshot = [] } = payload;
                 const safeName = safeID(name);
-                const newEmp = { name, group, role, customBadge: '' };
+                const cleanBadge = String(customBadge || '').trim().toUpperCase();
+                const newEmp = { name, group, role, customBadge: cleanBadge };
 
                 let targetList = currentListSnapshot.map(e => ({ ...e }));
                 const existIdx = targetList.findIndex(e => String(e.name).trim().toUpperCase() === String(name).trim().toUpperCase());
                 if (existIdx > -1) {
-                    targetList[existIdx] = { ...targetList[existIdx], group, role };
+                    targetList[existIdx] = { ...targetList[existIdx], group, role, customBadge: cleanBadge || targetList[existIdx].customBadge || '' };
                 } else {
                     targetList.push(newEmp);
                 }
@@ -5959,7 +5969,7 @@
                         if (d.id > monthStr) {
                             let list = (d.data().employees || []).map(e => ({ ...e }));
                             const idx = list.findIndex(e => String(e.name).trim().toUpperCase() === String(name).trim().toUpperCase());
-                            if (idx > -1) list[idx] = { ...list[idx], group, role };
+                            if (idx > -1) list[idx] = { ...list[idx], group, role, customBadge: cleanBadge || list[idx].customBadge || '' };
                             else list.push(newEmp);
                             batch.set(d.ref, { employees: list, updatedAt: new Date().toISOString() }, { merge: true });
                         }
@@ -5967,7 +5977,7 @@
                     await batch.commit();
                 } else if (scope === 'ALL') {
                     const batch = fs.writeBatch(db);
-                    batch.set(fs.doc(db, "off_employees", safeName), { name, group, role });
+                    batch.set(fs.doc(db, "off_employees", safeName), { name, group, role, customBadge: cleanBadge });
                     batch.set(fs.doc(db, "off_month_employees", monthStr), { 
                         employees: targetList, 
                         updatedAt: new Date().toISOString() 
@@ -5976,7 +5986,7 @@
                     monthSnap.forEach(d => {
                         let list = (d.data().employees || []).map(e => ({ ...e }));
                         const idx = list.findIndex(e => String(e.name).trim().toUpperCase() === String(name).trim().toUpperCase());
-                        if (idx > -1) list[idx] = { ...list[idx], group, role };
+                        if (idx > -1) list[idx] = { ...list[idx], group, role, customBadge: cleanBadge || list[idx].customBadge || '' };
                         else list.push(newEmp);
                         batch.set(d.ref, { employees: list, updatedAt: new Date().toISOString() }, { merge: true });
                     });
@@ -5989,9 +5999,20 @@
                         name, 
                         group, 
                         role, 
-                        customBadge: '' 
+                        customBadge: cleanBadge 
                     }, { merge: true });
                 } catch(e) { console.warn("off_employees master add sync:", e); }
+
+                if (cleanBadge && (!badgesData || !badgesData[cleanBadge])) {
+                    const defaultColor = (typeof DEFAULT_BADGE_COLORS !== 'undefined' && DEFAULT_BADGE_COLORS[cleanBadge])
+                        || (typeof BADGE_PALETTES !== 'undefined' && BADGE_PALETTES[0])
+                        || 'linear-gradient(135deg, #6366f1, #4f46e5)';
+                    if (!badgesData) badgesData = {};
+                    badgesData[cleanBadge] = defaultColor;
+                    try {
+                        await fs.setDoc(fs.doc(db, "system_config", "general"), { badges: { [cleanBadge]: defaultColor } }, { merge: true });
+                    } catch(e) { console.warn("system_config badges sync:", e); }
+                }
 
                 return "SUCCESS";
             }
@@ -6379,6 +6400,30 @@
       "linear-gradient(135deg, #6366f1, #4f46e5)"  // Indigo Violet
     ];
 
+    const DEFAULT_BADGE_COLORS = {
+      'TRANSLATOR': 'linear-gradient(135deg, #06b6d4, #0891b2)',
+      'TRANS': 'linear-gradient(135deg, #06b6d4, #0891b2)',
+      'OPERATION': 'linear-gradient(135deg, #f59e0b, #d97706)',
+      'MANAGER': 'linear-gradient(135deg, #6366f1, #4f46e5)',
+      'HR': 'linear-gradient(135deg, #ec4899, #be185d)',
+      'TECH': 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+      'ACCOUNTANT': 'linear-gradient(135deg, #10b981, #059669)',
+      'TEACHER': 'linear-gradient(135deg, #f59e0b, #b45309)',
+      'GIMBAL/MEDIA': 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+      'MEDIA': 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+      'EDITOR': 'linear-gradient(135deg, #a855f7, #7e22ce)',
+      'MC': 'linear-gradient(135deg, #f43f5e, #e11d48)',
+      'VNART': 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+      'ELRIS': 'linear-gradient(135deg, #f43f5e, #fb7185)',
+      'BEE': 'linear-gradient(135deg, #f43f5e, #fb7185)',
+      'MIRACLE': 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+      'ORION': 'linear-gradient(135deg, #0284c7, #1d4ed8)',
+      'ANGELIK': 'linear-gradient(135deg, #ec4899, #db2777)',
+      'FASHION': 'linear-gradient(135deg, #475569, #1e293b)',
+      'ROYEN:ONE': 'linear-gradient(135deg, #2563eb, #3b82f6)'
+    };
+    badgesData = { ...DEFAULT_BADGE_COLORS };
+
     function openBadgeLibraryModal() {
       const paletteWrap = document.getElementById('badgeColorPresets');
       if (paletteWrap) {
@@ -6608,6 +6653,15 @@
         custom.style.display = (sel.value === 'CUSTOM') ? 'block' : 'none';
         if (sel.value === 'CUSTOM') custom.focus();
       }
+      if (sel && sel.value !== 'CUSTOM') {
+        const selectedOpt = sel.options[sel.selectedIndex];
+        const badgeAttr = selectedOpt ? (selectedOpt.getAttribute('data-badge') || '').trim().toUpperCase() : '';
+        const badgeInput = document.getElementById(type === 'new' ? 'newEmpBadge' : 'editEmpBadge');
+        if (badgeInput && (!badgeInput.value || badgeInput.getAttribute('data-auto') === 'true')) {
+          badgeInput.value = badgeAttr;
+          badgeInput.setAttribute('data-auto', 'true');
+        }
+      }
     }
     window.onOtherGroupChanged = onOtherGroupChanged;
 
@@ -6647,7 +6701,9 @@
     window.onSelectBadgePreset = onSelectBadgePreset;
 
     function populateBadgePresetDropdowns() {
-      const list = ['VNART', 'ELRIS', 'BEE', 'ORION', 'ROYEN:ONE', 'FASHION', 'ANGELIK', 'MC', 'OPERATION', 'TEACHER', 'GIMBAL/MEDIA', 'MANAGER', 'HR', 'ACCOUNTANT'];
+      const baseList = ['VNART', 'ELRIS', 'BEE', 'ORION', 'ROYEN:ONE', 'FASHION', 'ANGELIK', 'MC', 'OPERATION', 'TRANSLATOR', 'MIRACLE', 'TEACHER', 'GIMBAL/MEDIA', 'MEDIA', 'EDITOR', 'TECH', 'MANAGER', 'HR', 'ACCOUNTANT'];
+      const dynamicKeys = Object.keys(badgesData || {}).map(k => String(k).trim().toUpperCase()).filter(Boolean);
+      const list = [...new Set([...baseList, ...dynamicKeys])];
       ['newEmpBadgeSelect', 'editEmpBadgeSelect'].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -6675,7 +6731,14 @@
         placeholder: 'Ví dụ: VIP, TỔ TRƯỞNG, VNART, BEE...'
       });
       if (b !== null && b.trim()) {
-        submitContextBadge(b.trim().toUpperCase());
+        const cleanB = b.trim().toUpperCase();
+        if (!badgesData) badgesData = {};
+        if (!badgesData[cleanB]) {
+          badgesData[cleanB] = DEFAULT_BADGE_COLORS[cleanB] || BADGE_PALETTES[0];
+        }
+        const empInput = document.getElementById('contextMenuEmpName');
+        if (empInput) empInput.value = empName;
+        submitContextBadge(cleanB);
       }
     }
     window.promptCustomBadge = promptCustomBadge;
@@ -7215,7 +7278,11 @@
     }
 
     function generateBadgeHTML(emp) {
-      if (emp.customBadge) { const bBg = badgesData[emp.customBadge] || (emp.customBadge === 'ELRIS' ? badgesData['BEE'] : ''); if (bBg) return `<span class="vip-badge" style="background: ${bBg}; border: 1px solid rgba(255,255,255,0.4);">${emp.customBadge}</span>`; }
+      const rawBadge = emp && emp.customBadge ? String(emp.customBadge).trim().toUpperCase() : '';
+      if (rawBadge) {
+        const bBg = badgesData[rawBadge] || (rawBadge === 'ELRIS' ? badgesData['BEE'] : '') || DEFAULT_BADGE_COLORS[rawBadge] || 'linear-gradient(135deg, #6366f1, #8b5cf6)';
+        return `<span class="vip-badge" style="background: ${bBg}; border: 1px solid rgba(255,255,255,0.4);">${rawBadge}</span>`;
+      }
       return "";
     }
 
@@ -7588,8 +7655,9 @@
           baseEmployeesData = data.employees || [];
           monthEmployeesData = data.monthEmployees || {};
           leavesData = data.leaves || []; 
-          badgesData = data.badges || {}; 
-          if (badgesData['BEE'] && !badgesData['ELRIS']) { badgesData['ELRIS'] = badgesData['BEE']; } 
+          badgesData = { ...DEFAULT_BADGE_COLORS, ...(data.badges || {}) };
+          if (badgesData['BEE'] && !(data.badges && data.badges['ELRIS'])) { badgesData['ELRIS'] = badgesData['BEE']; }
+          populateBadgePresetDropdowns(); 
           quotasData = data.quotas || {};
                     trafficGroupsData = data.trafficGroups || ["ORION", "ROYEN:ONE"];
           customGroupsData = data.customGroups || [];
@@ -9780,6 +9848,15 @@ function initMobileCalSwipeGesture() {
       document.getElementById('addEmployeeModal').classList.add('active'); 
       document.getElementById('newEmpName').value = ''; 
       document.getElementById('newEmpRole').value = 'LIVESTEAM'; 
+      const newGroupInput = document.getElementById('newEmpGroupName');
+      if (newGroupInput) newGroupInput.value = '';
+      const newBadgeInput = document.getElementById('newEmpBadge');
+      if (newBadgeInput) {
+        newBadgeInput.value = '';
+        newBadgeInput.setAttribute('data-auto', 'true');
+      }
+      const newBadgeSelect = document.getElementById('newEmpBadgeSelect');
+      if (newBadgeSelect) newBadgeSelect.value = '';
       updateGroupDropdown(); 
       
       const monthLabel = `Tháng ${displayMonth + 1}/${displayYear}`;
@@ -9918,7 +9995,11 @@ function initMobileCalSwipeGesture() {
 
     document.getElementById('editEmpName').value = emp.name;
     const badgeEl = document.getElementById('editEmpBadge');
-    if (badgeEl) badgeEl.value = emp.customBadge || '';
+    if (badgeEl) {
+      badgeEl.value = emp.customBadge || '';
+      if (emp.customBadge) badgeEl.removeAttribute('data-auto');
+      else badgeEl.setAttribute('data-auto', 'true');
+    }
 
     let r = emp.role ? String(emp.role).trim().toUpperCase() : 'LIVESTREAM';
     let g = emp.group ? String(emp.group).trim() : '';
@@ -10027,7 +10108,20 @@ function initMobileCalSwipeGesture() {
       options += '<option value="CUSTOM">➕ Nhóm tùy chỉnh khác...</option>';
       if (otherSelect) {
         otherSelect.innerHTML = options;
-        otherSelect.value = preselectGroup || 'CUSTOM';
+        const customInput = document.getElementById('editOtherGroupCustom');
+        if (preselectGroup) {
+          const targetUp = String(preselectGroup).trim().toUpperCase();
+          const matchedOpt = Array.from(otherSelect.options).find(o => o.value !== 'CUSTOM' && o.value.toUpperCase() === targetUp);
+          if (matchedOpt) {
+            otherSelect.value = matchedOpt.value;
+            if (customInput) customInput.value = '';
+          } else {
+            otherSelect.value = 'CUSTOM';
+            if (customInput) customInput.value = preselectGroup;
+          }
+        } else {
+          if (customInput) customInput.value = '';
+        }
         onOtherGroupChanged('edit');
       }
     }
