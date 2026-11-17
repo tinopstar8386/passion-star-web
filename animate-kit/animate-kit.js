@@ -245,11 +245,13 @@
   };
 
   // =========================================================================
-  // 3. 3D TILT EFFECT (Phỏng theo Animate-UI tilt primitive)
+  // 3. 3D TILT EFFECT (Phỏng theo Animate-UI tilt primitive + Touch Support)
   // =========================================================================
   AnimateKit.tilt = function (target, config) {
     const el = typeof target === 'string' ? document.querySelector(target) : target;
     if (!el) return null;
+    if (el.dataset.animateTiltBound === '1') return el._animateKitTilt || null;
+    el.dataset.animateTiltBound = '1';
 
     const opts = Object.assign(
       {
@@ -262,25 +264,30 @@
     );
 
     el.style.perspective = `${opts.perspective}px`;
+    el.style.transformStyle = 'preserve-3d';
 
-    let glareEl = null;
-    if (opts.glare) {
+    let glareEl = el.querySelector('.animatekit-glare');
+    if (opts.glare && !glareEl) {
       glareEl = document.createElement('div');
+      glareEl.className = 'animatekit-glare';
       glareEl.style.cssText =
         'position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%, rgba(255,255,255,0.18), transparent 70%);opacity:0;border-radius:inherit;transition:opacity 0.2s;';
       el.style.position = el.style.position || 'relative';
       el.appendChild(glareEl);
     }
 
-    function onMouseMove(e) {
+    function applyPointTilt(clientX, clientY, scaleVal) {
       const rect = el.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
+      if (!rect.width || !rect.height) return;
+      const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
 
       const tiltX = (y - 0.5) * -opts.maxTilt * 2;
       const tiltY = (x - 0.5) * opts.maxTilt * 2;
 
-      el.style.transform = `perspective(${opts.perspective}px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) scale3d(${opts.scale}, ${opts.scale}, 1)`;
+      el.dataset.pointerTilt = '1';
+      el.style.transition = 'transform 0.08s ease-out';
+      el.style.transform = `perspective(${opts.perspective}px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg) scale3d(${scaleVal}, ${scaleVal}, 1)`;
 
       if (glareEl) {
         glareEl.style.opacity = '1';
@@ -288,24 +295,58 @@
       }
     }
 
-    function onMouseLeave() {
+    function resetTilt() {
+      delete el.dataset.pointerTilt;
+      el.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)';
       el.style.transform = `perspective(${opts.perspective}px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
       if (glareEl) {
         glareEl.style.opacity = '0';
       }
     }
 
-    el.addEventListener('mousemove', onMouseMove);
-    el.addEventListener('mouseleave', onMouseLeave);
+    let lastTouchTs = 0;
 
-    return {
+    function onMouseMove(e) {
+      if (Date.now() - lastTouchTs < 800) return;
+      applyPointTilt(e.clientX, e.clientY, opts.scale);
+    }
+
+    function onTouchMove(e) {
+      lastTouchTs = Date.now();
+      if (e.touches && e.touches.length === 1) {
+        applyPointTilt(e.touches[0].clientX, e.touches[0].clientY, Math.min(opts.scale, 1.015));
+      }
+    }
+
+    function onTouchEnd() {
+      lastTouchTs = Date.now();
+      resetTilt();
+    }
+
+    el.addEventListener('mousemove', onMouseMove);
+    el.addEventListener('mouseleave', resetTilt);
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    const api = {
+      glareEl,
+      opts,
       destroy: function () {
         el.removeEventListener('mousemove', onMouseMove);
-        el.removeEventListener('mouseleave', onMouseLeave);
+        el.removeEventListener('mouseleave', resetTilt);
+        el.removeEventListener('touchmove', onTouchMove);
+        el.removeEventListener('touchend', onTouchEnd);
+        el.removeEventListener('touchcancel', onTouchEnd);
+        delete el.dataset.animateTiltBound;
+        delete el.dataset.pointerTilt;
         el.style.transform = '';
+        el.style.transition = '';
         if (glareEl) glareEl.remove();
       },
     };
+    el._animateKitTilt = api;
+    return api;
   };
 
   // =========================================================================

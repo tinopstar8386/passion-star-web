@@ -540,7 +540,13 @@
               </div>
 
               <!-- Two Visual Wallet Cards (MB Bank & Tiền Mặt) -->
-              <div class="wallet-cards-grid grid grid-cols-1 gap-3">
+              <div id="gyroPermissionBar" class="hidden flex items-center justify-between gap-2 px-1">
+                <span class="text-[11px] text-slate-400 truncate">Bật cảm biến để 2 thẻ nghiêng theo chiều cầm iPhone</span>
+                <button id="btnEnableGyro" type="button" onclick="enableIosGyroTilt(true)" class="px-2.5 py-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 border border-cyan-400/30 text-[11px] font-bold shrink-0">
+                  ✨ 3D Gyro
+                </button>
+              </div>
+              <div class="wallet-cards-grid grid grid-cols-1 gap-3" style="perspective: 1000px;">
                 <!-- MB Bank Digital Card -->
                 <div id="walletCardMB" data-animate="tilt" data-tilt-max="7" class="mb-bank-card rounded-3xl p-4 relative overflow-hidden">
                   <div class="flex items-start justify-between gap-2">
@@ -741,8 +747,8 @@
                     </div>
                   </div>
                 </div>
-                <button type="button" onclick="openIosInstallModal()" class="w-full py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-[0.98] transition">
-                  <i data-lucide="smartphone" class="w-4 h-4"></i> Xem Hướng Dẫn Cài Đặt Lên iPhone
+                <button id="btnSettingsInstall" type="button" onclick="triggerHomeScreenInstall()" class="w-full py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-[0.98] transition">
+                  <i data-lucide="smartphone" class="w-4 h-4"></i> Cài Đặt Lên Màn Hình Chính iPhone
                 </button>
               </div>
 
@@ -3118,13 +3124,95 @@
         showToast(`Đã thêm danh mục "${name}"`, 'success');
       }
 
-      // iPhone Install Guide Modal
-      function openIosInstallModal() {
-        const warn = document.getElementById('installOriginWarning');
-        if (warn) {
-          warn.classList.toggle('hidden', window.location.protocol !== 'file:');
+      // 1-Tap Auto Add to Home Screen (iOS WebClip .mobileconfig + PWA beforeinstallprompt)
+      let deferredInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+      });
+
+      function buildDynamicMobileConfigBlob() {
+        const currentUrl = window.location.protocol === 'file:'
+          ? 'https://passion-star-webapp.vercel.app/money/'
+          : new URL('./index.html', window.location.href).href.replace(/index\.html$/, '');
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>FullScreen</key><true/>
+      <key>IsRemovable</key><true/>
+      <key>Label</key><string>Tino Money</string>
+      <key>PayloadDescription</key><string>Cài đặt biểu tượng Tino Money ra Màn hình chính iPhone</string>
+      <key>PayloadDisplayName</key><string>Tino Money WebClip</string>
+      <key>PayloadIdentifier</key><string>com.passionstar.tinomoney.webclip</string>
+      <key>PayloadType</key><string>com.apple.webClip.managed</string>
+      <key>PayloadUUID</key><string>A8E5F320-11B4-4F92-9A77-202611170001</string>
+      <key>PayloadVersion</key><integer>1</integer>
+      <key>Precomposed</key><true/>
+      <key>URL</key><string>${currentUrl}</string>
+    </dict>
+  </array>
+  <key>PayloadDisplayName</key><string>Tino Money</string>
+  <key>PayloadIdentifier</key><string>com.passionstar.tinomoney.profile</string>
+  <key>PayloadOrganization</key><string>Passion Star</string>
+  <key>PayloadRemovalDisallowed</key><false/>
+  <key>PayloadType</key><string>Configuration</string>
+  <key>PayloadUUID</key><string>A8E5F320-11B4-4F92-9A77-202611170002</string>
+  <key>PayloadVersion</key><integer>1</integer>
+</dict>
+</plist>`;
+        return new Blob([xml], { type: 'application/x-apple-aspen-config' });
+      }
+
+      async function triggerHomeScreenInstall() {
+        const isStandalone = window.navigator.standalone === true ||
+          (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+        if (isStandalone) {
+          showToast('✅ Tino Money đã nằm trên Màn hình chính của bạn!', 'success');
+          return 'already_installed';
         }
-        openModal('iosInstallModal');
+
+        if (deferredInstallPrompt) {
+          try {
+            await deferredInstallPrompt.prompt();
+            const choice = await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            if (choice && choice.outcome === 'accepted') {
+              showToast('Đang cài đặt Tino Money lên Màn hình chính!', 'success');
+            }
+            return 'prompted';
+          } catch {}
+        }
+
+        if (window.location.protocol === 'file:') {
+          const blob = buildDynamicMobileConfigBlob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'tino-money.mobileconfig';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
+          showToast('Đã tạo hồ sơ cài đặt Tino Money (.mobileconfig)!', 'success');
+          return 'mobileconfig_blob';
+        }
+
+        const link = document.createElement('a');
+        link.href = './tino-money.mobileconfig';
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        showToast('Đang mở cài đặt Tino Money ra Màn hình chính iPhone — bấm "Cho phép"!', 'success');
+        return 'mobileconfig';
+      }
+
+      function openIosInstallModal() {
+        return triggerHomeScreenInstall();
       }
 
       // Settings & Backup Actions
@@ -3349,8 +3437,153 @@
       }
 
       // =========================================================================
-      // 12. CLOCK, PWA SERVICE WORKER & BOOTSTRAP
+      // 12. IOS GYROSCOPE 3D CARD TILT, CLOCK, PWA SERVICE WORKER & BOOTSTRAP
       // =========================================================================
+      let gyroListenerBound = false;
+      let gyroPermissionGranted = false;
+      let gyroBaseBeta = null;
+      let gyroTargetGamma = 0;
+      let gyroTargetBetaDelta = 0;
+      let gyroCurGamma = 0;
+      let gyroCurBetaDelta = 0;
+      let gyroRafId = null;
+
+      function getWalletTiltCards() {
+        return ['walletCardMB', 'walletCardCash']
+          .map(id => document.getElementById(id))
+          .filter(Boolean);
+      }
+
+      function ensureCardGlareLayer(card) {
+        let glare = card.querySelector('.animatekit-glare');
+        if (!glare) {
+          glare = document.createElement('div');
+          glare.className = 'animatekit-glare';
+          glare.style.cssText =
+            'position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%, rgba(255,255,255,0.18), transparent 70%);opacity:0;border-radius:inherit;transition:opacity 0.2s;';
+          card.style.position = card.style.position || 'relative';
+          card.appendChild(glare);
+        }
+        return glare;
+      }
+
+      function renderGyroTick(stepAlpha = 0.22) {
+        gyroCurGamma += (gyroTargetGamma - gyroCurGamma) * stepAlpha;
+        gyroCurBetaDelta += (gyroTargetBetaDelta - gyroCurBetaDelta) * stepAlpha;
+
+        const rotateY = (gyroCurGamma * 14).toFixed(2);
+        const shiftX = (gyroCurGamma * 4.5).toFixed(2);
+        const rotateX = (-gyroCurBetaDelta * 10).toFixed(2);
+        const gx = (50 + gyroCurGamma * 40).toFixed(1);
+        const gy = (50 + gyroCurBetaDelta * 34).toFixed(1);
+        const intensity = Math.min(0.32, 0.12 + (Math.abs(gyroCurGamma) + Math.abs(gyroCurBetaDelta)) * 0.14).toFixed(2);
+
+        if (activeTab === 'home') {
+          for (const card of getWalletTiltCards()) {
+            delete card.dataset.pointerTilt;
+            card.style.transition = 'none';
+            card.style.transform = `perspective(950px) translate3d(${shiftX}px, 0, 0) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1)`;
+            const glare = ensureCardGlareLayer(card);
+            glare.style.opacity = '1';
+            glare.style.background = `radial-gradient(circle at ${gx}% ${gy}%, rgba(255,255,255,${intensity}), transparent 68%)`;
+          }
+        }
+
+        const settled = Math.abs(gyroTargetGamma - gyroCurGamma) < 0.002 &&
+                        Math.abs(gyroTargetBetaDelta - gyroCurBetaDelta) < 0.002;
+        if (!settled) {
+          gyroRafId = requestAnimationFrame(() => renderGyroTick(0.22));
+        } else {
+          gyroRafId = null;
+        }
+      }
+
+      function onDeviceOrientation(e) {
+        if (typeof e.gamma !== 'number' && typeof e.beta !== 'number') return;
+        gyroPermissionGranted = true;
+        const bar = document.getElementById('gyroPermissionBar');
+        if (bar) bar.classList.add('hidden');
+
+        const rawGamma = typeof e.gamma === 'number' ? e.gamma : 0;
+        const rawBeta = typeof e.beta === 'number' ? e.beta : 45;
+
+        if (gyroBaseBeta === null) {
+          gyroBaseBeta = Math.max(15, Math.min(75, rawBeta));
+        } else {
+          const clampedBeta = Math.max(15, Math.min(75, rawBeta));
+          gyroBaseBeta += (clampedBeta - gyroBaseBeta) * 0.008;
+        }
+
+        gyroTargetGamma = Math.max(-1, Math.min(1, rawGamma / 32));
+        gyroTargetBetaDelta = Math.max(-1, Math.min(1, (rawBeta - gyroBaseBeta) / 32));
+
+        if (gyroRafId) {
+          cancelAnimationFrame(gyroRafId);
+          gyroRafId = null;
+        }
+        renderGyroTick(0.35);
+      }
+
+      function attachGyroListener() {
+        if (gyroListenerBound) return;
+        gyroListenerBound = true;
+        window.addEventListener('deviceorientation', onDeviceOrientation, { passive: true });
+      }
+
+      async function enableIosGyroTilt(fromUserButton = false) {
+        if (gyroPermissionGranted && gyroListenerBound) return true;
+        if (typeof window.DeviceOrientationEvent !== 'undefined' &&
+            typeof window.DeviceOrientationEvent.requestPermission === 'function') {
+          try {
+            const state = await window.DeviceOrientationEvent.requestPermission();
+            if (state === 'granted') {
+              gyroPermissionGranted = true;
+              const bar = document.getElementById('gyroPermissionBar');
+              if (bar) bar.classList.add('hidden');
+              attachGyroListener();
+              if (fromUserButton) {
+                showToast('Đã bật hiệu ứng nghiêng thẻ 3D theo chiều cầm iPhone!', 'success');
+              }
+              return true;
+            }
+          } catch {
+            // Permission rejected or called outside user gesture
+          }
+          if (fromUserButton) {
+            showToast('Hãy cho phép quyền Chuyển động & Hướng trong Safari để thẻ nghiêng theo iPhone', 'warning');
+          }
+          return false;
+        }
+        gyroPermissionGranted = true;
+        attachGyroListener();
+        return true;
+      }
+
+      function initIosGyroCardTilt() {
+        const needsPermission = typeof window.DeviceOrientationEvent !== 'undefined' &&
+          typeof window.DeviceOrientationEvent.requestPermission === 'function';
+
+        if (!needsPermission) {
+          attachGyroListener();
+          return;
+        }
+
+        const bar = document.getElementById('gyroPermissionBar');
+        if (bar) bar.classList.remove('hidden');
+
+        // Auto-request seamlessly on the user's first touch/click anywhere
+        const unlockOnGesture = () => {
+          enableIosGyroTilt(false).then((ok) => {
+            if (ok) {
+              document.removeEventListener('touchend', unlockOnGesture, true);
+              document.removeEventListener('click', unlockOnGesture, true);
+            }
+          });
+        };
+        document.addEventListener('touchend', unlockOnGesture, { capture: true, passive: true });
+        document.addEventListener('click', unlockOnGesture, { capture: true });
+      }
+
       function updateIosStatusClock() {
         const el = document.getElementById('iosStatusTime');
         if (el) el.textContent = nowTimeStr();
@@ -3370,6 +3603,7 @@
         setInterval(updateIosStatusClock, 15000);
         registerServiceWorker();
         initIosSheetGestures();
+        initIosGyroCardTilt();
 
         if (settings.requirePinOnStart && sessionStorage.getItem(STORAGE_KEYS.SESSION_PIN) !== 'ok') {
           lockAppWithPin();
@@ -3431,7 +3665,9 @@
         copyMbAccountNumber,
         openCategoryModal,
         saveCustomCategory,
+        triggerHomeScreenInstall,
         openIosInstallModal,
+        enableIosGyroTilt,
         saveWalletSettings,
         clearSearchTx,
         exportCSV,

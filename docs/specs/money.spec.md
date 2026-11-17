@@ -1,7 +1,7 @@
 # 📘 TINO MONEY — ĐẶC TẢ KỸ THUẬT CHI TIẾT (`money/index.html`)
 
 - **File nguồn chính:** `money/index.html` (Vanilla HTML/CSS/JS + Tailwind CDN + Lucide Icons + `AnimateKit`)
-- **PWA & Offline:** `money/manifest.json`, `money/sw.js`, `money/icon/tino_money.svg`, `money/icon/tino_money.png` (`180x180`), `money/icon/tino_money_512.png` (`512x512`)
+- **PWA & Offline:** `money/manifest.json`, `money/sw.js`, `money/tino-money.mobileconfig`, `money/icon/tino_money.svg`, `money/icon/tino_money.png` (`180x180`), `money/icon/tino_money_512.png` (`512x512`)
 - **Mục đích:** Quản lý tiền mặt, tiền ngân hàng **MB Bank**, dòng tiền Vô/Ra/Chuyển ví nội bộ trên nền tảng **iPhone View trực quan** và cài đặt ra **Màn hình chính iPhone (PWA Standalone)** tại `https://passion-star-webapp.vercel.app/money/`.
 
 ---
@@ -52,7 +52,9 @@
 4. **Bảo mật PIN & Tiện ích MB Bank:**
    - `pressPinDigit(digit)`, `verifyPinInput(entered)`, `lockAppWithPin()`, `togglePinOnStart(enabled)`, `updatePinCode()`: PIN mặc định `'0908'`, sai 5 lần tự khóa 10 giây (`.pin-shake`).
    - `openVietQrModal()`, `refreshVietQrImage(immediate)`, `renderVietQrToPngBlob()`, `copyVietQrImage()`, `downloadVietQrImage()`, `copyMbAccountNumber()`: Sinh VietQR chuẩn MB Bank (`MB-<STK>-compact2.png`), lấy ảnh PNG thật trực tiếp qua `POST https://api.vietqr.io/v2/generate` (`acqId: '970422'`, có fallback offline canvas) để hiển thị (`data:image/png;base64,...`), hỗ trợ sao chép ảnh QR vào Clipboard và tải xuống file `.png` (kèm Web Share API trên iOS PWA).
-   - `initIosSheetGestures()`, `dismissModalById(id)`: Tương tác thoát modal chuẩn iOS cho toàn bộ 7 modal (`#txModal`, `#smartPasteModal`, `#adjustBalanceModal`, `#vietQrModal`, `#categoryModal`, `#iosInstallModal`, `#glassConfirmModal`): hỗ trợ vuốt xuống (swipe-down), chạm ra ngoài vùng nền tối (tap-outside), nút `Đóng`, nút `X` (`36x36px`), và phím `Escape`.
+   - `initIosSheetGestures()`, `dismissModalById(id)`: Tương tác thoát modal chuẩn iOS cho toàn bộ modal (`#txModal`, `#smartPasteModal`, `#adjustBalanceModal`, `#vietQrModal`, `#categoryModal`, `#glassConfirmModal`): hỗ trợ vuốt xuống (swipe-down), chạm ra ngoài vùng nền tối (tap-outside), nút `Đóng`, nút `X` (`36x36px`), và phím `Escape`.
+   - `initIosGyroCardTilt()`, `enableIosGyroTilt()`: Lắng nghe cảm biến con quay hồi chuyển (`DeviceOrientationEvent`, tự xin quyền trên iOS 13+) giúp 2 thẻ `#walletCardMB` & `#walletCardCash` nghiêng 3D + phản quang ánh sáng theo chiều nghiêng trái/phải của iPhone, giữ nguyên nghiêng theo chuột trên Desktop.
+   - `triggerHomeScreenInstall()`, `openIosInstallModal()`: Cài đặt tự động 1-chạm ra Màn hình chính (ưu tiên `beforeinstallprompt` nếu trình duyệt hỗ trợ, hoặc kích hoạt trực tiếp hồ sơ iOS WebClip `./tino-money.mobileconfig` thay cho modal hướng dẫn thủ công).
    - `exportCSV()`, `exportBackupJSON()`, `handleImportBackupFile(ev)`, `seedDemoTransactions()`, `resetAllData(silent)`.
 
 ---
