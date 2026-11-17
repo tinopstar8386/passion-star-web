@@ -31,28 +31,34 @@
 
 | Key | Kiểu dữ liệu | Mô tả trường chính |
 | :--- | :--- | :--- |
-| `tino_finance_transactions_v1` | `Array<Transaction>` | `{ id, type: 'income'\|'expense'\|'transfer', wallet: 'mbbank'\|'cash', toWallet?, amount, categoryId, categoryName, note, date, time, isAdjustment?, createdAt }` |
-| `tino_finance_wallets_v1` | `Object` | `{ cashInitBalance, mbInitBalance, mbAccountNumber, mbAccountName, mbBranch }` |
+| `tino_finance_transactions_v1` | `Array<Transaction>` | `{ id, type: 'income'\|'expense'\|'transfer', wallet, toWallet?, amount, categoryId, categoryName, note, date, time, isAdjustment?, createdAt }` |
+| `tino_finance_wallets_v1` | `Object` | `{ cashInitBalance, mbInitBalance, mbAccountNumber, mbAccountName, mbBranch, mbCardSkin, extraWallets: Array<ExtraWallet> }` |
 | `tino_finance_categories_v1` | `Array<Category>` | `{ id, type: 'income'\|'expense', name, icon, color }` |
-| `tino_finance_settings_v1` | `Object` | `{ hideBalance, viewportMode, requirePinOnStart, pinCode, monthlyBudget }` |
-| `sessionStorage['tino_finance_pin_verified']` | `'ok' \| null` | Đánh dấu phiên đã vượt qua màn hình khóa PIN |
+| `tino_finance_settings_v1` | `Object` | `{ hideBalance, viewportMode, requirePinOnStart, pinCode, decoyPinEnabled, decoyPinCode, autoLockSeconds, soundHapticEnabled, cloudSyncEnabled, cloudSyncRoom, monthlyBudget }` |
+| `sessionStorage['tino_finance_pin_verified']` | `'ok' \| 'decoy' \| null` | Đánh dấu phiên đã vượt qua PIN (thật hoặc ví khách Decoy) |
+| `tino_finance_decoy_tx_v1` & `tino_finance_decoy_wallets_v1` | `Array` / `Object` | Dữ liệu ví khách cô lập hoàn toàn khi nhập Decoy PIN (mặc định `'0000'`), không đồng bộ lên Cloud |
+| `tino_finance_cloud_ts_v1` | `String` | Mốc thời gian đồng bộ gần nhất với Firestore `tino_money_sync/{roomId}` (dự án `passionstar-2014d`) |
 
 ---
 
 ## 3. Danh Sách Hàm Lõi & Trách Nhiệm (`window.*`)
 
-1. **Tính toán dòng tiền & Số dư:**
-   - `calculateWalletBalances(periodMonth)`: Tính `cashBalance`, `mbBalance`, `totalBalance`, `monthIncome`, `monthExpense`, `monthNet`, `cashIncome`, `cashExpense`, `mbIncome`, `mbExpense`. Giao dịch `transfer` chỉ dịch chuyển giữa 2 ví; giao dịch `isAdjustment: true` cân chỉnh số dư ví mà không bóp méo thống kê Thu/Chi thực tế.
-2. **Thao tác Giao dịch & Ví:**
-   - `addOrUpdateTransaction(payload)`, `deleteTransactionById(txId)`, `executeInternalTransfer(fromWallet, amount, note)`, `adjustWalletBalance(wallet, actualBalance)`.
-3. **Kỹ năng kế thừa từ Passion Star Code:**
+1. **Tính toán dòng tiền & Số dư đa ví:**
+   - `getAllWallets()`, `getWalletMeta(walletId)`, `calculateWalletBalances(periodMonth)`: Tính `cashBalance`, `mbBalance`, `totalBalance` (gộp toàn bộ ví phụ), `byWallet`, `monthIncome`, `monthExpense`, `monthNet`, `cashIncome`, `cashExpense`, `mbIncome`, `mbExpense`. Giao dịch `transfer` dịch chuyển giữa bất kỳ 2 ví nào; giao dịch `isAdjustment: true` cân chỉnh số dư ví mà không bóp méo thống kê Thu/Chi thực tế.
+2. **Thao tác Giao dịch, Nhiều Tài Khoản Ngân Hàng & Giao Diện Thẻ MB:**
+   - `addOrUpdateTransaction(payload)`, `deleteTransactionById(txId)`, `executeInternalTransfer(fromWallet, amount, note, toWallet)`, `adjustWalletBalance(walletId, actualBalance)`.
+   - `setMbCardSkin(skinId)`, `cycleMbCardSkin()`: Tùy chỉnh 5 skin thẻ MB (`priority`, `titanium`, `ruby`, `gold`, `emerald`).
+   - `openExtraWalletModal(walletId)`, `applyExtraWalletPreset(bankCode)`, `saveExtraWallet()`, `requestDeleteExtraWallet()`: Thêm/sửa/xóa nhiều tài khoản ngân hàng (VCB, TCB, VietinBank, BIDV, ACB, VPBank, TPBank, MoMo, Ví phụ).
+3. **Kỹ năng kế thừa & Phản hồi âm thanh/xúc giác:**
    - `docTien(soInput)`: Đọc chính xác số tiền VNĐ bằng chữ tiếng Việt.
    - `parseSmartTransactions(rawText)` & `applySmartPasteTransactions()`: Bóc tách nhiều dòng ghi chú viết tắt (`k`, `tr`, `3tr5`, `mb`, `tm`, `+`, `rút`/`rut`, `nộp`/`nop`) hỗ trợ tiếng Việt có dấu và không dấu.
+   - `playFeedback(kind)`: Tổng hợp âm thanh vi mô Web Audio (`tap`, `switch`, `success`, `error`) kết hợp `navigator.vibrate`, bật/tắt qua `toggleSoundHaptic(enabled)`.
    - `escapeHtml(str)`, `showToast(message, type)`, `showGlassConfirm(...)`: Chống XSS 100% và cấm hoàn toàn native `alert`/`confirm`/`prompt`.
-4. **Bảo mật PIN & Tiện ích MB Bank:**
-   - `pressPinDigit(digit)`, `verifyPinInput(entered)`, `lockAppWithPin()`, `togglePinOnStart(enabled)`, `updatePinCode()`: PIN mặc định `'0908'`, sai 5 lần tự khóa 10 giây (`.pin-shake`).
-   - `openVietQrModal()`, `refreshVietQrImage(immediate)`, `renderVietQrToPngBlob()`, `copyVietQrImage()`, `downloadVietQrImage()`, `copyMbAccountNumber()`: Sinh VietQR chuẩn MB Bank (`MB-<STK>-compact2.png`), lấy ảnh PNG thật trực tiếp qua `POST https://api.vietqr.io/v2/generate` (`acqId: '970422'`, có fallback offline canvas) để hiển thị (`data:image/png;base64,...`), hỗ trợ sao chép ảnh QR vào Clipboard và tải xuống file `.png` (kèm Web Share API trên iOS PWA).
-   - `initIosSheetGestures()`, `dismissModalById(id)`: Tương tác thoát modal chuẩn iOS cho toàn bộ modal (`#txModal`, `#smartPasteModal`, `#adjustBalanceModal`, `#vietQrModal`, `#categoryModal`, `#glassConfirmModal`): hỗ trợ vuốt xuống (swipe-down), chạm ra ngoài vùng nền tối (tap-outside), nút `Đóng`, nút `X` (`36x36px`), và phím `Escape`.
+4. **Bảo mật PIN (Auto-lock, Decoy PIN), Cloud Sync & Tiện ích VietQR:**
+   - `pressPinDigit(digit)`, `verifyPinInput(entered)`, `lockAppWithPin(silent)`, `togglePinOnStart(enabled)`, `updatePinCode()`, `updateAutoLockSetting(seconds)`, `bindAutoLockLifecycle()`, `checkAndTriggerAutoLock()`, `toggleDecoyPinSetting(enabled)`, `saveDecoyPinCode()`: PIN thật mặc định `'0908'`, PIN giả Ví Khách mặc định `'0000'`, tự khóa khi rời app (`visibilitychange` / `pagehide`), sai 5 lần tự khóa 10 giây (`.pin-shake`).
+   - `initCloudSync()`, `pushCloudSync()`, `scheduleCloudPush()`, `toggleCloudSync(enabled)`, `saveCloudRoomAndSync()`: Đồng bộ Realtime 2 chiều với Firebase Firestore (`tino_money_sync/{roomId}` thuộc dự án `passionstar-2014d`), tự fallback về `Offline Local` khi mất mạng và cô lập hoàn toàn khi đang ở chế độ Ví Khách (Decoy).
+   - `openVietQrModal(walletId)`, `handleVietQrWalletChange(walletId)`, `refreshVietQrImage(immediate)`, `renderVietQrToPngBlob()`, `copyVietQrImage()`, `downloadVietQrImage()`, `downloadLockScreenQrWallpaper()`, `copyWalletAccountNumber(walletId)`, `copyActiveQrAccountNumber()`, `copyMbAccountNumber()`: Phím tắt QR 1-chạm trên Header (`#btnHeaderQuickQr`), hỗ trợ tham số `?quickqr=1`, tạo VietQR đa ngân hàng (`acqId: params.bin`) và xuất hình nền màn hình khóa iPhone `1290×2796` chứa mã QR chuẩn EMVCo.
+   - `initIosSheetGestures()`, `dismissModalById(id)`: Tương tác thoát modal chuẩn iOS cho toàn bộ modal (`#txModal`, `#smartPasteModal`, `#adjustBalanceModal`, `#vietQrModal`, `#extraWalletModal`, `#categoryModal`, `#iosInstallModal`, `#glassConfirmModal`).
    - `playTabCascadeAnimation(tabName)`, `getTabCascadeTargets(tabName)`: Tạo hiệu ứng xuất hiện tuần tự từng thẻ từ trên xuống dưới (`.cascade-card-enter`, keyframe `cardCascadeDown` trễ `55ms` mỗi thẻ, hỗ trợ `prefers-reduced-motion`) khi tải trang, sau khi mở khóa PIN và khi chuyển tab (`home`, `ledger`, `analytics`, `settings`); sử dụng `html.tino-preload` để tránh nhấp nháy khung trước khi khởi tạo. Đã loại bỏ hoàn toàn hiệu ứng nghiêng thẻ 3D / cảm biến `DeviceOrientationEvent` (`#gyroPermissionBar`, `enableIosGyroTilt`, `data-animate="tilt"`) để không hiển thị hộp thoại xin quyền trên iOS.
    - `triggerHomeScreenInstall()`, `openIosInstallModal()`: Cài đặt tự động 1-chạm ra Màn hình chính (ưu tiên `beforeinstallprompt` nếu trình duyệt hỗ trợ, hoặc kích hoạt trực tiếp hồ sơ iOS WebClip `./tino-money.mobileconfig` thay cho modal hướng dẫn thủ công).
    - `exportCSV()`, `exportBackupJSON()`, `handleImportBackupFile(ev)`, `seedDemoTransactions()`, `resetAllData(silent)`.

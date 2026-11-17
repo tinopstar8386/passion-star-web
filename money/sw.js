@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tino-money-passion-pwa-v5';
+const CACHE_NAME = 'tino-money-passion-pwa-v6';
 const CORE_ASSETS = [
   './index.html',
   './manifest.json',
