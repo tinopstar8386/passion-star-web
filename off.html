@@ -101,8 +101,8 @@
     .cell-draft { background-color: rgba(59, 130, 246, 0.1) !important; }
     @keyframes pulse-draft { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-    .context-menu { position: absolute; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 8px; padding: 8px 0; min-width: 180px; z-index: 10000; font-size: 0.9rem; font-family: 'Inter', sans-serif; display: none; }
-    .context-menu-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; color: var(--text-main); transition: background 0.2s, transform 0.15s ease; font-weight: 500;}
+    .context-menu { position: absolute; background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-radius: 8px; padding: 8px 0; min-width: 180px; max-height: calc(100vh - 20px); overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box; z-index: 10000; font-size: 0.9rem; font-family: 'Inter', sans-serif; display: none; }
+    .context-menu-item { padding: 7px 14px; cursor: pointer; display: flex; align-items: center; color: var(--text-main); transition: background 0.2s, transform 0.15s ease; font-weight: 500;}
     .context-menu-item:hover { background: var(--row-hover); }
     .context-menu-item:active { transform: scale(0.97); }
     .context-menu-divider { height: 1px; background: var(--border-color); margin: 6px 0; }
@@ -6402,7 +6402,6 @@
 
     const DEFAULT_BADGE_COLORS = {
       'TRANSLATOR': 'linear-gradient(135deg, #06b6d4, #0891b2)',
-      'TRANS': 'linear-gradient(135deg, #06b6d4, #0891b2)',
       'OPERATION': 'linear-gradient(135deg, #f59e0b, #d97706)',
       'MANAGER': 'linear-gradient(135deg, #6366f1, #4f46e5)',
       'HR': 'linear-gradient(135deg, #ec4899, #be185d)',
@@ -7060,10 +7059,20 @@
         } else if (event) {
           menu.innerHTML = html;
           menu.style.display = 'block';
-          let x = event.pageX; let y = event.pageY;
-          if (x + menu.offsetWidth > window.innerWidth) x = window.innerWidth - menu.offsetWidth - 10;
-          if (y + menu.offsetHeight > window.innerHeight) y = window.innerHeight - menu.offsetHeight - 10;
-          menu.style.left = x + 'px'; menu.style.top = y + 'px';
+          const scrollX = window.scrollX || window.pageXOffset || 0;
+          const scrollY = window.scrollY || window.pageYOffset || 0;
+          let x = event.pageX;
+          let y = event.pageY;
+          if (x + menu.offsetWidth > scrollX + window.innerWidth - 10) {
+            x = scrollX + window.innerWidth - menu.offsetWidth - 10;
+          }
+          if (x < scrollX + 10) x = scrollX + 10;
+          if (y + menu.offsetHeight > scrollY + window.innerHeight - 10) {
+            y = scrollY + window.innerHeight - menu.offsetHeight - 10;
+          }
+          if (y < scrollY + 10) y = scrollY + 10;
+          menu.style.left = x + 'px';
+          menu.style.top = y + 'px';
         }
     }
 
@@ -7655,8 +7664,11 @@
           baseEmployeesData = data.employees || [];
           monthEmployeesData = data.monthEmployees || {};
           leavesData = data.leaves || []; 
-          badgesData = { ...DEFAULT_BADGE_COLORS, ...(data.badges || {}) };
-          if (badgesData['BEE'] && !(data.badges && data.badges['ELRIS'])) { badgesData['ELRIS'] = badgesData['BEE']; }
+          const serverBadges = data.badges || {};
+          badgesData = Object.keys(serverBadges).length > 0 ? { ...serverBadges } : { ...DEFAULT_BADGE_COLORS };
+          badgesData['TRANSLATOR'] = badgesData['TRANSLATOR'] || DEFAULT_BADGE_COLORS['TRANSLATOR'];
+          delete badgesData['TRANS'];
+          if (badgesData['BEE'] && !(serverBadges && serverBadges['ELRIS'])) { badgesData['ELRIS'] = badgesData['BEE']; }
           populateBadgePresetDropdowns(); 
           quotasData = data.quotas || {};
                     trafficGroupsData = data.trafficGroups || ["ORION", "ROYEN:ONE"];
