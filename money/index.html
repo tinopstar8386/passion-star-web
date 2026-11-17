@@ -21,6 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest" defer onload="window.safeRefreshIcons && window.safeRefreshIcons()"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
 
   <!-- AnimateKit (Passion Star Design System) -->
   <link rel="stylesheet" href="../animate-kit/animate-kit.css">
@@ -2701,6 +2702,63 @@
       let vietQrDebounceTimer = null;
       let vietQrRenderToken = 0;
 
+      function stripVnAccents(str) {
+        return String(str || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/đ/g, 'd')
+          .replace(/Đ/g, 'D');
+      }
+
+      function sanitizeVietQrApiFields(params) {
+        const accountNo = String(params.stk || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 19) || '8386999999';
+        let accountName = stripVnAccents(params.name || 'ANH TINO')
+          .toUpperCase()
+          .replace(/[^A-Z0-9 ]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (accountName.length < 5) {
+          accountName = ('MB ' + (accountName || 'TINO')).trim();
+        }
+        if (accountName.length < 5) {
+          accountName = ('MB BANK ' + accountName).trim();
+        }
+        accountName = accountName.slice(0, 50);
+
+        const addInfo = stripVnAccents(params.memo || '')
+          .replace(/[^A-Za-z0-9 ]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 50);
+
+        return { accountNo, accountName, addInfo };
+      }
+
+      function crc16Ccitt(str) {
+        let crc = 0xFFFF;
+        for (let i = 0; i < str.length; i++) {
+          crc ^= (str.charCodeAt(i) & 0xFF) << 8;
+          for (let j = 0; j < 8; j++) {
+            crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+          }
+        }
+        return crc.toString(16).toUpperCase().padStart(4, '0');
+      }
+
+      function buildNapasVietQrPayload({ stk, amt, memo }) {
+        const f = (id, val) => `${id}${String(val.length).padStart(2, '0')}${val}`;
+        const cleanStk = String(stk || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 19);
+        const cleanMemo = stripVnAccents(memo || '').replace(/[^A-Za-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 25);
+        const beneficiary = f('00', '970422') + f('01', cleanStk);
+        const consumerInfo = f('00', 'A000000727') + f('01', beneficiary) + f('02', 'QRIBFTTA');
+        let body = '000201' + f('01', amt > 0 ? '12' : '11') + f('38', consumerInfo) + '5303704';
+        if (amt > 0) body += f('54', String(Math.round(amt)));
+        body += '5802VN';
+        if (cleanMemo) body += f('62', f('08', cleanMemo));
+        body += '6304';
+        return body + crc16Ccitt(body);
+      }
+
       function getVietQrParams() {
         const stk = String(wallets.mbAccountNumber || '8386999999').replace(/\s+/g, '');
         const name = String(wallets.mbAccountName || 'ANH TINO');
@@ -2708,9 +2766,10 @@
         const memoEl = document.getElementById('vietQrMemoInput');
         const amt = Math.max(0, parseInt((amtEl && amtEl.value) || '0', 10) || 0);
         const memo = (memoEl && memoEl.value) ? memoEl.value : 'Chuyen khoan';
-        const url = `https://img.vietqr.io/image/MB-${encodeURIComponent(stk)}-compact2.png?amount=${amt}&addInfo=${encodeURIComponent(memo)}&accountName=${encodeURIComponent(name)}`;
+        const sanitized = sanitizeVietQrApiFields({ stk, name, memo });
+        const url = `https://img.vietqr.io/image/MB-${encodeURIComponent(sanitized.accountNo)}-compact2.png?amount=${amt}&addInfo=${encodeURIComponent(sanitized.addInfo)}&accountName=${encodeURIComponent(sanitized.accountName)}`;
         const key = `${stk}|${name}|${amt}|${memo}`;
-        return { stk, name, amt, memo, url, key };
+        return { stk, name, amt, memo, sanitized, url, key };
       }
 
       function buildVietQrFilename(params = getVietQrParams()) {
@@ -2759,9 +2818,9 @@
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         if (typeof ctx.roundRect === 'function') {
-          ctx.roundRect(72, 180, 936, 980, 48);
+          ctx.roundRect(72, 150, 936, 1040, 48);
         } else {
-          ctx.rect(72, 180, 936, 980);
+          ctx.rect(72, 150, 936, 1040);
         }
         ctx.fill();
 
@@ -2769,51 +2828,92 @@
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.font = 'bold 54px Inter, sans-serif';
-        ctx.fillText('MB BANK • VIETQR', 540, 118);
+        ctx.fillText('MB BANK • VIETQR', 540, 102);
 
         // Account info inside card
         ctx.fillStyle = '#1e3a8a';
-        ctx.font = 'bold 44px Inter, sans-serif';
-        ctx.fillText(String(params.name || 'ANH TINO').toUpperCase(), 540, 320);
+        ctx.font = 'bold 42px Inter, sans-serif';
+        ctx.fillText(String(params.name || 'ANH TINO').toUpperCase(), 540, 232);
 
         ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 64px monospace';
-        ctx.fillText(formatCardDisplay(params.stk), 540, 430);
+        ctx.font = 'bold 56px monospace';
+        ctx.fillText(formatCardDisplay(params.stk), 540, 306);
 
-        // Box notice for offline mode
-        ctx.fillStyle = '#eff6ff';
-        ctx.fillRect(150, 500, 780, 340);
-        ctx.strokeStyle = '#93c5fd';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(150, 500, 780, 340);
+        // Draw real EMVCo Napas 247 VietQR matrix in the center
+        let hasQr = false;
+        if (typeof window.qrcode === 'function') {
+          try {
+            const payload = buildNapasVietQrPayload({ stk: params.stk, amt: params.amt, memo: params.memo });
+            const qr = window.qrcode(0, 'M');
+            qr.addData(payload);
+            qr.make();
+            const count = qr.getModuleCount();
+            const qrAreaSize = 580;
+            const qrX = Math.round((1080 - qrAreaSize) / 2);
+            const qrY = 345;
+            const quietModules = 2;
+            const cellSize = qrAreaSize / (count + quietModules * 2);
 
-        ctx.fillStyle = '#1d4ed8';
-        ctx.font = 'bold 36px Inter, sans-serif';
-        ctx.fillText('THẺ CHUYỂN KHOẢN MB BANK', 540, 620);
-        ctx.fillStyle = '#475569';
-        ctx.font = '28px Inter, sans-serif';
-        ctx.fillText('Chụp / Lưu thẻ STK để chuyển khoản nhanh', 540, 690);
-        ctx.fillText('(Bật mạng để nhúng mã QR VietQR tự động)', 540, 745);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(qrX, qrY, qrAreaSize, qrAreaSize);
+            ctx.strokeStyle = '#dbeafe';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(qrX, qrY, qrAreaSize, qrAreaSize);
+
+            ctx.fillStyle = '#000000';
+            for (let r = 0; r < count; r++) {
+              for (let c = 0; c < count; c++) {
+                if (qr.isDark(r, c)) {
+                  const rx = Math.round(qrX + (c + quietModules) * cellSize);
+                  const ry = Math.round(qrY + (r + quietModules) * cellSize);
+                  const rw = Math.ceil(qrX + (c + 1 + quietModules) * cellSize) - rx;
+                  const rh = Math.ceil(qrY + (r + 1 + quietModules) * cellSize) - ry;
+                  ctx.fillRect(rx, ry, rw, rh);
+                }
+              }
+            }
+            hasQr = true;
+          } catch {}
+        }
+
+        if (!hasQr) {
+          ctx.fillStyle = '#eff6ff';
+          ctx.fillRect(150, 400, 780, 420);
+          ctx.strokeStyle = '#93c5fd';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(150, 400, 780, 420);
+          ctx.fillStyle = '#1d4ed8';
+          ctx.font = 'bold 36px Inter, sans-serif';
+          ctx.fillText('THẺ CHUYỂN KHOẢN MB BANK', 540, 560);
+          ctx.fillStyle = '#475569';
+          ctx.font = '28px Inter, sans-serif';
+          ctx.fillText('Nhập STK trên app ngân hàng để chuyển khoản', 540, 630);
+        }
 
         ctx.fillStyle = '#0f172a';
         ctx.font = 'bold 40px Inter, sans-serif';
         const amtText = params.amt > 0 ? `Số tiền: ${formatNumberDot(params.amt)} ₫` : 'Số tiền: Tùy chọn';
-        ctx.fillText(amtText, 540, 955);
+        ctx.fillText(amtText, 540, 1005);
 
         ctx.fillStyle = '#475569';
         ctx.font = '32px Inter, sans-serif';
-        ctx.fillText(`Nội dung: ${String(params.memo || '').slice(0, 36)}`, 540, 1030);
+        ctx.fillText(`Nội dung: ${String(params.memo || '').slice(0, 36)}`, 540, 1072);
 
-        return canvas;
+        ctx.fillStyle = '#2563eb';
+        ctx.font = 'bold 26px Inter, sans-serif';
+        ctx.fillText('napas 24/7  •  VietQR', 540, 1142);
+
+        return { canvas, hasQr };
       }
 
       async function renderVietQrToPngBlob(params = getVietQrParams()) {
         try {
+          const sanitized = params.sanitized || sanitizeVietQrApiFields(params);
           const payload = {
-            accountNo: params.stk,
-            accountName: params.name,
+            accountNo: sanitized.accountNo,
+            accountName: sanitized.accountName,
             acqId: '970422',
-            addInfo: params.memo,
+            addInfo: sanitized.addInfo,
             format: 'text',
             template: 'compact2'
           };
@@ -2828,18 +2928,18 @@
           const json = await res.json();
           const dataUrl = json && json.data && json.data.qrDataURL;
           if (!dataUrl || !String(dataUrl).startsWith('data:image/png')) {
-            throw new Error('Invalid qrDataURL');
+            throw new Error(json?.desc || 'Invalid qrDataURL');
           }
 
           const blob = dataUrlToBlob(dataUrl, 'image/png');
-          const result = { blob, dataUrl, isFallback: false };
-          vietQrCachedPng = { key: params.key, blob: result.blob, dataUrl: result.dataUrl, isFallback: false };
+          const result = { blob, dataUrl, isFallback: false, hasQr: true };
+          vietQrCachedPng = { key: params.key, blob: result.blob, dataUrl: result.dataUrl, isFallback: false, hasQr: true };
           return result;
         } catch {
-          const fallbackCanvas = buildOfflineVietQrCardCanvas(params);
+          const { canvas: fallbackCanvas, hasQr } = buildOfflineVietQrCardCanvas(params);
           const baseResult = await canvasToPngResult(fallbackCanvas);
-          const result = { ...baseResult, isFallback: true };
-          vietQrCachedPng = { key: params.key, blob: result.blob, dataUrl: result.dataUrl, isFallback: true };
+          const result = { ...baseResult, isFallback: true, hasQr };
+          vietQrCachedPng = { key: params.key, blob: result.blob, dataUrl: result.dataUrl, isFallback: true, hasQr };
           return result;
         }
       }
@@ -2867,7 +2967,7 @@
         document.getElementById('vietQrAccountLabel').textContent = `MB Bank • ${formatCardDisplay(params.stk)} • ${params.name}`;
         document.getElementById('vietQrFallbackStk').textContent = formatCardDisplay(params.stk);
 
-        if (vietQrCachedPng && vietQrCachedPng.key === params.key && !vietQrCachedPng.isFallback && vietQrCachedPng.dataUrl) {
+        if (vietQrCachedPng && vietQrCachedPng.key === params.key && vietQrCachedPng.hasQr && vietQrCachedPng.dataUrl) {
           img.classList.remove('hidden');
           fallback.classList.add('hidden');
           img.src = vietQrCachedPng.dataUrl;
@@ -2884,7 +2984,7 @@
         const runConvert = async () => {
           const result = await renderVietQrToPngBlob(params);
           if (token !== vietQrRenderToken) return;
-          if (!result.isFallback && result.dataUrl) {
+          if ((!result.isFallback || result.hasQr) && result.dataUrl) {
             img.classList.remove('hidden');
             fallback.classList.add('hidden');
             img.src = result.dataUrl;
@@ -3323,6 +3423,8 @@
         openVietQrModal,
         refreshVietQrImage,
         renderVietQrToPngBlob,
+        buildNapasVietQrPayload,
+        buildOfflineVietQrCardCanvas,
         copyVietQrImage,
         downloadVietQrImage,
         handleQrLoadError,
