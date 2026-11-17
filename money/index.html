@@ -27,6 +27,10 @@
   <link rel="stylesheet" href="../animate-kit/animate-kit.css">
 
   <script>
+    document.documentElement.classList.add('tino-preload');
+    setTimeout(function () {
+      document.documentElement.classList.remove('tino-preload');
+    }, 1800);
     if (window.tailwind) {
       window.tailwind.config = {
         darkMode: 'class',
@@ -382,6 +386,34 @@
 
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Staggered Top-to-Bottom Cascade Reveal for Cards */
+    html.tino-preload #appScrollArea {
+      opacity: 0;
+    }
+    @keyframes cardCascadeDown {
+      0% {
+        opacity: 0;
+        transform: translate3d(0, -16px, 0) scale(0.98);
+      }
+      100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+    }
+    .cascade-card-enter {
+      animation: cardCascadeDown 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+      animation-delay: calc(var(--stagger-idx, 0) * 55ms);
+      will-change: transform, opacity;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html.tino-preload #appScrollArea {
+        opacity: 1 !important;
+      }
+      .cascade-card-enter {
+        animation: none !important;
+      }
+    }
   </style>
 </head>
 <body class="mode-iphone">
@@ -540,15 +572,9 @@
               </div>
 
               <!-- Two Visual Wallet Cards (MB Bank & Tiền Mặt) -->
-              <div id="gyroPermissionBar" class="hidden flex items-center justify-between gap-2 px-1">
-                <span class="text-[11px] text-slate-400 truncate">Bật cảm biến để 2 thẻ nghiêng theo chiều cầm iPhone</span>
-                <button id="btnEnableGyro" type="button" onclick="enableIosGyroTilt(true)" class="px-2.5 py-1 rounded-full bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 border border-cyan-400/30 text-[11px] font-bold shrink-0">
-                  ✨ 3D Gyro
-                </button>
-              </div>
-              <div class="wallet-cards-grid grid grid-cols-1 gap-3" style="perspective: 1000px;">
+              <div class="wallet-cards-grid grid grid-cols-1 gap-3">
                 <!-- MB Bank Digital Card -->
-                <div id="walletCardMB" data-animate="tilt" data-tilt-max="7" class="mb-bank-card rounded-3xl p-4 relative overflow-hidden">
+                <div id="walletCardMB" class="mb-bank-card rounded-3xl p-4 relative overflow-hidden">
                   <div class="flex items-start justify-between gap-2">
                     <div class="flex items-center gap-2 min-w-0">
                       <div class="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
@@ -591,7 +617,7 @@
                 </div>
 
                 <!-- Cash Wallet Card -->
-                <div id="walletCardCash" data-animate="tilt" data-tilt-max="7" class="cash-wallet-card rounded-3xl p-4 relative overflow-hidden">
+                <div id="walletCardCash" class="cash-wallet-card rounded-3xl p-4 relative overflow-hidden">
                   <div class="flex items-start justify-between gap-2">
                     <div class="flex items-center gap-2 min-w-0">
                       <div class="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-300 shrink-0">
@@ -2212,6 +2238,7 @@
         if (activeTab === 'analytics') renderAnalytics();
         if (activeTab === 'settings') renderSettingsPanel();
         safeRefreshIcons();
+        playTabCascadeAnimation(activeTab);
       }
 
       function applyViewportMode() {
@@ -3412,6 +3439,7 @@
           sessionStorage.setItem(STORAGE_KEYS.SESSION_PIN, 'ok');
           document.getElementById('pinLockOverlay').classList.add('hidden');
           updatePinDots();
+          playTabCascadeAnimation(activeTab);
           showToast('Đã mở khóa Tino Money!', 'success');
           return true;
         }
@@ -3437,151 +3465,82 @@
       }
 
       // =========================================================================
-      // 12. IOS GYROSCOPE 3D CARD TILT, CLOCK, PWA SERVICE WORKER & BOOTSTRAP
+      // 12. STAGGERED CARD CASCADE REVEAL, CLOCK, PWA SERVICE WORKER & BOOTSTRAP
       // =========================================================================
-      let gyroListenerBound = false;
-      let gyroPermissionGranted = false;
-      let gyroBaseBeta = null;
-      let gyroTargetGamma = 0;
-      let gyroTargetBetaDelta = 0;
-      let gyroCurGamma = 0;
-      let gyroCurBetaDelta = 0;
-      let gyroRafId = null;
+      function getTabCascadeTargets(tabName) {
+        const section = document.getElementById(`tab-${tabName}`);
+        if (!section || section.classList.contains('hidden')) return [];
 
-      function getWalletTiltCards() {
-        return ['walletCardMB', 'walletCardCash']
-          .map(id => document.getElementById(id))
-          .filter(Boolean);
-      }
-
-      function ensureCardGlareLayer(card) {
-        let glare = card.querySelector('.animatekit-glare');
-        if (!glare) {
-          glare = document.createElement('div');
-          glare.className = 'animatekit-glare';
-          glare.style.cssText =
-            'position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%, rgba(255,255,255,0.18), transparent 70%);opacity:0;border-radius:inherit;transition:opacity 0.2s;';
-          card.style.position = card.style.position || 'relative';
-          card.appendChild(glare);
-        }
-        return glare;
-      }
-
-      function renderGyroTick(stepAlpha = 0.22) {
-        gyroCurGamma += (gyroTargetGamma - gyroCurGamma) * stepAlpha;
-        gyroCurBetaDelta += (gyroTargetBetaDelta - gyroCurBetaDelta) * stepAlpha;
-
-        const rotateY = (gyroCurGamma * 14).toFixed(2);
-        const shiftX = (gyroCurGamma * 4.5).toFixed(2);
-        const rotateX = (-gyroCurBetaDelta * 10).toFixed(2);
-        const gx = (50 + gyroCurGamma * 40).toFixed(1);
-        const gy = (50 + gyroCurBetaDelta * 34).toFixed(1);
-        const intensity = Math.min(0.32, 0.12 + (Math.abs(gyroCurGamma) + Math.abs(gyroCurBetaDelta)) * 0.14).toFixed(2);
-
-        if (activeTab === 'home') {
-          for (const card of getWalletTiltCards()) {
-            delete card.dataset.pointerTilt;
-            card.style.transition = 'none';
-            card.style.transform = `perspective(950px) translate3d(${shiftX}px, 0, 0) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1)`;
-            const glare = ensureCardGlareLayer(card);
-            glare.style.opacity = '1';
-            glare.style.background = `radial-gradient(circle at ${gx}% ${gy}%, rgba(255,255,255,${intensity}), transparent 68%)`;
-          }
+        if (tabName === 'home') {
+          const children = Array.from(section.children);
+          const heroCard = children[0];
+          const quickActionsGrid = children[1];
+          const mbCard = document.getElementById('walletCardMB');
+          const cashCard = document.getElementById('walletCardCash');
+          const recentSection = children[3];
+          const recentHeader = recentSection ? recentSection.firstElementChild : null;
+          const recentItems = Array.from(document.querySelectorAll('#recentTxList > *')).slice(0, 8);
+          const list = [];
+          if (heroCard) list.push(heroCard);
+          if (quickActionsGrid) list.push(...Array.from(quickActionsGrid.children));
+          if (mbCard) list.push(mbCard);
+          if (cashCard) list.push(cashCard);
+          if (recentHeader) list.push(recentHeader);
+          list.push(...recentItems);
+          return list;
         }
 
-        const settled = Math.abs(gyroTargetGamma - gyroCurGamma) < 0.002 &&
-                        Math.abs(gyroTargetBetaDelta - gyroCurBetaDelta) < 0.002;
-        if (!settled) {
-          gyroRafId = requestAnimationFrame(() => renderGyroTick(0.22));
-        } else {
-          gyroRafId = null;
-        }
-      }
-
-      function onDeviceOrientation(e) {
-        if (typeof e.gamma !== 'number' && typeof e.beta !== 'number') return;
-        gyroPermissionGranted = true;
-        const bar = document.getElementById('gyroPermissionBar');
-        if (bar) bar.classList.add('hidden');
-
-        const rawGamma = typeof e.gamma === 'number' ? e.gamma : 0;
-        const rawBeta = typeof e.beta === 'number' ? e.beta : 45;
-
-        if (gyroBaseBeta === null) {
-          gyroBaseBeta = Math.max(15, Math.min(75, rawBeta));
-        } else {
-          const clampedBeta = Math.max(15, Math.min(75, rawBeta));
-          gyroBaseBeta += (clampedBeta - gyroBaseBeta) * 0.008;
+        if (tabName === 'ledger') {
+          const children = Array.from(section.children);
+          const filterCard = children[0];
+          const summaryItems = Array.from(document.querySelectorAll('#ledgerSummaryBar > *'));
+          const ledgerGroups = Array.from(document.querySelectorAll('#ledgerListContainer > *')).slice(0, 10);
+          return [filterCard, ...summaryItems, ...ledgerGroups].filter(Boolean);
         }
 
-        gyroTargetGamma = Math.max(-1, Math.min(1, rawGamma / 32));
-        gyroTargetBetaDelta = Math.max(-1, Math.min(1, (rawBeta - gyroBaseBeta) / 32));
+        return Array.from(section.children).filter(Boolean);
+      }
 
-        if (gyroRafId) {
-          cancelAnimationFrame(gyroRafId);
-          gyroRafId = null;
+      function clearElementCascadeState(el) {
+        if (!el) return;
+        if (el._cascadeEndHandler) {
+          el.removeEventListener('animationend', el._cascadeEndHandler);
+          delete el._cascadeEndHandler;
         }
-        renderGyroTick(0.35);
-      }
-
-      function attachGyroListener() {
-        if (gyroListenerBound) return;
-        gyroListenerBound = true;
-        window.addEventListener('deviceorientation', onDeviceOrientation, { passive: true });
-      }
-
-      async function enableIosGyroTilt(fromUserButton = false) {
-        if (gyroPermissionGranted && gyroListenerBound) return true;
-        if (typeof window.DeviceOrientationEvent !== 'undefined' &&
-            typeof window.DeviceOrientationEvent.requestPermission === 'function') {
-          try {
-            const state = await window.DeviceOrientationEvent.requestPermission();
-            if (state === 'granted') {
-              gyroPermissionGranted = true;
-              const bar = document.getElementById('gyroPermissionBar');
-              if (bar) bar.classList.add('hidden');
-              attachGyroListener();
-              if (fromUserButton) {
-                showToast('Đã bật hiệu ứng nghiêng thẻ 3D theo chiều cầm iPhone!', 'success');
-              }
-              return true;
-            }
-          } catch {
-            // Permission rejected or called outside user gesture
-          }
-          if (fromUserButton) {
-            showToast('Hãy cho phép quyền Chuyển động & Hướng trong Safari để thẻ nghiêng theo iPhone', 'warning');
-          }
-          return false;
+        if (el._cascadeCleanupTimer) {
+          clearTimeout(el._cascadeCleanupTimer);
+          delete el._cascadeCleanupTimer;
         }
-        gyroPermissionGranted = true;
-        attachGyroListener();
-        return true;
+        el.classList.remove('cascade-card-enter');
+        el.style.removeProperty('--stagger-idx');
       }
 
-      function initIosGyroCardTilt() {
-        const needsPermission = typeof window.DeviceOrientationEvent !== 'undefined' &&
-          typeof window.DeviceOrientationEvent.requestPermission === 'function';
-
-        if (!needsPermission) {
-          attachGyroListener();
+      function playTabCascadeAnimation(tabName = activeTab) {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
           return;
         }
+        const section = document.getElementById(`tab-${tabName}`);
+        if (!section || section.classList.contains('hidden')) return;
 
-        const bar = document.getElementById('gyroPermissionBar');
-        if (bar) bar.classList.remove('hidden');
+        const targets = getTabCascadeTargets(tabName);
+        if (targets.length === 0) return;
 
-        // Auto-request seamlessly on the user's first touch/click anywhere
-        const unlockOnGesture = () => {
-          enableIosGyroTilt(false).then((ok) => {
-            if (ok) {
-              document.removeEventListener('touchend', unlockOnGesture, true);
-              document.removeEventListener('click', unlockOnGesture, true);
-            }
-          });
-        };
-        document.addEventListener('touchend', unlockOnGesture, { capture: true, passive: true });
-        document.addEventListener('click', unlockOnGesture, { capture: true });
+        targets.forEach(clearElementCascadeState);
+        void section.offsetWidth;
+
+        targets.forEach((el, idx) => {
+          const cappedIdx = Math.min(idx, 12);
+          el.style.setProperty('--stagger-idx', String(cappedIdx));
+          el.classList.add('cascade-card-enter');
+
+          const onEnd = (ev) => {
+            if (ev.target !== el || ev.animationName !== 'cardCascadeDown') return;
+            clearElementCascadeState(el);
+          };
+          el._cascadeEndHandler = onEnd;
+          el.addEventListener('animationend', onEnd);
+          el._cascadeCleanupTimer = setTimeout(() => clearElementCascadeState(el), cappedIdx * 55 + 520);
+        });
       }
 
       function updateIosStatusClock() {
@@ -3603,11 +3562,16 @@
         setInterval(updateIosStatusClock, 15000);
         registerServiceWorker();
         initIosSheetGestures();
-        initIosGyroCardTilt();
 
-        if (settings.requirePinOnStart && sessionStorage.getItem(STORAGE_KEYS.SESSION_PIN) !== 'ok') {
+        const isPinLockedOnLoad = Boolean(
+          settings.requirePinOnStart && sessionStorage.getItem(STORAGE_KEYS.SESSION_PIN) !== 'ok'
+        );
+        if (isPinLockedOnLoad) {
           lockAppWithPin();
+        } else {
+          playTabCascadeAnimation('home');
         }
+        document.documentElement.classList.remove('tino-preload');
 
         document.addEventListener('keydown', (e) => {
           const overlay = document.getElementById('pinLockOverlay');
@@ -3633,6 +3597,7 @@
       Object.assign(window, {
         safeRefreshIcons,
         switchTab,
+        playTabCascadeAnimation,
         toggleViewportMode,
         togglePrivacyMask,
         openTxModal,
@@ -3667,7 +3632,6 @@
         saveCustomCategory,
         triggerHomeScreenInstall,
         openIosInstallModal,
-        enableIosGyroTilt,
         saveWalletSettings,
         clearSearchTx,
         exportCSV,
