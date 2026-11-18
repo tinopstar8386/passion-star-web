@@ -146,6 +146,9 @@
                         <span id="patchBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                             Syncing Riot Data...
                         </span>
+                        <span id="desktopBridgeBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/35">
+                            🖥️ Blitz Desktop Ready
+                        </span>
                     </div>
                     <p class="text-[11px] text-slate-400 hidden sm:block">Nhận diện Tướng & Lõi bằng AI • Gợi ý Lõi 2-3-4 & Lên Đồ Thích Ứng</p>
                 </div>
@@ -291,6 +294,17 @@
                         <button type="button" id="btnScanNow" onclick="scanCurrentSource()" class="hidden"></button>
                     </div>
 
+                    <div id="desktopQuickCaptureRow" class="hidden grid grid-cols-2 gap-2">
+                        <button type="button" onclick="triggerDesktopCapture('scan-aug')" class="py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 font-extrabold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
+                            <i class="fa-solid fa-camera"></i>
+                            <span>⚡ Chụp Lõi (Alt+Shift+Q)</span>
+                        </button>
+                        <button type="button" onclick="triggerDesktopCapture('scan-combat')" class="py-2 px-3 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/40 text-indigo-200 font-extrabold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
+                            <i class="fa-solid fa-table-list"></i>
+                            <span>🔍 Chụp Tab (Alt+Shift+E)</span>
+                        </button>
+                    </div>
+
                     <div id="scanActionRow" class="hidden grid grid-cols-2 gap-2">
                         <button type="button" onclick="scanCurrentSource()" class="py-2 px-3 rounded-xl gold-btn text-xs flex items-center justify-center gap-1.5 cursor-pointer">
                             <i class="fa-solid fa-bolt"></i>
@@ -415,7 +429,7 @@
                 <!-- RIGHT 5 COLS -->
                 <div class="lg:col-span-5 space-y-4">
 
-                    <!-- ARAM HEALTH RELIC TIMERS (BỘ ĐẾM CỤC HỒI MÁU) -->
+                    <!-- ARAM HEALTH RELIC TIMERS & MINIMAP AUTO-SCALE -->
                     <div class="glass-panel rounded-3xl p-4 sm:p-5 space-y-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
@@ -423,21 +437,20 @@
                                     <i class="fa-solid fa-heart-pulse"></i>
                                 </span>
                                 <div>
-                                    <h2 class="text-sm font-extrabold uppercase tracking-wider text-emerald-200">Đếm Giờ Cục Hồi Máu ARAM</h2>
-                                    <p class="text-[11px] text-slate-400">Phím tắt nhanh <kbd class="px-1 bg-slate-800 rounded text-slate-300">Alt+1..4</kbd> • Báo giọng nói trước 15s & khi hồi</p>
+                                    <h2 class="text-sm font-extrabold uppercase tracking-wider text-emerald-200">Cục Hồi Máu / Mana &amp; Minimap</h2>
+                                    <p class="text-[11px] text-slate-400">Phím tắt <kbd class="px-1 bg-slate-800 rounded text-slate-300">Alt+1..4</kbd> • Tự Scale đè trên Minimap game</p>
                                 </div>
                             </div>
-                            <select id="relicCooldownSelect" onchange="setRelicCooldown(this.value)" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 text-[11px] font-bold text-emerald-300 focus:outline-none focus:border-emerald-400 cursor-pointer">
-                                <option value="90">90s (Chuẩn)</option>
-                                <option value="75">75s (Nhanh)</option>
-                                <option value="60">60s (Hỗn Loạn)</option>
+                            <select id="mapModeSelect" onchange="setMapMode(this.value)" class="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-amber-500/40 text-[11px] font-extrabold text-amber-300 focus:outline-none focus:border-amber-400 cursor-pointer">
+                                <option value="pirate_60">🏴‍☠️ Pirate / Cầu Đồ Tể (60s • 0:40)</option>
+                                <option value="abyss_90">❄️ Vực Gió Hú (90s • 1:45)</option>
                             </select>
                         </div>
 
                         <div class="flex flex-wrap items-center gap-2">
-                            <button type="button" onclick="startInitialRelics()" class="flex-1 py-1.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
+                            <button type="button" id="btnInitRelicSpawn" onclick="startInitialRelics()" class="flex-1 py-1.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
                                 <i class="fa-solid fa-stopwatch"></i>
-                                <span>⏱️ Đếm mốc đầu trận (1:50)</span>
+                                <span id="btnInitRelicLabel">⏱️ Đầu trận Pirate (0:40)</span>
                             </button>
                             <button type="button" onclick="resetAllRelics()" class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
                                 <i class="fa-solid fa-rotate-left"></i>
@@ -447,6 +460,71 @@
 
                         <div id="healthRelicGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             <!-- 4 Relic timers rendered dynamically -->
+                        </div>
+
+                        <!-- Interactive Minimap Radar & Auto-Scale Calibration -->
+                        <div class="rounded-2xl p-3 bg-slate-950/75 border border-cyan-500/25 space-y-2.5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <span class="text-[11px] font-extrabold text-cyan-200 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-map-location-dot text-cyan-400"></i>
+                                    <span>Radar Minimap &amp; Tự Nhận Diện Scale</span>
+                                </span>
+                                <span id="minimapScaleBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                                    100% • 260×260 px
+                                </span>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row items-center gap-3">
+                                <!-- Live Bridge Minimap Radar Preview -->
+                                <div class="shrink-0 flex items-center justify-center p-1.5 rounded-2xl bg-slate-900 border border-slate-800">
+                                    <div id="minimapRadarBox" class="relative rounded-xl bg-slate-950 border border-amber-500/30 overflow-hidden transition-all duration-200" style="width: 136px; height: 136px;">
+                                        <!-- Rendered dynamically -->
+                                    </div>
+                                </div>
+
+                                <!-- Controls -->
+                                <div class="flex-1 w-full space-y-2 text-[11px]">
+                                    <div>
+                                        <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                                            <span>Kích thước Minimap Game (Scale):</span>
+                                            <span id="minimapGameResLabel" class="font-mono text-slate-300">1920×1080</span>
+                                        </div>
+                                        <input id="minimapScaleSlider" type="range" min="50" max="200" step="5" value="100"
+                                               oninput="updateMinimapScaleFromSlider(this.value)"
+                                               class="w-full accent-cyan-400 cursor-pointer">
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <button type="button" onclick="detectRiotMinimapConfig()" class="py-1.5 px-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/35 text-cyan-200 font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer transition">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                            <span>Tự nhận diện Scale</span>
+                                        </button>
+                                        <button type="button" id="btnToggleCalibrate" onclick="toggleDesktopCalibrate()" class="py-1.5 px-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer transition">
+                                            <i class="fa-solid fa-up-down-left-right"></i>
+                                            <span id="btnCalibrateLabel">Căn chỉnh (Alt+Shift+C)</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-1.5 text-[10px] text-slate-300">
+                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="checkbox" id="chkShowMinimapOverlay" checked onchange="toggleMinimapFlag('showMinimapOverlay', this.checked)" class="accent-cyan-400 rounded">
+                                            <span>Overlay Minimap</span>
+                                        </label>
+                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="checkbox" id="chkShowHudOverlay" checked onchange="toggleMinimapFlag('showHudOverlay', this.checked)" class="accent-cyan-400 rounded">
+                                            <span>HUD Gợi Ý Blitz</span>
+                                        </label>
+                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="checkbox" id="chkAutoWatchPixels" checked onchange="toggleMinimapFlag('autoWatchPixels', this.checked)" class="accent-emerald-400 rounded">
+                                            <span>Tự đếm khi ăn cục</span>
+                                        </label>
+                                        <label class="flex items-center gap-1.5 cursor-pointer">
+                                            <input type="checkbox" id="chkMinimapFlipped" onchange="toggleMinimapFlag('flipped', this.checked)" class="accent-amber-400 rounded">
+                                            <span>Minimap bên Trái</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2276,10 +2354,10 @@
         ];
 
         const RELIC_DEFINITIONS = [
-            { id: 'ally_inner', label: 'Trụ Trong Đồng Minh', short: 'Trong Ta', hotkey: 'Alt+1', side: 'ally' },
-            { id: 'ally_outer', label: 'Trụ Ngoài Đồng Minh', short: 'Ngoài Ta', hotkey: 'Alt+2', side: 'ally' },
-            { id: 'enemy_outer', label: 'Trụ Ngoài Đối Phương', short: 'Ngoài Địch', hotkey: 'Alt+3', side: 'enemy' },
-            { id: 'enemy_inner', label: 'Trụ Trong Đối Phương', short: 'Trong Địch', hotkey: 'Alt+4', side: 'enemy' }
+            { id: 'ally_inner', label: 'Trụ Trong Đồng Minh', short: 'Trong Ta', hotkey: 'Alt+1', side: 'ally', nx: 0.25, ny: 0.75 },
+            { id: 'ally_outer', label: 'Trụ Ngoài Đồng Minh', short: 'Ngoài Ta', hotkey: 'Alt+2', side: 'ally', nx: 0.41, ny: 0.59 },
+            { id: 'enemy_outer', label: 'Trụ Ngoài Đối Phương', short: 'Ngoài Địch', hotkey: 'Alt+3', side: 'enemy', nx: 0.59, ny: 0.41 },
+            { id: 'enemy_inner', label: 'Trụ Trong Đối Phương', short: 'Trong Địch', hotkey: 'Alt+4', side: 'enemy', nx: 0.75, ny: 0.25 }
         ];
 
         // =====================================================================
@@ -2385,24 +2463,50 @@
             isScanning: false,
             enemyThreats: [],
             voiceAlerts: localStorage.getItem('aram_mayhem_voice_alerts') !== 'false',
-            relicCooldownSec: 90,
+            mapMode: 'pirate_60',
+            manualMapModeOverride: false,
+            relicCooldownSec: 60,
             relicTimers: RELIC_DEFINITIONS.map(r => ({
                 id: r.id,
                 label: r.label,
                 short: r.short,
                 hotkey: r.hotkey,
                 side: r.side,
+                nx: r.nx,
+                ny: r.ny,
                 remaining: 0,
-                total: 90,
+                total: 60,
                 running: false,
                 warned15: false,
                 warned0: false
             })),
             relicInterval: null,
             pipWindow: null,
+            overlayViewMode: 'full', // 'full' | 'minimap'
             canvasPipActive: false,
             canvasPipInterval: null,
-            lastCombatAnalysis: null
+            lastCombatAnalysis: null,
+            minimap: {
+                scale: 1.0,
+                sizePx: 260,
+                offsetX: 16,
+                offsetY: 16,
+                flipped: false,
+                autoDetect: true,
+                calibrateMode: false,
+                showMinimapOverlay: true,
+                showHudOverlay: true,
+                autoWatchPixels: true,
+                gameWidth: 1920,
+                gameHeight: 1080,
+                detectedSource: 'default'
+            },
+            isDesktopBridgeConnected: false,
+            liveClientConnected: false,
+            lastCapturedFrameSeq: 0,
+            lastRelicEventSeq: 0,
+            initialSpawnSyncedForMatch: false,
+            lastLiveGameTime: 0
         };
 
         // =====================================================================
@@ -2414,6 +2518,7 @@
             updateVoiceAlertUI();
             renderAll();
             bindGlobalEvents();
+            initDesktopAndLiveClientBridge();
             await syncRiotDataDragon();
         });
 
@@ -2774,11 +2879,13 @@
             renderRollEvaluator();
             renderNextAugmentAdvisor();
             renderHealthRelics();
+            renderMinimapRadar();
             renderEnemyThreatToggles();
             renderAdaptiveBuild();
             if (state.activeTab === 'tierlist') renderTierList();
             if (state.activeTab === 'combos') renderExodiaCombos();
             syncOverlayUI();
+            pushMayhemStateToBridge();
         }
 
         function renderSelectedChampion() {
@@ -4089,6 +4196,31 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
             return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         }
 
+        function setMapMode(mode, isManual = true) {
+            if (mode !== 'pirate_60' && mode !== 'abyss_90') return;
+            state.mapMode = mode;
+            if (isManual) state.manualMapModeOverride = true;
+            state.relicCooldownSec = mode === 'pirate_60' ? 60 : 90;
+
+            const sel = document.getElementById('mapModeSelect');
+            if (sel) sel.value = mode;
+            const initLbl = document.getElementById('btnInitRelicLabel');
+            if (initLbl) {
+                initLbl.textContent = mode === 'pirate_60'
+                    ? '⏱️ Đầu trận Pirate (0:40)'
+                    : '⏱️ Đầu trận Vực Gió Hú (1:45 / 2:30)';
+            }
+            renderHealthRelics();
+            renderMinimapRadar();
+            syncOverlayUI();
+            pushMayhemStateToBridge();
+            if (isManual) {
+                showToast(mode === 'pirate_60'
+                    ? 'Chế độ Bản đồ Pirate: Đầu trận 0:40 • Hồi 60s (Máu + Mana + Giảm Hồi Chiêu)'
+                    : 'Chế độ Vực Gió Hú: Ngoài 1:45 / Trong 2:30 • Hồi 90s', 'info');
+            }
+        }
+
         function setRelicCooldown(sec) {
             const parsed = parseInt(sec, 10);
             if (!isNaN(parsed) && parsed > 0) {
@@ -4106,7 +4238,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
         function startRelicTimer(relicId, customSec = null) {
             const relic = state.relicTimers.find(r => r.id === relicId);
             if (!relic) return;
-            const duration = customSec || state.relicCooldownSec || 90;
+            const duration = customSec || state.relicCooldownSec || (state.mapMode === 'pirate_60' ? 60 : 90);
             relic.total = duration;
             relic.remaining = duration;
             relic.running = true;
@@ -4114,7 +4246,9 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
             relic.warned0 = false;
             ensureRelicInterval();
             renderHealthRelics();
+            renderMinimapRadar();
             syncOverlayUI();
+            pushMayhemStateToBridge();
         }
 
         function adjustRelicTimer(relicId, deltaSec) {
@@ -4133,21 +4267,33 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                 playAlertTone('ready');
             }
             renderHealthRelics();
+            renderMinimapRadar();
             syncOverlayUI();
+            pushMayhemStateToBridge();
         }
 
-        function startInitialRelics() {
+        function startInitialRelics(currentGameTimeSec = 0) {
+            const elapsed = Math.max(0, Math.floor(currentGameTimeSec || 0));
+            const isPirate = state.mapMode === 'pirate_60';
             state.relicTimers.forEach(r => {
-                r.total = 110;
-                r.remaining = 110;
-                r.running = true;
-                r.warned15 = false;
-                r.warned0 = false;
+                const spawnAt = isPirate ? 40 : (r.id.includes('outer') ? 105 : 150);
+                const rem = Math.max(0, spawnAt - elapsed);
+                r.total = spawnAt;
+                r.remaining = rem;
+                r.running = rem > 0;
+                r.warned15 = rem <= 15;
+                r.warned0 = rem === 0;
             });
             ensureRelicInterval();
             renderHealthRelics();
+            renderMinimapRadar();
             syncOverlayUI();
-            showToast('Đang đếm mốc đầu trận (1:50) cho cả 4 cục hồi máu!', 'success');
+            pushMayhemStateToBridge();
+            if (elapsed === 0) {
+                showToast(isPirate
+                    ? 'Đang đếm mốc đầu trận Pirate (0:40) cho cả 4 cục Máu+Mana!'
+                    : 'Đang đếm mốc đầu trận Vực Gió Hú (Ngoài 1:45 / Trong 2:30)!', 'success');
+            }
         }
 
         function resetRelicTimer(relicId) {
@@ -4158,7 +4304,9 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
             relic.warned15 = false;
             relic.warned0 = false;
             renderHealthRelics();
+            renderMinimapRadar();
             syncOverlayUI();
+            pushMayhemStateToBridge();
         }
 
         function resetAllRelics() {
@@ -4173,7 +4321,9 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                 state.relicInterval = null;
             }
             renderHealthRelics();
+            renderMinimapRadar();
             syncOverlayUI();
+            pushMayhemStateToBridge();
         }
 
         function tickRelicTimers() {
@@ -4200,7 +4350,131 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                 state.relicInterval = null;
             }
             renderHealthRelics();
+            renderMinimapRadar();
             syncOverlayUI();
+            pushMayhemStateToBridge();
+        }
+
+        function renderMinimapRadar() {
+            const box = document.getElementById('minimapRadarBox');
+            const badge = document.getElementById('minimapScaleBadge');
+            const resLbl = document.getElementById('minimapGameResLabel');
+            const slider = document.getElementById('minimapScaleSlider');
+            const mm = state.minimap;
+
+            const pct = Math.round((mm.scale || 1.0) * 100);
+            if (slider && Number(slider.value) !== pct) slider.value = String(Math.max(50, Math.min(200, pct)));
+            if (badge) badge.textContent = `${pct}% • ${mm.sizePx}×${mm.sizePx} px`;
+            if (resLbl) resLbl.textContent = `${mm.gameWidth}×${mm.gameHeight}${mm.flipped ? ' (Trái)' : ''}`;
+
+            const chkMinimap = document.getElementById('chkShowMinimapOverlay');
+            const chkHud = document.getElementById('chkShowHudOverlay');
+            const chkWatch = document.getElementById('chkAutoWatchPixels');
+            const chkFlip = document.getElementById('chkMinimapFlipped');
+            const calBtn = document.getElementById('btnToggleCalibrate');
+            const calLbl = document.getElementById('btnCalibrateLabel');
+            if (chkMinimap) chkMinimap.checked = Boolean(mm.showMinimapOverlay);
+            if (chkHud) chkHud.checked = Boolean(mm.showHudOverlay);
+            if (chkWatch) chkWatch.checked = Boolean(mm.autoWatchPixels);
+            if (chkFlip) chkFlip.checked = Boolean(mm.flipped);
+            if (calLbl) calLbl.textContent = mm.calibrateMode ? 'Khóa Minimap (Đang chỉnh)' : 'Căn chỉnh (Alt+Shift+C)';
+            if (calBtn) {
+                calBtn.className = mm.calibrateMode
+                    ? 'py-1.5 px-2 rounded-xl bg-amber-400 text-slate-950 font-extrabold text-[10px] flex items-center justify-center gap-1 cursor-pointer transition'
+                    : 'py-1.5 px-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer transition';
+            }
+
+            if (!box) return;
+            // Visual scale preview inside box (clamped 96px..168px)
+            const previewSz = Math.round(Math.max(96, Math.min(168, 128 * (mm.scale || 1.0))));
+            box.style.width = `${previewSz}px`;
+            box.style.height = `${previewSz}px`;
+            const markerSz = Math.max(18, Math.round(previewSz * 0.19));
+            const fontSz = Math.max(8, Math.round(previewSz * 0.075));
+
+            box.innerHTML = `
+                <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full pointer-events-none opacity-65">
+                    <line x1="12" y1="88" x2="88" y2="12" stroke="#334155" stroke-width="14" stroke-linecap="round"/>
+                    <line x1="12" y1="88" x2="88" y2="12" stroke="#0ea5e9" stroke-width="1.2" stroke-dasharray="3 2"/>
+                    <circle cx="14" cy="86" r="5" fill="#10b981" opacity="0.7"/>
+                    <circle cx="86" cy="14" r="5" fill="#f43f5e" opacity="0.7"/>
+                </svg>
+                ${state.relicTimers.map(r => {
+                    const isSoon = r.running && r.remaining <= 15 && r.remaining > 0;
+                    const bg = r.running
+                        ? (isSoon ? 'bg-amber-400 text-slate-950 border-amber-200 animate-pulse' : 'bg-slate-900/95 text-cyan-300 border-cyan-400')
+                        : 'bg-emerald-500/25 text-emerald-300 border-emerald-400';
+                    return `
+                        <button type="button" onclick="startRelicTimer('${r.id}')" title="${escapeHtml(r.label)} (${r.hotkey}) — Click để đếm"
+                                class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border font-mono font-extrabold flex items-center justify-center shadow cursor-pointer hover:scale-110 transition ${bg}"
+                                style="left: ${(r.nx * 100).toFixed(1)}%; top: ${(r.ny * 100).toFixed(1)}%; width: ${markerSz}px; height: ${markerSz}px; font-size: ${fontSz}px;">
+                            ${r.running ? r.remaining : '✓'}
+                        </button>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        function updateMinimapScaleFromSlider(pctVal) {
+            const scale = Math.max(0.5, Math.min(2.0, Number(pctVal) / 100));
+            state.minimap.scale = Number(scale.toFixed(2));
+            state.minimap.autoDetect = true;
+            const ratioH = (state.minimap.gameHeight || 1080) / 1080;
+            state.minimap.sizePx = Math.round(260 * ratioH * state.minimap.scale);
+            renderMinimapRadar();
+            syncOverlayUI();
+            pushMayhemStateToBridge();
+        }
+
+        async function detectRiotMinimapConfig() {
+            if (!state.isDesktopBridgeConnected) {
+                showToast('Tính năng đọc cấu hình LMHT cần chạy qua PassionMayhem.exe (hoặc server.mjs local).', 'info');
+                return;
+            }
+            try {
+                const res = await fetch('/api/mayhem/riot-config');
+                const cfg = await res.json();
+                if (cfg && typeof cfg.minimapScale === 'number') {
+                    state.minimap.scale = cfg.minimapScale;
+                    state.minimap.flipped = Boolean(cfg.flipMiniMap);
+                    state.minimap.autoDetect = true;
+                    const ratioH = (state.minimap.gameHeight || cfg.height || 1080) / 1080;
+                    state.minimap.sizePx = Math.round(260 * ratioH * state.minimap.scale);
+                    await fetch('/api/mayhem/state', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ minimap: state.minimap, triggerAction: 'auto-detect-riot' })
+                    });
+                    renderMinimapRadar();
+                    showToast(cfg.found
+                        ? `Đã nhận diện từ Riot Config: Scale ${Math.round(cfg.minimapScale * 100)}% (${state.minimap.sizePx}px)`
+                        : `Dùng tỉ lệ màn hình mặc định: Scale ${Math.round(state.minimap.scale * 100)}%`, 'success');
+                }
+            } catch (err) {
+                showToast('Không thể đọc Riot Config: ' + err.message, 'error');
+            }
+        }
+
+        function toggleDesktopCalibrate() {
+            state.minimap.calibrateMode = !state.minimap.calibrateMode;
+            renderMinimapRadar();
+            pushMayhemStateToBridge();
+            if (state.isDesktopBridgeConnected) {
+                fetch('/api/mayhem/state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ minimap: state.minimap })
+                }).catch(() => {});
+            }
+            showToast(state.minimap.calibrateMode
+                ? 'Đã bật chế độ Căn Chỉnh Minimap! Kéo hoặc lăn chuột trên ô Minimap để khớp với game, bấm lại để khóa.'
+                : 'Đã khóa vị trí & tỉ lệ Minimap Overlay!', 'info');
+        }
+
+        function toggleMinimapFlag(flagKey, val) {
+            state.minimap[flagKey] = Boolean(val);
+            renderMinimapRadar();
+            pushMayhemStateToBridge();
         }
 
         function renderHealthRelics() {
@@ -4566,12 +4840,24 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                 .ov-item img { width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0; }
                 .ov-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
                 .ov-sec-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+                .ov-minimap-stage { position: relative; margin: 6px auto 0; background: #070d1f; border: 2px solid rgba(10, 200, 185, 0.55); border-radius: 14px; overflow: hidden; }
+                .ov-relic-dot { position: absolute; transform: translate(-50%, -50%); border-radius: 9999px; border: 2px solid #34d399; background: rgba(6, 48, 36, 0.88); color: #6ee7b7; font-family: monospace; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+                .ov-relic-dot.running { border-color: #38bdf8; background: rgba(15, 23, 42, 0.92); color: #67e8f9; }
+                .ov-relic-dot.soon { border-color: #facc15; background: rgba(250, 204, 21, 0.92); color: #0f172a; }
             `;
             pipWin.document.head.appendChild(styleEl);
 
             const root = pipWin.document.createElement('div');
             root.id = 'ovRoot';
             pipWin.document.body.appendChild(root);
+
+            // Auto-scale minimap overlay mode when user resizes the PiP window
+            if (typeof pipWin.ResizeObserver === 'function') {
+                const ro = new pipWin.ResizeObserver(() => {
+                    if (state.overlayViewMode === 'minimap') renderOverlayHUD();
+                });
+                ro.observe(pipWin.document.body);
+            }
 
             // Event delegation inside PiP window
             pipWin.document.body.addEventListener('click', (e) => {
@@ -4580,10 +4866,19 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                 const action = btn.dataset.ovAction;
                 const arg1 = btn.dataset.ovArg1;
                 const arg2 = btn.dataset.ovArg2;
-                if (action === 'scan-aug') scanCurrentSource();
-                else if (action === 'scan-combat') scanInGameDeepCombat();
-                else if (action === 'toggle-voice') toggleVoiceAlerts();
+                if (action === 'scan-aug') {
+                    if (state.isDesktopBridgeConnected) triggerDesktopCapture('scan-aug');
+                    else scanCurrentSource();
+                } else if (action === 'scan-combat') {
+                    if (state.isDesktopBridgeConnected) triggerDesktopCapture('scan-combat');
+                    else scanInGameDeepCombat();
+                } else if (action === 'toggle-voice') toggleVoiceAlerts();
                 else if (action === 'toggle-autoscan') toggleAutoScan(!state.autoScanTimer);
+                else if (action === 'switch-ov-mode') {
+                    state.overlayViewMode = state.overlayViewMode === 'minimap' ? 'full' : 'minimap';
+                    renderOverlayHUD();
+                }
+                else if (action === 'toggle-map-mode') setMapMode(state.mapMode === 'pirate_60' ? 'abyss_90' : 'pirate_60');
                 else if (action === 'relic-start') startRelicTimer(arg1);
                 else if (action === 'relic-adj') adjustRelicTimer(arg1, parseInt(arg2, 10));
                 else if (action === 'relic-reset') resetRelicTimer(arg1);
@@ -4685,6 +4980,40 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
 
             const build = computeAdaptiveBuild(champ, state.chosenAugments, state.enemyThreats);
             const chosenNames = state.chosenAugments.map(id => AUGMENTS_DB.find(a => a.id === id)?.nameVi).filter(Boolean);
+            const mapTag = state.mapMode === 'pirate_60' ? '🏴‍☠️ Pirate 60s' : '❄️ Vực Gió Hú 90s';
+
+            if (state.overlayViewMode === 'minimap') {
+                const winW = state.pipWindow.innerWidth || 280;
+                const winH = state.pipWindow.innerHeight || 320;
+                const sz = Math.max(130, Math.min(winW - 22, winH - 58));
+                const dotSz = Math.max(22, Math.round(sz * 0.16));
+                const fontSz = Math.max(9, Math.round(sz * 0.055));
+
+                root.innerHTML = `
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:4px;">
+                        <button class="ov-btn ov-btn-cyan" style="padding:3px 7px; font-size:10px;" data-ov-action="switch-ov-mode">◀ HUD Đầy Đủ</button>
+                        <button class="ov-btn" style="padding:3px 7px; font-size:10px;" data-ov-action="toggle-map-mode">${mapTag}</button>
+                        <button class="ov-btn" style="padding:3px 7px; font-size:10px;" data-ov-action="relic-init">${state.mapMode === 'pirate_60' ? '0:40' : '1:45'}</button>
+                    </div>
+                    <div class="ov-minimap-stage" style="width:${sz}px; height:${sz}px;">
+                        <svg viewBox="0 0 100 100" style="position:absolute; inset:0; width:100%; height:100%; opacity:0.65; pointer-events:none;">
+                            <line x1="12" y1="88" x2="88" y2="12" stroke="#334155" stroke-width="14" stroke-linecap="round"/>
+                            <line x1="12" y1="88" x2="88" y2="12" stroke="#0ea5e9" stroke-width="1.2" stroke-dasharray="3 2"/>
+                        </svg>
+                        ${state.relicTimers.map(r => {
+                            const soon = r.running && r.remaining <= 15 && r.remaining > 0;
+                            const cls = soon ? 'soon' : (r.running ? 'running' : '');
+                            return `
+                                <button class="ov-relic-dot ${cls}" data-ov-action="relic-start" data-ov-arg1="${r.id}"
+                                        style="left:${(r.nx * 100).toFixed(1)}%; top:${(r.ny * 100).toFixed(1)}%; width:${dotSz}px; height:${dotSz}px; font-size:${fontSz}px;">
+                                    ${r.running ? r.remaining : 'OK'}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                return;
+            }
 
             root.innerHTML = `
                 <div class="ov-card">
@@ -4696,14 +5025,17 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                                 <div class="ov-sub">${chosenNames.length ? escapeHtml(chosenNames.join(' → ')) : 'Chưa khóa lõi nào'}</div>
                             </div>
                         </div>
-                        <button class="ov-btn" data-ov-action="close-ov">✕</button>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <button class="ov-btn" style="padding:4px 7px; font-size:10px;" data-ov-action="switch-ov-mode" title="Chuyển sang Minimap phóng to/thu nhỏ">🗺️ Minimap</button>
+                            <button class="ov-btn" data-ov-action="close-ov">✕</button>
+                        </div>
                     </div>
                     <div class="ov-grid-2" style="margin-bottom: 6px;">
                         <button class="ov-btn ov-btn-gold" data-ov-action="scan-aug">⚡ Quét Lõi</button>
                         <button class="ov-btn ov-btn-indigo" data-ov-action="scan-combat">🔍 Quét Trận/Tab</button>
                     </div>
                     <div class="ov-grid-2">
-                        <button class="ov-btn" data-ov-action="toggle-autoscan">${state.autoScanTimer ? '🟢 Auto-Scan: BẬT' : '⚪ Auto-Scan: TẮT'}</button>
+                        <button class="ov-btn" data-ov-action="toggle-map-mode">${mapTag}</button>
                         <button class="ov-btn" data-ov-action="toggle-voice">${state.voiceAlerts ? '🔊 Âm báo: BẬT' : '🔇 Âm báo: TẮT'}</button>
                     </div>
                 </div>
@@ -4712,7 +5044,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     <div class="ov-sec-title">
                         <span>💚 Cục Hồi Máu (Alt+1..4)</span>
                         <span style="display:flex; gap:4px;">
-                            <button class="ov-btn" style="padding:2px 6px; font-size:10px;" data-ov-action="relic-init">1:50</button>
+                            <button class="ov-btn" style="padding:2px 6px; font-size:10px;" data-ov-action="relic-init">${state.mapMode === 'pirate_60' ? '0:40' : '1:45'}</button>
                             <button class="ov-btn" style="padding:2px 6px; font-size:10px;" data-ov-action="relic-reset-all">Reset</button>
                         </span>
                     </div>
@@ -4797,7 +5129,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
 
             ctx.fillStyle = '#34d399';
             ctx.font = 'bold 14px sans-serif';
-            ctx.fillText('CỤC HỒI MÁU ARAM:', 16, 86);
+            ctx.fillText(`CỤC HỒI MÁU (${state.mapMode === 'pirate_60' ? 'Pirate 60s' : 'Vực 90s'}):`, 16, 86);
             state.relicTimers.forEach((r, idx) => {
                 const y = 110 + idx * 24;
                 ctx.fillStyle = r.running && r.remaining <= 15 ? '#fcd34d' : '#e2e8f0';
@@ -4830,6 +5162,266 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                 ctx.font = '12px sans-serif';
                 ctx.fillText(`• ${state.itemsMap[id]?.name || id}`, 20, 368 + idx * 22);
             });
+        }
+
+        // =====================================================================
+        // 17. DESKTOP .EXE & RIOT LIVE CLIENT (127.0.0.1:2999) BRIDGE
+        // =====================================================================
+        let bridgeSyncThrottle = null;
+
+        async function initDesktopAndLiveClientBridge() {
+            const isLocal = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+            if (!isLocal) return;
+
+            try {
+                const res = await fetch('/api/mayhem/health');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data || data.status !== 'ok') return;
+
+                state.isDesktopBridgeConnected = true;
+                const badge = document.getElementById('desktopBridgeBadge');
+                if (badge) badge.classList.remove('hidden');
+                const quickRow = document.getElementById('desktopQuickCaptureRow');
+                if (quickRow) quickRow.classList.remove('hidden');
+
+                // Initial sync from server / Riot config
+                await detectRiotMinimapConfig();
+                setInterval(pollDesktopBridgeState, 650);
+                setInterval(pollRiotLiveClient, 2500);
+                pollRiotLiveClient();
+            } catch (_) {}
+        }
+
+        function pushMayhemStateToBridge() {
+            if (!state.isDesktopBridgeConnected) return;
+            if (bridgeSyncThrottle) clearTimeout(bridgeSyncThrottle);
+            bridgeSyncThrottle = setTimeout(() => {
+                const champ = state.championsMap[state.selectedChampId] || state.championsList[0];
+                const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
+
+                const rollValid = state.rollCandidates
+                    .map(id => AUGMENTS_DB.find(a => a.id === id))
+                    .filter(Boolean)
+                    .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
+                    .sort((a, b) => b.eval.score - a.eval.score);
+
+                const topList = rollValid.length > 0
+                    ? rollValid
+                    : AUGMENTS_DB
+                        .filter(a => !activeIds.includes(a.id))
+                        .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
+                        .sort((a, b) => b.eval.score - a.eval.score)
+                        .slice(0, 1);
+
+                const bestPick = topList[0];
+                const build = computeAdaptiveBuild(champ, state.chosenAugments, state.enemyThreats);
+                const nextItems = [build.boots, ...build.finalCore].slice(0, 4).map(id => state.itemsMap[id]?.name || id);
+
+                fetch('/api/mayhem/state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mapMode: state.mapMode,
+                        minimap: state.minimap,
+                        relicTimers: state.relicTimers.map(r => ({
+                            id: r.id,
+                            remaining: r.remaining,
+                            total: r.total,
+                            running: r.running
+                        })),
+                        advisorSummary: {
+                            champName: champ?.nameVi || 'Vi',
+                            champTier: champ?.tier || 'S',
+                            bestAugment: bestPick ? bestPick.aug.nameVi : '',
+                            bestScore: bestPick ? bestPick.eval.score : 0,
+                            nextItems,
+                            tacticalNote: state.lastCombatAnalysis?.tacticalAdviceVi || champ?.playstyleHint || ''
+                        }
+                    })
+                }).catch(() => {});
+            }, 120);
+        }
+
+        async function pollDesktopBridgeState() {
+            if (!state.isDesktopBridgeConnected) return;
+            try {
+                const res = await fetch('/api/mayhem/state');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                // Sync mapMode changed from Tray menu
+                if (data.mapMode && data.mapMode !== state.mapMode) {
+                    setMapMode(data.mapMode, false);
+                }
+
+                // Sync Minimap changes (when user dragged/resized on screen in C# overlay)
+                if (data.minimap && typeof data.minimap === 'object') {
+                    const m = data.minimap;
+                    const changed = m.sizePx !== state.minimap.sizePx ||
+                        m.scale !== state.minimap.scale ||
+                        m.calibrateMode !== state.minimap.calibrateMode ||
+                        m.gameWidth !== state.minimap.gameWidth ||
+                        m.gameHeight !== state.minimap.gameHeight ||
+                        m.flipped !== state.minimap.flipped;
+                    if (changed) {
+                        state.minimap = { ...state.minimap, ...m };
+                        renderMinimapRadar();
+                    }
+                }
+
+                // Handle Alt+1..4 or Pixel Auto-Watch triggered from PassionMayhem.exe
+                if (data.relicEventSeq && data.relicEventSeq > state.lastRelicEventSeq && data.lastRelicTrigger) {
+                    state.lastRelicEventSeq = data.relicEventSeq;
+                    const trig = data.lastRelicTrigger;
+                    if (trig.id) {
+                        startRelicTimer(trig.id, trig.total);
+                    }
+                }
+
+                // Handle silent frame captured via Alt+Shift+Q or Alt+Shift+E
+                if (data.capturedFrameSeq && data.capturedFrameSeq > state.lastCapturedFrameSeq) {
+                    state.lastCapturedFrameSeq = data.capturedFrameSeq;
+                    const frameRes = await fetch('/api/mayhem/state?includeFrame=1');
+                    if (frameRes.ok) {
+                        const frameData = await frameRes.json();
+                        const f = frameData.lastCapturedFrame;
+                        if (f && f.base64) {
+                            state.lastImageBase64 = f.base64;
+                            state.lastImageMime = f.mimeType || 'image/jpeg';
+                            const img = document.getElementById('capturedPreviewImg');
+                            if (img) {
+                                img.src = `data:${state.lastImageMime};base64,${state.lastImageBase64}`;
+                                img.classList.remove('hidden');
+                            }
+                            const emptySt = document.getElementById('visionEmptyState');
+                            if (emptySt) emptySt.classList.add('hidden');
+                            const scanRow = document.getElementById('scanActionRow');
+                            if (scanRow) scanRow.classList.remove('hidden');
+
+                            if (f.action === 'scan-combat') {
+                                analyzeInGameCombatScreen(state.lastImageBase64, state.lastImageMime);
+                            } else {
+                                analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime);
+                            }
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
+
+        function inferEnemyThreatsFromPlayers(allPlayers, allyTeam) {
+            const enemies = (allPlayers || []).filter(p => p.team && p.team !== allyTeam);
+            if (enemies.length === 0) return [];
+            let tankCount = 0;
+            let healCount = 0;
+            let adBurstCount = 0;
+            let apPokeCount = 0;
+            let ccCount = 0;
+
+            for (const ep of enemies) {
+                const mc = fuzzyMatchChampion(ep.championName);
+                const tags = new Set(mc?.tags || []);
+                if (tags.has('tank') || tags.has('hp') || tags.has('juggernaut')) tankCount++;
+                if (tags.has('heal') || tags.has('enchanter')) healCount++;
+                if (tags.has('assassin') && tags.has('ad')) adBurstCount++;
+                if ((tags.has('mage') || tags.has('poke')) && tags.has('ap')) apPokeCount++;
+                if (tags.has('cc')) ccCount++;
+            }
+
+            const detected = [];
+            if (tankCount >= 2) detected.push('tank');
+            if (healCount >= 2) detected.push('heal');
+            if (adBurstCount >= 1) detected.push('assassin_ad');
+            if (apPokeCount >= 2) detected.push('poke_ap');
+            if (ccCount >= 2) detected.push('cc');
+            return detected;
+        }
+
+        async function pollRiotLiveClient() {
+            if (!state.isDesktopBridgeConnected) return;
+            const badge = document.getElementById('desktopBridgeBadge');
+            try {
+                const res = await fetch('/api/mayhem/live-client');
+                if (!res.ok) return;
+                const live = await res.json();
+                if (!live || !live.connected) {
+                    state.liveClientConnected = false;
+                    state.initialSpawnSyncedForMatch = false;
+                    if (badge) {
+                        badge.textContent = '🖥️ Blitz Desktop Ready';
+                        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/35';
+                    }
+                    return;
+                }
+
+                state.liveClientConnected = true;
+                state.lastLiveGameTime = live.gameTime || 0;
+                if (badge) {
+                    badge.textContent = `🎮 Live Match (${formatMMSS(live.gameTime || 0)})`;
+                    badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                }
+
+                // Auto-detect Pirate vs Howling Abyss map if not overridden
+                const mapStr = String(live.mapName || '').toLowerCase();
+                if (!state.manualMapModeOverride) {
+                    if (mapStr.includes('butcher') || mapStr.includes('bilgewater') || mapStr.includes('pirate') || live.mapNumber === 35 || live.mapNumber === 14) {
+                        if (state.mapMode !== 'pirate_60') setMapMode('pirate_60', false);
+                    } else if (mapStr.includes('howling') && state.mapMode !== 'abyss_90') {
+                        setMapMode('abyss_90', false);
+                    }
+                }
+
+                // Auto-select player's champion
+                const activeChampName = live.activePlayer?.championName;
+                if (activeChampName) {
+                    const matched = fuzzyMatchChampion(activeChampName);
+                    if (matched && matched.id !== state.selectedChampId) {
+                        state.selectedChampId = matched.id;
+                        renderAll();
+                    }
+                }
+
+                // Auto-infer enemy threats once players load
+                if (Array.isArray(live.allPlayers) && live.allPlayers.length > 0 && state.enemyThreats.length === 0) {
+                    const me = live.allPlayers.find(p => p.championName === activeChampName);
+                    const allyTeam = me?.team || 'ORDER';
+                    const threats = inferEnemyThreatsFromPlayers(live.allPlayers, allyTeam);
+                    if (threats.length > 0) {
+                        state.enemyThreats = threats;
+                        renderEnemyThreatToggles();
+                        renderAdaptiveBuild();
+                        pushMayhemStateToBridge();
+                    }
+                }
+
+                // Auto-sync initial spawn countdown when game just started
+                if (!state.initialSpawnSyncedForMatch && live.gameTime > 0 && live.gameTime < 155) {
+                    state.initialSpawnSyncedForMatch = true;
+                    const maxInitial = state.mapMode === 'pirate_60' ? 40 : 150;
+                    if (live.gameTime < maxInitial) {
+                        startInitialRelics(live.gameTime);
+                    }
+                }
+            } catch (_) {}
+        }
+
+        async function triggerDesktopCapture(actionType = 'scan-aug') {
+            if (!state.isDesktopBridgeConnected) {
+                if (actionType === 'scan-combat') scanInGameDeepCombat();
+                else scanCurrentSource();
+                return;
+            }
+            try {
+                await fetch('/api/mayhem/state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ triggerAction: actionType })
+                });
+                showToast('Đang chụp màn hình Game từ Desktop App...', 'info');
+            } catch (err) {
+                showToast('Lỗi gọi chụp màn hình: ' + err.message, 'error');
+            }
         }
     </script>
 </body>
