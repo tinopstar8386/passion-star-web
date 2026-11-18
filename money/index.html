@@ -34,6 +34,7 @@
     if (window.tailwind) {
       window.tailwind.config = {
         darkMode: 'class',
+        future: { hoverOnlyWhenSupported: true },
         theme: {
           extend: {
             fontFamily: {
@@ -420,6 +421,22 @@
     }
     .pin-shake {
       animation: pinShake 0.4s ease-in-out;
+    }
+
+    #pinLockOverlay .pin-key-btn,
+    #pinLockOverlay .pin-key-btn:hover,
+    #pinLockOverlay .pin-key-btn:focus,
+    #pinLockOverlay .pin-key-btn:focus-visible,
+    #pinLockOverlay .pin-key-btn:active {
+      background: rgba(24, 34, 56, 0.65) !important;
+      border-color: rgba(255, 255, 255, 0.09) !important;
+      outline: none !important;
+      box-shadow: none !important;
+      transform: none !important;
+      transition: none !important;
+      -webkit-tap-highlight-color: transparent !important;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -1487,18 +1504,18 @@
               </div>
               <!-- Numeric Keypad -->
               <div class="grid grid-cols-3 gap-3 max-w-[250px] mx-auto">
-                <button type="button" data-pin-digit="1" onclick="pressPinDigit('1')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">1</button>
-                <button type="button" data-pin-digit="2" onclick="pressPinDigit('2')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">2</button>
-                <button type="button" data-pin-digit="3" onclick="pressPinDigit('3')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">3</button>
-                <button type="button" data-pin-digit="4" onclick="pressPinDigit('4')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">4</button>
-                <button type="button" data-pin-digit="5" onclick="pressPinDigit('5')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">5</button>
-                <button type="button" data-pin-digit="6" onclick="pressPinDigit('6')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">6</button>
-                <button type="button" data-pin-digit="7" onclick="pressPinDigit('7')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">7</button>
-                <button type="button" data-pin-digit="8" onclick="pressPinDigit('8')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">8</button>
-                <button type="button" data-pin-digit="9" onclick="pressPinDigit('9')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">9</button>
-                <button type="button" onclick="clearPinBuffer()" class="h-14 rounded-2xl glass-card text-xs font-semibold text-slate-300">Xóa</button>
-                <button type="button" data-pin-digit="0" onclick="pressPinDigit('0')" class="h-14 rounded-2xl glass-card text-lg font-bold text-white hover:bg-white/15">0</button>
-                <button type="button" onclick="backspacePinDigit()" class="h-14 rounded-2xl glass-card text-slate-300 flex items-center justify-center"><i data-lucide="delete" class="w-5 h-5"></i></button>
+                <button type="button" data-pin-digit="1" onclick="pressPinDigit('1')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">1</button>
+                <button type="button" data-pin-digit="2" onclick="pressPinDigit('2')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">2</button>
+                <button type="button" data-pin-digit="3" onclick="pressPinDigit('3')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">3</button>
+                <button type="button" data-pin-digit="4" onclick="pressPinDigit('4')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">4</button>
+                <button type="button" data-pin-digit="5" onclick="pressPinDigit('5')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">5</button>
+                <button type="button" data-pin-digit="6" onclick="pressPinDigit('6')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">6</button>
+                <button type="button" data-pin-digit="7" onclick="pressPinDigit('7')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">7</button>
+                <button type="button" data-pin-digit="8" onclick="pressPinDigit('8')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">8</button>
+                <button type="button" data-pin-digit="9" onclick="pressPinDigit('9')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">9</button>
+                <button type="button" onclick="clearPinBuffer()" class="pin-key-btn h-14 rounded-2xl glass-card text-xs font-semibold text-slate-300">Xóa</button>
+                <button type="button" data-pin-digit="0" onclick="pressPinDigit('0')" class="pin-key-btn h-14 rounded-2xl glass-card text-lg font-bold text-white">0</button>
+                <button type="button" onclick="backspacePinDigit()" class="pin-key-btn h-14 rounded-2xl glass-card text-slate-300 flex items-center justify-center"><i data-lucide="delete" class="w-5 h-5"></i></button>
               </div>
             </div>
           </div>
@@ -4704,7 +4721,14 @@
         });
       }
 
+      function blurPinActiveElement() {
+        if (document.activeElement && document.activeElement !== document.body && typeof document.activeElement.blur === 'function') {
+          document.activeElement.blur();
+        }
+      }
+
       function lockAppWithPin(silent = false) {
+        blurPinActiveElement();
         pinBuffer = '';
         settings.hideBalance = true;
         sessionStorage.removeItem(STORAGE_KEYS.SESSION_PIN);
@@ -4784,18 +4808,21 @@
       }
 
       function clearPinBuffer() {
+        blurPinActiveElement();
         pinBuffer = '';
         playFeedback('tap');
         updatePinDots();
       }
 
       function backspacePinDigit() {
+        blurPinActiveElement();
         pinBuffer = pinBuffer.slice(0, -1);
         playFeedback('tap');
         updatePinDots();
       }
 
       function pressPinDigit(digit) {
+        blurPinActiveElement();
         const now = Date.now();
         if (now < pinLockedUntil) {
           const secs = Math.ceil((pinLockedUntil - now) / 1000);
