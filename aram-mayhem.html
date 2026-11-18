@@ -167,8 +167,16 @@
                 </button>
             </nav>
 
-            <!-- AI Settings Button -->
+            <!-- AI Settings & Overlay Buttons -->
             <div class="flex items-center gap-2">
+                <button type="button" id="btnHeaderOverlay" onclick="toggleGameOverlay()" title="Mở cửa sổ nổi luôn hiện trên màn hình Game" class="px-3 py-2 rounded-xl bg-gradient-to-r from-purple-600/90 to-cyan-600/90 hover:from-purple-500 hover:to-cyan-500 border border-cyan-400/40 text-xs font-extrabold text-white flex items-center gap-1.5 shadow-lg transition cursor-pointer">
+                    <i class="fa-solid fa-window-restore"></i>
+                    <span id="btnHeaderOverlayLabel" class="hidden sm:inline">Bật Game Overlay</span>
+                </button>
+                <button type="button" id="btnVoiceAlertToggle" onclick="toggleVoiceAlerts()" title="Bật/tắt âm báo & giọng đọc trong trận" class="px-2.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold text-slate-300 flex items-center gap-1.5 transition cursor-pointer">
+                    <i id="voiceAlertIcon" class="fa-solid fa-volume-high text-cyan-400"></i>
+                    <span id="voiceAlertLabel" class="hidden lg:inline">Âm báo: Bật</span>
+                </button>
                 <button type="button" onclick="openSettingsModal()" class="px-3 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold flex items-center gap-2 transition cursor-pointer">
                     <span id="aiStatusDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
                     <span id="aiStatusText" class="hidden md:inline text-slate-200">Free Synergy + OCR</span>
@@ -250,11 +258,13 @@
                         <video id="screenVideo" autoplay muted playsinline class="hidden w-full max-h-36 object-contain rounded-xl"></video>
                         <img id="capturedPreviewImg" src="" alt="Preview" class="hidden w-full max-h-36 object-contain rounded-xl">
                         <canvas id="captureCanvas" class="hidden"></canvas>
+                        <video id="overlayFallbackVideo" muted playsinline class="hidden"></video>
+                        <canvas id="overlayFallbackCanvas" width="420" height="640" class="hidden"></canvas>
 
                         <div id="visionEmptyState" class="space-y-1.5 pointer-events-none">
                             <i class="fa-solid fa-desktop text-2xl text-slate-500"></i>
                             <p class="text-xs text-slate-300 font-semibold">Bấm <span class="text-cyan-300">Bắt màn hình Game</span> hoặc dán ảnh <span class="text-amber-300">Ctrl+V</span></p>
-                            <p class="text-[10px] text-slate-500">AI sẽ tự nhận ra Tướng + 3 Lõi đang hiện và chấm điểm chọn ngay</p>
+                            <p class="text-[10px] text-slate-500">AI nhận diện Tướng + 3 Lõi + Bảng Tab trận đấu & hỗ trợ Overlay nổi trên game</p>
                         </div>
 
                         <div id="visionLoadingOverlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
@@ -265,26 +275,42 @@
 
                     <!-- Action Buttons -->
                     <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" id="btnStartCapture" onclick="toggleScreenCapture()" class="flex-1 min-w-[140px] py-2 px-3 rounded-xl hextech-btn text-xs flex items-center justify-center gap-1.5 cursor-pointer">
+                        <button type="button" id="btnStartCapture" onclick="toggleScreenCapture()" class="flex-1 min-w-[130px] py-2 px-3 rounded-xl hextech-btn text-xs flex items-center justify-center gap-1.5 cursor-pointer">
                             <i class="fa-solid fa-display"></i>
                             <span id="btnStartCaptureLabel">Bắt màn hình Game</span>
+                        </button>
+                        <button type="button" id="btnCardOverlay" onclick="toggleGameOverlay()" class="py-2 px-3 rounded-xl bg-purple-600/80 hover:bg-purple-500 border border-purple-400/50 text-xs font-extrabold text-white flex items-center gap-1.5 cursor-pointer transition">
+                            <i class="fa-solid fa-window-restore"></i>
+                            <span id="btnCardOverlayLabel">Game Overlay</span>
                         </button>
                         <label class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 flex items-center gap-1.5 cursor-pointer transition">
                             <i class="fa-solid fa-image text-amber-300"></i>
                             <span>Tải ảnh</span>
                             <input type="file" id="screenshotUpload" accept="image/*" class="hidden" onchange="handleScreenshotUpload(event)">
                         </label>
-                        <button type="button" id="btnScanNow" onclick="scanCurrentSource()" class="hidden py-2 px-3 rounded-xl gold-btn text-xs flex items-center gap-1.5 cursor-pointer">
+                        <button type="button" id="btnScanNow" onclick="scanCurrentSource()" class="hidden"></button>
+                    </div>
+
+                    <div id="scanActionRow" class="hidden grid grid-cols-2 gap-2">
+                        <button type="button" onclick="scanCurrentSource()" class="py-2 px-3 rounded-xl gold-btn text-xs flex items-center justify-center gap-1.5 cursor-pointer">
                             <i class="fa-solid fa-bolt"></i>
-                            <span>Quét ngay</span>
+                            <span>⚡ Quét Lõi Ngay</span>
+                        </button>
+                        <button type="button" id="btnScanCombat" onclick="scanInGameDeepCombat()" class="py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition">
+                            <i class="fa-solid fa-magnifying-glass-chart"></i>
+                            <span>🔍 Quét Trận / Bảng Tab</span>
                         </button>
                     </div>
 
                     <!-- Auto-Scan Toggle + Scan Result Banner -->
-                    <div id="liveCaptureControls" class="hidden flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-[11px]">
+                    <div id="liveCaptureControls" class="hidden flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-[11px]">
                         <label class="flex items-center gap-2 cursor-pointer font-semibold text-cyan-200">
                             <input type="checkbox" id="autoScanToggle" onchange="toggleAutoScan(this.checked)" class="accent-cyan-400 rounded cursor-pointer">
-                            <span>Tự động quét mỗi 4 giây (Auto-Scan)</span>
+                            <span>Auto-Scan (4s)</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer font-semibold text-amber-200">
+                            <input type="checkbox" id="voiceAlertCheckbox" checked onchange="toggleVoiceAlerts(this.checked)" class="accent-amber-400 rounded cursor-pointer">
+                            <span>🔊 Âm báo & Giọng đọc</span>
                         </label>
                         <span id="autoScanTimerText" class="text-[10px] text-cyan-400 font-mono"></span>
                     </div>
@@ -389,6 +415,41 @@
                 <!-- RIGHT 5 COLS -->
                 <div class="lg:col-span-5 space-y-4">
 
+                    <!-- ARAM HEALTH RELIC TIMERS (BỘ ĐẾM CỤC HỒI MÁU) -->
+                    <div class="glass-panel rounded-3xl p-4 sm:p-5 space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-heart-pulse"></i>
+                                </span>
+                                <div>
+                                    <h2 class="text-sm font-extrabold uppercase tracking-wider text-emerald-200">Đếm Giờ Cục Hồi Máu ARAM</h2>
+                                    <p class="text-[11px] text-slate-400">Phím tắt nhanh <kbd class="px-1 bg-slate-800 rounded text-slate-300">Alt+1..4</kbd> • Báo giọng nói trước 15s & khi hồi</p>
+                                </div>
+                            </div>
+                            <select id="relicCooldownSelect" onchange="setRelicCooldown(this.value)" class="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 text-[11px] font-bold text-emerald-300 focus:outline-none focus:border-emerald-400 cursor-pointer">
+                                <option value="90">90s (Chuẩn)</option>
+                                <option value="75">75s (Nhanh)</option>
+                                <option value="60">60s (Hỗn Loạn)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="startInitialRelics()" class="flex-1 py-1.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
+                                <i class="fa-solid fa-stopwatch"></i>
+                                <span>⏱️ Đếm mốc đầu trận (1:50)</span>
+                            </button>
+                            <button type="button" onclick="resetAllRelics()" class="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-[11px] flex items-center justify-center gap-1.5 cursor-pointer transition">
+                                <i class="fa-solid fa-rotate-left"></i>
+                                <span>🔄 Đặt lại</span>
+                            </button>
+                        </div>
+
+                        <div id="healthRelicGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <!-- 4 Relic timers rendered dynamically -->
+                        </div>
+                    </div>
+
                     <!-- DYNAMIC AUGMENT-ADAPTIVE ITEM BUILD -->
                     <div class="glass-panel rounded-3xl p-4 sm:p-5 space-y-3.5">
                         <div class="flex items-center justify-between gap-2">
@@ -398,8 +459,16 @@
                                 </span>
                                 <div>
                                     <h2 class="text-sm font-extrabold uppercase tracking-wider text-cyan-200">Lên Đồ Theo Chuỗi Lõi</h2>
-                                    <p class="text-[11px] text-slate-400">Trang bị tự động biến đổi theo lõi đã chọn</p>
+                                    <p class="text-[11px] text-slate-400">Trang bị tự động biến đổi theo lõi & đội hình địch</p>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Enemy Threat Quick-Toggles -->
+                        <div class="space-y-1.5">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Mối đe dọa team địch (Tự động chèn đồ khắc chế):</div>
+                            <div id="enemyThreatToggles" class="flex flex-wrap gap-1.5">
+                                <!-- Rendered dynamically -->
                             </div>
                         </div>
 
@@ -2191,8 +2260,27 @@
             '6620': { name: 'Vọng Âm Helia', tag: 'Cấu Rỉa + Hồi Máu' },
             '3190': { name: 'Dây Chuyền Iron Solari', tag: 'Tạo Giáp Tập Thể' },
             '3742': { name: 'Giáp Liệt Sĩ', tag: 'Tốc Chạy + Đánh Choáng' },
-            '3027': { name: 'Trượng Trường Sinh', tag: 'Máu + Năng Lượng + SMPT' }
+            '3027': { name: 'Trượng Trường Sinh', tag: 'Máu + Năng Lượng + SMPT' },
+            '3033': { name: 'Lời Nhắc Tử Vong', tag: 'Vết Thương Sâu + Xuyên Giáp' },
+            '3165': { name: 'Quỷ Thư Morello', tag: 'Vết Thương Sâu Phép' },
+            '6609': { name: 'Cưa Xích Hóa Kỹ', tag: 'Vết Thương Sâu Đấu Sĩ' },
+            '3102': { name: 'Dây Chuyền Chữ Thập', tag: 'Khiên Chặn Chiêu Phép' }
         };
+
+        const ENEMY_THREAT_DEFS = [
+            { key: 'tank', label: '🛡️ Nhiều Tank', desc: 'Ưu tiên Xuyên Giáp / Xuyên Kháng Phép' },
+            { key: 'heal', label: '🩸 Hồi Máu Mạnh', desc: 'Chèn đồ Vết Thương Sâu (-40% Hồi máu)' },
+            { key: 'assassin_ad', label: '🗡️ Sát Thủ AD', desc: 'Chèn Giáp / Đồng Hồ Cát / Vũ Điệu Tử Thần' },
+            { key: 'poke_ap', label: '🔮 Cấu Rỉa AP', desc: 'Chèn Kháng Phép / Vòng Sắt Kaenic / Chữ Thập' },
+            { key: 'cc', label: '⛓️ Nhiều Khống Chế', desc: 'Đổi Giày Thủy Ngân / Hòm Bảo Hộ Mikael' }
+        ];
+
+        const RELIC_DEFINITIONS = [
+            { id: 'ally_inner', label: 'Trụ Trong Đồng Minh', short: 'Trong Ta', hotkey: 'Alt+1', side: 'ally' },
+            { id: 'ally_outer', label: 'Trụ Ngoài Đồng Minh', short: 'Ngoài Ta', hotkey: 'Alt+2', side: 'ally' },
+            { id: 'enemy_outer', label: 'Trụ Ngoài Đối Phương', short: 'Ngoài Địch', hotkey: 'Alt+3', side: 'enemy' },
+            { id: 'enemy_inner', label: 'Trụ Trong Đối Phương', short: 'Trong Địch', hotkey: 'Alt+4', side: 'enemy' }
+        ];
 
         // =====================================================================
         // 4. EXODIA COMBOS DATABASE (TAB 3)
@@ -2294,7 +2382,27 @@
             autoScanTimer: null,
             lastImageBase64: null,
             lastImageMime: 'image/jpeg',
-            isScanning: false
+            isScanning: false,
+            enemyThreats: [],
+            voiceAlerts: localStorage.getItem('aram_mayhem_voice_alerts') !== 'false',
+            relicCooldownSec: 90,
+            relicTimers: RELIC_DEFINITIONS.map(r => ({
+                id: r.id,
+                label: r.label,
+                short: r.short,
+                hotkey: r.hotkey,
+                side: r.side,
+                remaining: 0,
+                total: 90,
+                running: false,
+                warned15: false,
+                warned0: false
+            })),
+            relicInterval: null,
+            pipWindow: null,
+            canvasPipActive: false,
+            canvasPipInterval: null,
+            lastCombatAnalysis: null
         };
 
         // =====================================================================
@@ -2303,6 +2411,7 @@
         window.addEventListener('DOMContentLoaded', async () => {
             buildInitialChampions();
             updateAIStatusUI();
+            updateVoiceAlertUI();
             renderAll();
             bindGlobalEvents();
             await syncRiotDataDragon();
@@ -2568,24 +2677,23 @@
             return { score, reasons, comboHits };
         }
 
-        function computeAdaptiveBuild(champ, chosenIds) {
+        function computeAdaptiveBuild(champ, chosenIds, enemyThreats = state.enemyThreats) {
             const validIds = chosenIds.filter(Boolean);
             const chosenObjs = validIds.map(id => AUGMENTS_DB.find(a => a.id === id)).filter(Boolean);
             let items = [...(champ.coreItems || [])];
             let boots = champ.boots || '3111';
             const pivotNotes = [];
+            const counterNotes = [];
 
             // Apply build-warping augment shifts cleanly
             for (const aug of chosenObjs) {
                 if (aug.pivotNote) pivotNotes.push(`<strong>${aug.nameVi}:</strong> ${aug.pivotNote}`);
                 if (Array.isArray(aug.bonusItems) && aug.bonusItems.length > 0) {
-                    // Prioritize augment's bonus items at the front while keeping unique 5-item core (+boots = 6 slots)
                     for (let i = aug.bonusItems.length - 1; i >= 0; i--) {
                         const bItem = aug.bonusItems[i];
                         items = [bItem, ...items.filter(x => x !== bItem)];
                     }
                 }
-                // Specific boot shifts
                 if (aug.id === 'with_haste' || aug.id === 'recursion' || aug.id === 'eureka') {
                     if (boots === '3020') boots = '3158';
                 }
@@ -2594,10 +2702,66 @@
                 }
             }
 
+            // Apply enemy threat counter-items cleanly
+            const cTags = new Set(champ.tags || []);
+            const isAP = cTags.has('mage') || cTags.has('ap') || cTags.has('enchanter');
+            const isMarksman = cTags.has('marksman') || cTags.has('adc');
+            const isTank = cTags.has('tank') && !isMarksman;
+            const threats = Array.isArray(enemyThreats) ? enemyThreats : [];
+
+            const injectCounterItem = (itemId, reason) => {
+                if (!itemId) return;
+                // Keep top 2 core items intact and insert counter item at slot #3 (index 2) if not already near top
+                const existingIdx = items.indexOf(itemId);
+                if (existingIdx !== -1 && existingIdx <= 3) {
+                    counterNotes.push(reason);
+                    return;
+                }
+                const filtered = items.filter(x => x !== itemId);
+                const insertPos = Math.min(2, filtered.length);
+                filtered.splice(insertPos, 0, itemId);
+                items = filtered;
+                counterNotes.push(reason);
+            };
+
+            if (threats.includes('tank')) {
+                if (isAP && !cTags.has('enchanter')) {
+                    injectCounterItem('3135', '<strong>Nhiều Tank:</strong> Đẩy <em>Trượng Hư Vô</em> (+40% Xuyên Kháng Phép) lên sớm.');
+                } else if (isMarksman) {
+                    injectCounterItem('3036', '<strong>Nhiều Tank:</strong> Đẩy <em>Nỏ Thần Dominik</em> lên món 3 để bắn xuyên giáp.');
+                } else if (!isTank) {
+                    injectCounterItem('3071', '<strong>Nhiều Tank:</strong> Lên <em>Rìu Đen</em> để trừ 30% Giáp cho cả đội.');
+                }
+            }
+            if (threats.includes('heal')) {
+                if (isTank) injectCounterItem('3075', '<strong>Hồi Máu Mạnh:</strong> Chèn <em>Giáp Gai</em> gây Vết Thương Sâu.');
+                else if (isAP) injectCounterItem('3165', '<strong>Hồi Máu Mạnh:</strong> Chèn <em>Quỷ Thư Morello</em> giảm 40% hồi máu địch.');
+                else if (isMarksman) injectCounterItem('3033', '<strong>Hồi Máu Mạnh:</strong> Đổi sang <em>Lời Nhắc Tử Vong</em> (Xuyên Giáp + Vết Thương Sâu).');
+                else injectCounterItem('6609', '<strong>Hồi Máu Mạnh:</strong> Chèn <em>Cưa Xích Hóa Kỹ</em> gây Vết Thương Sâu.');
+            }
+            if (threats.includes('assassin_ad')) {
+                if (isAP) injectCounterItem('3157', '<strong>Sát Thủ AD:</strong> Ưu tiên <em>Đồng Hồ Cát Zhonya</em> tránh bị dồn 1-shot.');
+                else if (isTank) injectCounterItem('3110', '<strong>Sát Thủ AD:</strong> Chèn <em>Tim Băng</em> giảm tốc đánh & sát thương tay.');
+                else injectCounterItem('3026', '<strong>Sát Thủ AD:</strong> Chèn <em>Giáp Thiên Thần</em> để sống sót trong giao tranh.');
+            }
+            if (threats.includes('poke_ap')) {
+                if (isTank || cTags.has('bruiser')) injectCounterItem('2504', '<strong>Cấu Rỉa AP:</strong> Chèn <em>Vòng Sắt Kaenic</em> lấy lá chắn phép khổng lồ.');
+                else if (isAP) injectCounterItem('3102', '<strong>Cấu Rỉa AP:</strong> Chèn <em>Dây Chuyền Chữ Thập</em> chặn kỹ năng mở giao tranh.');
+                else injectCounterItem('3091', '<strong>Cấu Rỉa AP:</strong> Chèn <em>Đao Tím</em> lấy Kháng Phép + Tốc Đánh.');
+            }
+            if (threats.includes('cc')) {
+                if (cTags.has('enchanter')) {
+                    injectCounterItem('3222', '<strong>Nhiều Khống Chế:</strong> Lên <em>Hòm Bảo Hộ Mikael</em> giải choáng cho chủ lực.');
+                } else {
+                    boots = '3111';
+                    counterNotes.push('<strong>Nhiều Khống Chế:</strong> Đổi sang <em>Giày Thủy Ngân</em> để giảm thời gian bị làm choáng.');
+                }
+            }
+
             // Ensure max 5 non-boot core items + 1 boots = 6 items total, and collect extra situational items
             const finalCore = items.slice(0, 5);
             const situational = items.slice(5, 8);
-            return { boots, finalCore, situational, pivotNotes };
+            return { boots, finalCore, situational, pivotNotes: [...pivotNotes, ...counterNotes] };
         }
 
         // =====================================================================
@@ -2609,9 +2773,12 @@
             renderAugmentSlots();
             renderRollEvaluator();
             renderNextAugmentAdvisor();
+            renderHealthRelics();
+            renderEnemyThreatToggles();
             renderAdaptiveBuild();
             if (state.activeTab === 'tierlist') renderTierList();
             if (state.activeTab === 'combos') renderExodiaCombos();
+            syncOverlayUI();
         }
 
         function renderSelectedChampion() {
@@ -3370,6 +3537,18 @@
                 }
             });
 
+            // Hotkeys Alt+1..4 for ARAM Health Relic Timers
+            window.addEventListener('keydown', (e) => {
+                if (e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
+                    const idx = parseInt(e.key, 10) - 1;
+                    const relic = state.relicTimers[idx];
+                    if (relic) {
+                        e.preventDefault();
+                        startRelicTimer(relic.id);
+                    }
+                }
+            });
+
             // Global Ctrl+V Image Paste
             window.addEventListener('paste', (e) => {
                 const items = (e.clipboardData || window.clipboardData)?.items;
@@ -3407,16 +3586,16 @@
                 video.classList.remove('hidden');
                 document.getElementById('capturedPreviewImg').classList.add('hidden');
                 document.getElementById('visionEmptyState').classList.add('hidden');
-                document.getElementById('btnScanNow').classList.remove('hidden');
+                document.getElementById('scanActionRow').classList.remove('hidden');
                 document.getElementById('liveCaptureControls').classList.remove('hidden');
 
                 document.getElementById('btnStartCaptureLabel').textContent = 'Dừng bắt màn hình';
-                document.getElementById('btnStartCapture').className = 'flex-1 min-w-[140px] py-2 px-3 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer';
+                document.getElementById('btnStartCapture').className = 'flex-1 min-w-[130px] py-2 px-3 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer';
                 document.getElementById('scanModeBadge').textContent = 'Đang kết nối màn hình';
                 document.getElementById('scanModeBadge').className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
 
                 stream.getVideoTracks()[0].addEventListener('ended', stopScreenCapture);
-                showToast('Đã kết nối màn hình Game! Bấm "Quét ngay" hoặc bật Auto-Scan.', 'success');
+                showToast('Đã kết nối màn hình Game! Hãy bật "Game Overlay" để nổi trên màn hình game.', 'success');
             } catch (err) {
                 console.warn('Screen capture cancelled:', err);
             }
@@ -3438,14 +3617,16 @@
             video.classList.add('hidden');
             if (!state.lastImageBase64) {
                 document.getElementById('visionEmptyState').classList.remove('hidden');
+                document.getElementById('scanActionRow').classList.add('hidden');
             } else {
                 document.getElementById('capturedPreviewImg').classList.remove('hidden');
             }
             document.getElementById('liveCaptureControls').classList.add('hidden');
             document.getElementById('btnStartCaptureLabel').textContent = 'Bắt màn hình Game';
-            document.getElementById('btnStartCapture').className = 'flex-1 min-w-[140px] py-2 px-3 rounded-xl hextech-btn text-xs flex items-center justify-center gap-1.5 cursor-pointer';
+            document.getElementById('btnStartCapture').className = 'flex-1 min-w-[130px] py-2 px-3 rounded-xl hextech-btn text-xs flex items-center justify-center gap-1.5 cursor-pointer';
             document.getElementById('scanModeBadge').textContent = 'Sẵn sàng';
             document.getElementById('scanModeBadge').className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700';
+            syncOverlayUI();
         }
 
         function toggleAutoScan(enabled) {
@@ -3465,6 +3646,7 @@
             } else {
                 if (timerText) timerText.textContent = '';
             }
+            syncOverlayUI();
         }
 
         function handleScreenshotUpload(event) {
@@ -3484,7 +3666,7 @@
                 img.classList.remove('hidden');
                 document.getElementById('screenVideo').classList.add('hidden');
                 document.getElementById('visionEmptyState').classList.add('hidden');
-                document.getElementById('btnScanNow').classList.remove('hidden');
+                document.getElementById('scanActionRow').classList.remove('hidden');
                 analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime);
             };
             reader.readAsDataURL(file);
@@ -3695,6 +3877,25 @@
             `;
 
             renderAll();
+            if (matchedOffered.length > 0) {
+                const champ = state.championsMap[state.selectedChampId];
+                const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
+                let topAug = null;
+                let topScore = -1;
+                for (const aug of matchedOffered) {
+                    const ev = scoreAugmentForContext(aug, champ, activeIds);
+                    if (ev.score > topScore) {
+                        topScore = ev.score;
+                        topAug = aug;
+                    }
+                }
+                if (topAug) {
+                    const msg = topScore < 60
+                        ? `Nên đổi lõi! Hoặc tạm lấy ${topAug.nameVi}`
+                        : `Khuyên chọn lõi ${topAug.nameVi}, ${topScore} điểm`;
+                    speakAlertVi(msg);
+                }
+            }
             if (matchedOffered.length > 0 || matchedChamp) {
                 showToast('AI đã cập nhật Tướng & Lõi từ ảnh!', 'success');
             }
@@ -3876,6 +4077,759 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                 el.style.opacity = '0';
                 setTimeout(() => el.remove(), 300);
             }, 3000);
+        }
+
+        // =====================================================================
+        // 14. ARAM HEALTH RELIC TIMERS & AUDIO / VOICE ALERTS
+        // =====================================================================
+        function formatMMSS(totalSec) {
+            const s = Math.max(0, Math.ceil(totalSec));
+            const mins = Math.floor(s / 60);
+            const secs = s % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function setRelicCooldown(sec) {
+            const parsed = parseInt(sec, 10);
+            if (!isNaN(parsed) && parsed > 0) {
+                state.relicCooldownSec = parsed;
+                showToast(`Đã đặt hồi cục máu: ${parsed}s`, 'info');
+            }
+        }
+
+        function ensureRelicInterval() {
+            if (!state.relicInterval) {
+                state.relicInterval = setInterval(tickRelicTimers, 1000);
+            }
+        }
+
+        function startRelicTimer(relicId, customSec = null) {
+            const relic = state.relicTimers.find(r => r.id === relicId);
+            if (!relic) return;
+            const duration = customSec || state.relicCooldownSec || 90;
+            relic.total = duration;
+            relic.remaining = duration;
+            relic.running = true;
+            relic.warned15 = false;
+            relic.warned0 = false;
+            ensureRelicInterval();
+            renderHealthRelics();
+            syncOverlayUI();
+        }
+
+        function adjustRelicTimer(relicId, deltaSec) {
+            const relic = state.relicTimers.find(r => r.id === relicId);
+            if (!relic) return;
+            if (!relic.running && deltaSec > 0) {
+                startRelicTimer(relicId, deltaSec);
+                return;
+            }
+            relic.remaining = Math.max(0, relic.remaining + deltaSec);
+            if (relic.remaining > relic.total) relic.total = relic.remaining;
+            if (relic.remaining > 15) relic.warned15 = false;
+            if (relic.remaining === 0 && relic.running) {
+                relic.running = false;
+                relic.warned0 = true;
+                playAlertTone('ready');
+            }
+            renderHealthRelics();
+            syncOverlayUI();
+        }
+
+        function startInitialRelics() {
+            state.relicTimers.forEach(r => {
+                r.total = 110;
+                r.remaining = 110;
+                r.running = true;
+                r.warned15 = false;
+                r.warned0 = false;
+            });
+            ensureRelicInterval();
+            renderHealthRelics();
+            syncOverlayUI();
+            showToast('Đang đếm mốc đầu trận (1:50) cho cả 4 cục hồi máu!', 'success');
+        }
+
+        function resetRelicTimer(relicId) {
+            const relic = state.relicTimers.find(r => r.id === relicId);
+            if (!relic) return;
+            relic.remaining = 0;
+            relic.running = false;
+            relic.warned15 = false;
+            relic.warned0 = false;
+            renderHealthRelics();
+            syncOverlayUI();
+        }
+
+        function resetAllRelics() {
+            state.relicTimers.forEach(r => {
+                r.remaining = 0;
+                r.running = false;
+                r.warned15 = false;
+                r.warned0 = false;
+            });
+            if (state.relicInterval) {
+                clearInterval(state.relicInterval);
+                state.relicInterval = null;
+            }
+            renderHealthRelics();
+            syncOverlayUI();
+        }
+
+        function tickRelicTimers() {
+            let anyRunning = false;
+            for (const r of state.relicTimers) {
+                if (!r.running) continue;
+                r.remaining = Math.max(0, r.remaining - 1);
+                if (r.remaining === 15 && !r.warned15) {
+                    r.warned15 = true;
+                    playAlertTone('warn');
+                    speakAlertVi(`Cục hồi máu ${r.label} sắp ra trong 15 giây`);
+                }
+                if (r.remaining === 0 && !r.warned0) {
+                    r.warned0 = true;
+                    r.running = false;
+                    playAlertTone('ready');
+                    speakAlertVi(`Cục hồi máu ${r.label} đã hồi`);
+                } else if (r.remaining > 0) {
+                    anyRunning = true;
+                }
+            }
+            if (!anyRunning && state.relicInterval) {
+                clearInterval(state.relicInterval);
+                state.relicInterval = null;
+            }
+            renderHealthRelics();
+            syncOverlayUI();
+        }
+
+        function renderHealthRelics() {
+            const grid = document.getElementById('healthRelicGrid');
+            if (!grid) return;
+
+            grid.innerHTML = state.relicTimers.map(r => {
+                const isSoon = r.running && r.remaining <= 15 && r.remaining > 0;
+                const pct = r.running && r.total > 0 ? Math.min(100, Math.round(((r.total - r.remaining) / r.total) * 100)) : 100;
+                const borderCls = isSoon
+                    ? 'border-amber-400/70 bg-amber-500/10'
+                    : (r.running
+                        ? 'border-cyan-500/40 bg-slate-900/85'
+                        : (r.side === 'ally' ? 'border-emerald-500/35 bg-emerald-950/20' : 'border-rose-500/35 bg-rose-950/20'));
+                const timeText = r.running ? formatMMSS(r.remaining) : 'Sẵn sàng';
+                const timeCls = isSoon ? 'text-amber-300 animate-pulse' : (r.running ? 'text-cyan-300' : 'text-emerald-300');
+
+                return `
+                    <div class="rounded-2xl p-2.5 border ${borderCls} space-y-2 transition">
+                        <div class="flex items-center justify-between gap-1.5">
+                            <div class="min-w-0">
+                                <div class="text-[11px] font-extrabold text-slate-100 truncate">${escapeHtml(r.label)}</div>
+                                <div class="text-[9px] text-slate-400 font-mono">${r.hotkey}</div>
+                            </div>
+                            <span class="text-xs font-extrabold font-mono ${timeCls} shrink-0">${timeText}</span>
+                        </div>
+
+                        <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                            <div class="h-full transition-all duration-500 ${isSoon ? 'bg-amber-400' : (r.running ? 'bg-cyan-400' : 'bg-emerald-400')}" style="width: ${pct}%"></div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-1">
+                            <button type="button" onclick="startRelicTimer('${r.id}')"
+                                    class="flex-1 py-1 px-2 rounded-lg text-[10px] font-extrabold cursor-pointer transition ${r.running ? 'bg-slate-800 hover:bg-slate-700 text-cyan-200' : 'bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-200 border border-emerald-500/30'}">
+                                ${r.running ? 'Ăn lại' : 'Bắt đầu'}
+                            </button>
+                            <button type="button" onclick="adjustRelicTimer('${r.id}', -5)" title="Giảm 5s" class="px-1.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-slate-300 cursor-pointer">-5s</button>
+                            <button type="button" onclick="adjustRelicTimer('${r.id}', 5)" title="Tăng 5s" class="px-1.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-slate-300 cursor-pointer">+5s</button>
+                            <button type="button" onclick="resetRelicTimer('${r.id}')" title="Đặt lại" class="px-1.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-500/30 text-[10px] text-slate-400 hover:text-white cursor-pointer">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleVoiceAlerts(explicitVal) {
+            state.voiceAlerts = typeof explicitVal === 'boolean' ? explicitVal : !state.voiceAlerts;
+            localStorage.setItem('aram_mayhem_voice_alerts', String(state.voiceAlerts));
+            updateVoiceAlertUI();
+            syncOverlayUI();
+        }
+
+        function updateVoiceAlertUI() {
+            const icon = document.getElementById('voiceAlertIcon');
+            const label = document.getElementById('voiceAlertLabel');
+            const cb = document.getElementById('voiceAlertCheckbox');
+            if (cb) cb.checked = state.voiceAlerts;
+            if (icon) {
+                icon.className = state.voiceAlerts
+                    ? 'fa-solid fa-volume-high text-cyan-400'
+                    : 'fa-solid fa-volume-xmark text-slate-500';
+            }
+            if (label) {
+                label.textContent = state.voiceAlerts ? 'Âm báo: Bật' : 'Âm báo: Tắt';
+            }
+        }
+
+        function playAlertTone(kind = 'warn') {
+            if (!state.voiceAlerts) return;
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(kind === 'ready' ? 880 : 620, ctx.currentTime);
+                if (kind === 'ready') {
+                    osc.frequency.exponentialRampToValueAtTime(1180, ctx.currentTime + 0.16);
+                }
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.26);
+                setTimeout(() => { try { ctx.close(); } catch (_) {} }, 350);
+            } catch (_) {}
+        }
+
+        function speakAlertVi(text) {
+            if (!state.voiceAlerts || !text || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+            try {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'vi-VN';
+                utter.rate = 1.1;
+                const voices = window.speechSynthesis.getVoices() || [];
+                const viVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('vi'));
+                if (viVoice) utter.voice = viVoice;
+                window.speechSynthesis.speak(utter);
+            } catch (_) {}
+        }
+
+        // =====================================================================
+        // 15. ENEMY THREAT COUNTER-BUILD & DEEP IN-GAME COMBAT SCANNER
+        // =====================================================================
+        function toggleEnemyThreat(threatKey) {
+            const idx = state.enemyThreats.indexOf(threatKey);
+            if (idx === -1) state.enemyThreats.push(threatKey);
+            else state.enemyThreats.splice(idx, 1);
+            renderEnemyThreatToggles();
+            renderAdaptiveBuild();
+            syncOverlayUI();
+        }
+
+        function renderEnemyThreatToggles() {
+            const wrap = document.getElementById('enemyThreatToggles');
+            if (!wrap) return;
+            wrap.innerHTML = ENEMY_THREAT_DEFS.map(def => {
+                const active = state.enemyThreats.includes(def.key);
+                return `
+                    <button type="button" onclick="toggleEnemyThreat('${def.key}')" title="${escapeHtml(def.desc)}"
+                            class="px-2.5 py-1 rounded-full text-[10px] font-bold border transition cursor-pointer ${active ? 'bg-rose-500/25 text-rose-200 border-rose-400/60 shadow-sm' : 'bg-slate-900/90 text-slate-400 border-slate-700/80 hover:border-slate-500'}">
+                        ${def.label}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function captureCurrentFrameToState() {
+            if (state.screenStream) {
+                const video = document.getElementById('screenVideo');
+                if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+                    const canvas = document.getElementById('captureCanvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    state.lastImageBase64 = dataUrl.split(',')[1];
+                    state.lastImageMime = 'image/jpeg';
+                    return true;
+                }
+            }
+            return Boolean(state.lastImageBase64);
+        }
+
+        function scanInGameDeepCombat() {
+            const hasFrame = captureCurrentFrameToState();
+            if (!hasFrame) {
+                const offlineRes = buildOfflineCombatAnalysis('');
+                applyCombatAnalysisResult(offlineRes);
+                showToast('Đã phân tích chiến thuật trận hiện tại (chưa có ảnh màn hình).', 'info');
+                return;
+            }
+            analyzeInGameCombatScreen(state.lastImageBase64, state.lastImageMime);
+        }
+
+        async function analyzeInGameCombatScreen(base64Data, mimeType) {
+            if (state.isScanning) return;
+            state.isScanning = true;
+            const overlay = document.getElementById('visionLoadingOverlay');
+            const loadText = document.getElementById('visionLoadingText');
+            if (overlay) overlay.classList.remove('hidden');
+
+            try {
+                let res = null;
+                if (getEffectiveApiKey()) {
+                    if (loadText) loadText.textContent = 'Gemini AI đang phân tích Bảng Tab & Kèo Đấu...';
+                    try {
+                        res = await callGeminiCombatVisionScan(base64Data, mimeType);
+                    } catch (err) {
+                        console.warn('Gemini Combat Vision fallback:', err);
+                    }
+                }
+                if (!res) {
+                    if (loadText) loadText.textContent = 'Đang phân tích đội hình & đồ khắc chế...';
+                    res = buildOfflineCombatAnalysis('');
+                }
+                applyCombatAnalysisResult(res);
+            } catch (err) {
+                showToast(`Lỗi quét trận: ${err.message}`, 'error');
+            } finally {
+                if (overlay) overlay.classList.add('hidden');
+                state.isScanning = false;
+            }
+        }
+
+        async function callGeminiCombatVisionScan(base64Data, mimeType) {
+            const champ = state.championsMap[state.selectedChampId];
+            const chosenNames = state.chosenAugments.map(id => AUGMENTS_DB.find(a => a.id === id)?.nameVi).filter(Boolean);
+            const prompt = `Bạn là huấn luyện viên Cao Thủ LMHT chế độ ARAM: Hỗn Loạn. Hãy nhìn ảnh màn hình trận đấu (giao tranh hoặc Bảng Tab) và trả về JSON thuần:
+{
+  "championName": "Tên tướng của người chơi nếu thấy (mặc định: ${champ?.nameVi || ''})",
+  "detectedThreats": ["Chọn các key phù hợp trong: tank, heal, assassin_ad, poke_ap, cc"],
+  "enemyCarryNote": "Tướng nguy hiểm nhất bên địch thấy trong ảnh",
+  "nextItemName": "1 món trang bị nên mua ngay ở lần biến về/hồi sinh tiếp theo",
+  "tacticalAdviceVi": "Lời khuyên thực chiến 3 câu ngắn gọn bằng tiếng Việt (cách giữ vị trí, mục tiêu focus, khắc chế đội hình địch)",
+  "chosenAugments": ["Tên lõi đã chọn nếu nhìn thấy"],
+  "offeredAugments": ["Tên tối đa 3 lõi đang chọn nếu bảng lõi đang mở"]
+}`;
+            const resJson = await callGeminiAPI({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        { inlineData: { mimeType: mimeType || 'image/jpeg', data: base64Data } }
+                    ]
+                }],
+                generationConfig: { temperature: 0.25, responseMimeType: 'application/json' }
+            });
+            const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+            const parsed = JSON.parse(rawText);
+            return {
+                source: 'Gemini AI Deep Combat',
+                championName: parsed.championName || '',
+                detectedThreats: Array.isArray(parsed.detectedThreats) ? parsed.detectedThreats : [],
+                enemyCarryNote: parsed.enemyCarryNote || '',
+                nextItemName: parsed.nextItemName || '',
+                tacticalAdviceVi: parsed.tacticalAdviceVi || '',
+                chosenAugments: Array.isArray(parsed.chosenAugments) ? parsed.chosenAugments : [],
+                offeredAugments: Array.isArray(parsed.offeredAugments) ? parsed.offeredAugments : []
+            };
+        }
+
+        function buildOfflineCombatAnalysis() {
+            const champ = state.championsMap[state.selectedChampId];
+            const build = computeAdaptiveBuild(champ, state.chosenAugments, state.enemyThreats);
+            const firstItemId = build.finalCore[0];
+            const nextItemName = state.itemsMap[firstItemId]?.name || 'Món cốt lõi tiếp theo';
+            const threatsText = state.enemyThreats.length > 0
+                ? state.enemyThreats.map(k => ENEMY_THREAT_DEFS.find(d => d.key === k)?.label).filter(Boolean).join(', ')
+                : 'Chưa gắn thẻ mối đe dọa địch';
+            return {
+                source: 'Tactical Synergy Engine',
+                championName: champ?.nameVi || '',
+                detectedThreats: [...state.enemyThreats],
+                enemyCarryNote: threatsText,
+                nextItemName,
+                tacticalAdviceVi: `${champ?.playstyleHint || ''} Ưu tiên hoàn thành ${nextItemName}. Kiểm soát cục hồi máu mỗi khi đồng hồ còn 15 giây.`,
+                chosenAugments: [],
+                offeredAugments: []
+            };
+        }
+
+        function applyCombatAnalysisResult(res) {
+            const validThreatKeys = new Set(ENEMY_THREAT_DEFS.map(d => d.key));
+            const newThreats = (res.detectedThreats || []).filter(k => validThreatKeys.has(k));
+            if (newThreats.length > 0) {
+                state.enemyThreats = [...new Set([...state.enemyThreats, ...newThreats])];
+            }
+
+            if (res.championName) {
+                const mc = fuzzyMatchChampion(res.championName);
+                if (mc) state.selectedChampId = mc.id;
+            }
+            const matchedChosen = (res.chosenAugments || []).map(fuzzyMatchAugment).filter(Boolean);
+            if (matchedChosen.length > 0) {
+                matchedChosen.slice(0, 4).forEach((a, i) => { state.chosenAugments[i] = a.id; });
+                state.activeTargetSlot = getNextOpenSlotIndex();
+            }
+            const matchedOffered = (res.offeredAugments || []).map(fuzzyMatchAugment).filter(Boolean);
+            if (matchedOffered.length > 0) {
+                state.rollCandidates = [matchedOffered[0]?.id || null, matchedOffered[1]?.id || null, matchedOffered[2]?.id || null];
+            }
+
+            state.lastCombatAnalysis = res;
+
+            const noteBox = document.getElementById('visionResultNote');
+            if (noteBox) {
+                noteBox.classList.remove('hidden');
+                noteBox.innerHTML = `
+                    <div class="text-[10px] font-extrabold text-indigo-300 uppercase mb-1">
+                        <i class="fa-solid fa-magnifying-glass-chart mr-1"></i>${escapeHtml(res.source)}
+                    </div>
+                    ${res.nextItemName ? `<div class="text-amber-300 font-bold mb-0.5">🛒 Món ưu tiên mua tới: ${escapeHtml(res.nextItemName)}</div>` : ''}
+                    ${res.enemyCarryNote ? `<div class="text-rose-300 text-[10px] mb-1">⚠️ Điểm nóng địch: ${escapeHtml(res.enemyCarryNote)}</div>` : ''}
+                    <div class="text-slate-200">${escapeHtml(res.tacticalAdviceVi)}</div>
+                `;
+            }
+
+            const deepBox = document.getElementById('deepAiResponseBox');
+            if (deepBox) {
+                deepBox.classList.remove('hidden');
+                deepBox.innerHTML = `
+                    <div class="font-bold text-indigo-300"><i class="fa-solid fa-crosshairs mr-1"></i>Phân tích trận đấu trực tiếp (${escapeHtml(res.source)}):</div>
+                    ${res.nextItemName ? `<div><strong>Nên mua tiếp:</strong> <span class="text-amber-300">${escapeHtml(res.nextItemName)}</span></div>` : ''}
+                    ${res.enemyCarryNote ? `<div><strong>Mối đe dọa chính:</strong> <span class="text-rose-300">${escapeHtml(res.enemyCarryNote)}</span></div>` : ''}
+                    <div class="text-slate-200 leading-relaxed">${escapeHtml(res.tacticalAdviceVi)}</div>
+                `;
+            }
+
+            renderAll();
+            if (res.nextItemName && state.voiceAlerts) {
+                speakAlertVi(`Món ưu tiên tiếp theo: ${res.nextItemName}`);
+            }
+            showToast('Đã hoàn tất phân tích trận đấu chuyên sâu!', 'success');
+        }
+
+        // =====================================================================
+        // 16. ALWAYS-ON-TOP GAME OVERLAY (DOCUMENT PiP + VIDEO PiP FALLBACK)
+        // =====================================================================
+        async function toggleGameOverlay() {
+            if (state.pipWindow || state.canvasPipActive) {
+                closeGameOverlay();
+                return;
+            }
+            if ('documentPictureInPicture' in window) {
+                try {
+                    await openDocumentPiPOverlay();
+                    return;
+                } catch (err) {
+                    console.warn('Document PiP failed, trying Canvas Video PiP fallback:', err);
+                }
+            }
+            try {
+                await openCanvasVideoPiP();
+            } catch (err) {
+                showToast('Trình duyệt chặn mở Overlay nổi. Hãy bật quyền Pop-up/PiP hoặc mở cửa sổ này ở màn hình phụ.', 'error');
+            }
+        }
+
+        async function openDocumentPiPOverlay() {
+            const pipWin = await window.documentPictureInPicture.requestWindow({
+                width: 410,
+                height: 670
+            });
+            state.pipWindow = pipWin;
+
+            // Inject FontAwesome & clean Hextech Overlay CSS
+            const styleEl = pipWin.document.createElement('style');
+            styleEl.textContent = `
+                * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+                body { background: #050814; color: #e2e8f0; padding: 10px; font-size: 12px; overflow-y: auto; }
+                .ov-card { background: rgba(13, 19, 36, 0.92); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 10px; margin-bottom: 8px; }
+                .ov-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid rgba(200,155,60,0.25); padding-bottom: 8px; margin-bottom: 8px; }
+                .ov-champ { display: flex; align-items: center; gap: 8px; }
+                .ov-champ img { width: 34px; height: 34px; border-radius: 10px; border: 1px solid #c89b3c; object-fit: cover; }
+                .ov-title { font-weight: 800; font-size: 13px; color: #fde68a; }
+                .ov-sub { font-size: 10px; color: #94a3b8; }
+                .ov-btn { border: 1px solid rgba(255,255,255,0.12); background: #0f172a; color: #e2e8f0; border-radius: 9px; padding: 5px 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+                .ov-btn:hover { background: #1e293b; }
+                .ov-btn-cyan { background: linear-gradient(135deg, #0ea5e9, #0ac8b9); color: #03151e; border: none; }
+                .ov-btn-indigo { background: #4f46e5; color: #fff; border: none; }
+                .ov-btn-gold { background: linear-gradient(135deg, #c89b3c, #f59e0b); color: #1a1202; border: none; }
+                .ov-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+                .ov-relic { background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.22); border-radius: 10px; padding: 6px 8px; }
+                .ov-relic.soon { border-color: rgba(251,191,36,0.75); background: rgba(245,158,11,0.12); }
+                .ov-relic-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+                .ov-relic-name { font-size: 10px; font-weight: 700; color: #cbd5e1; }
+                .ov-relic-time { font-family: monospace; font-weight: 800; font-size: 12px; color: #34d399; }
+                .ov-relic.soon .ov-relic-time { color: #fcd34d; }
+                .ov-aug { padding: 6px 8px; border-radius: 10px; border: 1px solid rgba(168,85,247,0.35); background: rgba(88,28,135,0.16); margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+                .ov-aug.best { border-color: #34d399; background: rgba(16,185,129,0.15); }
+                .ov-badge { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 999px; background: rgba(10,200,185,0.2); color: #67e8f9; }
+                .ov-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+                .ov-pill { font-size: 10px; padding: 3px 7px; border-radius: 999px; border: 1px solid rgba(148,163,184,0.25); background: #0f172a; color: #cbd5e1; cursor: pointer; font-weight: 700; }
+                .ov-pill.active { background: rgba(244,63,94,0.25); border-color: rgba(251,113,133,0.65); color: #fecdd3; }
+                .ov-items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 6px; }
+                .ov-item { display: flex; align-items: center; gap: 5px; background: #0f172a; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 4px; font-size: 10px; overflow: hidden; }
+                .ov-item img { width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0; }
+                .ov-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .ov-sec-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+            `;
+            pipWin.document.head.appendChild(styleEl);
+
+            const root = pipWin.document.createElement('div');
+            root.id = 'ovRoot';
+            pipWin.document.body.appendChild(root);
+
+            // Event delegation inside PiP window
+            pipWin.document.body.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-ov-action]');
+                if (!btn) return;
+                const action = btn.dataset.ovAction;
+                const arg1 = btn.dataset.ovArg1;
+                const arg2 = btn.dataset.ovArg2;
+                if (action === 'scan-aug') scanCurrentSource();
+                else if (action === 'scan-combat') scanInGameDeepCombat();
+                else if (action === 'toggle-voice') toggleVoiceAlerts();
+                else if (action === 'toggle-autoscan') toggleAutoScan(!state.autoScanTimer);
+                else if (action === 'relic-start') startRelicTimer(arg1);
+                else if (action === 'relic-adj') adjustRelicTimer(arg1, parseInt(arg2, 10));
+                else if (action === 'relic-reset') resetRelicTimer(arg1);
+                else if (action === 'relic-init') startInitialRelics();
+                else if (action === 'relic-reset-all') resetAllRelics();
+                else if (action === 'lock-aug') lockAugmentToTargetSlot(arg1);
+                else if (action === 'toggle-threat') toggleEnemyThreat(arg1);
+                else if (action === 'close-ov') closeGameOverlay();
+            });
+
+            pipWin.addEventListener('pagehide', () => {
+                state.pipWindow = null;
+                updateOverlayButtonUI();
+            });
+
+            updateOverlayButtonUI();
+            renderOverlayHUD();
+            showToast('Đã mở Game Overlay nổi trên màn hình! (Đặt game chế độ Viền/Không Viền để thấy đè lên game)', 'success');
+        }
+
+        async function openCanvasVideoPiP() {
+            const video = document.getElementById('overlayFallbackVideo');
+            const canvas = document.getElementById('overlayFallbackCanvas');
+            if (!video || !canvas || !video.requestPictureInPicture) {
+                throw new Error('PiP unsupported');
+            }
+            drawOverlayCanvas();
+            const stream = canvas.captureStream(4);
+            video.srcObject = stream;
+            await video.play();
+            await video.requestPictureInPicture();
+            state.canvasPipActive = true;
+            state.canvasPipInterval = setInterval(drawOverlayCanvas, 500);
+            video.addEventListener('leavepictureinpicture', () => {
+                state.canvasPipActive = false;
+                if (state.canvasPipInterval) {
+                    clearInterval(state.canvasPipInterval);
+                    state.canvasPipInterval = null;
+                }
+                updateOverlayButtonUI();
+            }, { once: true });
+            updateOverlayButtonUI();
+            showToast('Đã bật Overlay Video PiP!', 'success');
+        }
+
+        function closeGameOverlay() {
+            if (state.pipWindow) {
+                try { state.pipWindow.close(); } catch (_) {}
+                state.pipWindow = null;
+            }
+            if (state.canvasPipActive && document.pictureInPictureElement) {
+                try { document.exitPictureInPicture(); } catch (_) {}
+            }
+            if (state.canvasPipInterval) {
+                clearInterval(state.canvasPipInterval);
+                state.canvasPipInterval = null;
+            }
+            state.canvasPipActive = false;
+            updateOverlayButtonUI();
+        }
+
+        function updateOverlayButtonUI() {
+            const active = Boolean(state.pipWindow || state.canvasPipActive);
+            const hLabel = document.getElementById('btnHeaderOverlayLabel');
+            const cLabel = document.getElementById('btnCardOverlayLabel');
+            if (hLabel) hLabel.textContent = active ? 'Đóng Overlay' : 'Bật Game Overlay';
+            if (cLabel) cLabel.textContent = active ? 'Đóng Overlay' : 'Game Overlay';
+        }
+
+        function syncOverlayUI() {
+            if (state.pipWindow && !state.pipWindow.closed) {
+                renderOverlayHUD();
+            }
+            if (state.canvasPipActive) {
+                drawOverlayCanvas();
+            }
+        }
+
+        function renderOverlayHUD() {
+            if (!state.pipWindow || state.pipWindow.closed) return;
+            const root = state.pipWindow.document.getElementById('ovRoot');
+            if (!root) return;
+
+            const champ = state.championsMap[state.selectedChampId] || state.championsList[0];
+            const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
+            const rollValid = state.rollCandidates
+                .map(id => AUGMENTS_DB.find(a => a.id === id))
+                .filter(Boolean)
+                .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
+                .sort((a, b) => b.eval.score - a.eval.score);
+
+            const topSuggestions = rollValid.length > 0
+                ? rollValid
+                : AUGMENTS_DB
+                    .filter(a => !activeIds.includes(a.id))
+                    .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
+                    .sort((a, b) => b.eval.score - a.eval.score)
+                    .slice(0, 3);
+
+            const build = computeAdaptiveBuild(champ, state.chosenAugments, state.enemyThreats);
+            const chosenNames = state.chosenAugments.map(id => AUGMENTS_DB.find(a => a.id === id)?.nameVi).filter(Boolean);
+
+            root.innerHTML = `
+                <div class="ov-card">
+                    <div class="ov-header">
+                        <div class="ov-champ">
+                            <img src="${getChampIconUrl(champ.id)}" alt="">
+                            <div>
+                                <div class="ov-title">${escapeHtml(champ.nameVi)} • ${champ.tier}</div>
+                                <div class="ov-sub">${chosenNames.length ? escapeHtml(chosenNames.join(' → ')) : 'Chưa khóa lõi nào'}</div>
+                            </div>
+                        </div>
+                        <button class="ov-btn" data-ov-action="close-ov">✕</button>
+                    </div>
+                    <div class="ov-grid-2" style="margin-bottom: 6px;">
+                        <button class="ov-btn ov-btn-gold" data-ov-action="scan-aug">⚡ Quét Lõi</button>
+                        <button class="ov-btn ov-btn-indigo" data-ov-action="scan-combat">🔍 Quét Trận/Tab</button>
+                    </div>
+                    <div class="ov-grid-2">
+                        <button class="ov-btn" data-ov-action="toggle-autoscan">${state.autoScanTimer ? '🟢 Auto-Scan: BẬT' : '⚪ Auto-Scan: TẮT'}</button>
+                        <button class="ov-btn" data-ov-action="toggle-voice">${state.voiceAlerts ? '🔊 Âm báo: BẬT' : '🔇 Âm báo: TẮT'}</button>
+                    </div>
+                </div>
+
+                <div class="ov-card">
+                    <div class="ov-sec-title">
+                        <span>💚 Cục Hồi Máu (Alt+1..4)</span>
+                        <span style="display:flex; gap:4px;">
+                            <button class="ov-btn" style="padding:2px 6px; font-size:10px;" data-ov-action="relic-init">1:50</button>
+                            <button class="ov-btn" style="padding:2px 6px; font-size:10px;" data-ov-action="relic-reset-all">Reset</button>
+                        </span>
+                    </div>
+                    <div class="ov-grid-2">
+                        ${state.relicTimers.map(r => {
+                            const soon = r.running && r.remaining <= 15 && r.remaining > 0;
+                            return `
+                                <div class="ov-relic ${soon ? 'soon' : ''}">
+                                    <div class="ov-relic-top">
+                                        <span class="ov-relic-name">${escapeHtml(r.short)}</span>
+                                        <span class="ov-relic-time">${r.running ? formatMMSS(r.remaining) : 'Sẵn sàng'}</span>
+                                    </div>
+                                    <div style="display:flex; gap:3px;">
+                                        <button class="ov-btn ov-btn-cyan" style="flex:1; padding:3px 4px; font-size:10px;" data-ov-action="relic-start" data-ov-arg1="${r.id}">${r.running ? 'Ăn lại' : 'Đếm'}</button>
+                                        <button class="ov-btn" style="padding:3px 5px; font-size:10px;" data-ov-action="relic-adj" data-ov-arg1="${r.id}" data-ov-arg2="-5">-5</button>
+                                        <button class="ov-btn" style="padding:3px 5px; font-size:10px;" data-ov-action="relic-reset" data-ov-arg1="${r.id}">×</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div class="ov-card">
+                    <div class="ov-sec-title">
+                        <span>${rollValid.length > 0 ? '🎲 Chấm Điểm 3 Lõi Đang Roll' : `✨ Gợi Ý Cho Lõi ${state.activeTargetSlot + 1}`}</span>
+                    </div>
+                    ${topSuggestions.map(({ aug, eval: ev }, i) => `
+                        <div class="ov-aug ${i === 0 ? 'best' : ''}">
+                            <div style="min-width:0; flex:1;">
+                                <div style="font-weight:800; color:#fff; font-size:11px;">${i === 0 ? '★ ' : ''}${escapeHtml(aug.nameVi)}</div>
+                                <div style="font-size:10px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    ${escapeHtml(ev.comboHits[0]?.note || ev.reasons[0] || aug.descVi)}
+                                </div>
+                            </div>
+                            <span class="ov-badge">${ev.score}đ</span>
+                            <button class="ov-btn ov-btn-cyan" style="padding:4px 7px; font-size:10px;" data-ov-action="lock-aug" data-ov-arg1="${aug.id}">Khóa</button>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="ov-card">
+                    <div class="ov-sec-title"><span>🛡️ Địch & Lên Đồ Thích Ứng</span></div>
+                    <div class="ov-pills">
+                        ${ENEMY_THREAT_DEFS.map(d => `
+                            <button class="ov-pill ${state.enemyThreats.includes(d.key) ? 'active' : ''}" data-ov-action="toggle-threat" data-ov-arg1="${d.key}">${d.label}</button>
+                        `).join('')}
+                    </div>
+                    <div class="ov-items">
+                        ${[build.boots, ...build.finalCore].map(id => {
+                            const info = state.itemsMap[id] || { name: `#${id}` };
+                            return `<div class="ov-item" title="${escapeHtml(info.name)}"><img src="${getItemIconUrl(id)}" alt=""><span>${escapeHtml(info.name)}</span></div>`;
+                        }).join('')}
+                    </div>
+                    ${state.lastCombatAnalysis ? `
+                        <div style="margin-top:8px; padding:6px 8px; border-radius:9px; background:rgba(79,70,229,0.18); border:1px solid rgba(129,140,248,0.35); font-size:10px; line-height:1.4; color:#e0e7ff;">
+                            <strong>AI Chiến Thuật:</strong> ${escapeHtml(state.lastCombatAnalysis.tacticalAdviceVi)}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function drawOverlayCanvas() {
+            const canvas = document.getElementById('overlayFallbackCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.fillStyle = '#050814';
+            ctx.fillRect(0, 0, w, h);
+
+            const champ = state.championsMap[state.selectedChampId] || state.championsList[0];
+            ctx.fillStyle = '#fde68a';
+            ctx.font = 'bold 18px sans-serif';
+            ctx.fillText(`ARAM MAYHEM • ${champ?.nameVi || 'Vi'} (${champ?.tier || 'S'})`, 16, 30);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '12px sans-serif';
+            const chosenNames = state.chosenAugments.map(id => AUGMENTS_DB.find(a => a.id === id)?.nameVi).filter(Boolean);
+            ctx.fillText(`Lõi: ${chosenNames.join(' -> ') || 'Chưa chọn'}`, 16, 52);
+
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText('CỤC HỒI MÁU ARAM:', 16, 86);
+            state.relicTimers.forEach((r, idx) => {
+                const y = 110 + idx * 24;
+                ctx.fillStyle = r.running && r.remaining <= 15 ? '#fcd34d' : '#e2e8f0';
+                ctx.font = '13px monospace';
+                ctx.fillText(`${r.label}: ${r.running ? formatMMSS(r.remaining) : 'Sẵn sàng'}`, 20, y);
+            });
+
+            const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
+            const top3 = AUGMENTS_DB
+                .filter(a => !activeIds.includes(a.id))
+                .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
+                .sort((a, b) => b.eval.score - a.eval.score)
+                .slice(0, 3);
+
+            ctx.fillStyle = '#67e8f9';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText(`GỢI Ý LÕI ${state.activeTargetSlot + 1}:`, 16, 224);
+            top3.forEach((item, idx) => {
+                ctx.fillStyle = idx === 0 ? '#34d399' : '#e2e8f0';
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillText(`${idx + 1}. ${item.aug.nameVi} (${item.eval.score}đ)`, 20, 248 + idx * 24);
+            });
+
+            const build = computeAdaptiveBuild(champ, state.chosenAugments, state.enemyThreats);
+            ctx.fillStyle = '#c084fc';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText('LÊN ĐỒ ĐỀ XUẤT:', 16, 344);
+            [build.boots, ...build.finalCore].forEach((id, idx) => {
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`• ${state.itemsMap[id]?.name || id}`, 20, 368 + idx * 22);
+            });
         }
     </script>
 </body>
