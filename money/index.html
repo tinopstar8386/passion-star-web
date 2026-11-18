@@ -1068,6 +1068,10 @@
                 <i data-lucide="settings" class="w-5 h-5"></i>
                 <span class="text-[10px] font-semibold">Ví &amp; Cài Đặt</span>
               </button>
+              <button id="navTabDecoyQrBtn" type="button" onclick="openVietQrModal()" class="hidden flex flex-col items-center gap-1 py-1 text-slate-400 hover:text-cyan-300">
+                <i data-lucide="qr-code" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Mã VietQR</span>
+              </button>
             </div>
             <!-- iPhone Home Indicator (Desktop Simulator) -->
             <div id="iphoneHomeIndicator" class="w-32 h-1 rounded-full bg-white/30 mx-auto mt-2.5"></div>
@@ -1521,7 +1525,8 @@
         SESSION_PIN: 'tino_finance_pin_verified',
         DECOY_TX: 'tino_finance_decoy_tx_v1',
         DECOY_WALLETS: 'tino_finance_decoy_wallets_v1',
-        CLOUD_TS: 'tino_finance_cloud_ts_v1'
+        CLOUD_TS: 'tino_finance_cloud_ts_v1',
+        CLOUD_BACKUP: 'tino_finance_cloud_backup_v1'
       };
 
       const FIREBASE_CONFIG = {
@@ -1615,6 +1620,7 @@
       let cloudUnsubscribe = null;
       let cloudPushTimer = null;
       let localCloudTs = parseInt(localStorage.getItem(STORAGE_KEYS.CLOUD_TS) || '0', 10) || 0;
+      let cloudInitialPullDone = false;
       let cloudSyncState = 'local'; // 'local' | 'connecting' | 'synced' | 'offline' | 'error'
 
       // Audio / Haptic / Auto-Lock State
@@ -1889,6 +1895,33 @@
       // =========================================================================
       // 4. DATA PERSISTENCE, DECOY WALLET ISOLATION & DEMO SEED
       // =========================================================================
+      const TEST_TX_JUNK_NOTES = new Set(['Cà phê kiểm thử trượt']);
+
+      function isWebDriverAutomation() {
+        if (window.__allowTestCloudSync) return false;
+        const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+        return Boolean((typeof navigator !== 'undefined' && navigator.webdriver) || /HeadlessChrome|HeadlessEdg|Lightpanda/i.test(ua));
+      }
+
+      function sanitizeTransactionsList(list) {
+        if (!Array.isArray(list)) return [];
+        return list.filter(t => t && typeof t === 'object' && !TEST_TX_JUNK_NOTES.has(String(t.note || '').trim()));
+      }
+
+      function isPureDemoState(txList, walletCfg) {
+        const list = Array.isArray(txList) ? txList : [];
+        const w = walletCfg || {};
+        const accNum = String(w.mbAccountNumber ?? '8386999999').trim();
+        const hasCustomWallet =
+          (accNum !== '' && accNum !== '8386999999') ||
+          (Number(w.mbInitBalance) || 0) !== 0 ||
+          (Number(w.cashInitBalance) || 0) !== 0 ||
+          (Array.isArray(w.extraWallets) && w.extraWallets.length > 0);
+        if (hasCustomWallet) return false;
+        if (list.length === 0) return true;
+        return list.every(t => t && String(t.id || '').startsWith('tx_demo_'));
+      }
+
       function saveState(options = {}) {
         if (isDecoyMode) {
           localStorage.setItem(STORAGE_KEYS.DECOY_TX, JSON.stringify(transactions));
@@ -2014,7 +2047,11 @@
           saveState({ skipCloud: true });
         } else {
           const parsed = safeParseJson(rawTx, []);
-          transactions = Array.isArray(parsed) ? parsed : [];
+          const rawList = Array.isArray(parsed) ? parsed : [];
+          transactions = sanitizeTransactionsList(rawList);
+          if (transactions.length !== rawList.length) {
+            localStorage.setItem(STORAGE_KEYS.TX, JSON.stringify(transactions));
+          }
         }
       }
 
@@ -3042,13 +3079,15 @@
       function applyDecoyModeUI() {
         const bottomGrid = document.getElementById('bottomTabGrid');
         const settingsBtn = document.getElementById('navTabSettingsBtn');
+        const decoyQrBtn = document.getElementById('navTabDecoyQrBtn');
         const settingsTab = document.getElementById('tab-settings');
         const cloudBadge = document.getElementById('cloudSyncBadge');
 
         if (settingsBtn) settingsBtn.classList.toggle('hidden', isDecoyMode);
+        if (decoyQrBtn) decoyQrBtn.classList.toggle('hidden', !isDecoyMode);
         if (bottomGrid) {
-          bottomGrid.classList.toggle('grid-cols-4', isDecoyMode);
-          bottomGrid.classList.toggle('grid-cols-5', !isDecoyMode);
+          bottomGrid.classList.remove('grid-cols-4');
+          bottomGrid.classList.add('grid-cols-5');
         }
         if (cloudBadge) cloudBadge.classList.toggle('hidden', isDecoyMode);
 
@@ -3115,7 +3154,7 @@
 
       function toggleViewportMode() {
         settings.viewportMode = settings.viewportMode === 'iphone' ? 'full' : 'iphone';
-        saveState();
+        saveState({ skipCloud: true });
         applyViewportMode();
         playFeedback('switch');
         showToast(settings.viewportMode === 'iphone' ? 'Đã bật Khung iPhone 16 Pro Max' : 'Đã bật Chế độ Mở Rộng', 'info');
@@ -3123,7 +3162,7 @@
 
       function togglePrivacyMask() {
         settings.hideBalance = !settings.hideBalance;
-        saveState();
+        saveState({ skipCloud: true });
         renderAllViews();
         playFeedback('switch');
         flashDynamicIsland(settings.hideBalance ? 'Đã ẩn số dư' : 'Đã hiện số dư');
@@ -4577,14 +4616,14 @@
 
       function togglePinOnStart(enabled) {
         settings.requirePinOnStart = Boolean(enabled);
-        saveState();
+        saveState({ skipCloud: true });
         playFeedback('switch');
         showToast(enabled ? 'Đã bật khóa PIN khi mở app' : 'Đã tắt khóa PIN tự động', 'info');
       }
 
       function updateAutoLockSetting(seconds) {
         settings.autoLockSeconds = Math.max(0, parseInt(seconds || '0', 10) || 0);
-        saveState();
+        saveState({ skipCloud: true });
         playFeedback('switch');
         const label = settings.autoLockSeconds === 0
           ? 'Đã tắt tự khóa khi chuyển app'
@@ -4594,7 +4633,7 @@
 
       function toggleSoundHaptic(enabled) {
         settings.soundHapticEnabled = Boolean(enabled);
-        saveState();
+        saveState({ skipCloud: true });
         if (settings.soundHapticEnabled) playFeedback('success');
         showToast(enabled ? 'Đã bật Âm thanh vi mô & Xúc giác' : 'Đã tắt Âm thanh & Xúc giác', 'info');
       }
@@ -4612,7 +4651,7 @@
           return;
         }
         settings.pinCode = val;
-        saveState();
+        saveState({ skipCloud: true });
         document.getElementById('inputNewPin').value = '';
         playFeedback('success');
         showToast('Đã cập nhật mã PIN mới!', 'success');
@@ -4620,7 +4659,7 @@
 
       function toggleDecoyPinSetting(enabled) {
         settings.decoyPinEnabled = Boolean(enabled);
-        saveState();
+        saveState({ skipCloud: true });
         playFeedback('switch');
         showToast(enabled ? 'Đã bật Chế độ PIN Giả / Ví Khách' : 'Đã tắt PIN Giả', 'info');
       }
@@ -4638,7 +4677,7 @@
           return;
         }
         settings.decoyPinCode = val;
-        saveState();
+        saveState({ skipCloud: true });
         playFeedback('success');
         showToast('Đã lưu mã PIN Ví Khách (Decoy)!', 'success');
       }
@@ -4796,7 +4835,7 @@
         const cfg = map[state] || map.local;
 
         if (badge) {
-          badge.className = `cursor-pointer inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md border font-semibold shrink-0 ${cfg.pillCls}`;
+          badge.className = `cursor-pointer inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md border font-semibold shrink-0 ${cfg.pillCls}${isDecoyMode ? ' hidden' : ''}`;
         }
         if (dot) dot.className = `w-1.5 h-1.5 rounded-full ${cfg.dotCls}`;
         if (txt) txt.textContent = cfg.label;
@@ -4807,8 +4846,11 @@
         return String(room || 'tino_default_wallet').trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64) || 'tino_default_wallet';
       }
 
-      async function pushCloudSync() {
+      async function pushCloudSync(forceManual = false) {
+        if (isWebDriverAutomation()) return false;
         if (isDecoyMode || !settings.cloudSyncEnabled || !cloudDb || !cloudFs) return false;
+        if (!forceManual && !cloudInitialPullDone) return false;
+        if (!forceManual && isPureDemoState(transactions, wallets)) return false;
         try {
           const roomId = sanitizeCloudRoomId(settings.cloudSyncRoom);
           const ref = cloudFs.doc(cloudDb, 'tino_money_sync', roomId);
@@ -4816,8 +4858,9 @@
           await cloudFs.setDoc(ref, {
             wallets,
             categories,
-            transactions,
+            transactions: sanitizeTransactionsList(transactions),
             monthlyBudget: Number(settings.monthlyBudget) || 0,
+            paydayDay: Math.min(31, Math.max(1, parseInt(settings.paydayDay, 10) || 10)),
             updatedAt: ts,
             updatedBy: SESSION_CLIENT_ID
           }, { merge: true });
@@ -4830,7 +4873,10 @@
       }
 
       function scheduleCloudPush() {
+        if (isWebDriverAutomation()) return;
         if (isDecoyMode || !settings.cloudSyncEnabled || !cloudDb || !cloudFs) return;
+        if (!cloudInitialPullDone) return;
+        if (isPureDemoState(transactions, wallets)) return;
         clearTimeout(cloudPushTimer);
         cloudPushTimer = setTimeout(() => {
           pushCloudSync();
@@ -4838,11 +4884,12 @@
       }
 
       async function initCloudSync() {
+        cloudInitialPullDone = false;
         if (typeof cloudUnsubscribe === 'function') {
           try { cloudUnsubscribe(); } catch {}
           cloudUnsubscribe = null;
         }
-        if (!settings.cloudSyncEnabled) {
+        if (isWebDriverAutomation() || !settings.cloudSyncEnabled) {
           updateCloudSyncBadge('local');
           return;
         }
@@ -4870,9 +4917,10 @@
 
           cloudUnsubscribe = cloudFs.onSnapshot(docRef, (snap) => {
             if (isDecoyMode) return;
+            cloudInitialPullDone = true;
             if (!snap.exists()) {
-              if (localCloudTs > 0) {
-                pushCloudSync();
+              if (localCloudTs > 0 && !isPureDemoState(transactions, wallets)) {
+                pushCloudSync(true);
               } else {
                 updateCloudSyncBadge('synced');
               }
@@ -4884,22 +4932,50 @@
               return;
             }
             const remoteTs = Number(data.updatedAt) || 0;
-            if (remoteTs > localCloudTs) {
-              if (data.wallets && typeof data.wallets === 'object') {
-                wallets = {
+            const remoteTxRaw = Array.isArray(data.transactions) ? data.transactions : [];
+            const remoteTx = sanitizeTransactionsList(remoteTxRaw);
+            const remoteWallets = data.wallets && typeof data.wallets === 'object'
+              ? {
                   ...DEFAULT_WALLETS,
                   ...data.wallets,
                   extraWallets: Array.isArray(data.wallets.extraWallets) ? data.wallets.extraWallets : []
-                };
+                }
+              : null;
+            const remoteIsPureDemo = isPureDemoState(remoteTx, remoteWallets || DEFAULT_WALLETS);
+            const localIsPureDemo = isPureDemoState(transactions, wallets);
+
+            if (!localIsPureDemo && remoteIsPureDemo) {
+              localCloudTs = Math.max(localCloudTs, remoteTs + 1, Date.now());
+              localStorage.setItem(STORAGE_KEYS.CLOUD_TS, String(localCloudTs));
+              pushCloudSync(true);
+              return;
+            }
+
+            if (remoteTs > localCloudTs) {
+              try {
+                if (!localIsPureDemo) {
+                  localStorage.setItem(STORAGE_KEYS.CLOUD_BACKUP, JSON.stringify({
+                    backedUpAt: new Date().toISOString(),
+                    wallets,
+                    categories,
+                    transactions
+                  }));
+                }
+              } catch {}
+              if (remoteWallets) {
+                wallets = remoteWallets;
               }
               if (Array.isArray(data.categories) && data.categories.length > 0) {
                 categories = data.categories;
               }
               if (Array.isArray(data.transactions)) {
-                transactions = data.transactions;
+                transactions = remoteTx;
               }
               if (typeof data.monthlyBudget === 'number') {
                 settings.monthlyBudget = data.monthlyBudget;
+              }
+              if (typeof data.paydayDay === 'number') {
+                settings.paydayDay = Math.min(31, Math.max(1, Math.round(data.paydayDay) || 10));
               }
               localCloudTs = remoteTs;
               localStorage.setItem(STORAGE_KEYS.CLOUD_TS, String(localCloudTs));
@@ -4941,7 +5017,9 @@
         localStorage.setItem(STORAGE_KEYS.CLOUD_TS, '0');
         saveState({ skipCloud: true });
         await initCloudSync();
-        await pushCloudSync();
+        if (!isPureDemoState(transactions, wallets)) {
+          await pushCloudSync(true);
+        }
         playFeedback('success');
         showToast(`Đã kết nối đồng bộ phòng "${nextRoom}"!`, 'success');
       }
@@ -5172,6 +5250,9 @@
         getPaydayCountdown,
         renderPaydayCountdownCard,
         applyDecoyModeUI,
+        isPureDemoState,
+        isWebDriverAutomation,
+        sanitizeTransactionsList,
         getAllWallets,
         getWalletMeta,
         calculateWalletBalances,
