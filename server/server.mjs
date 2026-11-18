@@ -93,6 +93,8 @@ const mayhemState = {
         bestAugment: '',
         bestScore: 0,
         nextItems: [],
+        chosenAugments: [],
+        candidateCards: [],
         tacticalNote: ''
     },
     pendingAction: null,
@@ -108,6 +110,9 @@ const mayhemState = {
     minimapThumbBase64: '',
     minimapThumbSeq: 0,
     recommendedItemPath: '',
+    nativeOcrCards: ['', '', ''],
+    nativeOcrSeq: 0,
+    chromeTitlebarHeight: 33,
     updatedAt: Date.now()
 };
 
@@ -790,6 +795,9 @@ const server = http.createServer(async (req, res) => {
             minimapThumbSeq: mayhemState.minimapThumbSeq,
             minimapThumbBase64: mayhemState.minimapThumbBase64,
             recommendedItemPath: mayhemState.recommendedItemPath,
+            nativeOcrCards: mayhemState.nativeOcrCards,
+            nativeOcrSeq: mayhemState.nativeOcrSeq,
+            chromeTitlebarHeight: mayhemState.chromeTitlebarHeight,
             updatedAt: mayhemState.updatedAt
         };
         if (includeFrame && mayhemState.lastCapturedFrame) {
@@ -881,6 +889,13 @@ const server = http.createServer(async (req, res) => {
                 mayhemState.minimapThumbBase64 = body.minimapThumbBase64;
                 mayhemState.minimapThumbSeq += 1;
             }
+            if (typeof body.chromeTitlebarHeight === 'number' && body.chromeTitlebarHeight >= 0 && body.chromeTitlebarHeight <= 80) {
+                mayhemState.chromeTitlebarHeight = Math.round(body.chromeTitlebarHeight);
+            }
+            if (Array.isArray(body.nativeOcrCards) && body.nativeOcrCards.length >= 3) {
+                mayhemState.nativeOcrCards = body.nativeOcrCards.slice(0, 3).map(s => String(s || ''));
+                mayhemState.nativeOcrSeq += 1;
+            }
             if (body.lastCardClick && typeof body.lastCardClick.index === 'number') {
                 mayhemState.cardClickSeq += 1;
                 mayhemState.lastCardClick = {
@@ -897,6 +912,7 @@ const server = http.createServer(async (req, res) => {
                 capturedFrameSeq: mayhemState.capturedFrameSeq,
                 modalOpen: mayhemState.modalOpen,
                 modalEventSeq: mayhemState.modalEventSeq,
+                nativeOcrSeq: mayhemState.nativeOcrSeq,
                 minimapThumbSeq: mayhemState.minimapThumbSeq,
                 minimap: mayhemState.minimap
             });

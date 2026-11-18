@@ -156,23 +156,28 @@ namespace PassionMayhemDesktop
         [DllImport("gdi32.dll")]
         public static extern bool StretchBlt(IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest, IntPtr hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, uint rop);
 
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+
+        [DllImport("user32.dll")]
+        public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+
+        [DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();
+
+        public const int GWL_STYLE = -16;
+        public const int WS_CAPTION = 0x00C00000;
+        public const int WS_THICKFRAME = 0x00040000;
+        public const int WS_MINIMIZEBOX = 0x00020000;
+        public const int WS_MAXIMIZEBOX = 0x00010000;
+        public const int WS_SYSMENU = 0x00080000;
+        public const int WS_CHILD = 0x40000000;
+        public const int WS_POPUP = unchecked((int)0x80000000);
+        public const int WM_NCLBUTTONDOWN = 0x00A1;
+        public const int HTCAPTION = 2;
+
         public const uint SRCCOPY = 0x00CC0020;
         public const int COLORONCOLOR = 3;
-    }
-
-    internal sealed class RelicTimerModel
-    {
-        public string id = "";
-        public string label = "";
-        public string shortName = "";
-        public double nx = 0.5;
-        public double ny = 0.5;
-        public int remaining = 0;
-        public int total = 60;
-        public bool running = false;
-        public int visibleStreak = 0;
-        public int missingStreak = 0;
-        public int respawnStreak = 0;
     }
 
     internal sealed class MinimapConfigModel
@@ -184,12 +189,24 @@ namespace PassionMayhemDesktop
         public bool flipped = false;
         public bool autoDetect = true;
         public bool calibrateMode = false;
-        public bool showMinimapOverlay = true;
+        public bool showMinimapOverlay = false;
         public bool showHudOverlay = true;
-        public bool autoWatchPixels = true;
+        public bool autoWatchPixels = false;
         public int gameWidth = 1920;
         public int gameHeight = 1080;
-        public string detectedSource = "default";
+        public string detectedSource = "disabled";
+    }
+
+    internal sealed class CandidateCardOverlayModel
+    {
+        public int slot = 0;
+        public string nameVi = "";
+        public string tier = "A";
+        public string metaRank = "";
+        public int score = 0;
+        public double winRate = 0.0;
+        public bool isBest = false;
+        public string reason = "";
     }
 
     internal sealed class AdvisorSummaryModel
@@ -199,24 +216,163 @@ namespace PassionMayhemDesktop
         public string bestAugment = "";
         public int bestScore = 0;
         public string nextItemsText = "";
+        public string chosenAugmentsText = "";
         public string tacticalNote = "";
+        public List<CandidateCardOverlayModel> candidateCards = new List<CandidateCardOverlayModel>();
     }
 
-    internal sealed class MinimapOverlayForm : Form
+    internal static class NativeWinRtOcrEngine
+    {
+        private static readonly object initLock = new object();
+        private static bool initialized = false;
+        private static bool available = false;
+        private static object ocrEngine = null;
+        private static Type ocrResultType = null;
+        private static Type bmpDecoderType = null;
+        private static Type softBmpType = null;
+        private static MethodInfo asRasMethod = null;
+        private static MethodInfo createDecMethod = null;
+        private static MethodInfo getSbMethod = null;
+        private static MethodInfo recogMethod = null;
+        private static MethodInfo asTaskMethod = null;
+        private static PropertyInfo linesProp = null;
+        private static PropertyInfo lineTextProp = null;
+        private static PropertyInfo wordsProp = null;
+        private static PropertyInfo rectProp = null;
+
+        private static bool EnsureInit()
+        {
+            if (initialized) return available;
+            lock (initLock)
+            {
+                if (initialized) return available;
+                initialized = true;
+                try
+                {
+                    Assembly wrAsm = Assembly.Load("System.Runtime.WindowsRuntime, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089");
+                    Type ocrEngineType = Type.GetType("Windows.Media.Ocr.OcrEngine, Windows.Media, ContentType=WindowsRuntime");
+                    ocrResultType = Type.GetType("Windows.Media.Ocr.OcrResult, Windows.Media, ContentType=WindowsRuntime");
+                    bmpDecoderType = Type.GetType("Windows.Graphics.Imaging.BitmapDecoder, Windows.Graphics, ContentType=WindowsRuntime");
+                    softBmpType = Type.GetType("Windows.Graphics.Imaging.SoftwareBitmap, Windows.Graphics, ContentType=WindowsRuntime");
+                    if (ocrEngineType == null || ocrResultType == null || bmpDecoderType == null || softBmpType == null) return false;
+
+                    MethodInfo tryCreate = ocrEngineType.GetMethod("TryCreateFromUserProfileLanguages", BindingFlags.Public | BindingFlags.Static);
+                    if (tryCreate == null) return false;
+                    ocrEngine = tryCreate.Invoke(null, null);
+                    if (ocrEngine == null) return false;
+
+                    Type streamExt = wrAsm.GetType("System.IO.WindowsRuntimeStreamExtensions");
+                    Type asyncExt = wrAsm.GetType("System.WindowsRuntimeSystemExtensions");
+                    if (streamExt == null || asyncExt == null) return false;
+
+                    asRasMethod = streamExt.GetMethod("AsRandomAccessStream", new Type[] { typeof(Stream) });
+                    foreach (MethodInfo m in bmpDecoderType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                    {
+                        if (m.Name == "CreateAsync" && m.GetParameters().Length == 1) { createDecMethod = m; break; }
+                    }
+                    getSbMethod = bmpDecoderType.GetMethod("GetSoftwareBitmapAsync", Type.EmptyTypes);
+                    recogMethod = ocrEngineType.GetMethod("RecognizeAsync");
+                    foreach (MethodInfo m in asyncExt.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                    {
+                        if (m.Name == "AsTask" && m.IsGenericMethodDefinition && m.GetGenericArguments().Length == 1 && m.GetParameters().Length == 1)
+                        {
+                            if (m.GetParameters()[0].ParameterType.Name.StartsWith("IAsyncOperation"))
+                            {
+                                asTaskMethod = m;
+                                break;
+                            }
+                        }
+                    }
+
+                    linesProp = ocrResultType.GetProperty("Lines");
+                    Type ocrLineType = Type.GetType("Windows.Media.Ocr.OcrLine, Windows.Media, ContentType=WindowsRuntime");
+                    Type ocrWordType = Type.GetType("Windows.Media.Ocr.OcrWord, Windows.Media, ContentType=WindowsRuntime");
+                    if (ocrLineType != null)
+                    {
+                        lineTextProp = ocrLineType.GetProperty("Text");
+                        wordsProp = ocrLineType.GetProperty("Words");
+                    }
+                    if (ocrWordType != null) rectProp = ocrWordType.GetProperty("BoundingRect");
+
+                    available = (asRasMethod != null && createDecMethod != null && getSbMethod != null && recogMethod != null && asTaskMethod != null && linesProp != null);
+                }
+                catch { available = false; }
+                return available;
+            }
+        }
+
+        private static object AwaitWinRT(object asyncOp, Type resultType)
+        {
+            MethodInfo generic = asTaskMethod.MakeGenericMethod(resultType);
+            object task = generic.Invoke(null, new object[] { asyncOp });
+            task.GetType().GetMethod("Wait", Type.EmptyTypes).Invoke(task, null);
+            return task.GetType().GetProperty("Result").GetValue(task, null);
+        }
+
+        public static string[] RecognizeStackedCards(Bitmap stackedBmp, int bandHeight)
+        {
+            string[] cards = new string[] { "", "", "" };
+            if (stackedBmp == null || bandHeight <= 0 || !EnsureInit()) return cards;
+
+            try
+            {
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    stackedBmp.Save(ms, ImageFormat.Bmp);
+                    ms.Position = 0;
+                    object ras = asRasMethod.Invoke(null, new object[] { ms });
+                    object dec = AwaitWinRT(createDecMethod.Invoke(null, new object[] { ras }), bmpDecoderType);
+                    object sb = AwaitWinRT(getSbMethod.Invoke(dec, null), softBmpType);
+                    object res = AwaitWinRT(recogMethod.Invoke(ocrEngine, new object[] { sb }), ocrResultType);
+                    if (res == null) return cards;
+
+                    StringBuilder[] builders = new StringBuilder[] { new StringBuilder(), new StringBuilder(), new StringBuilder() };
+                    IEnumerable lines = linesProp.GetValue(res, null) as IEnumerable;
+                    if (lines != null)
+                    {
+                        foreach (object line in lines)
+                        {
+                            string txt = lineTextProp != null ? Convert.ToString(lineTextProp.GetValue(line, null)) : "";
+                            if (string.IsNullOrWhiteSpace(txt)) continue;
+
+                            double yPos = 0.0;
+                            if (wordsProp != null && rectProp != null)
+                            {
+                                IEnumerable words = wordsProp.GetValue(line, null) as IEnumerable;
+                                if (words != null)
+                                {
+                                    foreach (object w in words)
+                                    {
+                                        object rect = rectProp.GetValue(w, null);
+                                        if (rect != null)
+                                        {
+                                            PropertyInfo yp = rect.GetType().GetProperty("Y");
+                                            if (yp != null) { yPos = Convert.ToDouble(yp.GetValue(rect, null)); break; }
+                                        }
+                                    }
+                                }
+                            }
+                            int idx = Math.Max(0, Math.Min(2, (int)(yPos / bandHeight)));
+                            if (builders[idx].Length > 0) builders[idx].Append('\n');
+                            builders[idx].Append(txt.Trim());
+                        }
+                    }
+
+                    for (int i = 0; i < 3; i++) cards[i] = builders[i].ToString();
+                }
+            }
+            catch { }
+            return cards;
+        }
+    }
+
+    internal sealed class AugmentCardsOverlayForm : Form
     {
         private static readonly Color KEY_COLOR = Color.FromArgb(1, 2, 3);
+        private List<CandidateCardOverlayModel> cards = new List<CandidateCardOverlayModel>();
 
-        private readonly MayhemControllerForm owner;
-        private MinimapConfigModel cfg = new MinimapConfigModel();
-        private List<RelicTimerModel> relics = new List<RelicTimerModel>();
-        private bool isDragging = false;
-        private bool isResizing = false;
-        private Point dragStartScreen;
-        private Rectangle dragStartBounds;
-
-        public MinimapOverlayForm(MayhemControllerForm ownerForm)
+        public AugmentCardsOverlayForm()
         {
-            owner = ownerForm;
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
             TopMost = true;
@@ -224,13 +380,8 @@ namespace PassionMayhemDesktop
             BackColor = KEY_COLOR;
             TransparencyKey = KEY_COLOR;
             DoubleBuffered = true;
-            Width = 221;
-            Height = 221;
-
-            MouseDown += OnOverlayMouseDown;
-            MouseMove += OnOverlayMouseMove;
-            MouseUp += OnOverlayMouseUp;
-            MouseWheel += OnOverlayMouseWheel;
+            Width = 1000;
+            Height = 140;
         }
 
         protected override CreateParams CreateParams
@@ -243,204 +394,288 @@ namespace PassionMayhemDesktop
             }
         }
 
-        protected override bool ShowWithoutActivation
+        protected override bool ShowWithoutActivation { get { return true; } }
+
+        public void UpdateCards(List<CandidateCardOverlayModel> list, Rectangle gameBounds)
         {
-            get { return true; }
-        }
-
-        public void UpdateData(MinimapConfigModel newCfg, List<RelicTimerModel> newRelics, Rectangle gameBounds)
-        {
-            cfg = newCfg;
-            relics = newRelics;
-
-            int sz = Math.Max(110, Math.Min(680, cfg.sizePx));
-            int targetX = cfg.flipped
-                ? gameBounds.Left + cfg.offsetX
-                : gameBounds.Right - sz - cfg.offsetX;
-            int targetY = gameBounds.Bottom - sz - cfg.offsetY;
-
-            if (!isDragging && !isResizing)
+            cards = list ?? new List<CandidateCardOverlayModel>();
+            int ox = gameBounds.Left + (int)Math.Round(gameBounds.Width * 0.14);
+            int oy = gameBounds.Top + (int)Math.Round(gameBounds.Height * 0.055);
+            int ow = Math.Max(600, (int)Math.Round(gameBounds.Width * 0.72));
+            int oh = Math.Max(108, (int)Math.Round(gameBounds.Height * 0.155));
+            if (Left != ox || Top != oy || Width != ow || Height != oh)
             {
-                if (Left != targetX || Top != targetY || Width != sz || Height != sz)
-                {
-                    SetBounds(targetX, targetY, sz, sz);
-                }
+                SetBounds(ox, oy, ow, oh);
             }
-
-            ApplyClickThrough(!cfg.calibrateMode);
             Invalidate();
-        }
-
-        private void ApplyClickThrough(bool clickThrough)
-        {
-            if (!IsHandleCreated) return;
-            int exStyle = NativeMethods.GetWindowLong(Handle, NativeMethods.GWL_EXSTYLE);
-            if (clickThrough)
-            {
-                int target = exStyle | NativeMethods.WS_EX_TRANSPARENT | NativeMethods.WS_EX_NOACTIVATE | NativeMethods.WS_EX_LAYERED | NativeMethods.WS_EX_TOOLWINDOW;
-                if (target != exStyle) NativeMethods.SetWindowLong(Handle, NativeMethods.GWL_EXSTYLE, target);
-            }
-            else
-            {
-                int target = (exStyle & ~NativeMethods.WS_EX_TRANSPARENT) | NativeMethods.WS_EX_LAYERED | NativeMethods.WS_EX_TOOLWINDOW;
-                if (target != exStyle) NativeMethods.SetWindowLong(Handle, NativeMethods.GWL_EXSTYLE, target);
-            }
-        }
-
-        private void OnOverlayMouseDown(object sender, MouseEventArgs e)
-        {
-            if (!cfg.calibrateMode || e.Button != MouseButtons.Left) return;
-            dragStartScreen = Control.MousePosition;
-            dragStartBounds = Bounds;
-            if (e.X >= Width - 26 && e.Y >= Height - 26)
-            {
-                isResizing = true;
-            }
-            else
-            {
-                isDragging = true;
-            }
-        }
-
-        private void OnOverlayMouseMove(object sender, MouseEventArgs e)
-        {
-            if (!cfg.calibrateMode) return;
-            if (isResizing)
-            {
-                Point cur = Control.MousePosition;
-                int dx = cur.X - dragStartScreen.X;
-                int dy = cur.Y - dragStartScreen.Y;
-                int delta = Math.Abs(dx) > Math.Abs(dy) ? dx : dy;
-                int newSz = Math.Max(120, Math.Min(680, dragStartBounds.Width + delta));
-                Width = newSz;
-                Height = newSz;
-                Invalidate();
-            }
-            else if (isDragging)
-            {
-                Point cur = Control.MousePosition;
-                Left = dragStartBounds.Left + (cur.X - dragStartScreen.X);
-                Top = dragStartBounds.Top + (cur.Y - dragStartScreen.Y);
-            }
-            else
-            {
-                Cursor = (e.X >= Width - 26 && e.Y >= Height - 26) ? Cursors.SizeNWSE : Cursors.SizeAll;
-            }
-        }
-
-        private void OnOverlayMouseUp(object sender, MouseEventArgs e)
-        {
-            if (!isDragging && !isResizing) return;
-            isDragging = false;
-            isResizing = false;
-            owner.CommitCalibratedMinimapBounds(Bounds);
-        }
-
-        private void OnOverlayMouseWheel(object sender, MouseEventArgs e)
-        {
-            if (!cfg.calibrateMode) return;
-            int step = e.Delta > 0 ? 8 : -8;
-            int newSz = Math.Max(120, Math.Min(680, Width + step));
-            int diff = newSz - Width;
-            SetBounds(Left - (cfg.flipped ? 0 : diff), Top - diff, newSz, newSz);
-            owner.CommitCalibratedMinimapBounds(Bounds);
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
+            if (cards == null || cards.Count == 0) return;
+
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            int w = Width;
-            int h = Height;
+            // Three cards sit at normalized X centers inside [0.14..0.86]: ~0.18, 0.50, 0.82 of this overlay box
+            double[] centers = new double[] { 0.180, 0.500, 0.820 };
+            int cardW = Math.Max(180, Math.Min(310, (int)Math.Round(Width * 0.28)));
+            int cardH = Math.Max(90, Height - 8);
 
-            if (cfg.calibrateMode)
+            using (Font fBadge = new Font("Segoe UI", 8.0f, FontStyle.Bold))
+            using (Font fTier = new Font("Segoe UI", 11.5f, FontStyle.Bold))
+            using (Font fName = new Font("Segoe UI", 9.0f, FontStyle.Bold))
+            using (Font fSub = new Font("Segoe UI", 7.8f, FontStyle.Regular))
             {
-                using (SolidBrush dimBrush = new SolidBrush(Color.FromArgb(80, 10, 20, 40)))
+                for (int i = 0; i < cards.Count; i++)
                 {
-                    g.FillRectangle(dimBrush, 0, 0, w, h);
-                }
-                using (Pen borderPen = new Pen(Color.FromArgb(255, 10, 200, 185), 3f))
-                {
-                    borderPen.DashStyle = DashStyle.Dash;
-                    g.DrawRectangle(borderPen, 2, 2, w - 5, h - 5);
-                }
-                using (Pen bridgePen = new Pen(Color.FromArgb(140, 200, 155, 60), 2f))
-                {
-                    g.DrawLine(bridgePen, (int)(w * 0.30), (int)(h * 0.78), (int)(w * 0.78), (int)(h * 0.30));
-                }
-                using (SolidBrush gripBrush = new SolidBrush(Color.FromArgb(245, 200, 155, 60)))
-                {
-                    g.FillRectangle(gripBrush, w - 20, h - 20, 18, 18);
-                }
-                using (Font f = new Font("Segoe UI", 8.5f, FontStyle.Bold))
-                using (SolidBrush bg = new SolidBrush(Color.FromArgb(215, 5, 8, 20)))
-                using (SolidBrush fg = new SolidBrush(Color.FromArgb(255, 103, 232, 249)))
-                {
-                    string txt = string.Format("Kéo đặt vào Minimap • Lăn chuột Scale ({0}px) • Alt+Shift+C khóa", w);
-                    SizeF sz = g.MeasureString(txt, f);
-                    g.FillRectangle(bg, 4, 4, Math.Min(w - 8, sz.Width + 8), sz.Height + 4);
-                    g.DrawString(txt, f, fg, new RectangleF(7, 6, w - 12, sz.Height + 2));
+                    CandidateCardOverlayModel c = cards[i];
+                    if (c.slot < 0 || c.slot > 2 || string.IsNullOrEmpty(c.nameVi)) continue;
+
+                    int cx = (int)Math.Round(Width * centers[c.slot]);
+                    int rx = cx - cardW / 2;
+                    int ry = 4;
+
+                    Color bgCol = c.isBest ? Color.FromArgb(236, 10, 26, 36) : Color.FromArgb(228, 12, 14, 19);
+                    Color borderCol = c.isBest ? Color.FromArgb(255, 36, 232, 204) : Color.FromArgb(200, 71, 85, 105);
+
+                    using (SolidBrush bg = new SolidBrush(bgCol))
+                    using (Pen pen = new Pen(borderCol, c.isBest ? 2.4f : 1.4f))
+                    {
+                        g.FillRectangle(bg, rx, ry, cardW, cardH);
+                        g.DrawRectangle(pen, rx, ry, cardW - 1, cardH - 1);
+                    }
+
+                    string topTag = c.isBest ? string.Format("★ KHUYÊN CHỌN #{0} • {1}đ", c.slot + 1, c.score) : string.Format("Lựa chọn #{0} • {1}đ", c.slot + 1, c.score);
+                    Color tagCol = c.isBest ? Color.FromArgb(255, 36, 232, 204) : Color.FromArgb(255, 148, 163, 184);
+                    using (SolidBrush bTag = new SolidBrush(tagCol))
+                    {
+                        g.DrawString(topTag, fBadge, bTag, rx + 8, ry + 6);
+                    }
+
+                    string rankText = !string.IsNullOrEmpty(c.metaRank) ? c.metaRank : c.tier;
+                    Color tierCol = (rankText.StartsWith("S")) ? Color.FromArgb(255, 251, 191, 36) : Color.FromArgb(255, 56, 189, 248);
+                    using (SolidBrush bTier = new SolidBrush(tierCol))
+                    {
+                        g.DrawString(rankText, fTier, bTier, rx + cardW - 44, ry + 4);
+                    }
+
+                    using (SolidBrush bWhite = new SolidBrush(Color.FromArgb(255, 248, 250, 252)))
+                    {
+                        g.DrawString(c.nameVi, fName, bWhite, new RectangleF(rx + 8, ry + 24, cardW - 50, 22));
+                    }
+
+                    string detail = c.winRate > 0
+                        ? string.Format("WR {0:0.0}% • {1}", c.winRate, c.reason)
+                        : (string.IsNullOrEmpty(c.reason) ? "Đề xuất theo tướng & lõi hiện tại" : c.reason);
+                    using (SolidBrush bSub = new SolidBrush(Color.FromArgb(255, 203, 213, 225)))
+                    {
+                        g.DrawString(detail, fSub, bSub, new RectangleF(rx + 8, ry + 48, cardW - 16, cardH - 52));
+                    }
                 }
             }
+        }
+    }
 
-            // Proportional scaling for relic circles and fonts relative to inner minimap sizePx
-            float radius = Math.Max(9.5f, w * 0.042f);
-            float fontSize = Math.Max(6.5f, w * 0.030f);
-            using (Font timeFont = new Font("Consolas", fontSize, FontStyle.Bold))
-            using (StringFormat sf = new StringFormat())
+    internal sealed class BlitzDesktopShellForm : Form
+    {
+        private readonly MayhemControllerForm controller;
+        private readonly Panel titleBar;
+        private readonly Label lblTitle;
+        private readonly Label lblLiveStatus;
+        private readonly Button btnPinTop;
+        private readonly Button btnMin;
+        private readonly Button btnMax;
+        private readonly Button btnClose;
+        private readonly Panel hostPanel;
+
+        private IntPtr embeddedHwnd = IntPtr.Zero;
+        private int chromeTitlebarTrim = 33;
+        private bool topPinned = false;
+
+        public BlitzDesktopShellForm(MayhemControllerForm ownerController, Icon appIcon)
+        {
+            controller = ownerController;
+            FormBorderStyle = FormBorderStyle.None;
+            StartPosition = FormStartPosition.CenterScreen;
+            Width = 1420;
+            Height = 860;
+            MinimumSize = new Size(1080, 700);
+            BackColor = Color.FromArgb(12, 14, 19);
+            Text = "Passion Mayhem — Blitz Edition";
+            if (appIcon != null) Icon = appIcon;
+
+            titleBar = new Panel
             {
-                sf.Alignment = StringAlignment.Center;
-                sf.LineAlignment = StringAlignment.Center;
+                Dock = DockStyle.Top,
+                Height = 34,
+                BackColor = Color.FromArgb(9, 11, 16)
+            };
 
-                for (int i = 0; i < relics.Count; i++)
+            lblTitle = new Label
+            {
+                Text = "  ⚡ PASSION MAYHEM • BLITZ NATIVE",
+                ForeColor = Color.FromArgb(36, 232, 204),
+                Font = new Font("Segoe UI", 9.0f, FontStyle.Bold),
+                AutoSize = false,
+                Width = 280,
+                Height = 34,
+                Left = 6,
+                Top = 0,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            lblLiveStatus = new Label
+            {
+                Text = "● Chờ kết nối Liên Minh Huyền Thoại...",
+                ForeColor = Color.FromArgb(148, 163, 184),
+                Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
+                AutoSize = false,
+                Width = 340,
+                Height = 34,
+                Left = 290,
+                Top = 0,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            btnClose = MakeCaptionBtn("✕", 42, Color.FromArgb(248, 113, 113));
+            btnMax = MakeCaptionBtn("□", 40, Color.FromArgb(203, 213, 225));
+            btnMin = MakeCaptionBtn("—", 40, Color.FromArgb(203, 213, 225));
+            btnPinTop = MakeCaptionBtn("📌", 40, Color.FromArgb(148, 163, 184));
+
+            btnClose.Click += delegate { Hide(); };
+            btnMax.Click += delegate
+            {
+                WindowState = (WindowState == FormWindowState.Maximized) ? FormWindowState.Normal : FormWindowState.Maximized;
+                SyncEmbeddedBounds();
+            };
+            btnMin.Click += delegate { WindowState = FormWindowState.Minimized; };
+            btnPinTop.Click += delegate
+            {
+                topPinned = !topPinned;
+                TopMost = topPinned;
+                btnPinTop.ForeColor = topPinned ? Color.FromArgb(36, 232, 204) : Color.FromArgb(148, 163, 184);
+            };
+
+            MouseEventHandler dragHandler = delegate(object s, MouseEventArgs e)
+            {
+                if (e.Button == MouseButtons.Left)
                 {
-                    RelicTimerModel r = relics[i];
-                    float cx = (float)(r.nx * w);
-                    float cy = (float)(r.ny * h);
-
-                    bool isSoon = r.running && r.remaining <= 15 && r.remaining > 0;
-                    Color ringColor = r.running
-                        ? (isSoon ? Color.FromArgb(255, 250, 204, 21) : Color.FromArgb(255, 56, 189, 248))
-                        : Color.FromArgb(255, 52, 211, 153);
-
-                    RectangleF circleRect = new RectangleF(cx - radius, cy - radius, radius * 2f, radius * 2f);
-                    if (r.running || cfg.calibrateMode)
+                    if (e.Clicks >= 2)
                     {
-                        Color fillColor = r.running
-                            ? Color.FromArgb(215, 8, 15, 32)
-                            : Color.FromArgb(190, 6, 48, 36);
-                        using (SolidBrush fillBrush = new SolidBrush(fillColor))
-                        {
-                            g.FillEllipse(fillBrush, circleRect);
-                        }
-                        using (Pen bgRing = new Pen(Color.FromArgb(140, 30, 41, 59), 2.5f))
-                        {
-                            g.DrawEllipse(bgRing, circleRect);
-                        }
+                        WindowState = (WindowState == FormWindowState.Maximized) ? FormWindowState.Normal : FormWindowState.Maximized;
+                        SyncEmbeddedBounds();
                     }
-
-                    float sweep = 360f;
-                    if (r.running && r.total > 0)
+                    else
                     {
-                        sweep = Math.Max(8f, Math.Min(360f, (float)((r.total - r.remaining) * 360.0 / r.total)));
-                    }
-                    using (Pen arcPen = new Pen(ringColor, Math.Max(2.2f, w * 0.011f)))
-                    {
-                        g.DrawArc(arcPen, circleRect, -90f, sweep);
-                    }
-
-                    if (r.running || cfg.calibrateMode)
-                    {
-                        string labelText = r.running ? r.remaining.ToString() : "OK";
-                        using (SolidBrush textBrush = new SolidBrush(ringColor))
-                        {
-                            g.DrawString(labelText, timeFont, textBrush, circleRect, sf);
-                        }
+                        NativeMethods.ReleaseCapture();
+                        NativeMethods.SendMessage(Handle, NativeMethods.WM_NCLBUTTONDOWN, new IntPtr(NativeMethods.HTCAPTION), IntPtr.Zero);
                     }
                 }
+            };
+            titleBar.MouseDown += dragHandler;
+            lblTitle.MouseDown += dragHandler;
+            lblLiveStatus.MouseDown += dragHandler;
+
+            titleBar.Controls.Add(lblTitle);
+            titleBar.Controls.Add(lblLiveStatus);
+            titleBar.Controls.Add(btnPinTop);
+            titleBar.Controls.Add(btnMin);
+            titleBar.Controls.Add(btnMax);
+            titleBar.Controls.Add(btnClose);
+
+            hostPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.FromArgb(12, 14, 19)
+            };
+
+            Controls.Add(hostPanel);
+            Controls.Add(titleBar);
+
+            Resize += delegate
+            {
+                LayoutTitleButtons();
+                SyncEmbeddedBounds();
+            };
+            FormClosing += delegate(object s, FormClosingEventArgs e)
+            {
+                controller.NotifyShellClosing(e.CloseReason);
+            };
+
+            LayoutTitleButtons();
+        }
+
+        private static Button MakeCaptionBtn(string txt, int width, Color fg)
+        {
+            Button b = new Button
+            {
+                Text = txt,
+                Width = width,
+                Height = 34,
+                Top = 0,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(9, 11, 16),
+                ForeColor = fg,
+                Font = new Font("Segoe UI", 9.0f, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                TabStop = false
+            };
+            b.FlatAppearance.BorderSize = 0;
+            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(28, 34, 48);
+            return b;
+        }
+
+        private void LayoutTitleButtons()
+        {
+            int right = Width;
+            btnClose.Left = right - btnClose.Width;
+            btnMax.Left = btnClose.Left - btnMax.Width;
+            btnMin.Left = btnMax.Left - btnMin.Width;
+            btnPinTop.Left = btnMin.Left - btnPinTop.Width;
+        }
+
+        public void SetLiveStatus(string text, bool active)
+        {
+            if (IsDisposed) return;
+            if (lblLiveStatus.Text != text) lblLiveStatus.Text = text;
+            lblLiveStatus.ForeColor = active ? Color.FromArgb(36, 232, 204) : Color.FromArgb(148, 163, 184);
+        }
+
+        public void SetChromeTrimHeight(int trimPx)
+        {
+            if (trimPx >= 0 && trimPx <= 80 && trimPx != chromeTitlebarTrim)
+            {
+                chromeTitlebarTrim = trimPx;
+                SyncEmbeddedBounds();
+            }
+        }
+
+        public bool EmbedWindow(IntPtr childHwnd)
+        {
+            if (childHwnd == IntPtr.Zero || !NativeMethods.IsWindow(childHwnd)) return false;
+            if (embeddedHwnd == childHwnd) return true;
+            try
+            {
+                int style = NativeMethods.GetWindowLong(childHwnd, NativeMethods.GWL_STYLE);
+                int cleanStyle = (style & ~(NativeMethods.WS_CAPTION | NativeMethods.WS_THICKFRAME | NativeMethods.WS_MINIMIZEBOX | NativeMethods.WS_MAXIMIZEBOX | NativeMethods.WS_SYSMENU | NativeMethods.WS_POPUP)) | NativeMethods.WS_CHILD;
+                NativeMethods.SetWindowLong(childHwnd, NativeMethods.GWL_STYLE, cleanStyle);
+                NativeMethods.SetParent(childHwnd, hostPanel.Handle);
+                embeddedHwnd = childHwnd;
+                SyncEmbeddedBounds();
+                return true;
+            }
+            catch { return false; }
+        }
+
+        public void SyncEmbeddedBounds()
+        {
+            if (embeddedHwnd != IntPtr.Zero && NativeMethods.IsWindow(embeddedHwnd) && hostPanel.Width > 50 && hostPanel.Height > 50)
+            {
+                int trim = chromeTitlebarTrim;
+                NativeMethods.MoveWindow(embeddedHwnd, 0, -trim, hostPanel.Width, hostPanel.Height + trim, true);
             }
         }
     }
@@ -449,8 +684,6 @@ namespace PassionMayhemDesktop
     {
         private readonly MayhemControllerForm owner;
         private AdvisorSummaryModel summary = new AdvisorSummaryModel();
-        private string mapMode = "pirate_60";
-        private List<RelicTimerModel> relics = new List<RelicTimerModel>();
         private bool isDragging = false;
         private Point dragStartScreen;
         private Point dragStartLoc;
@@ -462,10 +695,10 @@ namespace PassionMayhemDesktop
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            BackColor = Color.FromArgb(9, 14, 28);
-            Opacity = 0.89;
+            BackColor = Color.FromArgb(12, 14, 19);
+            Opacity = 0.90;
             Width = 330;
-            Height = 148;
+            Height = 122;
             Left = 18;
             Top = 18;
             DoubleBuffered = true;
@@ -501,16 +734,11 @@ namespace PassionMayhemDesktop
             }
         }
 
-        protected override bool ShowWithoutActivation
-        {
-            get { return true; }
-        }
+        protected override bool ShowWithoutActivation { get { return true; } }
 
-        public void UpdateData(AdvisorSummaryModel sum, string mode, List<RelicTimerModel> relicList)
+        public void UpdateData(AdvisorSummaryModel sum)
         {
             summary = sum;
-            mapMode = mode;
-            relics = relicList;
             Invalidate();
         }
 
@@ -521,7 +749,7 @@ namespace PassionMayhemDesktop
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            using (Pen borderPen = new Pen(Color.FromArgb(190, 200, 155, 60), 1.5f))
+            using (Pen borderPen = new Pen(Color.FromArgb(210, 36, 232, 204), 1.5f))
             {
                 g.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
             }
@@ -531,42 +759,30 @@ namespace PassionMayhemDesktop
             using (Font fBold = new Font("Segoe UI", 8.5f, FontStyle.Bold))
             using (Font fSmall = new Font("Segoe UI", 7.5f, FontStyle.Regular))
             using (SolidBrush brGold = new SolidBrush(Color.FromArgb(253, 230, 138)))
-            using (SolidBrush brCyan = new SolidBrush(Color.FromArgb(103, 232, 249)))
+            using (SolidBrush brCyan = new SolidBrush(Color.FromArgb(36, 232, 204)))
             using (SolidBrush brGreen = new SolidBrush(Color.FromArgb(110, 231, 183)))
             using (SolidBrush brMuted = new SolidBrush(Color.FromArgb(148, 163, 184)))
             using (SolidBrush brWhite = new SolidBrush(Color.FromArgb(241, 245, 249)))
             {
-                string mapTag = mapMode == "pirate_60" ? "Pirate 60s" : "Vực Gió Hú 90s";
-                g.DrawString(string.Format("MAYHEM BLITZ • {0} ({1})", summary.champName, summary.champTier), fTitle, brGold, 10, 8);
-                g.DrawString(mapTag, fBold, brCyan, Width - 96, 9);
+                g.DrawString(string.Format("BLITZ MAYHEM • {0} ({1})", summary.champName, summary.champTier), fTitle, brGold, 10, 8);
+                g.DrawString("AUTO-SYNC", fBold, brCyan, Width - 82, 9);
 
                 string augLine = string.IsNullOrEmpty(summary.bestAugment)
-                    ? "Bấm Alt+Shift+Q khi hiện 3 lõi để AI chấm điểm"
-                    : string.Format("★ Lõi #1: {0} ({1}đ)", summary.bestAugment, summary.bestScore);
+                    ? "Mở 3 Lõi trong game -> tự hiện điểm & khóa tự động"
+                    : string.Format("★ Gợi ý #1: {0} ({1}đ)", summary.bestAugment, summary.bestScore);
                 g.DrawString(augLine, fBold, brGreen, new RectangleF(10, 30, Width - 20, 18));
 
+                string chosenLine = string.IsNullOrEmpty(summary.chosenAugmentsText)
+                    ? "Lõi đã chọn: Chưa khóa lõi nào"
+                    : "Đã khóa: " + summary.chosenAugmentsText;
+                g.DrawString(chosenLine, fSmall, brCyan, new RectangleF(10, 50, Width - 20, 16));
+
                 string itemsLine = string.IsNullOrEmpty(summary.nextItemsText)
-                    ? "Đồ: Đang đồng bộ từ ARAM Mayhem..."
+                    ? "Đồ: Đang đồng bộ từ Shop PeakBuild 26.22..."
                     : "Đồ: " + summary.nextItemsText;
-                g.DrawString(itemsLine, fBody, brWhite, new RectangleF(10, 50, Width - 20, 18));
+                g.DrawString(itemsLine, fBody, brWhite, new RectangleF(10, 68, Width - 20, 18));
 
-                string noteLine = string.IsNullOrEmpty(summary.tacticalNote)
-                    ? "Alt+Shift+E: Quét Bảng Tab / Trận đấu"
-                    : summary.tacticalNote;
-                g.DrawString(noteLine, fSmall, brMuted, new RectangleF(10, 70, Width - 20, 32));
-
-                // Compact 4 relic line at bottom
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < relics.Count; i++)
-                {
-                    if (i > 0) sb.Append("  |  ");
-                    RelicTimerModel r = relics[i];
-                    sb.Append(r.shortName);
-                    sb.Append(": ");
-                    sb.Append(r.running ? r.remaining + "s" : "OK");
-                }
-                g.DrawString(sb.ToString(), fSmall, brCyan, new RectangleF(10, 106, Width - 20, 16));
-                g.DrawString("Alt+1..4: Đếm cục máu | Alt+Shift+C: Chỉnh Minimap | Alt+Shift+O: Ẩn", fSmall, brMuted, new RectangleF(10, 124, Width - 20, 16));
+                g.DrawString("Alt+Shift+Q: Quét Lõi ngay | Alt+Shift+O: Ẩn HUD | Alt+Shift+M: Mở App", fSmall, brMuted, new RectangleF(10, 96, Width - 20, 16));
             }
         }
     }
@@ -575,13 +791,8 @@ namespace PassionMayhemDesktop
     {
         private const int HK_TOGGLE_APP = 101;
         private const int HK_TOGGLE_OVERLAY = 102;
-        private const int HK_TOGGLE_CALIBRATE = 103;
         private const int HK_SCAN_AUGMENTS = 104;
         private const int HK_SCAN_COMBAT = 105;
-        private const int HK_RELIC_1 = 111;
-        private const int HK_RELIC_2 = 112;
-        private const int HK_RELIC_3 = 113;
-        private const int HK_RELIC_4 = 114;
 
         private const string WAKE_EVENT_NAME = "Local\\PassionStar_Mayhem_Desktop_Wakeup_Event";
 
@@ -601,14 +812,9 @@ namespace PassionMayhemDesktop
         private bool isShuttingDown = false;
         private bool overlaysEnabled = true;
 
-        private MinimapConfigModel minimapCfg = new MinimapConfigModel();
-        private string mapMode = "pirate_60";
         private AdvisorSummaryModel advisorSummary = new AdvisorSummaryModel();
-        private List<RelicTimerModel> relics = new List<RelicTimerModel>();
         private long lastHandledPendingActionSeq = 0;
         private bool wasLeftMouseDown = false;
-        private DateTime lastRiotConfigPollUtc = DateTime.MinValue;
-        private DateTime lastMinimapThumbPushUtc = DateTime.MinValue;
         private bool nativeModalOpen = false;
         private int nativeModalOpenStreak = 0;
         private int nativeModalCloseStreak = 0;
@@ -616,7 +822,8 @@ namespace PassionMayhemDesktop
         private DateTime lastNativeAutoCaptureUtc = DateTime.MinValue;
         private int nativeCaptureCooldownTicks = 0;
 
-        private MinimapOverlayForm minimapForm;
+        private BlitzDesktopShellForm desktopShell;
+        private AugmentCardsOverlayForm cardsOverlayForm;
         private HudOverlayForm hudForm;
 
         private NotifyIcon trayIcon;
@@ -625,9 +832,6 @@ namespace PassionMayhemDesktop
         private ContextMenuStrip trayMenu;
         private ToolStripMenuItem menuShowHide;
         private ToolStripMenuItem menuToggleOverlay;
-        private ToolStripMenuItem menuCalibrate;
-        private ToolStripMenuItem menuMapPirate;
-        private ToolStripMenuItem menuMapAbyss;
 
         private System.Windows.Forms.Timer monitorTimer;
         private System.Windows.Forms.Timer overlayTickTimer;
@@ -652,7 +856,6 @@ namespace PassionMayhemDesktop
             Top = -32000;
             Text = "Passion Mayhem Blitz Controller";
 
-            InitDefaultRelics();
             serverPort = PickOrReuseServerPort();
             baseUrl = "http://127.0.0.1:" + serverPort;
 
@@ -674,13 +877,16 @@ namespace PassionMayhemDesktop
             FormClosing += delegate { ShutdownAll(false); };
         }
 
-        private void InitDefaultRelics()
+        public void NotifyShellClosing(CloseReason reason)
         {
-            relics.Clear();
-            relics.Add(new RelicTimerModel { id = "ally_inner", label = "Trụ Trong Đồng Minh", shortName = "Trong Ta", nx = 0.386, ny = 0.697, total = 60 });
-            relics.Add(new RelicTimerModel { id = "ally_outer", label = "Trụ Ngoài Đồng Minh", shortName = "Ngoài Ta", nx = 0.476, ny = 0.600, total = 60 });
-            relics.Add(new RelicTimerModel { id = "enemy_outer", label = "Trụ Ngoài Đối Phương", shortName = "Ngoài Địch", nx = 0.600, ny = 0.476, total = 60 });
-            relics.Add(new RelicTimerModel { id = "enemy_inner", label = "Trụ Trong Đối Phương", shortName = "Trong Địch", nx = 0.703, ny = 0.393, total = 60 });
+            if (reason == CloseReason.ApplicationExitCall || reason == CloseReason.TaskManagerClosing || reason == CloseReason.WindowsShutDown)
+            {
+                ShutdownAll(true);
+            }
+            else
+            {
+                isHiddenToTray = true;
+            }
         }
 
         private string ResolveAppDirectory()
@@ -721,32 +927,19 @@ namespace PassionMayhemDesktop
 
             trayMenu = new ContextMenuStrip();
 
-            menuShowHide = new ToolStripMenuItem("Hiện / Ẩn ARAM Mayhem (Alt+Shift+M)");
+            menuShowHide = new ToolStripMenuItem("Hiện / Ẩn Passion Mayhem Blitz (Alt+Shift+M)");
             menuShowHide.Font = new Font(menuShowHide.Font, FontStyle.Bold);
             menuShowHide.Click += delegate { ToggleShowHide(); };
 
-            menuToggleOverlay = new ToolStripMenuItem("Bật / Tắt Overlay Trong Game (Alt+Shift+O)");
+            menuToggleOverlay = new ToolStripMenuItem("Bật / Tắt Overlay 3 Lõi & HUD Trong Game (Alt+Shift+O)");
             menuToggleOverlay.Checked = true;
             menuToggleOverlay.Click += delegate { ToggleOverlays(); };
 
-            menuCalibrate = new ToolStripMenuItem("Căn Chỉnh & Scale Minimap (Alt+Shift+C)");
-            menuCalibrate.Click += delegate { ToggleCalibrateMode(); };
-
-            ToolStripMenuItem menuAutoScale = new ToolStripMenuItem("Tự Nhận Diện Minimap Từ Riot Config");
-            menuAutoScale.Click += delegate { AutoDetectFromRiotConfig(); };
-
-            ToolStripMenuItem menuScanAug = new ToolStripMenuItem("⚡ Chụp & Quét 3 Lõi (Alt+Shift+Q)");
+            ToolStripMenuItem menuScanAug = new ToolStripMenuItem("⚡ Quét Nhanh 3 Thẻ Lõi Ngay (Alt+Shift+Q)");
             menuScanAug.Click += delegate { CaptureAndUploadFrame("scan-aug"); };
 
             ToolStripMenuItem menuScanTab = new ToolStripMenuItem("🔍 Chụp & Quét Bảng Tab / Trận (Alt+Shift+E)");
             menuScanTab.Click += delegate { CaptureAndUploadFrame("scan-combat"); };
-
-            menuMapPirate = new ToolStripMenuItem("Chế độ Bản đồ Pirate (60s Máu+Mana)");
-            menuMapPirate.Checked = true;
-            menuMapPirate.Click += delegate { SetMapMode("pirate_60"); };
-
-            menuMapAbyss = new ToolStripMenuItem("Chế độ Vực Gió Hú (90s)");
-            menuMapAbyss.Click += delegate { SetMapMode("abyss_90"); };
 
             ToolStripMenuItem menuShortcut = new ToolStripMenuItem("Tạo lối tắt ngoài Desktop");
             menuShortcut.Click += delegate { CreateDesktopShortcut(true); };
@@ -756,21 +949,16 @@ namespace PassionMayhemDesktop
 
             trayMenu.Items.Add(menuShowHide);
             trayMenu.Items.Add(menuToggleOverlay);
-            trayMenu.Items.Add(menuCalibrate);
-            trayMenu.Items.Add(menuAutoScale);
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add(menuScanAug);
             trayMenu.Items.Add(menuScanTab);
-            trayMenu.Items.Add(new ToolStripSeparator());
-            trayMenu.Items.Add(menuMapPirate);
-            trayMenu.Items.Add(menuMapAbyss);
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add(menuShortcut);
             trayMenu.Items.Add(menuExit);
 
             trayIcon = new NotifyIcon();
             trayIcon.Icon = loadedTrayIcon;
-            trayIcon.Text = "Passion ARAM Mayhem Blitz Overlay";
+            trayIcon.Text = "Passion Mayhem Blitz Edition";
             trayIcon.ContextMenuStrip = trayMenu;
             trayIcon.Visible = true;
             trayIcon.MouseClick += delegate(object sender, MouseEventArgs e)
@@ -785,18 +973,10 @@ namespace PassionMayhemDesktop
             if (h == IntPtr.Zero) return;
 
             uint modAltShift = NativeMethods.MOD_ALT | NativeMethods.MOD_SHIFT | NativeMethods.MOD_NOREPEAT;
-            uint modAlt = NativeMethods.MOD_ALT | NativeMethods.MOD_NOREPEAT;
-
             NativeMethods.RegisterHotKey(h, HK_TOGGLE_APP, modAltShift, (uint)Keys.M);
             NativeMethods.RegisterHotKey(h, HK_TOGGLE_OVERLAY, modAltShift, (uint)Keys.O);
-            NativeMethods.RegisterHotKey(h, HK_TOGGLE_CALIBRATE, modAltShift, (uint)Keys.C);
             NativeMethods.RegisterHotKey(h, HK_SCAN_AUGMENTS, modAltShift, (uint)Keys.Q);
             NativeMethods.RegisterHotKey(h, HK_SCAN_COMBAT, modAltShift, (uint)Keys.E);
-
-            NativeMethods.RegisterHotKey(h, HK_RELIC_1, modAlt, (uint)Keys.D1);
-            NativeMethods.RegisterHotKey(h, HK_RELIC_2, modAlt, (uint)Keys.D2);
-            NativeMethods.RegisterHotKey(h, HK_RELIC_3, modAlt, (uint)Keys.D3);
-            NativeMethods.RegisterHotKey(h, HK_RELIC_4, modAlt, (uint)Keys.D4);
         }
 
         private void StartWakeListener()
@@ -1024,8 +1204,6 @@ namespace PassionMayhemDesktop
                 return;
             }
 
-            AutoDetectFromRiotConfig();
-
             string browserExe = FindBrowserExecutable();
             if (string.IsNullOrEmpty(browserExe))
             {
@@ -1033,6 +1211,9 @@ namespace PassionMayhemDesktop
                 ShutdownAll(true);
                 return;
             }
+
+            desktopShell = new BlitzDesktopShellForm(this, loadedBigIcon);
+            desktopShell.Show();
 
             string profileDir = Path.Combine(appDir, ".tmp_mayhem_desktop_profile");
             if (!Directory.Exists(profileDir))
@@ -1042,7 +1223,7 @@ namespace PassionMayhemDesktop
 
             string appUrl = baseUrl + "/aram-mayhem.html?desktop=1";
             string args = string.Format(
-                "--app=\"{0}\" --user-data-dir=\"{1}\" --window-size=1360,880 --no-first-run --no-default-browser-check --disable-features=msEdgeSidebarV2",
+                "--app=\"{0}\" --user-data-dir=\"{1}\" --window-size=1420,860 --no-first-run --no-default-browser-check --disable-features=msEdgeSidebarV2",
                 appUrl,
                 profileDir
             );
@@ -1066,16 +1247,16 @@ namespace PassionMayhemDesktop
                 return;
             }
 
-            minimapForm = new MinimapOverlayForm(this);
+            cardsOverlayForm = new AugmentCardsOverlayForm();
             hudForm = new HudOverlayForm(this);
 
             monitorTimer = new System.Windows.Forms.Timer();
-            monitorTimer.Interval = 400;
+            monitorTimer.Interval = 250;
             monitorTimer.Tick += MonitorWindowTick;
             monitorTimer.Start();
 
             overlayTickTimer = new System.Windows.Forms.Timer();
-            overlayTickTimer.Interval = 500;
+            overlayTickTimer.Interval = 220;
             overlayTickTimer.Tick += OverlayTick;
             overlayTickTimer.Start();
 
@@ -1175,11 +1356,19 @@ namespace PassionMayhemDesktop
                 {
                     appHwnd = found;
                     ApplyWindowIcons(appHwnd);
+                    if (desktopShell != null && !desktopShell.IsDisposed)
+                    {
+                        desktopShell.EmbedWindow(appHwnd);
+                    }
                 }
                 else if ((DateTime.UtcNow - launchTimeUtc).TotalSeconds > 20 && browserProcess != null && browserProcess.HasExited)
                 {
                     ShutdownAll(true);
                 }
+            }
+            else if (desktopShell != null && !desktopShell.IsDisposed && desktopShell.Visible)
+            {
+                desktopShell.SyncEmbeddedBounds();
             }
         }
 
@@ -1274,31 +1463,22 @@ namespace PassionMayhemDesktop
             bool gameFocused;
             IntPtr leagueHwnd = FindLeagueGameWindow(out gameBounds, out gameFocused);
 
-            bool shouldShow = overlaysEnabled && (leagueHwnd != IntPtr.Zero || minimapCfg.calibrateMode);
+            bool shouldShowHud = overlaysEnabled && leagueHwnd != IntPtr.Zero;
 
-            lock (syncLock)
+            if (desktopShell != null && !desktopShell.IsDisposed)
             {
-                minimapCfg.gameWidth = gameBounds.Width;
-                minimapCfg.gameHeight = gameBounds.Height;
-                if (minimapCfg.autoDetect && !minimapCfg.calibrateMode)
+                if (leagueHwnd != IntPtr.Zero)
                 {
-                    double ratioH = gameBounds.Height / 1080.0;
-                    minimapCfg.sizePx = Math.Max(110, Math.Min(640, (int)Math.Round(221.0 * ratioH * minimapCfg.scale)));
-                    minimapCfg.offsetX = Math.Max(2, (int)Math.Round(14.0 * ratioH));
-                    minimapCfg.offsetY = Math.Max(2, (int)Math.Round(13.0 * ratioH));
+                    desktopShell.SetLiveStatus("● Đang bắt trận LMHT (" + advisorSummary.champName + ") — Auto Lõi & Shop", true);
+                }
+                else
+                {
+                    desktopShell.SetLiveStatus("● Chờ Liên Minh Huyền Thoại / Sảnh LCU...", false);
                 }
             }
 
-            if (minimapCfg.autoDetect && !minimapCfg.calibrateMode && (DateTime.UtcNow - lastRiotConfigPollUtc).TotalSeconds >= 5.0)
+            if (leagueHwnd != IntPtr.Zero && gameFocused)
             {
-                lastRiotConfigPollUtc = DateTime.UtcNow;
-                ThreadPool.QueueUserWorkItem(delegate { AutoDetectFromRiotConfig(); });
-            }
-
-            // Native background minimap watcher & live thumbnail stream (Zero Browser Screen-Share)
-            if (leagueHwnd != IntPtr.Zero && gameFocused && !minimapCfg.calibrateMode)
-            {
-                WatchMinimapRelicPixels(gameBounds, overlaysEnabled && minimapCfg.autoWatchPixels);
                 WatchCardClickInGame(gameBounds);
                 CheckAndAutoCaptureAugmentModal(gameBounds);
             }
@@ -1311,26 +1491,32 @@ namespace PassionMayhemDesktop
                 PushModalOpenStateToServer(false);
             }
 
-            if (minimapForm != null && !minimapForm.IsDisposed)
+            if (cardsOverlayForm != null && !cardsOverlayForm.IsDisposed)
             {
-                if (shouldShow && minimapCfg.showMinimapOverlay)
+                List<CandidateCardOverlayModel> candSnapshot = null;
+                lock (syncLock)
                 {
-                    if (!minimapForm.Visible)
+                    if (advisorSummary.candidateCards != null && advisorSummary.candidateCards.Count > 0)
                     {
-                        minimapForm.Show();
+                        candSnapshot = new List<CandidateCardOverlayModel>(advisorSummary.candidateCards);
                     }
-                    minimapForm.UpdateData(CloneConfig(minimapCfg), CloneRelics(relics), gameBounds);
-                    NativeMethods.SetWindowPos(minimapForm.Handle, NativeMethods.HWND_TOPMOST, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
                 }
-                else if (minimapForm.Visible)
+
+                if (overlaysEnabled && leagueHwnd != IntPtr.Zero && gameFocused && nativeModalOpen && candSnapshot != null && candSnapshot.Count > 0)
                 {
-                    minimapForm.Hide();
+                    if (!cardsOverlayForm.Visible) cardsOverlayForm.Show();
+                    cardsOverlayForm.UpdateCards(candSnapshot, gameBounds);
+                    NativeMethods.SetWindowPos(cardsOverlayForm.Handle, NativeMethods.HWND_TOPMOST, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
+                }
+                else if (cardsOverlayForm.Visible)
+                {
+                    cardsOverlayForm.Hide();
                 }
             }
 
             if (hudForm != null && !hudForm.IsDisposed)
             {
-                if (shouldShow && minimapCfg.showHudOverlay)
+                if (shouldShowHud)
                 {
                     if (!hudForm.Visible)
                     {
@@ -1338,7 +1524,7 @@ namespace PassionMayhemDesktop
                         hudForm.Top = gameBounds.Top + 18;
                         hudForm.Show();
                     }
-                    hudForm.UpdateData(advisorSummary, mapMode, CloneRelics(relics));
+                    hudForm.UpdateData(advisorSummary);
                     NativeMethods.SetWindowPos(hudForm.Handle, NativeMethods.HWND_TOPMOST, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
                 }
                 else if (hudForm.Visible)
@@ -1534,22 +1720,22 @@ namespace PassionMayhemDesktop
                             nativeModalOpen = true;
                             lastCardTitleSample = curSig;
                             PushModalOpenStateToServer(true);
-                            nativeCaptureCooldownTicks = 1; // Wait one 500ms tick if rerolling animation settles, OR capture immediately if opened
-                            if (justOpened && (DateTime.UtcNow - lastNativeAutoCaptureUtc).TotalMilliseconds >= 1100)
+                            nativeCaptureCooldownTicks = 1;
+                            if (justOpened && (DateTime.UtcNow - lastNativeAutoCaptureUtc).TotalMilliseconds >= 650)
                             {
                                 lastNativeAutoCaptureUtc = DateTime.UtcNow;
                                 nativeCaptureCooldownTicks = 0;
-                                CaptureAndUploadFrame("scan-aug", true);
+                                RunInstantThreeCardOcrAsync(gameBounds);
                             }
                         }
                         else if (nativeCaptureCooldownTicks > 0)
                         {
                             nativeCaptureCooldownTicks--;
-                            if (nativeCaptureCooldownTicks == 0 && (DateTime.UtcNow - lastNativeAutoCaptureUtc).TotalMilliseconds >= 1100)
+                            if (nativeCaptureCooldownTicks == 0 && (DateTime.UtcNow - lastNativeAutoCaptureUtc).TotalMilliseconds >= 650)
                             {
                                 lastNativeAutoCaptureUtc = DateTime.UtcNow;
                                 lastCardTitleSample = curSig;
-                                CaptureAndUploadFrame("scan-aug", true);
+                                RunInstantThreeCardOcrAsync(gameBounds);
                             }
                         }
                     }
@@ -1574,122 +1760,71 @@ namespace PassionMayhemDesktop
             catch { }
         }
 
-        private void WatchMinimapRelicPixels(Rectangle gameBounds, bool watchRelics)
+        private void RunInstantThreeCardOcrAsync(Rectangle gameBounds)
         {
-            int sz = Math.Max(110, minimapCfg.sizePx);
-            int mx = minimapCfg.flipped ? gameBounds.Left + minimapCfg.offsetX : gameBounds.Right - sz - minimapCfg.offsetX;
-            int my = gameBounds.Bottom - sz - minimapCfg.offsetY;
-            if (mx < 0 || my < 0 || sz < 80) return;
+            if (gameBounds.Width < 800 || gameBounds.Height < 600) return;
 
-            bool needThumb = (DateTime.UtcNow - lastMinimapThumbPushUtc).TotalMilliseconds >= 1100;
-            if (!watchRelics && !needThumb) return;
+            int srcH = Math.Max(80, (int)Math.Round(gameBounds.Height * 0.255));
+            int srcW = Math.Max(120, (int)Math.Round(gameBounds.Width * 0.195));
+            int srcY = gameBounds.Top + (int)Math.Round(gameBounds.Height * 0.375);
+            double[] cardXFrac = new double[] { 0.175, 0.405, 0.635 };
+
+            const int bandW = 420;
+            const int bandH = 180;
 
             try
             {
-                using (Bitmap mmBmp = new Bitmap(sz, sz, PixelFormat.Format24bppRgb))
+                Bitmap stacked = new Bitmap(bandW, bandH * 3, PixelFormat.Format24bppRgb);
+                using (Graphics gs = Graphics.FromImage(stacked))
                 {
-                    using (Graphics g = Graphics.FromImage(mmBmp))
-                    {
-                        g.CopyFromScreen(mx, my, 0, 0, new Size(sz, sz), CopyPixelOperation.SourceCopy);
-                    }
+                    gs.Clear(Color.FromArgb(14, 22, 38));
+                    gs.InterpolationMode = InterpolationMode.HighQualityBicubic;
 
-                    if (watchRelics)
+                    using (Bitmap rawCard = new Bitmap(srcW, srcH, PixelFormat.Format24bppRgb))
+                    using (Graphics gr = Graphics.FromImage(rawCard))
                     {
-                        int half = 3;
-                        lock (syncLock)
+                        for (int i = 0; i < 3; i++)
                         {
-                            for (int i = 0; i < relics.Count; i++)
-                            {
-                                RelicTimerModel r = relics[i];
-                                int cx = (int)Math.Round(r.nx * sz);
-                                int cy = (int)Math.Round(r.ny * sz);
-                                int brightGreenCount = 0;
-                                for (int dx = -half; dx <= half; dx++)
-                                {
-                                    int px = cx + dx;
-                                    if (px < 0 || px >= sz) continue;
-                                    for (int dy = -half; dy <= half; dy++)
-                                    {
-                                        int py = cy + dy;
-                                        if (py < 0 || py >= sz) continue;
-                                        Color c = mmBmp.GetPixel(px, py);
-                                        if (c.G >= 102 && c.G <= 185 && c.R >= 50 && c.R <= 172 && c.B <= 130 && (c.G - c.R) >= 9 && (c.G - c.R) <= 45 && (c.G - c.B) >= 28)
-                                        {
-                                            brightGreenCount++;
-                                        }
-                                    }
-                                }
-                                bool isVisible = brightGreenCount >= 3;
-                                if (!r.running)
-                                {
-                                    if (isVisible)
-                                    {
-                                        r.visibleStreak = Math.Min(10, r.visibleStreak + 1);
-                                        r.missingStreak = 0;
-                                        r.respawnStreak = 0;
-                                    }
-                                    else if (r.visibleStreak >= 2)
-                                    {
-                                        r.missingStreak++;
-                                        if (r.missingStreak >= 3)
-                                        {
-                                            int cd = mapMode == "pirate_60" ? 60 : 90;
-                                            r.total = cd;
-                                            r.remaining = cd;
-                                            r.running = true;
-                                            r.visibleStreak = 0;
-                                            r.missingStreak = 0;
-                                            r.respawnStreak = 0;
-                                            PushRelicTriggerToServer(i, cd);
-                                        }
-                                    }
-                                }
-                                else if (r.remaining <= Math.Max(0, r.total - 5))
-                                {
-                                    if (isVisible)
-                                    {
-                                        r.respawnStreak++;
-                                        if (r.respawnStreak >= 4)
-                                        {
-                                            r.running = false;
-                                            r.remaining = 0;
-                                            r.visibleStreak = 2;
-                                            r.missingStreak = 0;
-                                            r.respawnStreak = 0;
-                                            PushRelicTriggerToServer(i, -1);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        r.respawnStreak = 0;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (needThumb)
-                    {
-                        lastMinimapThumbPushUtc = DateTime.UtcNow;
-                        using (Bitmap thumb = new Bitmap(160, 160, PixelFormat.Format24bppRgb))
-                        using (Graphics gt = Graphics.FromImage(thumb))
-                        {
-                            gt.InterpolationMode = InterpolationMode.Bilinear;
-                            gt.DrawImage(mmBmp, 0, 0, 160, 160);
-                            string b64 = EncodeBitmapToJpegBase64(thumb, 70L);
-                            ThreadPool.QueueUserWorkItem(delegate
-                            {
-                                try
-                                {
-                                    Dictionary<string, object> body = new Dictionary<string, object>();
-                                    body["minimapThumbBase64"] = "data:image/jpeg;base64," + b64;
-                                    HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
-                                }
-                                catch { }
-                            });
+                            int sx = gameBounds.Left + (int)Math.Round(gameBounds.Width * cardXFrac[i]);
+                            gr.CopyFromScreen(sx, srcY, 0, 0, new Size(srcW, srcH), CopyPixelOperation.SourceCopy);
+                            gs.DrawImage(rawCard, 12, i * bandH + 10, bandW - 24, bandH - 20);
                         }
                     }
                 }
+
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    try
+                    {
+                        string[] ocrTexts;
+                        using (stacked)
+                        {
+                            ocrTexts = NativeWinRtOcrEngine.RecognizeStackedCards(stacked, bandH);
+                        }
+
+                        int nonEmpty = 0;
+                        for (int i = 0; i < 3; i++)
+                        {
+                            if (!string.IsNullOrWhiteSpace(ocrTexts[i])) nonEmpty++;
+                        }
+
+                        if (nonEmpty >= 2)
+                        {
+                            Dictionary<string, object> body = new Dictionary<string, object>();
+                            body["modalOpen"] = true;
+                            body["nativeOcrCards"] = ocrTexts;
+                            HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
+                        }
+                        else
+                        {
+                            CaptureAndUploadFrame("scan-aug", true);
+                        }
+                    }
+                    catch
+                    {
+                        try { CaptureAndUploadFrame("scan-aug", true); } catch { }
+                    }
+                });
             }
             catch { }
         }
@@ -1713,7 +1848,7 @@ namespace PassionMayhemDesktop
                         }
                     }
                     catch { }
-                    Thread.Sleep(550);
+                    Thread.Sleep(260);
                 }
             });
             syncThread.IsBackground = true;
@@ -1724,40 +1859,14 @@ namespace PassionMayhemDesktop
         {
             string pendingActionToRun = null;
             long pendingSeq = 0;
+            int trimHeight = -1;
 
             lock (syncLock)
             {
-                if (data.ContainsKey("mapMode") && data["mapMode"] != null)
+                if (data.ContainsKey("chromeTitlebarHeight") && data["chromeTitlebarHeight"] != null)
                 {
-                    mapMode = Convert.ToString(data["mapMode"]);
-                }
-
-                if (data.ContainsKey("minimap") && data["minimap"] is Dictionary<string, object>)
-                {
-                    Dictionary<string, object> mm = (Dictionary<string, object>)data["minimap"];
-                    if (mm.ContainsKey("scale")) minimapCfg.scale = Convert.ToDouble(mm["scale"]);
-                    if (mm.ContainsKey("sizePx")) minimapCfg.sizePx = Convert.ToInt32(mm["sizePx"]);
-                    if (mm.ContainsKey("offsetX")) minimapCfg.offsetX = Convert.ToInt32(mm["offsetX"]);
-                    if (mm.ContainsKey("offsetY")) minimapCfg.offsetY = Convert.ToInt32(mm["offsetY"]);
-                    if (mm.ContainsKey("flipped")) minimapCfg.flipped = Convert.ToBoolean(mm["flipped"]);
-                    if (mm.ContainsKey("autoDetect")) minimapCfg.autoDetect = Convert.ToBoolean(mm["autoDetect"]);
-                    if (mm.ContainsKey("calibrateMode")) minimapCfg.calibrateMode = Convert.ToBoolean(mm["calibrateMode"]);
-                    if (mm.ContainsKey("showMinimapOverlay")) minimapCfg.showMinimapOverlay = Convert.ToBoolean(mm["showMinimapOverlay"]);
-                    if (mm.ContainsKey("showHudOverlay")) minimapCfg.showHudOverlay = Convert.ToBoolean(mm["showHudOverlay"]);
-                    if (mm.ContainsKey("autoWatchPixels")) minimapCfg.autoWatchPixels = Convert.ToBoolean(mm["autoWatchPixels"]);
-                }
-
-                if (data.ContainsKey("relicTimers") && data["relicTimers"] is object[])
-                {
-                    object[] arr = (object[])data["relicTimers"];
-                    for (int i = 0; i < arr.Length && i < relics.Count; i++)
-                    {
-                        Dictionary<string, object> rt = arr[i] as Dictionary<string, object>;
-                        if (rt == null) continue;
-                        if (rt.ContainsKey("remaining")) relics[i].remaining = Convert.ToInt32(rt["remaining"]);
-                        if (rt.ContainsKey("total")) relics[i].total = Convert.ToInt32(rt["total"]);
-                        if (rt.ContainsKey("running")) relics[i].running = Convert.ToBoolean(rt["running"]);
-                    }
+                    int th = Convert.ToInt32(data["chromeTitlebarHeight"]);
+                    if (th >= 0 && th <= 80) trimHeight = th;
                 }
 
                 if (data.ContainsKey("advisorSummary") && data["advisorSummary"] is Dictionary<string, object>)
@@ -1768,12 +1877,45 @@ namespace PassionMayhemDesktop
                     if (ad.ContainsKey("bestAugment")) advisorSummary.bestAugment = Convert.ToString(ad["bestAugment"]);
                     if (ad.ContainsKey("bestScore")) advisorSummary.bestScore = Convert.ToInt32(ad["bestScore"]);
                     if (ad.ContainsKey("tacticalNote")) advisorSummary.tacticalNote = Convert.ToString(ad["tacticalNote"]);
+                    if (ad.ContainsKey("chosenAugments") && ad["chosenAugments"] is object[])
+                    {
+                        object[] chosen = (object[])ad["chosenAugments"];
+                        List<string> cList = new List<string>();
+                        for (int i = 0; i < chosen.Length; i++)
+                        {
+                            string s = Convert.ToString(chosen[i]);
+                            if (!string.IsNullOrEmpty(s)) cList.Add(s);
+                        }
+                        advisorSummary.chosenAugmentsText = string.Join(" + ", cList.ToArray());
+                    }
                     if (ad.ContainsKey("nextItems") && ad["nextItems"] is object[])
                     {
                         object[] items = (object[])ad["nextItems"];
                         List<string> list = new List<string>();
                         for (int i = 0; i < items.Length && i < 4; i++) list.Add(Convert.ToString(items[i]));
                         advisorSummary.nextItemsText = string.Join(" • ", list.ToArray());
+                    }
+                    if (ad.ContainsKey("candidateCards") && ad["candidateCards"] is object[])
+                    {
+                        object[] cArr = (object[])ad["candidateCards"];
+                        List<CandidateCardOverlayModel> cardsList = new List<CandidateCardOverlayModel>();
+                        for (int i = 0; i < cArr.Length; i++)
+                        {
+                            Dictionary<string, object> cd = cArr[i] as Dictionary<string, object>;
+                            if (cd == null) continue;
+                            cardsList.Add(new CandidateCardOverlayModel
+                            {
+                                slot = cd.ContainsKey("slot") && cd["slot"] != null ? Convert.ToInt32(cd["slot"]) : i,
+                                nameVi = cd.ContainsKey("nameVi") && cd["nameVi"] != null ? Convert.ToString(cd["nameVi"]) : "",
+                                tier = cd.ContainsKey("tier") && cd["tier"] != null ? Convert.ToString(cd["tier"]) : "A",
+                                metaRank = cd.ContainsKey("metaRank") && cd["metaRank"] != null ? Convert.ToString(cd["metaRank"]) : "",
+                                score = cd.ContainsKey("score") && cd["score"] != null ? Convert.ToInt32(cd["score"]) : 0,
+                                winRate = cd.ContainsKey("winRate") && cd["winRate"] != null ? Convert.ToDouble(cd["winRate"]) : 0.0,
+                                isBest = cd.ContainsKey("isBest") && cd["isBest"] != null && Convert.ToBoolean(cd["isBest"]),
+                                reason = cd.ContainsKey("reason") && cd["reason"] != null ? Convert.ToString(cd["reason"]) : ""
+                            });
+                        }
+                        advisorSummary.candidateCards = cardsList;
                     }
                 }
 
@@ -1788,6 +1930,11 @@ namespace PassionMayhemDesktop
                         pendingActionToRun = pa.ContainsKey("action") ? Convert.ToString(pa["action"]) : "";
                     }
                 }
+            }
+
+            if (trimHeight >= 0 && desktopShell != null && !desktopShell.IsDisposed)
+            {
+                SafeBeginInvoke(delegate { desktopShell.SetChromeTrimHeight(trimHeight); });
             }
 
             if (!string.IsNullOrEmpty(pendingActionToRun))
@@ -1810,96 +1957,10 @@ namespace PassionMayhemDesktop
             {
                 CaptureAndUploadFrame("scan-combat");
             }
-            else if (action == "auto-detect-riot")
-            {
-                AutoDetectFromRiotConfig();
-            }
-            else if (action == "toggle-calibrate")
-            {
-                ToggleCalibrateMode();
-            }
             else if (action == "toggle-overlay")
             {
                 ToggleOverlays();
             }
-        }
-
-        private void AutoDetectFromRiotConfig()
-        {
-            try
-            {
-                string resp = HttpGet(baseUrl + "/api/mayhem/riot-config", 1500);
-                if (string.IsNullOrEmpty(resp)) return;
-                Dictionary<string, object> cfg = json.Deserialize<Dictionary<string, object>>(resp);
-                if (cfg == null) return;
-
-                Rectangle gameBounds;
-                bool fg;
-                FindLeagueGameWindow(out gameBounds, out fg);
-
-                bool changed = false;
-                lock (syncLock)
-                {
-                    double prevScale = minimapCfg.scale;
-                    bool prevFlip = minimapCfg.flipped;
-                    int prevSz = minimapCfg.sizePx;
-                    int prevOx = minimapCfg.offsetX;
-                    int prevOy = minimapCfg.offsetY;
-                    int prevW = minimapCfg.gameWidth;
-                    int prevH = minimapCfg.gameHeight;
-                    string prevSrc = minimapCfg.detectedSource;
-
-                    if (cfg.ContainsKey("minimapScale"))
-                    {
-                        double sc = Convert.ToDouble(cfg["minimapScale"]);
-                        if (sc >= 0.3 && sc <= 3.0) minimapCfg.scale = sc;
-                    }
-                    if (cfg.ContainsKey("flipMiniMap"))
-                    {
-                        minimapCfg.flipped = Convert.ToBoolean(cfg["flipMiniMap"]);
-                    }
-                    minimapCfg.autoDetect = true;
-                    minimapCfg.detectedSource = (cfg.ContainsKey("found") && Convert.ToBoolean(cfg["found"])) ? "riot-config" : "screen-ratio";
-                    minimapCfg.gameWidth = gameBounds.Width;
-                    minimapCfg.gameHeight = gameBounds.Height;
-                    double ratioH = gameBounds.Height / 1080.0;
-                    minimapCfg.sizePx = Math.Max(110, Math.Min(640, (int)Math.Round(221.0 * ratioH * minimapCfg.scale)));
-                    minimapCfg.offsetX = Math.Max(2, (int)Math.Round(14.0 * ratioH));
-                    minimapCfg.offsetY = Math.Max(2, (int)Math.Round(13.0 * ratioH));
-
-                    changed = Math.Abs(prevScale - minimapCfg.scale) > 0.001 ||
-                              prevFlip != minimapCfg.flipped ||
-                              prevSz != minimapCfg.sizePx ||
-                              prevOx != minimapCfg.offsetX ||
-                              prevOy != minimapCfg.offsetY ||
-                              prevW != minimapCfg.gameWidth ||
-                              prevH != minimapCfg.gameHeight ||
-                              prevSrc != minimapCfg.detectedSource;
-                }
-                if (changed) PushMinimapToServer();
-            }
-            catch { }
-        }
-
-        public void CommitCalibratedMinimapBounds(Rectangle bounds)
-        {
-            Rectangle gameBounds;
-            bool fg;
-            FindLeagueGameWindow(out gameBounds, out fg);
-
-            lock (syncLock)
-            {
-                minimapCfg.autoDetect = false;
-                minimapCfg.sizePx = bounds.Width;
-                minimapCfg.offsetY = Math.Max(0, gameBounds.Bottom - bounds.Bottom);
-                minimapCfg.offsetX = minimapCfg.flipped
-                    ? Math.Max(0, bounds.Left - gameBounds.Left)
-                    : Math.Max(0, gameBounds.Right - bounds.Right);
-                double ratioH = gameBounds.Height / 1080.0;
-                minimapCfg.scale = Math.Round(bounds.Width / Math.Max(80.0, 221.0 * ratioH), 2);
-                minimapCfg.detectedSource = "manual-calibrated";
-            }
-            PushMinimapToServer();
         }
 
         private void CaptureAndUploadFrame(string scanAction)
@@ -1937,129 +1998,17 @@ namespace PassionMayhemDesktop
 
                     if (!silentBalloon && trayIcon != null)
                     {
-                        trayIcon.ShowBalloonTip(1500, "ARAM Mayhem AI", scanAction == "scan-combat" ? "Đã chụp trận đấu / Bảng Tab gửi AI phân tích..." : "Đã chụp màn hình 3 Lõi gửi AI chấm điểm...", ToolTipIcon.Info);
+                        trayIcon.ShowBalloonTip(1500, "Passion Mayhem Blitz", scanAction == "scan-combat" ? "Đã chụp bảng Tab / Trận đấu gửi AI phân tích..." : "Đã chụp 3 Lõi gửi AI chấm điểm...", ToolTipIcon.Info);
                     }
                 }
             }
             catch { }
         }
 
-        private void TriggerRelicHotkey(int index)
-        {
-            if (index < 0 || index >= relics.Count) return;
-            int cd = mapMode == "pirate_60" ? 60 : 90;
-            lock (syncLock)
-            {
-                relics[index].total = cd;
-                relics[index].remaining = cd;
-                relics[index].running = true;
-            }
-            PushRelicTriggerToServer(index, cd);
-        }
-
-        private void PushRelicTriggerToServer(int index, int totalSec)
-        {
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
-                {
-                    Dictionary<string, object> body = new Dictionary<string, object>();
-                    body["triggerRelicIndex"] = index;
-                    body["total"] = totalSec;
-                    HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
-                }
-                catch { }
-            });
-        }
-
         private void ToggleOverlays()
         {
             overlaysEnabled = !overlaysEnabled;
             if (menuToggleOverlay != null) menuToggleOverlay.Checked = overlaysEnabled;
-        }
-
-        private void ToggleCalibrateMode()
-        {
-            lock (syncLock)
-            {
-                minimapCfg.calibrateMode = !minimapCfg.calibrateMode;
-                if (minimapCfg.calibrateMode) overlaysEnabled = true;
-            }
-            if (menuCalibrate != null) menuCalibrate.Checked = minimapCfg.calibrateMode;
-            PushMinimapToServer();
-        }
-
-        private void SetMapMode(string mode)
-        {
-            mapMode = mode;
-            if (menuMapPirate != null) menuMapPirate.Checked = (mode == "pirate_60");
-            if (menuMapAbyss != null) menuMapAbyss.Checked = (mode == "abyss_90");
-
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
-                {
-                    Dictionary<string, object> body = new Dictionary<string, object>();
-                    body["mapMode"] = mode;
-                    HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
-                }
-                catch { }
-            });
-        }
-
-        private void PushMinimapToServer()
-        {
-            MinimapConfigModel copy = CloneConfig(minimapCfg);
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
-                {
-                    Dictionary<string, object> mm = new Dictionary<string, object>();
-                    mm["scale"] = copy.scale;
-                    mm["sizePx"] = copy.sizePx;
-                    mm["offsetX"] = copy.offsetX;
-                    mm["offsetY"] = copy.offsetY;
-                    mm["flipped"] = copy.flipped;
-                    mm["autoDetect"] = copy.autoDetect;
-                    mm["calibrateMode"] = copy.calibrateMode;
-                    mm["showMinimapOverlay"] = copy.showMinimapOverlay;
-                    mm["showHudOverlay"] = copy.showHudOverlay;
-                    mm["autoWatchPixels"] = copy.autoWatchPixels;
-                    mm["gameWidth"] = copy.gameWidth;
-                    mm["gameHeight"] = copy.gameHeight;
-                    mm["detectedSource"] = copy.detectedSource;
-
-                    Dictionary<string, object> body = new Dictionary<string, object>();
-                    body["minimap"] = mm;
-                    HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
-                }
-                catch { }
-            });
-        }
-
-        private void PushRelicsToServer()
-        {
-            List<RelicTimerModel> listCopy = CloneRelics(relics);
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
-                {
-                    List<Dictionary<string, object>> arr = new List<Dictionary<string, object>>();
-                    for (int i = 0; i < listCopy.Count; i++)
-                    {
-                        Dictionary<string, object> obj = new Dictionary<string, object>();
-                        obj["id"] = listCopy[i].id;
-                        obj["remaining"] = listCopy[i].remaining;
-                        obj["total"] = listCopy[i].total;
-                        obj["running"] = listCopy[i].running;
-                        arr.Add(obj);
-                    }
-                    Dictionary<string, object> body = new Dictionary<string, object>();
-                    body["relicTimers"] = arr;
-                    HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
-                }
-                catch { }
-            });
         }
 
         private void ClearPendingActionOnServer(long seq)
@@ -2076,47 +2025,6 @@ namespace PassionMayhemDesktop
             });
         }
 
-        private MinimapConfigModel CloneConfig(MinimapConfigModel src)
-        {
-            return new MinimapConfigModel
-            {
-                scale = src.scale,
-                sizePx = src.sizePx,
-                offsetX = src.offsetX,
-                offsetY = src.offsetY,
-                flipped = src.flipped,
-                autoDetect = src.autoDetect,
-                calibrateMode = src.calibrateMode,
-                showMinimapOverlay = src.showMinimapOverlay,
-                showHudOverlay = src.showHudOverlay,
-                autoWatchPixels = src.autoWatchPixels,
-                gameWidth = src.gameWidth,
-                gameHeight = src.gameHeight,
-                detectedSource = src.detectedSource
-            };
-        }
-
-        private List<RelicTimerModel> CloneRelics(List<RelicTimerModel> src)
-        {
-            List<RelicTimerModel> list = new List<RelicTimerModel>();
-            for (int i = 0; i < src.Count; i++)
-            {
-                RelicTimerModel r = src[i];
-                list.Add(new RelicTimerModel
-                {
-                    id = r.id,
-                    label = r.label,
-                    shortName = r.shortName,
-                    nx = r.nx,
-                    ny = r.ny,
-                    remaining = r.remaining,
-                    total = r.total,
-                    running = r.running
-                });
-            }
-            return list;
-        }
-
         private void ApplyWindowIcons(IntPtr hWnd)
         {
             if (hWnd == IntPtr.Zero) return;
@@ -2130,6 +2038,12 @@ namespace PassionMayhemDesktop
 
         private void ToggleShowHide()
         {
+            if (desktopShell != null && !desktopShell.IsDisposed)
+            {
+                if (isHiddenToTray || !desktopShell.Visible) ShowAppWindow();
+                else HideToTray();
+                return;
+            }
             if (appHwnd == IntPtr.Zero || !NativeMethods.IsWindow(appHwnd))
             {
                 appHwnd = FindMayhemWindowHandle();
@@ -2141,19 +2055,34 @@ namespace PassionMayhemDesktop
 
         private void HideToTray()
         {
-            if (appHwnd == IntPtr.Zero || !NativeMethods.IsWindow(appHwnd)) return;
             isHiddenToTray = true;
-            NativeMethods.ShowWindow(appHwnd, NativeMethods.SW_HIDE);
+            if (desktopShell != null && !desktopShell.IsDisposed)
+            {
+                desktopShell.Hide();
+                return;
+            }
+            if (appHwnd != IntPtr.Zero && NativeMethods.IsWindow(appHwnd))
+            {
+                NativeMethods.ShowWindow(appHwnd, NativeMethods.SW_HIDE);
+            }
         }
 
         private void ShowAppWindow()
         {
+            isHiddenToTray = false;
+            if (desktopShell != null && !desktopShell.IsDisposed)
+            {
+                desktopShell.Show();
+                if (desktopShell.WindowState == FormWindowState.Minimized) desktopShell.WindowState = FormWindowState.Normal;
+                desktopShell.Activate();
+                desktopShell.SyncEmbeddedBounds();
+                return;
+            }
             if (appHwnd == IntPtr.Zero || !NativeMethods.IsWindow(appHwnd))
             {
                 appHwnd = FindMayhemWindowHandle();
                 if (appHwnd == IntPtr.Zero) return;
             }
-            isHiddenToTray = false;
             NativeMethods.ShowWindow(appHwnd, NativeMethods.IsIconic(appHwnd) ? NativeMethods.SW_RESTORE : NativeMethods.SW_SHOW);
             NativeMethods.SetForegroundWindow(appHwnd);
         }
@@ -2173,13 +2102,13 @@ namespace PassionMayhemDesktop
 
                 shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { exePath });
                 shortcutType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { appDir });
-                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "ARAM Mayhem Blitz AI & Minimap Overlay" });
+                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Passion Mayhem — Blitz Edition" });
                 if (File.Exists(iconPath)) shortcutType.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut, new object[] { iconPath + ",0" });
                 shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
 
                 if (notifyUser && trayIcon != null)
                 {
-                    trayIcon.ShowBalloonTip(2500, "ARAM Mayhem Blitz", "Đã tạo lối tắt ngoài Desktop!", ToolTipIcon.Info);
+                    trayIcon.ShowBalloonTip(2500, "Passion Mayhem Blitz", "Đã tạo lối tắt ngoài Desktop!", ToolTipIcon.Info);
                 }
             }
             catch (Exception ex)
@@ -2234,13 +2163,8 @@ namespace PassionMayhemDesktop
                 int id = m.WParam.ToInt32();
                 if (id == HK_TOGGLE_APP) ToggleShowHide();
                 else if (id == HK_TOGGLE_OVERLAY) ToggleOverlays();
-                else if (id == HK_TOGGLE_CALIBRATE) ToggleCalibrateMode();
                 else if (id == HK_SCAN_AUGMENTS) CaptureAndUploadFrame("scan-aug");
                 else if (id == HK_SCAN_COMBAT) CaptureAndUploadFrame("scan-combat");
-                else if (id == HK_RELIC_1) TriggerRelicHotkey(0);
-                else if (id == HK_RELIC_2) TriggerRelicHotkey(1);
-                else if (id == HK_RELIC_3) TriggerRelicHotkey(2);
-                else if (id == HK_RELIC_4) TriggerRelicHotkey(3);
             }
             base.WndProc(ref m);
         }
@@ -2254,13 +2178,14 @@ namespace PassionMayhemDesktop
             }
             try { if (monitorTimer != null) { monitorTimer.Stop(); monitorTimer.Dispose(); } } catch { }
             try { if (overlayTickTimer != null) { overlayTickTimer.Stop(); overlayTickTimer.Dispose(); } } catch { }
-            try { if (minimapForm != null && !minimapForm.IsDisposed) minimapForm.Close(); } catch { }
+            try { if (cardsOverlayForm != null && !cardsOverlayForm.IsDisposed) cardsOverlayForm.Close(); } catch { }
             try { if (hudForm != null && !hudForm.IsDisposed) hudForm.Close(); } catch { }
+            try { if (desktopShell != null && !desktopShell.IsDisposed) desktopShell.Close(); } catch { }
             try
             {
                 if (IsHandleCreated)
                 {
-                    int[] keys = new int[] { HK_TOGGLE_APP, HK_TOGGLE_OVERLAY, HK_TOGGLE_CALIBRATE, HK_SCAN_AUGMENTS, HK_SCAN_COMBAT, HK_RELIC_1, HK_RELIC_2, HK_RELIC_3, HK_RELIC_4 };
+                    int[] keys = new int[] { HK_TOGGLE_APP, HK_TOGGLE_OVERLAY, HK_SCAN_AUGMENTS, HK_SCAN_COMBAT };
                     for (int i = 0; i < keys.Length; i++) NativeMethods.UnregisterHotKey(Handle, keys[i]);
                 }
             }
@@ -2269,6 +2194,10 @@ namespace PassionMayhemDesktop
             if (closeBrowserWindow && appHwnd != IntPtr.Zero && NativeMethods.IsWindow(appHwnd))
             {
                 try { NativeMethods.PostMessage(appHwnd, NativeMethods.WM_CLOSE, IntPtr.Zero, IntPtr.Zero); } catch { }
+            }
+            if (browserProcess != null)
+            {
+                try { if (!browserProcess.HasExited) browserProcess.Kill(); browserProcess.Dispose(); } catch { }
             }
             if (nodeProcess != null)
             {
@@ -2330,6 +2259,9 @@ namespace PassionMayhemDesktop
         private string minimapThumbBase64 = "";
         private long minimapThumbSeq = 0;
         private string recommendedItemPath = "";
+        private string[] nativeOcrCards = new string[] { "", "", "" };
+        private long nativeOcrSeq = 0;
+        private int chromeTitlebarHeight = 33;
         private long updatedAt = NowMs();
 
         public EmbeddedMayhemHttpServer(string appRootDir, int listenPort)
@@ -2694,6 +2626,9 @@ namespace PassionMayhemDesktop
                 outObj["minimapThumbSeq"] = minimapThumbSeq;
                 outObj["minimapThumbBase64"] = minimapThumbBase64;
                 outObj["recommendedItemPath"] = recommendedItemPath;
+                outObj["nativeOcrCards"] = nativeOcrCards;
+                outObj["nativeOcrSeq"] = nativeOcrSeq;
+                outObj["chromeTitlebarHeight"] = chromeTitlebarHeight;
                 outObj["updatedAt"] = updatedAt;
                 if (includeFrame && lastCapturedFrame != null)
                 {
@@ -2844,6 +2779,24 @@ namespace PassionMayhemDesktop
                     }
                 }
 
+                if (body.ContainsKey("chromeTitlebarHeight") && body["chromeTitlebarHeight"] != null)
+                {
+                    int th = Convert.ToInt32(body["chromeTitlebarHeight"]);
+                    if (th >= 0 && th <= 80) chromeTitlebarHeight = th;
+                }
+
+                IList ocrArr = body.ContainsKey("nativeOcrCards") ? body["nativeOcrCards"] as IList : null;
+                if (ocrArr != null && ocrArr.Count >= 3)
+                {
+                    nativeOcrCards = new string[]
+                    {
+                        Convert.ToString(ocrArr[0] ?? ""),
+                        Convert.ToString(ocrArr[1] ?? ""),
+                        Convert.ToString(ocrArr[2] ?? "")
+                    };
+                    nativeOcrSeq += 1;
+                }
+
                 Dictionary<string, object> clk = body.ContainsKey("lastCardClick") ? body["lastCardClick"] as Dictionary<string, object> : null;
                 if (clk != null && clk.ContainsKey("index") && clk["index"] != null)
                 {
@@ -2862,6 +2815,7 @@ namespace PassionMayhemDesktop
                 resp["capturedFrameSeq"] = capturedFrameSeq;
                 resp["modalOpen"] = modalOpen;
                 resp["modalEventSeq"] = modalEventSeq;
+                resp["nativeOcrSeq"] = nativeOcrSeq;
                 resp["minimapThumbSeq"] = minimapThumbSeq;
                 resp["minimap"] = new Dictionary<string, object>(minimap);
                 return resp;
