@@ -137,6 +137,9 @@ namespace PassionMayhemDesktop
 
         [DllImport("user32.dll")]
         public static extern bool PostMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        public static extern bool SetProcessDPIAware();
     }
 
     internal sealed class RelicTimerModel
@@ -156,9 +159,9 @@ namespace PassionMayhemDesktop
     internal sealed class MinimapConfigModel
     {
         public double scale = 1.0;
-        public int sizePx = 260;
-        public int offsetX = 16;
-        public int offsetY = 16;
+        public int sizePx = 221;
+        public int offsetX = 14;
+        public int offsetY = 13;
         public bool flipped = false;
         public bool autoDetect = true;
         public bool calibrateMode = false;
@@ -202,8 +205,8 @@ namespace PassionMayhemDesktop
             BackColor = KEY_COLOR;
             TransparencyKey = KEY_COLOR;
             DoubleBuffered = true;
-            Width = 260;
-            Height = 260;
+            Width = 221;
+            Height = 221;
 
             MouseDown += OnOverlayMouseDown;
             MouseMove += OnOverlayMouseMove;
@@ -231,7 +234,7 @@ namespace PassionMayhemDesktop
             cfg = newCfg;
             relics = newRelics;
 
-            int sz = Math.Max(120, Math.Min(680, cfg.sizePx));
+            int sz = Math.Max(110, Math.Min(680, cfg.sizePx));
             int targetX = cfg.flipped
                 ? gameBounds.Left + cfg.offsetX
                 : gameBounds.Right - sz - cfg.offsetX;
@@ -347,7 +350,7 @@ namespace PassionMayhemDesktop
                 }
                 using (Pen bridgePen = new Pen(Color.FromArgb(140, 200, 155, 60), 2f))
                 {
-                    g.DrawLine(bridgePen, (int)(w * 0.14), (int)(h * 0.86), (int)(w * 0.86), (int)(h * 0.14));
+                    g.DrawLine(bridgePen, (int)(w * 0.30), (int)(h * 0.78), (int)(w * 0.78), (int)(h * 0.30));
                 }
                 using (SolidBrush gripBrush = new SolidBrush(Color.FromArgb(245, 200, 155, 60)))
                 {
@@ -364,9 +367,9 @@ namespace PassionMayhemDesktop
                 }
             }
 
-            // Proportional scaling for relic circles and fonts relative to minimap sizePx
-            float radius = Math.Max(11f, w * 0.068f);
-            float fontSize = Math.Max(7.5f, w * 0.038f);
+            // Proportional scaling for relic circles and fonts relative to inner minimap sizePx
+            float radius = Math.Max(8.0f, w * 0.040f);
+            float fontSize = Math.Max(6.5f, w * 0.030f);
             using (Font timeFont = new Font("Consolas", fontSize, FontStyle.Bold))
             using (StringFormat sf = new StringFormat())
             {
@@ -579,6 +582,7 @@ namespace PassionMayhemDesktop
         private AdvisorSummaryModel advisorSummary = new AdvisorSummaryModel();
         private List<RelicTimerModel> relics = new List<RelicTimerModel>();
         private long lastHandledPendingActionSeq = 0;
+        private DateTime lastRiotConfigPollUtc = DateTime.MinValue;
 
         private MinimapOverlayForm minimapForm;
         private HudOverlayForm hudForm;
@@ -641,10 +645,10 @@ namespace PassionMayhemDesktop
         private void InitDefaultRelics()
         {
             relics.Clear();
-            relics.Add(new RelicTimerModel { id = "ally_inner", label = "Trụ Trong Đồng Minh", shortName = "Trong Ta", nx = 0.25, ny = 0.75, total = 60 });
-            relics.Add(new RelicTimerModel { id = "ally_outer", label = "Trụ Ngoài Đồng Minh", shortName = "Ngoài Ta", nx = 0.41, ny = 0.59, total = 60 });
-            relics.Add(new RelicTimerModel { id = "enemy_outer", label = "Trụ Ngoài Đối Phương", shortName = "Ngoài Địch", nx = 0.59, ny = 0.41, total = 60 });
-            relics.Add(new RelicTimerModel { id = "enemy_inner", label = "Trụ Trong Đối Phương", shortName = "Trong Địch", nx = 0.75, ny = 0.25, total = 60 });
+            relics.Add(new RelicTimerModel { id = "ally_inner", label = "Trụ Trong Đồng Minh", shortName = "Trong Ta", nx = 0.386, ny = 0.697, total = 60 });
+            relics.Add(new RelicTimerModel { id = "ally_outer", label = "Trụ Ngoài Đồng Minh", shortName = "Ngoài Ta", nx = 0.476, ny = 0.600, total = 60 });
+            relics.Add(new RelicTimerModel { id = "enemy_outer", label = "Trụ Ngoài Đối Phương", shortName = "Ngoài Địch", nx = 0.600, ny = 0.476, total = 60 });
+            relics.Add(new RelicTimerModel { id = "enemy_inner", label = "Trụ Trong Đối Phương", shortName = "Trong Địch", nx = 0.703, ny = 0.393, total = 60 });
         }
 
         private string ResolveAppDirectory()
@@ -1247,10 +1251,16 @@ namespace PassionMayhemDesktop
                 if (minimapCfg.autoDetect && !minimapCfg.calibrateMode)
                 {
                     double ratioH = gameBounds.Height / 1080.0;
-                    minimapCfg.sizePx = Math.Max(130, Math.Min(640, (int)Math.Round(260.0 * ratioH * minimapCfg.scale)));
-                    minimapCfg.offsetX = Math.Max(4, (int)Math.Round(16.0 * ratioH));
-                    minimapCfg.offsetY = Math.Max(4, (int)Math.Round(16.0 * ratioH));
+                    minimapCfg.sizePx = Math.Max(110, Math.Min(640, (int)Math.Round(221.0 * ratioH * minimapCfg.scale)));
+                    minimapCfg.offsetX = Math.Max(2, (int)Math.Round(14.0 * ratioH));
+                    minimapCfg.offsetY = Math.Max(2, (int)Math.Round(13.0 * ratioH));
                 }
+            }
+
+            if (minimapCfg.autoDetect && !minimapCfg.calibrateMode && (DateTime.UtcNow - lastRiotConfigPollUtc).TotalSeconds >= 5.0)
+            {
+                lastRiotConfigPollUtc = DateTime.UtcNow;
+                ThreadPool.QueueUserWorkItem(delegate { AutoDetectFromRiotConfig(); });
             }
 
             // Optional pixel watcher for health relics inside the League minimap
@@ -1298,7 +1308,7 @@ namespace PassionMayhemDesktop
 
         private void WatchMinimapRelicPixels(Rectangle gameBounds)
         {
-            int sz = Math.Max(120, minimapCfg.sizePx);
+            int sz = Math.Max(110, minimapCfg.sizePx);
             int mx = minimapCfg.flipped ? gameBounds.Left + minimapCfg.offsetX : gameBounds.Right - sz - minimapCfg.offsetX;
             int my = gameBounds.Bottom - sz - minimapCfg.offsetY;
             int patch = Math.Max(6, (int)Math.Round(sz * 0.032));
@@ -1510,8 +1520,18 @@ namespace PassionMayhemDesktop
                 bool fg;
                 FindLeagueGameWindow(out gameBounds, out fg);
 
+                bool changed = false;
                 lock (syncLock)
                 {
+                    double prevScale = minimapCfg.scale;
+                    bool prevFlip = minimapCfg.flipped;
+                    int prevSz = minimapCfg.sizePx;
+                    int prevOx = minimapCfg.offsetX;
+                    int prevOy = minimapCfg.offsetY;
+                    int prevW = minimapCfg.gameWidth;
+                    int prevH = minimapCfg.gameHeight;
+                    string prevSrc = minimapCfg.detectedSource;
+
                     if (cfg.ContainsKey("minimapScale"))
                     {
                         double sc = Convert.ToDouble(cfg["minimapScale"]);
@@ -1523,12 +1543,23 @@ namespace PassionMayhemDesktop
                     }
                     minimapCfg.autoDetect = true;
                     minimapCfg.detectedSource = (cfg.ContainsKey("found") && Convert.ToBoolean(cfg["found"])) ? "riot-config" : "screen-ratio";
+                    minimapCfg.gameWidth = gameBounds.Width;
+                    minimapCfg.gameHeight = gameBounds.Height;
                     double ratioH = gameBounds.Height / 1080.0;
-                    minimapCfg.sizePx = Math.Max(130, Math.Min(640, (int)Math.Round(260.0 * ratioH * minimapCfg.scale)));
-                    minimapCfg.offsetX = Math.Max(4, (int)Math.Round(16.0 * ratioH));
-                    minimapCfg.offsetY = Math.Max(4, (int)Math.Round(16.0 * ratioH));
+                    minimapCfg.sizePx = Math.Max(110, Math.Min(640, (int)Math.Round(221.0 * ratioH * minimapCfg.scale)));
+                    minimapCfg.offsetX = Math.Max(2, (int)Math.Round(14.0 * ratioH));
+                    minimapCfg.offsetY = Math.Max(2, (int)Math.Round(13.0 * ratioH));
+
+                    changed = Math.Abs(prevScale - minimapCfg.scale) > 0.001 ||
+                              prevFlip != minimapCfg.flipped ||
+                              prevSz != minimapCfg.sizePx ||
+                              prevOx != minimapCfg.offsetX ||
+                              prevOy != minimapCfg.offsetY ||
+                              prevW != minimapCfg.gameWidth ||
+                              prevH != minimapCfg.gameHeight ||
+                              prevSrc != minimapCfg.detectedSource;
                 }
-                PushMinimapToServer();
+                if (changed) PushMinimapToServer();
             }
             catch { }
         }
@@ -1548,7 +1579,7 @@ namespace PassionMayhemDesktop
                     ? Math.Max(0, bounds.Left - gameBounds.Left)
                     : Math.Max(0, gameBounds.Right - bounds.Right);
                 double ratioH = gameBounds.Height / 1080.0;
-                minimapCfg.scale = Math.Round(bounds.Width / Math.Max(100.0, 260.0 * ratioH), 2);
+                minimapCfg.scale = Math.Round(bounds.Width / Math.Max(80.0, 221.0 * ratioH), 2);
                 minimapCfg.detectedSource = "manual-calibrated";
             }
             PushMinimapToServer();
@@ -1987,9 +2018,9 @@ namespace PassionMayhemDesktop
         {
             minimap = new Dictionary<string, object>();
             minimap["scale"] = 1.0;
-            minimap["sizePx"] = 260;
-            minimap["offsetX"] = 16;
-            minimap["offsetY"] = 16;
+            minimap["sizePx"] = 221;
+            minimap["offsetX"] = 14;
+            minimap["offsetY"] = 13;
             minimap["flipped"] = false;
             minimap["autoDetect"] = true;
             minimap["calibrateMode"] = false;
@@ -2001,10 +2032,10 @@ namespace PassionMayhemDesktop
             minimap["detectedSource"] = "default";
 
             relicTimers = new List<Dictionary<string, object>>();
-            relicTimers.Add(MakeRelic("ally_inner", "Trụ Trong Đồng Minh", "Trong Ta", 0.25, 0.75));
-            relicTimers.Add(MakeRelic("ally_outer", "Trụ Ngoài Đồng Minh", "Ngoài Ta", 0.41, 0.59));
-            relicTimers.Add(MakeRelic("enemy_outer", "Trụ Ngoài Đối Phương", "Ngoài Địch", 0.59, 0.41));
-            relicTimers.Add(MakeRelic("enemy_inner", "Trụ Trong Đối Phương", "Trong Địch", 0.75, 0.25));
+            relicTimers.Add(MakeRelic("ally_inner", "Trụ Trong Đồng Minh", "Trong Ta", 0.386, 0.697));
+            relicTimers.Add(MakeRelic("ally_outer", "Trụ Ngoài Đồng Minh", "Ngoài Ta", 0.476, 0.600));
+            relicTimers.Add(MakeRelic("enemy_outer", "Trụ Ngoài Đối Phương", "Ngoài Địch", 0.600, 0.476));
+            relicTimers.Add(MakeRelic("enemy_inner", "Trụ Trong Đối Phương", "Trong Địch", 0.703, 0.393));
 
             advisorSummary = new Dictionary<string, object>();
             advisorSummary["champName"] = "Vi";
@@ -2530,9 +2561,65 @@ namespace PassionMayhemDesktop
             }
         }
 
+        private List<string> DiscoverLeagueConfigDirs()
+        {
+            List<string> dirs = new List<string>();
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            string[] procNames = new string[] { "League of Legends", "LeagueClientUx", "LeagueClient" };
+            for (int i = 0; i < procNames.Length; i++)
+            {
+                try
+                {
+                    Process[] procs = Process.GetProcessesByName(procNames[i]);
+                    for (int j = 0; j < procs.Length; j++)
+                    {
+                        try
+                        {
+                            string exePath = procs[j].MainModule.FileName;
+                            string dir = Path.GetDirectoryName(exePath);
+                            while (!string.IsNullOrEmpty(dir))
+                            {
+                                string cfgDir = Path.Combine(dir, "Config");
+                                if (Directory.Exists(cfgDir) && (File.Exists(Path.Combine(cfgDir, "game.cfg")) || File.Exists(Path.Combine(cfgDir, "PersistedSettings.json"))))
+                                {
+                                    if (seen.Add(cfgDir)) dirs.Add(cfgDir);
+                                    break;
+                                }
+                                DirectoryInfo parent = Directory.GetParent(dir);
+                                dir = parent != null ? parent.FullName : null;
+                            }
+                        }
+                        catch { }
+                        finally { try { procs[j].Dispose(); } catch { } }
+                    }
+                }
+                catch { }
+            }
+
+            string[] drives = new string[] { "C:", "D:", "E:", "F:", "G:" };
+            string[] subPaths = new string[]
+            {
+                "\\Riot Games\\League of Legends\\Config",
+                "\\Games\\Riot Games\\League of Legends\\Config"
+            };
+            for (int d = 0; d < drives.Length; d++)
+            {
+                for (int sp = 0; sp < subPaths.Length; sp++)
+                {
+                    string candidate = drives[d] + subPaths[sp];
+                    try
+                    {
+                        if (Directory.Exists(candidate) && seen.Add(candidate)) dirs.Add(candidate);
+                    }
+                    catch { }
+                }
+            }
+            return dirs;
+        }
+
         private Dictionary<string, object> ReadRiotConfig()
         {
-            string[] drives = new string[] { "C:", "D:", "E:", "F:" };
             bool found = false;
             string foundPath = "";
             double minimapScale = 1.0;
@@ -2541,82 +2628,121 @@ namespace PassionMayhemDesktop
             int width = 1920;
             int height = 1080;
 
-            JavaScriptSerializer js = CreateSerializer();
-            for (int d = 0; d < drives.Length; d++)
+            List<string> cfgDirs = DiscoverLeagueConfigDirs();
+            string bestCfgDir = null;
+            for (int i = 0; i < cfgDirs.Count; i++)
             {
-                string p = drives[d] + "\\Riot Games\\League of Legends\\Config\\PersistedSettings.json";
-                try
+                if (File.Exists(Path.Combine(cfgDirs[i], "PersistedSettings.json")) || File.Exists(Path.Combine(cfgDirs[i], "game.cfg")))
                 {
-                    if (!File.Exists(p)) continue;
-                    string raw = File.ReadAllText(p, Encoding.UTF8);
-                    Dictionary<string, object> parsed = js.Deserialize<Dictionary<string, object>>(raw);
-                    found = true;
-                    foundPath = p;
-                    IList files = parsed != null && parsed.ContainsKey("files") ? parsed["files"] as IList : null;
-                    if (files != null)
+                    bestCfgDir = cfgDirs[i];
+                    break;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(bestCfgDir))
+            {
+                string persistedPath = Path.Combine(bestCfgDir, "PersistedSettings.json");
+                string gameCfgPath = Path.Combine(bestCfgDir, "game.cfg");
+                DateTime persistedMtime = File.Exists(persistedPath) ? File.GetLastWriteTimeUtc(persistedPath) : DateTime.MinValue;
+                DateTime gameCfgMtime = File.Exists(gameCfgPath) ? File.GetLastWriteTimeUtc(gameCfgPath) : DateTime.MinValue;
+
+                double persistedScale = -1;
+                bool persistedHasScale = false;
+                bool persistedFlip = false;
+                bool persistedHasFlip = false;
+
+                if (File.Exists(persistedPath))
+                {
+                    try
                     {
-                        for (int fi = 0; fi < files.Count; fi++)
+                        JavaScriptSerializer js = CreateSerializer();
+                        string raw = File.ReadAllText(persistedPath, Encoding.UTF8);
+                        Dictionary<string, object> parsed = js.Deserialize<Dictionary<string, object>>(raw);
+                        found = true;
+                        foundPath = persistedPath;
+                        IList files = parsed != null && parsed.ContainsKey("files") ? parsed["files"] as IList : null;
+                        if (files != null)
                         {
-                            Dictionary<string, object> fileEntry = files[fi] as Dictionary<string, object>;
-                            IList secs = fileEntry != null && fileEntry.ContainsKey("sections") ? fileEntry["sections"] as IList : null;
-                            if (secs == null) continue;
-                            for (int si = 0; si < secs.Count; si++)
+                            for (int fi = 0; fi < files.Count; fi++)
                             {
-                                Dictionary<string, object> sec = secs[si] as Dictionary<string, object>;
-                                IList settings = sec != null && sec.ContainsKey("settings") ? sec["settings"] as IList : null;
-                                if (settings == null) continue;
-                                for (int i = 0; i < settings.Count; i++)
+                                Dictionary<string, object> fileEntry = files[fi] as Dictionary<string, object>;
+                                IList secs = fileEntry != null && fileEntry.ContainsKey("sections") ? fileEntry["sections"] as IList : null;
+                                if (secs == null) continue;
+                                for (int si = 0; si < secs.Count; si++)
                                 {
-                                    Dictionary<string, object> st = settings[i] as Dictionary<string, object>;
-                                    if (st == null || !st.ContainsKey("name") || !st.ContainsKey("value")) continue;
-                                    string n = Convert.ToString(st["name"]);
-                                    string v = Convert.ToString(st["value"]);
-                                    double dv;
-                                    if (n == "MinimapScale" && double.TryParse(v, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dv) && dv >= 0.1 && dv <= 4.0)
+                                    Dictionary<string, object> sec = secs[si] as Dictionary<string, object>;
+                                    IList settings = sec != null && sec.ContainsKey("settings") ? sec["settings"] as IList : null;
+                                    if (settings == null) continue;
+                                    for (int i = 0; i < settings.Count; i++)
                                     {
-                                        minimapScale = dv;
-                                    }
-                                    else if ((n == "GlobalScale" || n == "HUDScale") && double.TryParse(v, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dv) && dv >= 0.1 && dv <= 4.0)
-                                    {
-                                        hudScale = dv;
-                                    }
-                                    else if (n == "FlipMiniMap")
-                                    {
-                                        flipMiniMap = (v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase));
+                                        Dictionary<string, object> st = settings[i] as Dictionary<string, object>;
+                                        if (st == null || !st.ContainsKey("name") || !st.ContainsKey("value")) continue;
+                                        string n = Convert.ToString(st["name"]);
+                                        string v = Convert.ToString(st["value"]);
+                                        double dv;
+                                        if (n == "MinimapScale" && double.TryParse(v, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dv) && dv >= 0.1 && dv <= 4.0)
+                                        {
+                                            persistedScale = dv;
+                                            persistedHasScale = true;
+                                        }
+                                        else if ((n == "GlobalScale" || n == "HUDScale") && double.TryParse(v, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dv) && dv >= 0.05 && dv <= 4.0)
+                                        {
+                                            hudScale = dv;
+                                        }
+                                        else if (n == "FlipMiniMap")
+                                        {
+                                            persistedFlip = (v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase));
+                                            persistedHasFlip = true;
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    break;
+                    catch { }
                 }
-                catch { }
-            }
 
-            for (int d = 0; d < drives.Length; d++)
-            {
-                string cfgPath = drives[d] + "\\Riot Games\\League of Legends\\Config\\game.cfg";
-                try
+                double gameCfgScale = -1;
+                bool gameCfgHasScale = false;
+                bool gameCfgFlip = false;
+                bool gameCfgHasFlip = false;
+
+                if (File.Exists(gameCfgPath))
                 {
-                    if (!File.Exists(cfgPath)) continue;
-                    string cfgText = File.ReadAllText(cfgPath, Encoding.UTF8);
-                    if (!found) { found = true; foundPath = cfgPath; }
-                    Match wm = Regex.Match(cfgText, @"^\s*Width\s*=\s*(\d+)", RegexOptions.Multiline);
-                    Match hm = Regex.Match(cfgText, @"^\s*Height\s*=\s*(\d+)", RegexOptions.Multiline);
-                    Match mm = Regex.Match(cfgText, @"^\s*MinimapScale\s*=\s*([0-9.]+)", RegexOptions.Multiline);
-                    Match fm = Regex.Match(cfgText, @"^\s*FlipMiniMap\s*=\s*(\d+)", RegexOptions.Multiline);
-                    int iv;
-                    double dv;
-                    if (wm.Success && int.TryParse(wm.Groups[1].Value, out iv)) width = iv;
-                    if (hm.Success && int.TryParse(hm.Groups[1].Value, out iv)) height = iv;
-                    if (mm.Success && minimapScale == 1.0 && double.TryParse(mm.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dv) && dv >= 0.1 && dv <= 4.0)
+                    try
                     {
-                        minimapScale = dv;
+                        string cfgText = File.ReadAllText(gameCfgPath, Encoding.UTF8);
+                        if (!found) { found = true; foundPath = gameCfgPath; }
+                        Match wm = Regex.Match(cfgText, @"^\s*Width\s*=\s*(\d+)", RegexOptions.Multiline);
+                        Match hm = Regex.Match(cfgText, @"^\s*Height\s*=\s*(\d+)", RegexOptions.Multiline);
+                        Match mm = Regex.Match(cfgText, @"^\s*MinimapScale\s*=\s*([0-9.]+)", RegexOptions.Multiline);
+                        Match fm = Regex.Match(cfgText, @"^\s*FlipMiniMap\s*=\s*(\d+)", RegexOptions.Multiline);
+                        int iv;
+                        double dv;
+                        if (wm.Success && int.TryParse(wm.Groups[1].Value, out iv)) width = iv;
+                        if (hm.Success && int.TryParse(hm.Groups[1].Value, out iv)) height = iv;
+                        if (mm.Success && double.TryParse(mm.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dv) && dv >= 0.1 && dv <= 4.0)
+                        {
+                            gameCfgScale = dv;
+                            gameCfgHasScale = true;
+                        }
+                        if (fm.Success)
+                        {
+                            gameCfgFlip = fm.Groups[1].Value == "1";
+                            gameCfgHasFlip = true;
+                        }
                     }
-                    if (fm.Success && !flipMiniMap) flipMiniMap = fm.Groups[1].Value == "1";
-                    break;
+                    catch { }
                 }
-                catch { }
+
+                bool preferGameCfg = gameCfgMtime > persistedMtime;
+                if (preferGameCfg && gameCfgHasScale) { minimapScale = gameCfgScale; foundPath = gameCfgPath; }
+                else if (persistedHasScale) minimapScale = persistedScale;
+                else if (gameCfgHasScale) minimapScale = gameCfgScale;
+
+                if (preferGameCfg && gameCfgHasFlip) flipMiniMap = gameCfgFlip;
+                else if (persistedHasFlip) flipMiniMap = persistedFlip;
+                else if (gameCfgHasFlip) flipMiniMap = gameCfgFlip;
             }
 
             Dictionary<string, object> outCfg = new Dictionary<string, object>();
@@ -2774,6 +2900,7 @@ namespace PassionMayhemDesktop
         [STAThread]
         private static void Main()
         {
+            try { NativeMethods.SetProcessDPIAware(); } catch { }
             bool createdNew;
             using (Mutex mutex = new Mutex(true, MUTEX_NAME, out createdNew))
             {

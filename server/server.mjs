@@ -68,9 +68,9 @@ const mayhemState = {
     mapMode: 'pirate_60', // 'pirate_60' (0:40 first, 60s respawn) | 'abyss_90' (1:45 first, 90s respawn)
     minimap: {
         scale: 1.0,
-        sizePx: 260,
-        offsetX: 16,
-        offsetY: 16,
+        sizePx: 221,
+        offsetX: 14,
+        offsetY: 13,
         flipped: false,
         autoDetect: true,
         calibrateMode: false,
@@ -82,10 +82,10 @@ const mayhemState = {
         detectedSource: 'default'
     },
     relicTimers: [
-        { id: 'ally_inner', label: 'Trụ Trong Đồng Minh', short: 'Trong Ta', nx: 0.25, ny: 0.75, remaining: 0, total: 60, running: false },
-        { id: 'ally_outer', label: 'Trụ Ngoài Đồng Minh', short: 'Ngoài Ta', nx: 0.41, ny: 0.59, remaining: 0, total: 60, running: false },
-        { id: 'enemy_outer', label: 'Trụ Ngoài Đối Phương', short: 'Ngoài Địch', nx: 0.59, ny: 0.41, remaining: 0, total: 60, running: false },
-        { id: 'enemy_inner', label: 'Trụ Trong Đối Phương', short: 'Trong Địch', nx: 0.75, ny: 0.25, remaining: 0, total: 60, running: false }
+        { id: 'ally_inner', label: 'Trụ Trong Đồng Minh', short: 'Trong Ta', nx: 0.386, ny: 0.697, remaining: 0, total: 60, running: false },
+        { id: 'ally_outer', label: 'Trụ Ngoài Đồng Minh', short: 'Ngoài Ta', nx: 0.476, ny: 0.600, remaining: 0, total: 60, running: false },
+        { id: 'enemy_outer', label: 'Trụ Ngoài Đối Phương', short: 'Ngoài Địch', nx: 0.600, ny: 0.476, remaining: 0, total: 60, running: false },
+        { id: 'enemy_inner', label: 'Trụ Trong Đối Phương', short: 'Trong Địch', nx: 0.703, ny: 0.393, remaining: 0, total: 60, running: false }
     ],
     advisorSummary: {
         champName: 'Vi',
@@ -158,12 +158,21 @@ function fetchRiotLiveClient() {
 }
 
 function readRiotConfig() {
-    const drives = ['C:', 'D:', 'E:', 'F:'];
-    const persistedCandidates = [];
-    const cfgCandidates = [];
+    const drives = ['C:', 'D:', 'E:', 'F:', 'G:'];
+    const subPaths = [
+        '\\Riot Games\\League of Legends\\Config',
+        '\\Games\\Riot Games\\League of Legends\\Config'
+    ];
+    let bestDir = '';
     for (const d of drives) {
-        persistedCandidates.push(`${d}\\Riot Games\\League of Legends\\Config\\PersistedSettings.json`);
-        cfgCandidates.push(`${d}\\Riot Games\\League of Legends\\Config\\game.cfg`);
+        for (const sp of subPaths) {
+            const dir = `${d}${sp}`;
+            if (fs.existsSync(path.join(dir, 'PersistedSettings.json')) || fs.existsSync(path.join(dir, 'game.cfg'))) {
+                bestDir = dir;
+                break;
+            }
+        }
+        if (bestDir) break;
     }
 
     let result = {
@@ -175,40 +184,49 @@ function readRiotConfig() {
         width: 1920,
         height: 1080
     };
+    if (!bestDir) return result;
 
-    for (const p of persistedCandidates) {
+    const persistedPath = path.join(bestDir, 'PersistedSettings.json');
+    const gameCfgPath = path.join(bestDir, 'game.cfg');
+    let persistedMtime = 0;
+    let gameCfgMtime = 0;
+    let persistedScale = null;
+    let persistedFlip = null;
+    let gameCfgScale = null;
+    let gameCfgFlip = null;
+
+    if (fs.existsSync(persistedPath)) {
         try {
-            if (!fs.existsSync(p)) continue;
-            const raw = fs.readFileSync(p, 'utf8');
+            persistedMtime = fs.statSync(persistedPath).mtimeMs;
+            const raw = fs.readFileSync(persistedPath, 'utf8');
             const parsed = JSON.parse(raw);
             result.found = true;
-            result.path = p;
+            result.path = persistedPath;
             for (const fileEntry of (parsed.files || [])) {
                 for (const sec of (fileEntry.sections || [])) {
                     for (const setting of (sec.settings || [])) {
                         if (setting.name === 'MinimapScale') {
                             const v = parseFloat(setting.value);
-                            if (!isNaN(v) && v >= 0.1 && v <= 4.0) result.minimapScale = v;
+                            if (!isNaN(v) && v >= 0.1 && v <= 4.0) persistedScale = v;
                         } else if (setting.name === 'GlobalScale' || setting.name === 'HUDScale') {
                             const v = parseFloat(setting.value);
-                            if (!isNaN(v) && v >= 0.1 && v <= 4.0) result.hudScale = v;
+                            if (!isNaN(v) && v >= 0.05 && v <= 4.0) result.hudScale = v;
                         } else if (setting.name === 'FlipMiniMap') {
-                            result.flipMiniMap = String(setting.value) === '1' || String(setting.value).toLowerCase() === 'true';
+                            persistedFlip = String(setting.value) === '1' || String(setting.value).toLowerCase() === 'true';
                         }
                     }
                 }
             }
-            break;
         } catch (_) {}
     }
 
-    for (const cfgPath of cfgCandidates) {
+    if (fs.existsSync(gameCfgPath)) {
         try {
-            if (!fs.existsSync(cfgPath)) continue;
-            const cfgText = fs.readFileSync(cfgPath, 'utf8');
+            gameCfgMtime = fs.statSync(gameCfgPath).mtimeMs;
+            const cfgText = fs.readFileSync(gameCfgPath, 'utf8');
             if (!result.found) {
                 result.found = true;
-                result.path = cfgPath;
+                result.path = gameCfgPath;
             }
             const wMatch = cfgText.match(/^\s*Width\s*=\s*(\d+)/m);
             const hMatch = cfgText.match(/^\s*Height\s*=\s*(\d+)/m);
@@ -216,13 +234,30 @@ function readRiotConfig() {
             const fMatch = cfgText.match(/^\s*FlipMiniMap\s*=\s*(\d+)/m);
             if (wMatch) result.width = parseInt(wMatch[1], 10);
             if (hMatch) result.height = parseInt(hMatch[1], 10);
-            if (mMatch && result.minimapScale === 1.0) {
+            if (mMatch) {
                 const v = parseFloat(mMatch[1]);
-                if (!isNaN(v) && v >= 0.1 && v <= 4.0) result.minimapScale = v;
+                if (!isNaN(v) && v >= 0.1 && v <= 4.0) gameCfgScale = v;
             }
-            if (fMatch && !result.flipMiniMap) result.flipMiniMap = fMatch[1] === '1';
-            break;
+            if (fMatch) gameCfgFlip = fMatch[1] === '1';
         } catch (_) {}
+    }
+
+    const preferGameCfg = gameCfgMtime > persistedMtime;
+    if (preferGameCfg && gameCfgScale !== null) {
+        result.minimapScale = gameCfgScale;
+        result.path = gameCfgPath;
+    } else if (persistedScale !== null) {
+        result.minimapScale = persistedScale;
+    } else if (gameCfgScale !== null) {
+        result.minimapScale = gameCfgScale;
+    }
+
+    if (preferGameCfg && gameCfgFlip !== null) {
+        result.flipMiniMap = gameCfgFlip;
+    } else if (persistedFlip !== null) {
+        result.flipMiniMap = persistedFlip;
+    } else if (gameCfgFlip !== null) {
+        result.flipMiniMap = gameCfgFlip;
     }
 
     return result;
