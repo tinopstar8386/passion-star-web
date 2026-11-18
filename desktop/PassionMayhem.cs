@@ -140,6 +140,9 @@ namespace PassionMayhemDesktop
 
         [DllImport("user32.dll")]
         public static extern bool SetProcessDPIAware();
+
+        [DllImport("user32.dll")]
+        public static extern short GetAsyncKeyState(int vKey);
     }
 
     internal sealed class RelicTimerModel
@@ -588,6 +591,7 @@ namespace PassionMayhemDesktop
         private AdvisorSummaryModel advisorSummary = new AdvisorSummaryModel();
         private List<RelicTimerModel> relics = new List<RelicTimerModel>();
         private long lastHandledPendingActionSeq = 0;
+        private bool wasLeftMouseDown = false;
         private DateTime lastRiotConfigPollUtc = DateTime.MinValue;
 
         private MinimapOverlayForm minimapForm;
@@ -1275,6 +1279,11 @@ namespace PassionMayhemDesktop
                 WatchMinimapRelicPixels(gameBounds);
             }
 
+            if (leagueHwnd != IntPtr.Zero && gameFocused)
+            {
+                WatchCardClickInGame(gameBounds);
+            }
+
             if (minimapForm != null && !minimapForm.IsDisposed)
             {
                 if (shouldShow && minimapCfg.showMinimapOverlay)
@@ -1310,6 +1319,41 @@ namespace PassionMayhemDesktop
                     hudForm.Hide();
                 }
             }
+        }
+
+        private void WatchCardClickInGame(Rectangle gameBounds)
+        {
+            if (gameBounds.Width < 640 || gameBounds.Height < 480) return;
+            bool isDown = (NativeMethods.GetAsyncKeyState(0x01) & 0x8000) != 0;
+            if (isDown && !wasLeftMouseDown)
+            {
+                Point pt = Cursor.Position;
+                double nx = (pt.X - gameBounds.Left) / (double)gameBounds.Width;
+                double ny = (pt.Y - gameBounds.Top) / (double)gameBounds.Height;
+                if (ny >= 0.22 && ny <= 0.72)
+                {
+                    int idx = -1;
+                    if (nx >= 0.16 && nx <= 0.38) idx = 0;
+                    else if (nx >= 0.39 && nx <= 0.61) idx = 1;
+                    else if (nx >= 0.62 && nx <= 0.84) idx = 2;
+                    if (idx >= 0)
+                    {
+                        ThreadPool.QueueUserWorkItem(delegate
+                        {
+                            try
+                            {
+                                Dictionary<string, object> clk = new Dictionary<string, object>();
+                                clk["index"] = idx;
+                                Dictionary<string, object> body = new Dictionary<string, object>();
+                                body["lastCardClick"] = clk;
+                                HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
+                            }
+                            catch { }
+                        });
+                    }
+                }
+            }
+            wasLeftMouseDown = isDown;
         }
 
         private void WatchMinimapRelicPixels(Rectangle gameBounds)
@@ -2031,6 +2075,8 @@ namespace PassionMayhemDesktop
         private long pendingActionSeq = 0;
         private long relicEventSeq = 0;
         private Dictionary<string, object> lastRelicTrigger = null;
+        private long cardClickSeq = 0;
+        private Dictionary<string, object> lastCardClick = null;
         private Dictionary<string, object> lastCapturedFrame = null;
         private long capturedFrameSeq = 0;
         private long updatedAt = NowMs();
@@ -2373,6 +2419,8 @@ namespace PassionMayhemDesktop
                 outObj["pendingActionSeq"] = pendingActionSeq;
                 outObj["relicEventSeq"] = relicEventSeq;
                 outObj["lastRelicTrigger"] = lastRelicTrigger != null ? new Dictionary<string, object>(lastRelicTrigger) : null;
+                outObj["cardClickSeq"] = cardClickSeq;
+                outObj["lastCardClick"] = lastCardClick != null ? new Dictionary<string, object>(lastCardClick) : null;
                 outObj["capturedFrameSeq"] = capturedFrameSeq;
                 outObj["updatedAt"] = updatedAt;
                 if (includeFrame && lastCapturedFrame != null)
@@ -2503,9 +2551,21 @@ namespace PassionMayhemDesktop
                     lastCapturedFrame = saved;
                 }
 
+                Dictionary<string, object> clk = body.ContainsKey("lastCardClick") ? body["lastCardClick"] as Dictionary<string, object> : null;
+                if (clk != null && clk.ContainsKey("index") && clk["index"] != null)
+                {
+                    cardClickSeq += 1;
+                    Dictionary<string, object> savedClk = new Dictionary<string, object>();
+                    savedClk["seq"] = cardClickSeq;
+                    savedClk["index"] = Convert.ToInt32(clk["index"]);
+                    savedClk["ts"] = NowMs();
+                    lastCardClick = savedClk;
+                }
+
                 Dictionary<string, object> resp = new Dictionary<string, object>();
                 resp["status"] = "ok";
                 resp["pendingActionSeq"] = pendingActionSeq;
+                resp["cardClickSeq"] = cardClickSeq;
                 resp["capturedFrameSeq"] = capturedFrameSeq;
                 resp["minimap"] = new Dictionary<string, object>(minimap);
                 return resp;

@@ -99,6 +99,8 @@ const mayhemState = {
     pendingActionSeq: 0,
     relicEventSeq: 0,
     lastRelicTrigger: null,
+    cardClickSeq: 0,
+    lastCardClick: null,
     lastCapturedFrame: null,
     capturedFrameSeq: 0,
     updatedAt: Date.now()
@@ -509,6 +511,8 @@ const server = http.createServer(async (req, res) => {
             pendingActionSeq: mayhemState.pendingActionSeq,
             relicEventSeq: mayhemState.relicEventSeq,
             lastRelicTrigger: mayhemState.lastRelicTrigger,
+            cardClickSeq: mayhemState.cardClickSeq,
+            lastCardClick: mayhemState.lastCardClick,
             capturedFrameSeq: mayhemState.capturedFrameSeq,
             updatedAt: mayhemState.updatedAt
         };
@@ -590,10 +594,19 @@ const server = http.createServer(async (req, res) => {
                     ts: Date.now()
                 };
             }
+            if (body.lastCardClick && typeof body.lastCardClick.index === 'number') {
+                mayhemState.cardClickSeq += 1;
+                mayhemState.lastCardClick = {
+                    seq: mayhemState.cardClickSeq,
+                    index: body.lastCardClick.index,
+                    ts: Date.now()
+                };
+            }
 
             sendJson(res, 200, {
                 status: 'ok',
                 pendingActionSeq: mayhemState.pendingActionSeq,
+                cardClickSeq: mayhemState.cardClickSeq,
                 capturedFrameSeq: mayhemState.capturedFrameSeq,
                 minimap: mayhemState.minimap
             });
