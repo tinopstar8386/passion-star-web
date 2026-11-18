@@ -444,11 +444,38 @@
       animation-delay: calc(var(--stagger-idx, 0) * 55ms);
       will-change: transform, opacity;
     }
+
+    /* Smooth Slide-In from Left for newly saved transactions */
+    @keyframes txSlideInFromLeft {
+      0% {
+        opacity: 0;
+        transform: translate3d(-48px, 0, 0) scale(0.97);
+        border-color: rgba(34, 211, 238, 0.55);
+        box-shadow: 0 0 24px -4px rgba(34, 211, 238, 0.32);
+      }
+      65% {
+        opacity: 1;
+        transform: translate3d(4px, 0, 0) scale(1.005);
+        border-color: rgba(34, 211, 238, 0.35);
+      }
+      100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        border-color: rgba(255, 255, 255, 0.09);
+        box-shadow: none;
+      }
+    }
+    .tx-slide-in-left {
+      animation: txSlideInFromLeft 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+      will-change: transform, opacity;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       html.tino-preload #appScrollArea {
         opacity: 1 !important;
       }
-      .cascade-card-enter {
+      .cascade-card-enter,
+      .tx-slide-in-left {
         animation: none !important;
       }
     }
@@ -558,7 +585,7 @@
             <!-- TAB 1: TỔNG QUAN (HOME) -->
             <section id="tab-home" class="space-y-4">
               <!-- Total Net Worth Hero Card -->
-              <div class="relative rounded-3xl p-4 glass-panel overflow-hidden shadow-xl border border-white/15" data-animate="glow-border">
+              <div id="heroNetWorthCard" class="relative rounded-3xl p-4 glass-panel overflow-hidden shadow-xl border border-white/15" data-animate="glow-border">
                 <div class="relative z-10">
                   <div class="flex items-center justify-between mb-1">
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Tổng Tài Sản Hiện Có</span>
@@ -593,8 +620,11 @@
                 </div>
               </div>
 
+              <!-- Payday Countdown Card (Default: 10th of every month) -->
+              <div id="paydayCountdownCard" class="glass-panel rounded-3xl p-3.5 border border-amber-400/20 relative overflow-hidden"></div>
+
               <!-- Quick 1-Tap Actions -->
-              <div class="grid grid-cols-4 gap-2">
+              <div id="quickActionsGrid" class="grid grid-cols-4 gap-2">
                 <button type="button" data-animate="ripple" onclick="openTxModal('income')" class="glass-card rounded-2xl py-2.5 px-1 flex flex-col items-center gap-1.5 text-center hover:border-emerald-400/40">
                   <span class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center">
                     <i data-lucide="plus-circle" class="w-5 h-5"></i>
@@ -719,7 +749,7 @@
               </button>
 
               <!-- Recent Transactions Header & List -->
-              <div class="space-y-2.5">
+              <div id="recentTxSection" class="space-y-2.5">
                 <div class="flex items-center justify-between">
                   <h2 class="text-sm font-bold text-slate-100 flex items-center gap-1.5">
                     <i data-lucide="clock" class="w-4 h-4 text-cyan-400"></i>
@@ -874,9 +904,15 @@
                       <input id="inputCashInitBalance" type="number" inputmode="numeric" class="w-full min-w-0 bg-slate-900/90 border border-white/10 rounded-xl px-3 py-2 text-white font-mono-num focus:outline-none focus:border-emerald-400">
                     </div>
                   </div>
-                  <div>
-                    <label class="text-xs text-slate-400 block mb-1">Hạn mức chi tiêu tháng (₫, 0 = tắt)</label>
-                    <input id="inputMonthlyBudget" type="number" inputmode="numeric" class="w-full min-w-0 bg-slate-900/90 border border-white/10 rounded-xl px-3 py-2 text-white font-mono-num focus:outline-none focus:border-amber-400">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="min-w-0">
+                      <label class="text-xs text-slate-400 block mb-1 truncate">Hạn mức tháng (₫, 0=tắt)</label>
+                      <input id="inputMonthlyBudget" type="number" inputmode="numeric" class="w-full min-w-0 bg-slate-900/90 border border-white/10 rounded-xl px-3 py-2 text-white font-mono-num focus:outline-none focus:border-amber-400">
+                    </div>
+                    <div class="min-w-0">
+                      <label class="text-xs text-slate-400 block mb-1 truncate">Ngày lãnh lương (1–31)</label>
+                      <input id="inputPaydayDay" type="number" inputmode="numeric" min="1" max="31" placeholder="10" class="w-full min-w-0 bg-slate-900/90 border border-white/10 rounded-xl px-3 py-2 text-white font-mono-num focus:outline-none focus:border-amber-400">
+                    </div>
                   </div>
                   <button type="button" onclick="saveWalletSettings()" class="w-full py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg active:scale-[0.98] transition">
                     Lưu Cấu Hình Ví &amp; MB Bank
@@ -1010,7 +1046,7 @@
 
           <!-- Floating iOS Bottom Tab Bar -->
           <nav id="bottomTabBar" class="shrink-0 absolute bottom-0 left-0 right-0 z-30 glass-panel border-t border-white/10 px-2 pt-2 pb-4">
-            <div class="grid grid-cols-5 items-end max-w-md mx-auto">
+            <div id="bottomTabGrid" class="grid grid-cols-5 items-end max-w-md mx-auto">
               <button type="button" data-tab="home" onclick="switchTab('home')" class="tab-nav-btn flex flex-col items-center gap-1 py-1 text-cyan-400">
                 <i data-lucide="wallet" class="w-5 h-5"></i>
                 <span class="text-[10px] font-bold">Tổng Quan</span>
@@ -1028,7 +1064,7 @@
                 <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
                 <span class="text-[10px] font-semibold">Thống Kê</span>
               </button>
-              <button type="button" data-tab="settings" onclick="switchTab('settings')" class="tab-nav-btn flex flex-col items-center gap-1 py-1 text-slate-400">
+              <button id="navTabSettingsBtn" type="button" data-tab="settings" onclick="switchTab('settings')" class="tab-nav-btn flex flex-col items-center gap-1 py-1 text-slate-400">
                 <i data-lucide="settings" class="w-5 h-5"></i>
                 <span class="text-[10px] font-semibold">Ví &amp; Cài Đặt</span>
               </button>
@@ -1539,7 +1575,8 @@
         soundHapticEnabled: true,
         cloudSyncEnabled: true,
         cloudSyncRoom: 'tino_default_wallet',
-        monthlyBudget: 15000000
+        monthlyBudget: 15000000,
+        paydayDay: 10
       };
 
       const DEFAULT_CATEGORIES = [
@@ -1601,6 +1638,8 @@
       let islandTimer = null;
       let lastRenderedTotal = null;
       let counterToken = 0;
+      let pendingAnimatedTxIds = new Set();
+      let txSlideClearTimer = null;
 
       // =========================================================================
       // 2. SECURITY & FORMATTING HELPERS (XSS-SAFE + VIETNAMESE MONEY READER)
@@ -2163,9 +2202,22 @@
           transactions.unshift(txObj);
         }
 
+        pendingAnimatedTxIds.add(txObj.id);
         saveState();
         renderAllViews();
+        scheduleTxSlideCleanup();
         return txObj;
+      }
+
+      function scheduleTxSlideCleanup() {
+        clearTimeout(txSlideClearTimer);
+        txSlideClearTimer = setTimeout(() => {
+          pendingAnimatedTxIds.clear();
+          document.querySelectorAll('.tx-slide-in-left').forEach(el => {
+            el.classList.remove('tx-slide-in-left');
+            el.style.removeProperty('animation-delay');
+          });
+        }, 900);
       }
 
       function deleteTransactionById(txId) {
@@ -2329,7 +2381,129 @@
       // =========================================================================
       // 8. RENDERING ENGINE (HOME, LEDGER, ANALYTICS, SETTINGS)
       // =========================================================================
-      function renderTxItemHtml(tx) {
+      function buildClampedPaydayDate(year, monthIndex, desiredDay) {
+        const lastDayOfMonth = new Date(year, monthIndex + 1, 0).getDate();
+        return new Date(year, monthIndex, Math.min(desiredDay, lastDayOfMonth), 0, 0, 0, 0);
+      }
+
+      function getPaydayCountdown(now = new Date(), rawPaydayDay = settings.paydayDay || 10) {
+        const parsedDay = parseInt(rawPaydayDay, 10);
+        const paydayDay = Math.min(31, Math.max(1, Number.isFinite(parsedDay) ? parsedDay : 10));
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        const thisMonthPayday = buildClampedPaydayDate(today.getFullYear(), today.getMonth(), paydayDay);
+
+        let targetDate;
+        let prevPayday;
+        let isPaydayToday = false;
+
+        if (today.getTime() === thisMonthPayday.getTime()) {
+          isPaydayToday = true;
+          targetDate = thisMonthPayday;
+          prevPayday = buildClampedPaydayDate(today.getFullYear(), today.getMonth() - 1, paydayDay);
+        } else if (today.getTime() < thisMonthPayday.getTime()) {
+          targetDate = thisMonthPayday;
+          prevPayday = buildClampedPaydayDate(today.getFullYear(), today.getMonth() - 1, paydayDay);
+        } else {
+          targetDate = buildClampedPaydayDate(today.getFullYear(), today.getMonth() + 1, paydayDay);
+          prevPayday = thisMonthPayday;
+        }
+
+        const daysLeft = isPaydayToday ? 0 : Math.max(0, Math.round((targetDate.getTime() - today.getTime()) / 86400000));
+        const totalCycleDays = Math.max(1, Math.round((targetDate.getTime() - prevPayday.getTime()) / 86400000));
+        const elapsedDays = Math.max(0, totalCycleDays - daysLeft);
+        const progressPct = isPaydayToday
+          ? 100
+          : Math.min(99, Math.max(5, Math.round((elapsedDays / totalCycleDays) * 100)));
+
+        const targetDateLabel = `${String(targetDate.getDate()).padStart(2, '0')}/${String(targetDate.getMonth() + 1).padStart(2, '0')}/${targetDate.getFullYear()}`;
+
+        return {
+          paydayDay,
+          daysLeft,
+          isPaydayToday,
+          targetDate,
+          targetDateLabel,
+          prevPayday,
+          totalCycleDays,
+          elapsedDays,
+          progressPct
+        };
+      }
+
+      function renderPaydayCountdownCard() {
+        const el = document.getElementById('paydayCountdownCard');
+        if (!el) return;
+
+        const info = getPaydayCountdown();
+        const safeDay = escapeHtml(info.paydayDay);
+        const safeTargetDate = escapeHtml(info.targetDateLabel);
+
+        if (info.isPaydayToday) {
+          el.className = 'glass-panel rounded-3xl p-3.5 border border-emerald-400/35 bg-gradient-to-r from-emerald-500/15 via-amber-500/15 to-cyan-500/15 relative overflow-hidden';
+          el.innerHTML = `
+            <div class="flex items-center justify-between gap-2.5">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/35 flex items-center justify-center text-lg shrink-0">🎉</div>
+                <div class="min-w-0">
+                  <div class="text-xs font-extrabold text-emerald-200 truncate">Hôm nay lãnh lương!</div>
+                  <div class="text-[11px] text-slate-300 truncate">Ngày ${safeDay} hàng tháng • Kỳ lương ${safeTargetDate}</div>
+                </div>
+              </div>
+              <button type="button" onclick="openTxModal('income', 'mbbank', 'inc_salary')" class="px-3 py-1.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold shrink-0 shadow-lg active:scale-95 transition">
+                + Ghi Lương
+              </button>
+            </div>
+            <div class="mt-2.5 space-y-1">
+              <div class="w-full h-1.5 rounded-full bg-slate-800/90 overflow-hidden">
+                <div style="width: 100%" class="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-cyan-400 transition-all duration-500"></div>
+              </div>
+              <div class="flex items-center justify-between gap-2 text-[10px] text-emerald-200/90">
+                <span class="truncate">Ting ting! Đừng quên ghi nhận lương vào ví nhé.</span>
+                <span class="font-mono-num font-bold shrink-0">100%</span>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        let hintText = 'Chặng đường tới kỳ lương mới đang chạy đều.';
+        if (info.daysLeft === 1) hintText = 'Ngày mai là tới ngày nhận lương rồi!';
+        else if (info.daysLeft <= 3) hintText = 'Chỉ còn vài ngày nữa thôi, giữ vững chi tiêu!';
+        else if (info.daysLeft <= 7) hintText = 'Đang vào tuần cuối trước ngày lãnh lương.';
+
+        el.className = 'glass-panel rounded-3xl p-3.5 border border-amber-400/20 relative overflow-hidden';
+        el.innerHTML = `
+          <div class="flex items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-10 h-10 rounded-2xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="text-xs font-extrabold text-white truncate">Đếm Ngày Lãnh Lương</div>
+                <div class="text-[11px] text-slate-400 truncate">Ngày ${safeDay} hàng tháng • Kỳ tới: ${safeTargetDate}</div>
+              </div>
+            </div>
+            <div class="px-3 py-1.5 rounded-2xl bg-amber-500/15 border border-amber-400/30 text-right shrink-0">
+              <div class="flex items-baseline justify-end gap-1 leading-none">
+                <span class="text-[10px] font-semibold text-amber-200/80">Còn</span>
+                <span id="paydayDaysLeftNumber" class="text-lg font-extrabold font-mono-num text-amber-300">${info.daysLeft}</span>
+                <span class="text-[10px] font-semibold text-amber-200/80">ngày</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-2.5 space-y-1">
+            <div class="w-full h-1.5 rounded-full bg-slate-800/90 overflow-hidden">
+              <div style="width: ${info.progressPct}%" class="h-full rounded-full bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400 transition-all duration-500"></div>
+            </div>
+            <div class="flex items-center justify-between gap-2 text-[10px] text-slate-400">
+              <span class="truncate">${escapeHtml(hintText)}</span>
+              <span class="font-mono-num text-slate-300 shrink-0">${info.elapsedDays}/${info.totalCycleDays} ngày (${info.progressPct}%)</span>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderTxItemHtml(tx, animOrder = 0) {
         const cat = tx.type === 'transfer'
           ? { icon: '🔄', name: 'Chuyển Ví Nội Bộ' }
           : (tx.categoryId === 'adj_balance'
@@ -2359,9 +2533,14 @@
         const safeCatName = escapeHtml(tx.categoryName || cat.name);
         const safeIcon = escapeHtml(cat.icon || '💳');
         const safeDate = escapeHtml(`${tx.date} ${tx.time || ''}`.trim());
+        const shouldSlideIn = pendingAnimatedTxIds.has(tx.id);
+        const slideClass = shouldSlideIn ? ' tx-slide-in-left' : '';
+        const slideDelayStyle = (shouldSlideIn && animOrder > 0)
+          ? ` style="animation-delay: ${Math.min(animOrder, 6) * 55}ms"`
+          : '';
 
         return `
-          <div onclick="openTxForEdit('${safeId}')" class="glass-card rounded-2xl p-3 flex items-center justify-between gap-2.5 cursor-pointer hover:border-white/20">
+          <div data-tx-id="${safeId}" onclick="openTxForEdit('${safeId}')"${slideDelayStyle} class="glass-card rounded-2xl p-3 flex items-center justify-between gap-2.5 cursor-pointer hover:border-white/20${slideClass}">
             <div class="flex items-center gap-2.5 min-w-0">
               <div class="w-10 h-10 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-center text-lg shrink-0">${safeIcon}</div>
               <div class="min-w-0">
@@ -2486,6 +2665,7 @@
         const stats = calculateWalletBalances(m);
 
         applyMbCardSkin();
+        renderPaydayCountdownCard();
         renderExtraWalletCards(stats);
 
         const totalEl = document.getElementById('totalBalanceDisplay');
@@ -2546,7 +2726,11 @@
             </div>
           `;
         } else {
-          recentEl.innerHTML = sorted.slice(0, 8).map(renderTxItemHtml).join('');
+          let animCounter = 0;
+          recentEl.innerHTML = sorted.slice(0, 8).map(tx => {
+            const order = pendingAnimatedTxIds.has(tx.id) ? animCounter++ : 0;
+            return renderTxItemHtml(tx, order);
+          }).join('');
         }
       }
 
@@ -2643,6 +2827,7 @@
           groups[d].push(tx);
         }
 
+        let ledgerAnimCounter = 0;
         const html = Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(dateKey => {
           const items = groups[dateKey];
           let dayIn = 0, dayOut = 0;
@@ -2662,7 +2847,10 @@
                 </span>
               </div>
               <div class="space-y-2">
-                ${items.map(renderTxItemHtml).join('')}
+                ${items.map(tx => {
+                  const order = pendingAnimatedTxIds.has(tx.id) ? ledgerAnimCounter++ : 0;
+                  return renderTxItemHtml(tx, order);
+                }).join('')}
               </div>
             </div>
           `;
@@ -2802,6 +2990,8 @@
         document.getElementById('inputMbInitBalance').value = Number(wallets.mbInitBalance) || 0;
         document.getElementById('inputCashInitBalance').value = Number(wallets.cashInitBalance) || 0;
         document.getElementById('inputMonthlyBudget').value = Number(settings.monthlyBudget) || 0;
+        const paydayInput = document.getElementById('inputPaydayDay');
+        if (paydayInput) paydayInput.value = Math.min(31, Math.max(1, parseInt(settings.paydayDay, 10) || 10));
         document.getElementById('toggleRequirePin').checked = Boolean(settings.requirePinOnStart);
 
         const autoLockSel = document.getElementById('selectAutoLockSeconds');
@@ -2849,12 +3039,43 @@
         updateCloudSyncBadge();
       }
 
+      function applyDecoyModeUI() {
+        const bottomGrid = document.getElementById('bottomTabGrid');
+        const settingsBtn = document.getElementById('navTabSettingsBtn');
+        const settingsTab = document.getElementById('tab-settings');
+        const cloudBadge = document.getElementById('cloudSyncBadge');
+
+        if (settingsBtn) settingsBtn.classList.toggle('hidden', isDecoyMode);
+        if (bottomGrid) {
+          bottomGrid.classList.toggle('grid-cols-4', isDecoyMode);
+          bottomGrid.classList.toggle('grid-cols-5', !isDecoyMode);
+        }
+        if (cloudBadge) cloudBadge.classList.toggle('hidden', isDecoyMode);
+
+        if (isDecoyMode) {
+          if (settingsTab) settingsTab.classList.add('hidden');
+          if (activeTab === 'settings') {
+            activeTab = 'home';
+            ['home', 'ledger', 'analytics', 'settings'].forEach(t => {
+              const sec = document.getElementById(`tab-${t}`);
+              if (sec) sec.classList.toggle('hidden', t !== activeTab);
+            });
+            document.querySelectorAll('.tab-nav-btn').forEach(btn => {
+              const isMatch = btn.getAttribute('data-tab') === activeTab;
+              btn.classList.toggle('text-cyan-400', isMatch);
+              btn.classList.toggle('text-slate-400', !isMatch);
+            });
+          }
+        }
+      }
+
       function renderAllViews() {
         populateMonthSelectors();
         renderDashboard();
         renderLedgerList();
         renderAnalytics();
         renderSettingsPanel();
+        applyDecoyModeUI();
         safeRefreshIcons();
       }
 
@@ -2862,6 +3083,9 @@
       // 9. TAB & VIEWPORT SWITCHING
       // =========================================================================
       function switchTab(tabName) {
+        if (isDecoyMode && tabName === 'settings') {
+          tabName = 'home';
+        }
         activeTab = ['home', 'ledger', 'analytics', 'settings'].includes(tabName) ? tabName : 'home';
         ['home', 'ledger', 'analytics', 'settings'].forEach(t => {
           document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== activeTab);
@@ -2875,6 +3099,7 @@
         if (activeTab === 'ledger') renderLedgerList();
         if (activeTab === 'analytics') renderAnalytics();
         if (activeTab === 'settings') renderSettingsPanel();
+        applyDecoyModeUI();
         safeRefreshIcons();
         playFeedback('switch');
         playTabCascadeAnimation(activeTab);
@@ -3117,14 +3342,17 @@
         });
       }
 
-      function openTxModal(type = 'expense', preferredWallet = null) {
+      function openTxModal(type = 'expense', preferredWallet = null, preferredCategoryId = null) {
         const all = getAllWallets();
         modalState.editingId = null;
         modalState.type = type;
         modalState.wallet = (preferredWallet && all.some(w => w.id === preferredWallet)) ? preferredWallet : 'mbbank';
         const fallbackTo = all.find(w => w.id !== modalState.wallet);
         modalState.toWallet = fallbackTo ? fallbackTo.id : 'cash';
-        const firstCat = categories.find(c => c.type === type);
+        const matchedCat = preferredCategoryId
+          ? categories.find(c => c.id === preferredCategoryId && c.type === type)
+          : null;
+        const firstCat = matchedCat || categories.find(c => c.type === type);
         modalState.categoryId = firstCat ? firstCat.id : 'exp_food';
 
         document.getElementById('txModalTitle').textContent = 'Ghi Giao Dịch Mới';
@@ -4185,12 +4413,16 @@
         const mbInit = parseInt(document.getElementById('inputMbInitBalance').value || '0', 10) || 0;
         const cashInit = parseInt(document.getElementById('inputCashInitBalance').value || '0', 10) || 0;
         const budget = Math.max(0, parseInt(document.getElementById('inputMonthlyBudget').value || '0', 10) || 0);
+        const paydayEl = document.getElementById('inputPaydayDay');
+        const paydayRaw = paydayEl ? parseInt(paydayEl.value || '10', 10) : (settings.paydayDay || 10);
+        const paydayDay = Math.min(31, Math.max(1, Number.isFinite(paydayRaw) ? paydayRaw : 10));
 
         wallets.mbAccountNumber = stk || '8386999999';
         wallets.mbAccountName = holder;
         wallets.mbInitBalance = mbInit;
         wallets.cashInitBalance = cashInit;
         settings.monthlyBudget = budget;
+        settings.paydayDay = paydayDay;
         saveState();
         renderAllViews();
         playFeedback('success');
@@ -4457,6 +4689,7 @@
             renderAllViews();
           } else {
             renderSettingsPanel();
+            applyDecoyModeUI();
           }
           document.getElementById('pinLockOverlay').classList.add('hidden');
           updatePinDots();
@@ -4721,18 +4954,19 @@
         if (!section || section.classList.contains('hidden')) return [];
 
         if (tabName === 'home') {
-          const children = Array.from(section.children);
-          const heroCard = children[0];
-          const quickActionsGrid = children[1];
+          const heroCard = document.getElementById('heroNetWorthCard');
+          const paydayCard = document.getElementById('paydayCountdownCard');
+          const quickActionsGrid = document.getElementById('quickActionsGrid');
           const mbCard = document.getElementById('walletCardMB');
           const cashCard = document.getElementById('walletCardCash');
           const extraCards = Array.from(document.querySelectorAll('#extraWalletsContainer > *'));
           const addWalletBtn = document.getElementById('btnAddExtraWallet');
-          const recentSection = children[children.length - 1];
+          const recentSection = document.getElementById('recentTxSection');
           const recentHeader = recentSection ? recentSection.firstElementChild : null;
           const recentItems = Array.from(document.querySelectorAll('#recentTxList > *')).slice(0, 8);
           const list = [];
           if (heroCard) list.push(heroCard);
+          if (paydayCard) list.push(paydayCard);
           if (quickActionsGrid) list.push(...Array.from(quickActionsGrid.children));
           if (mbCard) list.push(mbCard);
           if (cashCard) list.push(cashCard);
@@ -4935,6 +5169,9 @@
         renderLedgerList,
         renderAnalytics,
         // Public Engine APIs
+        getPaydayCountdown,
+        renderPaydayCountdownCard,
+        applyDecoyModeUI,
         getAllWallets,
         getWalletMeta,
         calculateWalletBalances,
