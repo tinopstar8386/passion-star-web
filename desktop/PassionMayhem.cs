@@ -217,6 +217,7 @@ namespace PassionMayhemDesktop
         public int bestScore = 0;
         public string nextItemsText = "";
         public string chosenAugmentsText = "";
+        public string recommendedAugmentsText = "";
         public string tacticalNote = "";
         public List<CandidateCardOverlayModel> candidateCards = new List<CandidateCardOverlayModel>();
     }
@@ -381,7 +382,7 @@ namespace PassionMayhemDesktop
             TransparencyKey = KEY_COLOR;
             DoubleBuffered = true;
             Width = 1000;
-            Height = 140;
+            Height = 42;
         }
 
         protected override CreateParams CreateParams
@@ -400,9 +401,9 @@ namespace PassionMayhemDesktop
         {
             cards = list ?? new List<CandidateCardOverlayModel>();
             int ox = gameBounds.Left + (int)Math.Round(gameBounds.Width * 0.14);
-            int oy = gameBounds.Top + (int)Math.Round(gameBounds.Height * 0.055);
+            int oy = gameBounds.Top + (int)Math.Round(gameBounds.Height * 0.135);
             int ow = Math.Max(600, (int)Math.Round(gameBounds.Width * 0.72));
-            int oh = Math.Max(108, (int)Math.Round(gameBounds.Height * 0.155));
+            int oh = 42;
             if (Left != ox || Top != oy || Width != ow || Height != oh)
             {
                 SetBounds(ox, oy, ow, oh);
@@ -419,15 +420,13 @@ namespace PassionMayhemDesktop
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            // Three cards sit at normalized X centers inside [0.14..0.86]: ~0.18, 0.50, 0.82 of this overlay box
+            // Three compact Blitz pills centered right above the 3 augment cards
             double[] centers = new double[] { 0.180, 0.500, 0.820 };
-            int cardW = Math.Max(180, Math.Min(310, (int)Math.Round(Width * 0.28)));
-            int cardH = Math.Max(90, Height - 8);
+            int cardW = 186;
+            int cardH = 34;
 
-            using (Font fBadge = new Font("Segoe UI", 8.0f, FontStyle.Bold))
-            using (Font fTier = new Font("Segoe UI", 11.5f, FontStyle.Bold))
-            using (Font fName = new Font("Segoe UI", 9.0f, FontStyle.Bold))
-            using (Font fSub = new Font("Segoe UI", 7.8f, FontStyle.Regular))
+            using (Font fBadge = new Font("Segoe UI", 8.5f, FontStyle.Bold))
+            using (Font fTier = new Font("Segoe UI", 9.0f, FontStyle.Bold))
             {
                 for (int i = 0; i < cards.Count; i++)
                 {
@@ -435,44 +434,34 @@ namespace PassionMayhemDesktop
                     if (c.slot < 0 || c.slot > 2 || string.IsNullOrEmpty(c.nameVi)) continue;
 
                     int cx = (int)Math.Round(Width * centers[c.slot]);
-                    int rx = cx - cardW / 2;
-                    int ry = 4;
+                    int rx = Math.Max(2, Math.Min(Width - cardW - 2, cx - cardW / 2));
+                    int ry = 3;
 
-                    Color bgCol = c.isBest ? Color.FromArgb(236, 10, 26, 36) : Color.FromArgb(228, 12, 14, 19);
-                    Color borderCol = c.isBest ? Color.FromArgb(255, 36, 232, 204) : Color.FromArgb(200, 71, 85, 105);
+                    Color bgCol = c.isBest ? Color.FromArgb(242, 10, 28, 36) : Color.FromArgb(226, 12, 14, 19);
+                    Color borderCol = c.isBest ? Color.FromArgb(255, 36, 232, 204) : Color.FromArgb(190, 71, 85, 105);
 
                     using (SolidBrush bg = new SolidBrush(bgCol))
-                    using (Pen pen = new Pen(borderCol, c.isBest ? 2.4f : 1.4f))
+                    using (Pen pen = new Pen(borderCol, c.isBest ? 2.0f : 1.2f))
                     {
                         g.FillRectangle(bg, rx, ry, cardW, cardH);
                         g.DrawRectangle(pen, rx, ry, cardW - 1, cardH - 1);
                     }
 
-                    string topTag = c.isBest ? string.Format("★ KHUYÊN CHỌN #{0} • {1}đ", c.slot + 1, c.score) : string.Format("Lựa chọn #{0} • {1}đ", c.slot + 1, c.score);
-                    Color tagCol = c.isBest ? Color.FromArgb(255, 36, 232, 204) : Color.FromArgb(255, 148, 163, 184);
+                    string topTag = c.isBest ? string.Format("★ NÊN CHỌN • {0}đ", c.score) : string.Format("#{0} • {1}đ", c.slot + 1, c.score);
+                    Color tagCol = c.isBest ? Color.FromArgb(255, 36, 232, 204) : Color.FromArgb(255, 203, 213, 225);
                     using (SolidBrush bTag = new SolidBrush(tagCol))
                     {
-                        g.DrawString(topTag, fBadge, bTag, rx + 8, ry + 6);
+                        g.DrawString(topTag, fBadge, bTag, rx + 8, ry + 8);
                     }
 
-                    string rankText = !string.IsNullOrEmpty(c.metaRank) ? c.metaRank : c.tier;
-                    Color tierCol = (rankText.StartsWith("S")) ? Color.FromArgb(255, 251, 191, 36) : Color.FromArgb(255, 56, 189, 248);
+                    string rawRank = !string.IsNullOrEmpty(c.metaRank) ? c.metaRank : c.tier;
+                    string rankText = "[" + rawRank + "]";
+                    Color tierCol = rawRank.StartsWith("S", StringComparison.OrdinalIgnoreCase)
+                        ? Color.FromArgb(255, 251, 191, 36)
+                        : Color.FromArgb(255, 56, 189, 248);
                     using (SolidBrush bTier = new SolidBrush(tierCol))
                     {
-                        g.DrawString(rankText, fTier, bTier, rx + cardW - 44, ry + 4);
-                    }
-
-                    using (SolidBrush bWhite = new SolidBrush(Color.FromArgb(255, 248, 250, 252)))
-                    {
-                        g.DrawString(c.nameVi, fName, bWhite, new RectangleF(rx + 8, ry + 24, cardW - 50, 22));
-                    }
-
-                    string detail = c.winRate > 0
-                        ? string.Format("WR {0:0.0}% • {1}", c.winRate, c.reason)
-                        : (string.IsNullOrEmpty(c.reason) ? "Đề xuất theo tướng & lõi hiện tại" : c.reason);
-                    using (SolidBrush bSub = new SolidBrush(Color.FromArgb(255, 203, 213, 225)))
-                    {
-                        g.DrawString(detail, fSub, bSub, new RectangleF(rx + 8, ry + 48, cardW - 16, cardH - 52));
+                        g.DrawString(rankText, fTier, bTier, rx + cardW - 40, ry + 8);
                     }
                 }
             }
@@ -684,9 +673,13 @@ namespace PassionMayhemDesktop
     {
         private readonly MayhemControllerForm owner;
         private AdvisorSummaryModel summary = new AdvisorSummaryModel();
+        private bool offerOpen = false;
         private bool isDragging = false;
+        private bool userMoved = false;
         private Point dragStartScreen;
         private Point dragStartLoc;
+
+        public bool UserMoved { get { return userMoved; } }
 
         public HudOverlayForm(MayhemControllerForm ownerForm)
         {
@@ -697,10 +690,10 @@ namespace PassionMayhemDesktop
             StartPosition = FormStartPosition.Manual;
             BackColor = Color.FromArgb(12, 14, 19);
             Opacity = 0.90;
-            Width = 330;
-            Height = 122;
+            Width = 246;
+            Height = 72;
             Left = 18;
-            Top = 18;
+            Top = 44;
             DoubleBuffered = true;
 
             MouseDown += delegate(object s, MouseEventArgs e)
@@ -719,6 +712,7 @@ namespace PassionMayhemDesktop
                     Point cur = Control.MousePosition;
                     Left = dragStartLoc.X + (cur.X - dragStartScreen.X);
                     Top = dragStartLoc.Y + (cur.Y - dragStartScreen.Y);
+                    userMoved = true;
                 }
             };
             MouseUp += delegate { isDragging = false; };
@@ -736,9 +730,10 @@ namespace PassionMayhemDesktop
 
         protected override bool ShowWithoutActivation { get { return true; } }
 
-        public void UpdateData(AdvisorSummaryModel sum)
+        public void UpdateData(AdvisorSummaryModel sum, bool isOfferOpen)
         {
             summary = sum;
+            offerOpen = isOfferOpen;
             Invalidate();
         }
 
@@ -749,40 +744,45 @@ namespace PassionMayhemDesktop
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            using (Pen borderPen = new Pen(Color.FromArgb(210, 36, 232, 204), 1.5f))
+            using (Pen borderPen = new Pen(Color.FromArgb(200, 36, 232, 204), 1.3f))
             {
                 g.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
             }
 
-            using (Font fTitle = new Font("Segoe UI", 9.5f, FontStyle.Bold))
-            using (Font fBody = new Font("Segoe UI", 8.5f, FontStyle.Regular))
-            using (Font fBold = new Font("Segoe UI", 8.5f, FontStyle.Bold))
-            using (Font fSmall = new Font("Segoe UI", 7.5f, FontStyle.Regular))
+            using (Font fTitle = new Font("Segoe UI", 8.8f, FontStyle.Bold))
+            using (Font fCyan = new Font("Segoe UI", 8.2f, FontStyle.Bold))
+            using (Font fBody = new Font("Segoe UI", 8.0f, FontStyle.Regular))
             using (SolidBrush brGold = new SolidBrush(Color.FromArgb(253, 230, 138)))
             using (SolidBrush brCyan = new SolidBrush(Color.FromArgb(36, 232, 204)))
-            using (SolidBrush brGreen = new SolidBrush(Color.FromArgb(110, 231, 183)))
-            using (SolidBrush brMuted = new SolidBrush(Color.FromArgb(148, 163, 184)))
-            using (SolidBrush brWhite = new SolidBrush(Color.FromArgb(241, 245, 249)))
+            using (SolidBrush brWhite = new SolidBrush(Color.FromArgb(226, 232, 240)))
             {
-                g.DrawString(string.Format("BLITZ MAYHEM • {0} ({1})", summary.champName, summary.champTier), fTitle, brGold, 10, 8);
-                g.DrawString("AUTO-SYNC", fBold, brCyan, Width - 82, 9);
+                StringFormat sfEllipsis = new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
 
-                string augLine = string.IsNullOrEmpty(summary.bestAugment)
-                    ? "Mở 3 Lõi trong game -> tự hiện điểm & khóa tự động"
-                    : string.Format("★ Gợi ý #1: {0} ({1}đ)", summary.bestAugment, summary.bestScore);
-                g.DrawString(augLine, fBold, brGreen, new RectangleF(10, 30, Width - 20, 18));
+                g.DrawString(string.Format("⚡ {0} • Hạng {1}", summary.champName, summary.champTier), fTitle, brGold, new RectangleF(9, 7, Width - 18, 18), sfEllipsis);
 
-                string chosenLine = string.IsNullOrEmpty(summary.chosenAugmentsText)
-                    ? "Lõi đã chọn: Chưa khóa lõi nào"
-                    : "Đã khóa: " + summary.chosenAugmentsText;
-                g.DrawString(chosenLine, fSmall, brCyan, new RectangleF(10, 50, Width - 20, 16));
+                string line2;
+                if (offerOpen && !string.IsNullOrEmpty(summary.bestAugment))
+                {
+                    line2 = string.Format("★ Khuyên lấy: {0} ({1}đ)", summary.bestAugment, summary.bestScore);
+                }
+                else if (!string.IsNullOrEmpty(summary.recommendedAugmentsText))
+                {
+                    line2 = "★ Đề xuất: " + summary.recommendedAugmentsText;
+                }
+                else if (!string.IsNullOrEmpty(summary.bestAugment))
+                {
+                    line2 = string.Format("★ Đề xuất: {0} ({1}đ)", summary.bestAugment, summary.bestScore);
+                }
+                else
+                {
+                    line2 = "★ Đề xuất: Đang đồng bộ lõi...";
+                }
+                g.DrawString(line2, fCyan, brCyan, new RectangleF(9, 27, Width - 18, 17), sfEllipsis);
 
                 string itemsLine = string.IsNullOrEmpty(summary.nextItemsText)
-                    ? "Đồ: Đang đồng bộ từ Shop PeakBuild 26.22..."
-                    : "Đồ: " + summary.nextItemsText;
-                g.DrawString(itemsLine, fBody, brWhite, new RectangleF(10, 68, Width - 20, 18));
-
-                g.DrawString("Alt+Shift+Q: Quét Lõi ngay | Alt+Shift+O: Ẩn HUD | Alt+Shift+M: Mở App", fSmall, brMuted, new RectangleF(10, 96, Width - 20, 16));
+                    ? "🛒 Đồ: Đang đồng bộ..."
+                    : "🛒 Đồ: " + summary.nextItemsText;
+                g.DrawString(itemsLine, fBody, brWhite, new RectangleF(9, 46, Width - 18, 18), sfEllipsis);
             }
         }
     }
@@ -811,6 +811,7 @@ namespace PassionMayhemDesktop
         private bool isHiddenToTray = false;
         private bool isShuttingDown = false;
         private bool overlaysEnabled = true;
+        private bool usingClonedBlitzElectron = false;
 
         private AdvisorSummaryModel advisorSummary = new AdvisorSummaryModel();
         private long lastHandledPendingActionSeq = 0;
@@ -818,6 +819,7 @@ namespace PassionMayhemDesktop
         private bool nativeModalOpen = false;
         private int nativeModalOpenStreak = 0;
         private int nativeModalCloseStreak = 0;
+        private DateTime lastRerollClickUtc = DateTime.MinValue;
         private byte[] lastCardTitleSample = null;
         private DateTime lastNativeAutoCaptureUtc = DateTime.MinValue;
         private int nativeCaptureCooldownTicks = 0;
@@ -1195,6 +1197,126 @@ namespace PassionMayhemDesktop
             return null;
         }
 
+        private string FindBlitzInstallDir()
+        {
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string[] candidates = new string[]
+            {
+                Path.Combine(localAppData, "Programs\\Blitz"),
+                Path.Combine(pf, "Blitz"),
+                "C:\\Users\\AD\\AppData\\Local\\Programs\\Blitz"
+            };
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                if (File.Exists(Path.Combine(candidates[i], "Blitz.exe"))) return candidates[i];
+            }
+            return null;
+        }
+
+        private static void CopyFileIfChanged(string srcPath, string dstPath)
+        {
+            if (!File.Exists(srcPath)) return;
+            FileInfo srcInfo = new FileInfo(srcPath);
+            if (File.Exists(dstPath))
+            {
+                FileInfo dstInfo = new FileInfo(dstPath);
+                if (dstInfo.Length == srcInfo.Length && Math.Abs((dstInfo.LastWriteTimeUtc - srcInfo.LastWriteTimeUtc).TotalSeconds) < 2.0)
+                {
+                    return;
+                }
+            }
+            string dstDir = Path.GetDirectoryName(dstPath);
+            if (!Directory.Exists(dstDir)) Directory.CreateDirectory(dstDir);
+            File.Copy(srcPath, dstPath, true);
+            try { File.SetLastWriteTimeUtc(dstPath, srcInfo.LastWriteTimeUtc); } catch { }
+        }
+
+        private static void MirrorDirectory(string srcDir, string dstDir)
+        {
+            if (!Directory.Exists(srcDir)) return;
+            if (!Directory.Exists(dstDir)) Directory.CreateDirectory(dstDir);
+            string[] files = Directory.GetFiles(srcDir);
+            for (int i = 0; i < files.Length; i++)
+            {
+                string name = Path.GetFileName(files[i]);
+                CopyFileIfChanged(files[i], Path.Combine(dstDir, name));
+            }
+            string[] subDirs = Directory.GetDirectories(srcDir);
+            for (int i = 0; i < subDirs.Length; i++)
+            {
+                string subName = Path.GetFileName(subDirs[i]);
+                MirrorDirectory(subDirs[i], Path.Combine(dstDir, subName));
+            }
+        }
+
+        private string EnsureClonedBlitzRuntime()
+        {
+            string blitzDir = FindBlitzInstallDir();
+            if (string.IsNullOrEmpty(blitzDir)) return null;
+
+            string appSourceDir = Path.Combine(appDir, "desktop\\blitz-app");
+            if (!File.Exists(Path.Combine(appSourceDir, "package.json")) || !File.Exists(Path.Combine(appSourceDir, "src\\index.js")))
+            {
+                return null;
+            }
+
+            try
+            {
+                string runtimeDir = Path.Combine(appDir, ".blitz_runtime");
+                Directory.CreateDirectory(runtimeDir);
+
+                string targetExe = Path.Combine(runtimeDir, "PassionBlitz.exe");
+                CopyFileIfChanged(Path.Combine(blitzDir, "Blitz.exe"), targetExe);
+
+                string[] topFiles = Directory.GetFiles(blitzDir);
+                for (int i = 0; i < topFiles.Length; i++)
+                {
+                    string fileName = Path.GetFileName(topFiles[i]);
+                    if (fileName.Equals("Blitz.exe", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (fileName.Equals("Uninstall Blitz.exe", StringComparison.OrdinalIgnoreCase)) continue;
+                    CopyFileIfChanged(topFiles[i], Path.Combine(runtimeDir, fileName));
+                }
+
+                MirrorDirectory(Path.Combine(blitzDir, "locales"), Path.Combine(runtimeDir, "locales"));
+
+                string resDir = Path.Combine(runtimeDir, "resources");
+                Directory.CreateDirectory(resDir);
+                string staleAsar = Path.Combine(resDir, "app.asar");
+                if (File.Exists(staleAsar))
+                {
+                    try { File.Delete(staleAsar); } catch { }
+                }
+                MirrorDirectory(appSourceDir, Path.Combine(resDir, "app"));
+
+                return File.Exists(targetExe) ? targetExe : null;
+            }
+            catch { return null; }
+        }
+
+        private bool TryLaunchClonedBlitzElectron(string appUrl)
+        {
+            string blitzExe = EnsureClonedBlitzRuntime();
+            if (string.IsNullOrEmpty(blitzExe)) return false;
+
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = blitzExe;
+                psi.Arguments = string.Format("--url=\"{0}\" --no-tray --quit-on-close", appUrl);
+                psi.WorkingDirectory = Path.GetDirectoryName(blitzExe);
+                psi.UseShellExecute = false;
+                browserProcess = Process.Start(psi);
+                if (browserProcess != null)
+                {
+                    usingClonedBlitzElectron = true;
+                    return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
         private void StartDesktopApp()
         {
             if (!EnsureNodeServerRunning())
@@ -1204,47 +1326,50 @@ namespace PassionMayhemDesktop
                 return;
             }
 
-            string browserExe = FindBrowserExecutable();
-            if (string.IsNullOrEmpty(browserExe))
-            {
-                MessageBox.Show("Không tìm thấy Microsoft Edge hoặc Google Chrome.", "Passion Mayhem Blitz", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                ShutdownAll(true);
-                return;
-            }
-
-            desktopShell = new BlitzDesktopShellForm(this, loadedBigIcon);
-            desktopShell.Show();
-
-            string profileDir = Path.Combine(appDir, ".tmp_mayhem_desktop_profile");
-            if (!Directory.Exists(profileDir))
-            {
-                try { Directory.CreateDirectory(profileDir); } catch { }
-            }
-
-            string appUrl = baseUrl + "/aram-mayhem.html?desktop=1";
-            string args = string.Format(
-                "--app=\"{0}\" --user-data-dir=\"{1}\" --window-size=1420,860 --no-first-run --no-default-browser-check --disable-features=msEdgeSidebarV2",
-                appUrl,
-                profileDir
-            );
-
             launchTimeUtc = DateTime.UtcNow;
-
-            ProcessStartInfo psi = new ProcessStartInfo();
-            psi.FileName = browserExe;
-            psi.Arguments = args;
-            psi.WorkingDirectory = appDir;
-            psi.UseShellExecute = false;
-
-            try
+            string blitzUrl = baseUrl + "/aram-mayhem.html?desktop=1&blitz=1";
+            if (!TryLaunchClonedBlitzElectron(blitzUrl))
             {
-                browserProcess = Process.Start(psi);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Không thể mở cửa sổ ứng dụng: " + ex.Message, "Passion Mayhem Blitz", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                ShutdownAll(true);
-                return;
+                string browserExe = FindBrowserExecutable();
+                if (string.IsNullOrEmpty(browserExe))
+                {
+                    MessageBox.Show("Không tìm thấy Blitz Desktop hoặc Microsoft Edge/Chrome.", "Passion Mayhem Blitz", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ShutdownAll(true);
+                    return;
+                }
+
+                desktopShell = new BlitzDesktopShellForm(this, loadedBigIcon);
+                desktopShell.Show();
+
+                string profileDir = Path.Combine(appDir, ".tmp_mayhem_desktop_profile");
+                if (!Directory.Exists(profileDir))
+                {
+                    try { Directory.CreateDirectory(profileDir); } catch { }
+                }
+
+                string appUrl = baseUrl + "/aram-mayhem.html?desktop=1";
+                string args = string.Format(
+                    "--app=\"{0}\" --user-data-dir=\"{1}\" --window-size=1420,860 --no-first-run --no-default-browser-check --disable-features=msEdgeSidebarV2",
+                    appUrl,
+                    profileDir
+                );
+
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = browserExe;
+                psi.Arguments = args;
+                psi.WorkingDirectory = appDir;
+                psi.UseShellExecute = false;
+
+                try
+                {
+                    browserProcess = Process.Start(psi);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Không thể mở cửa sổ ứng dụng: " + ex.Message, "Passion Mayhem Blitz", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    ShutdownAll(true);
+                    return;
+                }
             }
 
             cardsOverlayForm = new AugmentCardsOverlayForm();
@@ -1343,6 +1468,12 @@ namespace PassionMayhemDesktop
         {
             if (isShuttingDown) return;
 
+            if (usingClonedBlitzElectron && browserProcess != null && browserProcess.HasExited)
+            {
+                ShutdownAll(true);
+                return;
+            }
+
             if (appHwnd == IntPtr.Zero || !NativeMethods.IsWindow(appHwnd))
             {
                 if (appHwnd != IntPtr.Zero && !isHiddenToTray)
@@ -1356,7 +1487,7 @@ namespace PassionMayhemDesktop
                 {
                     appHwnd = found;
                     ApplyWindowIcons(appHwnd);
-                    if (desktopShell != null && !desktopShell.IsDisposed)
+                    if (!usingClonedBlitzElectron && desktopShell != null && !desktopShell.IsDisposed)
                     {
                         desktopShell.EmbedWindow(appHwnd);
                     }
@@ -1365,6 +1496,10 @@ namespace PassionMayhemDesktop
                 {
                     ShutdownAll(true);
                 }
+            }
+            else if (usingClonedBlitzElectron)
+            {
+                isHiddenToTray = !NativeMethods.IsWindowVisible(appHwnd);
             }
             else if (desktopShell != null && !desktopShell.IsDisposed && desktopShell.Visible)
             {
@@ -1401,6 +1536,9 @@ namespace PassionMayhemDesktop
                 }
 
                 if (titleStr.IndexOf("ARAM: Mayhem", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    titleStr.IndexOf("ARAM Mayhem", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    titleStr.IndexOf("Passion Mayhem", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    titleStr.IndexOf("Passion Star", StringComparison.OrdinalIgnoreCase) >= 0 ||
                     titleStr.IndexOf("127.0.0.1:" + serverPort, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     titleMatched = hWnd;
@@ -1518,13 +1656,16 @@ namespace PassionMayhemDesktop
             {
                 if (shouldShowHud)
                 {
+                    if (!hudForm.UserMoved)
+                    {
+                        hudForm.Left = Math.Max(gameBounds.Left + 16, gameBounds.Right - hudForm.Width - 16);
+                        hudForm.Top = gameBounds.Top + 44;
+                    }
                     if (!hudForm.Visible)
                     {
-                        hudForm.Left = gameBounds.Left + 18;
-                        hudForm.Top = gameBounds.Top + 18;
                         hudForm.Show();
                     }
-                    hudForm.UpdateData(advisorSummary);
+                    hudForm.UpdateData(advisorSummary, nativeModalOpen);
                     NativeMethods.SetWindowPos(hudForm.Handle, NativeMethods.HWND_TOPMOST, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
                 }
                 else if (hudForm.Visible)
@@ -1543,7 +1684,7 @@ namespace PassionMayhemDesktop
                 Point pt = Cursor.Position;
                 double nx = (pt.X - gameBounds.Left) / (double)gameBounds.Width;
                 double ny = (pt.Y - gameBounds.Top) / (double)gameBounds.Height;
-                if (ny >= 0.22 && ny <= 0.72)
+                if (ny >= 0.22 && ny <= 0.88)
                 {
                     int idx = -1;
                     if (nx >= 0.16 && nx <= 0.38) idx = 0;
@@ -1551,12 +1692,20 @@ namespace PassionMayhemDesktop
                     else if (nx >= 0.62 && nx <= 0.84) idx = 2;
                     if (idx >= 0)
                     {
+                        bool isReroll = (ny >= 0.57);
+                        if (isReroll)
+                        {
+                            lastRerollClickUtc = DateTime.UtcNow;
+                            nativeModalCloseStreak = 0;
+                            nativeCaptureCooldownTicks = 3;
+                        }
                         ThreadPool.QueueUserWorkItem(delegate
                         {
                             try
                             {
                                 Dictionary<string, object> clk = new Dictionary<string, object>();
                                 clk["index"] = idx;
+                                clk["isReroll"] = isReroll;
                                 Dictionary<string, object> body = new Dictionary<string, object>();
                                 body["lastCardClick"] = clk;
                                 HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
@@ -1678,7 +1827,10 @@ namespace PassionMayhemDesktop
                         if (zi == 1 && darkPct >= 22.0 && brightPct >= 1.0) centerLooksLikeCard = true;
                     }
 
-                    bool isModalOpen = validPanels >= 2 && centerLooksLikeCard;
+                    bool recentlyRerolled = (DateTime.UtcNow - lastRerollClickUtc).TotalMilliseconds < 2200.0;
+                    bool isModalOpen = !nativeModalOpen
+                        ? (validPanels >= 2 && centerLooksLikeCard)
+                        : ((validPanels >= 2) || (recentlyRerolled && validPanels >= 1));
 
                     // Extract compact luminance sample from the title bands of all 3 cards to detect Rerolls
                     int titleY0 = (int)Math.Round(SH * 0.42);
@@ -1720,7 +1872,7 @@ namespace PassionMayhemDesktop
                             nativeModalOpen = true;
                             lastCardTitleSample = curSig;
                             PushModalOpenStateToServer(true);
-                            nativeCaptureCooldownTicks = 1;
+                            nativeCaptureCooldownTicks = rerolled ? 2 : 1;
                             if (justOpened && (DateTime.UtcNow - lastNativeAutoCaptureUtc).TotalMilliseconds >= 650)
                             {
                                 lastNativeAutoCaptureUtc = DateTime.UtcNow;
@@ -1742,17 +1894,29 @@ namespace PassionMayhemDesktop
                     else
                     {
                         nativeModalOpenStreak = 0;
-                        nativeCaptureCooldownTicks = 0;
+                        bool canCloseAfterReroll = (DateTime.UtcNow - lastRerollClickUtc).TotalMilliseconds >= 1800.0;
                         if (nativeModalOpen)
                         {
-                            nativeModalCloseStreak++;
-                            if (nativeModalCloseStreak >= 2)
+                            if (validPanels == 0 && canCloseAfterReroll)
                             {
-                                nativeModalOpen = false;
-                                nativeModalCloseStreak = 0;
-                                lastCardTitleSample = null;
-                                PushModalOpenStateToServer(false);
+                                nativeModalCloseStreak++;
+                                if (nativeModalCloseStreak >= 4)
+                                {
+                                    nativeModalOpen = false;
+                                    nativeModalCloseStreak = 0;
+                                    nativeCaptureCooldownTicks = 0;
+                                    lastCardTitleSample = null;
+                                    PushModalOpenStateToServer(false);
+                                }
                             }
+                            else
+                            {
+                                nativeModalCloseStreak = 0;
+                            }
+                        }
+                        else
+                        {
+                            nativeCaptureCooldownTicks = 0;
                         }
                     }
                 }
@@ -1887,6 +2051,17 @@ namespace PassionMayhemDesktop
                             if (!string.IsNullOrEmpty(s)) cList.Add(s);
                         }
                         advisorSummary.chosenAugmentsText = string.Join(" + ", cList.ToArray());
+                    }
+                    if (ad.ContainsKey("recommendedAugments") && ad["recommendedAugments"] is object[])
+                    {
+                        object[] rec = (object[])ad["recommendedAugments"];
+                        List<string> rList = new List<string>();
+                        for (int i = 0; i < rec.Length && i < 2; i++)
+                        {
+                            string s = Convert.ToString(rec[i]);
+                            if (!string.IsNullOrEmpty(s)) rList.Add(s);
+                        }
+                        advisorSummary.recommendedAugmentsText = string.Join(" • ", rList.ToArray());
                     }
                     if (ad.ContainsKey("nextItems") && ad["nextItems"] is object[])
                     {
@@ -2301,6 +2476,9 @@ namespace PassionMayhemDesktop
             advisorSummary["bestAugment"] = "";
             advisorSummary["bestScore"] = 0;
             advisorSummary["nextItems"] = new object[0];
+            advisorSummary["chosenAugments"] = new object[0];
+            advisorSummary["recommendedAugments"] = new object[0];
+            advisorSummary["candidateCards"] = new object[0];
             advisorSummary["tacticalNote"] = "";
         }
 
@@ -2804,6 +2982,7 @@ namespace PassionMayhemDesktop
                     Dictionary<string, object> savedClk = new Dictionary<string, object>();
                     savedClk["seq"] = cardClickSeq;
                     savedClk["index"] = Convert.ToInt32(clk["index"]);
+                    savedClk["isReroll"] = clk.ContainsKey("isReroll") && clk["isReroll"] != null && Convert.ToBoolean(clk["isReroll"]);
                     savedClk["ts"] = NowMs();
                     lastCardClick = savedClk;
                 }

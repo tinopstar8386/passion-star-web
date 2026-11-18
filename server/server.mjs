@@ -94,6 +94,7 @@ const mayhemState = {
         bestScore: 0,
         nextItems: [],
         chosenAugments: [],
+        recommendedAugments: [],
         candidateCards: [],
         tacticalNote: ''
     },
@@ -901,6 +902,7 @@ const server = http.createServer(async (req, res) => {
                 mayhemState.lastCardClick = {
                     seq: mayhemState.cardClickSeq,
                     index: body.lastCardClick.index,
+                    isReroll: Boolean(body.lastCardClick.isReroll),
                     ts: Date.now()
                 };
             }

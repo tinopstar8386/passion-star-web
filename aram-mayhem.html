@@ -10,6 +10,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="./desktop/blitz-app/src/web/fonts/fonts.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -18,7 +19,7 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        sans: ['Maison Neue', 'Plus Jakarta Sans', 'sans-serif'],
                     },
                     colors: {
                         hextech: {
@@ -44,8 +45,18 @@
             --prismatic: #c084fc;
         }
         * {
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: 'Maison Neue', 'Plus Jakarta Sans', sans-serif;
             -webkit-tap-highlight-color: transparent;
+        }
+        .blitz-titlebar {
+            height: 32px;
+            background: #090b10;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+        .blitz-nodrag {
+            -webkit-app-region: no-drag;
         }
         body {
             background-color: var(--bg-base);
@@ -127,15 +138,30 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm pointer-events-none"></div>
 
+    <!-- BLITZ FRAMELESS ELECTRON TITLEBAR (32px, Native Clone Window Chrome) -->
+    <div id="blitzElectronTitlebar" class="hidden blitz-titlebar sticky top-0 z-50 px-3 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0">
+            <img src="./desktop/blitz-app/src/web/blitz_logo.svg" alt="Blitz" class="w-4 h-4 shrink-0">
+            <span class="text-[11px] font-extrabold tracking-wider text-white">PASSION <span class="text-[#24e8cc]">BLITZ</span></span>
+            <span id="blitzTitleLivePill" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 text-slate-400 truncate">Chờ Liên Minh Huyền Thoại...</span>
+        </div>
+        <div class="blitz-nodrag flex items-center h-full">
+            <button type="button" id="btnBlitzPin" onclick="blitzWindowAction('pin')" title="Ghim luôn nổi trên cùng" class="h-full px-2.5 text-xs text-slate-400 hover:text-[#24e8cc] hover:bg-white/5 transition cursor-pointer">📌</button>
+            <button type="button" onclick="blitzWindowAction('minimize')" title="Thu nhỏ" class="h-full px-2.5 text-xs text-slate-300 hover:text-white hover:bg-white/5 transition cursor-pointer">—</button>
+            <button type="button" id="btnBlitzMax" onclick="blitzWindowAction('maximize')" title="Phóng to / Khôi phục" class="h-full px-2.5 text-xs text-slate-300 hover:text-white hover:bg-white/5 transition cursor-pointer">□</button>
+            <button type="button" onclick="blitzWindowAction('close')" title="Thu xuống khay hệ thống" class="h-full px-3 text-xs text-slate-300 hover:text-rose-400 hover:bg-rose-500/15 transition cursor-pointer">✕</button>
+        </div>
+    </div>
+
     <div class="flex flex-col lg:flex-row min-h-screen">
         <!-- BLITZ LEFT SIDEBAR -->
-        <aside class="blitz-sidebar lg:w-60 shrink-0 lg:sticky lg:top-0 lg:h-screen flex flex-col justify-between p-3.5 gap-3 z-40">
+        <aside class="blitz-sidebar lg:w-60 shrink-0 lg:sticky lg:top-8 lg:h-[calc(100vh-2rem)] flex flex-col justify-between p-3.5 gap-3 z-40">
             <div class="space-y-4">
                 <!-- App Brand -->
                 <div class="flex items-center justify-between gap-2 px-1">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 rounded-xl bg-[#24e8cc]/15 border border-[#24e8cc]/40 flex items-center justify-center text-[#24e8cc] shrink-0">
-                            <i class="fa-solid fa-bolt text-base"></i>
+                        <div class="w-9 h-9 rounded-xl bg-[#0f141e] border border-white/10 flex items-center justify-center shrink-0 p-1.5">
+                            <img src="./desktop/blitz-app/src/web/blitz_logo.svg" alt="Blitz" class="w-full h-full object-contain">
                         </div>
                         <div>
                             <div class="text-sm font-black tracking-tight text-white leading-tight">PASSION <span class="text-[#24e8cc]">BLITZ</span></div>
@@ -228,6 +254,19 @@
         <!-- TAB 1: TRỢ LÝ TRONG TRẬN (IN-GAME AI ADVISOR)          -->
         <!-- ======================================================= -->
         <section id="tabPanel-advisor" class="space-y-4">
+
+            <!-- COMPACT 4-SLOT AUGMENT PROGRESSION STRIP (Right above Champion Header) -->
+            <div class="glass-panel rounded-2xl px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-purple-200"><i class="fa-solid fa-layer-group text-purple-300 mr-1.5"></i>Lõi đã khóa</span>
+                    <span id="activeTargetSlotPill" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#24e8cc]/15 text-[#24e8cc] border border-[#24e8cc]/30">
+                        Lõi 1 (Lv3)
+                    </span>
+                </div>
+                <div id="augmentSlotsGrid" class="flex-1 min-w-[260px] grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <!-- Compact pills rendered dynamically -->
+                </div>
+            </div>
 
             <!-- ROW 1: CHAMPION SELECTOR + BLITZ AUTO-SYNC CARD -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -362,83 +401,66 @@
                 </div>
             </div>
 
-            <!-- ROW 2: 4-SLOT AUGMENT PROGRESSION BAR -->
-            <div class="glass-panel rounded-3xl p-4 sm:p-5 space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <div class="flex items-center gap-2">
-                        <span class="w-7 h-7 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center text-xs">
-                            <i class="fa-solid fa-layer-group"></i>
-                        </span>
-                        <div>
-                            <h2 class="text-sm font-extrabold uppercase tracking-wider text-purple-200">2. Chuỗi Lõi Đã Chọn Trong Trận</h2>
-                            <p class="text-[11px] text-slate-400">Chọn Lõi 1 để hệ thống tính ngay combo khuyên dùng cho Lõi 2, 3, 4 và chỉnh Lên Đồ</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span id="activeTargetSlotPill" class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                            Đang gợi ý cho: Lõi 1 (Cấp 3)
-                        </span>
-                        <button type="button" onclick="resetMatchState()" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/40 border border-slate-700 text-xs font-bold text-slate-300 transition flex items-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-rotate-left"></i>
-                            <span>Trận mới</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="augmentSlotsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <!-- Rendered dynamically -->
-                </div>
-            </div>
-
-            <!-- ROW 3: MAIN ENGINE (LEFT 7 COLS: 3-CARD ROLL EVALUATOR + NEXT AUGMENT RANKING | RIGHT 5 COLS: ADAPTIVE ITEMS + AI COACH) -->
+            <!-- ROW 2: MAIN ENGINE (LEFT 7 COLS: NEXT AUGMENT RANKING + DYNAMIC 3-CARD ROLL EVALUATOR | RIGHT 5 COLS: ADAPTIVE ITEMS + AI COACH) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
 
                 <!-- LEFT 7 COLS -->
                 <div class="lg:col-span-7 space-y-4">
 
-                    <!-- 3-CARD ROLL EVALUATOR -->
-                    <div class="glass-panel rounded-3xl p-4 sm:p-5 space-y-3.5">
+                    <!-- 3-CARD ROLL EVALUATOR (Automatically expands only while 3-card offer / compare is active) -->
+                    <div id="rollEvaluatorPanel" class="glass-panel rounded-2xl p-3.5 sm:p-4 space-y-3 border border-[#24e8cc]/25">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
-                                <span class="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center justify-center text-xs">
+                                <span class="w-6 h-6 rounded-lg bg-[#24e8cc]/15 border border-[#24e8cc]/40 text-[#24e8cc] flex items-center justify-center text-[11px]">
                                     <i class="fa-solid fa-dice"></i>
                                 </span>
                                 <div>
-                                    <h2 class="text-sm font-extrabold uppercase tracking-wider text-emerald-200">3. So Sánh &amp; Chấm Điểm Lõi (Tức Thì 0ms)</h2>
-                                    <p class="text-[11px] text-slate-400">Luôn hiện Top 3 Best-in-Slot ngay lập tức • Gõ nhanh hoặc chia sẻ màn hình để so sánh 3 lõi đang roll</p>
+                                    <h2 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#24e8cc]">Chấm Điểm 3 Thẻ Đang Mở</h2>
+                                    <p id="rollPanelStatusSub" class="text-[10px] text-slate-400">Tự mở khi game hiện 3 thẻ lõi • Hoặc gõ tên lõi để so sánh</p>
                                 </div>
                             </div>
-                            <button type="button" onclick="clearRollCandidates()" class="text-[11px] font-semibold text-slate-400 hover:text-slate-200 cursor-pointer">
-                                <i class="fa-solid fa-eraser mr-1"></i>Xóa 3 ô
-                            </button>
-                        </div>
-
-                        <!-- 0ms Inline Quick-Search & Instant Add-to-Compare Pills -->
-                        <div class="space-y-1.5">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <div class="relative flex-1 min-w-[200px]">
-                                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 text-[11px]"></i>
-                                    <input id="quickRollSearchInput" type="text" autocomplete="off"
-                                           placeholder="Gõ 2-3 chữ tên lõi hiện trên màn hình để đưa vào so sánh ngay (0ms)..."
-                                           oninput="renderQuickRollSuggestPills()"
-                                           onkeydown="handleQuickRollKeydown(event)"
-                                           class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900/90 border border-emerald-500/35 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-400">
-                                </div>
+                            <div class="flex items-center gap-1.5">
+                                <span id="rollWaitingBadge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#24e8cc]/15 text-[#24e8cc] border border-[#24e8cc]/35">Đang chờ chọn / Khóa thủ công</span>
+                                <button type="button" id="btnManualRerollOffer" onclick="manualRerollPendingOffer()" class="hidden px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-amber-500/20 border border-slate-700 hover:border-amber-400/50 text-[10px] font-bold text-amber-300 cursor-pointer">
+                                    <i class="fa-solid fa-rotate mr-1"></i>Đổi lõi (Reroll)
+                                </button>
+                                <button type="button" onclick="toggleManualRollBody()" id="btnToggleRollBody" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-bold text-slate-300 cursor-pointer">
+                                    Mở ô so sánh
+                                </button>
+                                <button type="button" id="btnClearRollCandidates" onclick="clearRollCandidates()" class="hidden px-2 py-1 rounded-lg text-[10px] font-semibold text-slate-400 hover:text-white cursor-pointer" title="Đóng / Xóa 3 ô">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
                             </div>
-                            <div id="quickRollSuggestPills" class="flex flex-wrap items-center gap-1.5"></div>
                         </div>
 
-                        <div id="rollEvaluatorGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <!-- 3 candidate slots rendered dynamically -->
-                        </div>
+                        <div id="rollEvaluatorBody" class="hidden space-y-3 pt-1">
+                            <!-- 0ms Inline Quick-Search & Instant Add-to-Compare Pills -->
+                            <div class="space-y-1.5">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <div class="relative flex-1 min-w-[200px]">
+                                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-[#24e8cc] text-[11px]"></i>
+                                        <input id="quickRollSearchInput" type="text" autocomplete="off"
+                                               placeholder="Gõ 2-3 chữ tên lõi hiện trên màn hình để đưa vào so sánh ngay (0ms)..."
+                                               oninput="renderQuickRollSuggestPills()"
+                                               onkeydown="handleQuickRollKeydown(event)"
+                                               class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900/90 border border-[#24e8cc]/35 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#24e8cc]">
+                                    </div>
+                                </div>
+                                <div id="quickRollSuggestPills" class="flex flex-wrap items-center gap-1.5"></div>
+                            </div>
 
-                        <div id="rollVerdictBanner" class="hidden rounded-2xl p-3 border text-xs leading-relaxed">
-                            <!-- Verdict banner -->
+                            <div id="rollEvaluatorGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <!-- 3 candidate slots rendered dynamically -->
+                            </div>
+
+                            <div id="rollVerdictBanner" class="hidden rounded-2xl p-3 border text-xs leading-relaxed">
+                                <!-- Verdict banner -->
+                            </div>
                         </div>
                     </div>
 
-                    <!-- NEXT AUGMENT ADVISOR -->
-                    <div class="glass-panel rounded-3xl p-4 sm:p-5 space-y-3.5">
+                    <!-- NEXT AUGMENT ADVISOR (CENTERPIECE TOP-LEFT) -->
+                    <div id="nextAugmentPanel" class="glass-panel rounded-2xl p-4 sm:p-5 space-y-3.5">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center text-xs">
@@ -20232,9 +20254,11 @@
                 flashedIdx: -1,
                 clickedIdx: -1,
                 clickedTs: 0,
+                lastRerollTs: 0,
                 isStatAnvilOffer: false,
                 closedStreak: 0
             },
+            manualRollExpanded: false,
             lastCardClickSeq: 0,
             advisorTierFilter: 'all',
             pickerContext: null,                      // { type: 'slot'|'roll', index: 0..3 }
@@ -20321,6 +20345,7 @@
         // 6. INITIALIZATION & RIOT DATA DRAGON SYNC
         // =====================================================================
         window.addEventListener('DOMContentLoaded', async () => {
+            initBlitzElectronTitlebar();
             buildInitialChampions();
             updateAIStatusUI();
             updateVoiceAlertUI();
@@ -20903,7 +20928,7 @@
             const targetPill = document.getElementById('activeTargetSlotPill');
             if (targetPill) {
                 const slotIdx = state.activeTargetSlot;
-                targetPill.textContent = `Đang gợi ý cho: Lõi ${slotIdx + 1} (Cấp ${levels[slotIdx]})`;
+                targetPill.textContent = `Chọn cho Lõi ${slotIdx + 1} (Lv${levels[slotIdx]})`;
             }
 
             grid.innerHTML = levels.map((lvl, idx) => {
@@ -20917,31 +20942,24 @@
                         .map(id => AUGMENTS_DB.find(a => a.id === id))
                         .filter(Boolean);
                     return `
-                        <div class="rounded-2xl p-3 border ${st.cls} relative flex flex-col justify-between gap-2 transition ${isActiveTarget ? 'ring-2 ring-cyan-400' : ''}">
-                            <div class="flex items-start justify-between gap-2">
-                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${st.badge}">Lõi ${idx + 1} (Lv ${lvl}) • ${st.label}</span>
-                                <button type="button" onclick="clearAugmentSlot(${idx})" title="Bỏ lõi này" class="w-6 h-6 rounded-lg bg-slate-950/60 hover:bg-rose-500/40 text-slate-300 hover:text-white flex items-center justify-center text-xs cursor-pointer">
+                        <div class="rounded-xl px-2.5 py-1.5 border ${st.cls} flex items-center justify-between gap-2 transition ${isActiveTarget ? 'ring-1 ring-[#24e8cc]' : ''}" title="${alts.length ? 'Đổi nhanh: ' + alts.map(a => a.nameVi).join(', ') : escapeHtml(aug.descVi)}">
+                            <div onclick="openAugmentPicker('slot', ${idx})" class="cursor-pointer flex items-center gap-2 min-w-0 flex-1">
+                                ${renderAugmentIconHtml(aug, 22)}
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-[11px] font-extrabold text-white truncate">${escapeHtml(aug.nameVi)}</div>
+                                    <div class="text-[9px] text-slate-400 truncate">Lõi ${idx + 1} • Lv${lvl}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                                ${alts[0] ? `
+                                    <button type="button" onclick="swapSlotAlternative(${idx}, '${alts[0].id}')" title="Đổi sang ${escapeHtml(alts[0].nameVi)}" class="px-1.5 py-0.5 rounded bg-slate-900/90 hover:bg-[#24e8cc]/20 border border-white/10 text-[9px] font-bold text-[#24e8cc] cursor-pointer">
+                                        ⇄
+                                    </button>
+                                ` : ''}
+                                <button type="button" onclick="clearAugmentSlot(${idx})" title="Bỏ lõi này" class="w-5 h-5 rounded bg-slate-950/60 hover:bg-rose-500/40 text-slate-300 hover:text-white flex items-center justify-center text-[10px] cursor-pointer">
                                     <i class="fa-solid fa-xmark"></i>
                                 </button>
                             </div>
-                            <div onclick="openAugmentPicker('slot', ${idx})" class="cursor-pointer flex items-start gap-2.5">
-                                ${renderAugmentIconHtml(aug, 32)}
-                                <div class="min-w-0 flex-1 space-y-0.5">
-                                    <div class="text-xs sm:text-sm font-extrabold text-white truncate">${escapeHtml(aug.nameVi)}</div>
-                                    <div class="text-[10px] text-slate-300/90 line-clamp-2">${escapeHtml(aug.descVi)}</div>
-                                </div>
-                            </div>
-                            ${alts.length > 0 ? `
-                                <div class="flex flex-wrap items-center gap-1 pt-1 border-t border-slate-700/50">
-                                    <span class="text-[9px] text-slate-400">Đổi nhanh:</span>
-                                    ${alts.map(alt => `
-                                        <button type="button" onclick="swapSlotAlternative(${idx}, '${alt.id}')"
-                                                class="px-1.5 py-0.5 rounded bg-slate-900/90 hover:bg-cyan-500/20 border border-slate-700 hover:border-cyan-400/50 text-[9px] font-bold text-cyan-200 cursor-pointer transition truncate max-w-[115px]">
-                                            ${escapeHtml(alt.nameVi)}
-                                        </button>
-                                    `).join('')}
-                                </div>
-                            ` : ''}
                         </div>
                     `;
                 }
@@ -20949,16 +20967,9 @@
                 const isNext = idx === nextOpen;
                 return `
                     <button type="button" onclick="setActiveTargetSlot(${idx}); openAugmentPicker('slot', ${idx})"
-                            class="rounded-2xl p-3 border border-dashed text-left flex flex-col justify-between gap-2 min-h-[104px] transition cursor-pointer ${isActiveTarget ? 'border-cyan-400 bg-cyan-500/10' : (isNext ? 'border-amber-400/50 bg-slate-900/60 hover:border-cyan-400' : 'border-slate-700/80 bg-slate-900/40 hover:border-slate-500')}">
-                        <div class="flex items-center justify-between w-full">
-                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${isActiveTarget ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/40' : 'bg-slate-800 text-slate-400'}">
-                                Lõi ${idx + 1} • Cấp ${lvl}
-                            </span>
-                            <i class="fa-solid fa-plus text-xs ${isActiveTarget ? 'text-cyan-300' : 'text-slate-500'}"></i>
-                        </div>
-                        <div class="text-xs font-bold ${isActiveTarget ? 'text-cyan-200' : 'text-slate-400'}">
-                            ${idx === 0 ? 'Bấm chọn Lõi 1 đã mở...' : `Chọn Lõi ${idx + 1} (hoặc khóa từ gợi ý bên dưới)`}
-                        </div>
+                            class="rounded-xl px-2.5 py-1.5 border border-dashed text-left flex items-center justify-between gap-2 transition cursor-pointer ${isActiveTarget ? 'border-[#24e8cc] bg-[#24e8cc]/10 text-[#24e8cc]' : (isNext ? 'border-amber-400/50 bg-slate-900/60 hover:border-[#24e8cc] text-slate-300' : 'border-slate-700/80 bg-slate-900/40 hover:border-slate-500 text-slate-400')}">
+                        <span class="text-[11px] font-bold truncate">Lõi ${idx + 1} <span class="text-[9px] opacity-75">(Lv${lvl})</span></span>
+                        <i class="fa-solid fa-plus text-[10px] shrink-0"></i>
                     </button>
                 `;
             }).join('');
@@ -21002,9 +21013,11 @@
                 flashedIdx: -1,
                 clickedIdx: -1,
                 clickedTs: 0,
+                lastRerollTs: 0,
                 isStatAnvilOffer: false,
                 closedStreak: 0
             };
+            state.manualRollExpanded = false;
             const resBox = document.getElementById('deepAiResponseBox');
             if (resBox) resBox.classList.add('hidden');
             const vNote = document.getElementById('visionResultNote');
@@ -21078,13 +21091,54 @@
             }
         }
 
+        function toggleManualRollBody() {
+            state.manualRollExpanded = !state.manualRollExpanded;
+            renderRollEvaluator();
+        }
+
+        function manualRerollPendingOffer() {
+            if (state.liveOfferState) {
+                state.liveOfferState.clickedIdx = -1;
+                state.liveOfferState.clickedTs = 0;
+                state.liveOfferState.lastRerollTs = Date.now();
+            }
+            state.lastOcrCardKey = '';
+            showToast('🎲 Đang đổi lõi — giữ nguyên lõi đã khóa và quét thẻ mới...', 'info');
+            if (state.isDesktopBridgeConnected) {
+                setTimeout(() => triggerDesktopCapture('scan-aug'), 450);
+            }
+        }
+
         function renderRollEvaluator() {
             const grid = document.getElementById('rollEvaluatorGrid');
             const banner = document.getElementById('rollVerdictBanner');
+            const bodyWrap = document.getElementById('rollEvaluatorBody');
+            const toggleBtn = document.getElementById('btnToggleRollBody');
+            const clearBtn = document.getElementById('btnClearRollCandidates');
+            const waitBadge = document.getElementById('rollWaitingBadge');
+            const rerollBtn = document.getElementById('btnManualRerollOffer');
+            const statusSub = document.getElementById('rollPanelStatusSub');
             if (!grid || !banner) return;
             const champ = state.championsMap[state.selectedChampId] || state.championsList[0];
             const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
             const hasManualRoll = state.rollCandidates.some(Boolean);
+            const showBody = hasManualRoll || state.manualRollExpanded;
+
+            if (bodyWrap) bodyWrap.classList.toggle('hidden', !showBody);
+            if (toggleBtn) {
+                toggleBtn.classList.toggle('hidden', hasManualRoll);
+                toggleBtn.textContent = state.manualRollExpanded ? 'Thu gọn' : 'Mở ô so sánh';
+            }
+            if (clearBtn) clearBtn.classList.toggle('hidden', !hasManualRoll);
+            if (waitBadge) waitBadge.classList.toggle('hidden', !hasManualRoll);
+            if (rerollBtn) rerollBtn.classList.toggle('hidden', !hasManualRoll);
+            if (statusSub) {
+                statusSub.textContent = hasManualRoll
+                    ? `Đang chấm ${state.rollCandidates.filter(Boolean).length} thẻ trên màn hình • Chọn xong trong game sẽ tự khóa (hoặc bấm Đổi lõi)`
+                    : 'Tự mở khi game hiện 3 thẻ lõi • Bảng lõi đề xuất chuẩn bài ở ngay bên dưới';
+            }
+
+            if (!showBody) return;
 
             const scored = hasManualRoll
                 ? state.rollCandidates.map((augId, idx) => {
@@ -21115,8 +21169,8 @@
                 if (!aug) {
                     return `
                         <button type="button" onclick="openAugmentPicker('roll', ${idx})"
-                                class="rounded-2xl p-3.5 border border-dashed border-slate-700 hover:border-emerald-400/60 bg-slate-900/50 flex flex-col items-center justify-center gap-2 min-h-[168px] text-center transition cursor-pointer group">
-                            <span class="w-9 h-9 rounded-full bg-slate-800 group-hover:bg-emerald-500/20 text-slate-400 group-hover:text-emerald-300 flex items-center justify-center transition">
+                                class="rounded-2xl p-3.5 border border-dashed border-slate-700 hover:border-[#24e8cc]/60 bg-slate-900/50 flex flex-col items-center justify-center gap-2 min-h-[168px] text-center transition cursor-pointer group">
+                            <span class="w-9 h-9 rounded-full bg-slate-800 group-hover:bg-[#24e8cc]/20 text-slate-400 group-hover:text-[#24e8cc] flex items-center justify-center transition">
                                 <i class="fa-solid fa-plus"></i>
                             </span>
                             <div class="text-xs font-bold text-slate-300">Lựa chọn ${idx + 1}</div>
@@ -21128,13 +21182,13 @@
                 const st = getTierStyle(aug.tier);
                 const isBest = !isSuggestedPreview && idx === bestIdx && validScored.length >= 1 && bestScore >= 60;
                 const isTopPreview = isSuggestedPreview && idx === bestIdx;
-                const scoreColor = ev.score >= 80 ? 'text-emerald-300 bg-emerald-500/20 border-emerald-400/40' : (ev.score >= 62 ? 'text-amber-300 bg-amber-500/20 border-amber-400/40' : 'text-rose-300 bg-rose-500/20 border-rose-400/40');
-                const ringCls = isBest ? 'ring-2 ring-emerald-400 best-pick-glow' : (isTopPreview ? 'ring-1 ring-amber-400/60' : '');
+                const scoreColor = ev.score >= 80 ? 'text-[#24e8cc] bg-[#24e8cc]/15 border-[#24e8cc]/40' : (ev.score >= 62 ? 'text-amber-300 bg-amber-500/20 border-amber-400/40' : 'text-rose-300 bg-rose-500/20 border-rose-400/40');
+                const ringCls = isBest ? 'ring-2 ring-[#24e8cc] best-pick-glow' : (isTopPreview ? 'ring-1 ring-amber-400/60' : '');
 
                 return `
                     <div class="rounded-2xl p-3.5 border ${st.cls} flex flex-col justify-between gap-2.5 relative ${ringCls}">
-                        ${isBest ? `<div class="absolute -top-2.5 left-3 px-2 py-0.5 rounded-full bg-emerald-400 text-slate-950 text-[10px] font-extrabold shadow">★ #1 KHUYÊN CHỌN</div>` : ''}
-                        ${isSuggestedPreview ? `<div class="absolute -top-2.5 left-3 px-2 py-0.5 rounded-full bg-amber-400/95 text-slate-950 text-[10px] font-extrabold shadow">⚡ GỢI Ý TOP ${idx + 1} (TỨC THÌ)</div>` : ''}
+                        ${isBest ? `<div class="absolute -top-2.5 left-3 px-2 py-0.5 rounded-full bg-[#24e8cc] text-[#061217] text-[10px] font-extrabold shadow">★ #1 NÊN CHỌN</div>` : ''}
+                        ${isSuggestedPreview ? `<div class="absolute -top-2.5 left-3 px-2 py-0.5 rounded-full bg-amber-400/95 text-slate-950 text-[10px] font-extrabold shadow">⚡ ĐỀ XUẤT TOP ${idx + 1}</div>` : ''}
                         <div class="flex items-start justify-between gap-1.5 pt-1">
                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${st.badge}">${st.label}</span>
                             <div class="flex items-center gap-1">
@@ -21215,6 +21269,7 @@
 
         function clearRollCandidates() {
             state.rollCandidates = [null, null, null];
+            state.manualRollExpanded = false;
             renderQuickRollSuggestPills();
             renderRollEvaluator();
             syncOverlayUI();
@@ -22034,11 +22089,21 @@
             if (!offer || !offer.active) return;
 
             const validIds = offer.slotIds.filter(Boolean);
+            const now = Date.now();
+            const recentlyRerolled = Boolean(offer.lastRerollTs && (now - offer.lastRerollTs) < 2200);
             offer.active = false;
             offer.closedStreak = 0;
             state.lastOcrCardKey = '';
 
-            if (validIds.length === 0) return;
+            if (recentlyRerolled) {
+                return;
+            }
+
+            if (validIds.length === 0) {
+                state.rollCandidates = [null, null, null];
+                renderAll();
+                return;
+            }
 
             if (offer.isStatAnvilOffer) {
                 state.rollCandidates = [null, null, null];
@@ -22047,15 +22112,24 @@
                 return;
             }
 
+            const hasRealCardClick =
+                offer.clickedIdx >= 0 &&
+                (now - offer.clickedTs) < 10000 &&
+                (!offer.lastRerollTs || offer.clickedTs > offer.lastRerollTs) &&
+                Boolean(offer.slotIds[offer.clickedIdx]);
+
             let chosenIdx = -1;
-            if (offer.clickedIdx >= 0 && (Date.now() - offer.clickedTs) < 12000 && offer.slotIds[offer.clickedIdx]) {
+            if (hasRealCardClick) {
                 chosenIdx = offer.clickedIdx;
             } else if (offer.flashedIdx >= 0 && offer.slotIds[offer.flashedIdx]) {
                 chosenIdx = offer.flashedIdx;
-            } else if (offer.bestIdx >= 0 && offer.slotIds[offer.bestIdx]) {
-                chosenIdx = offer.bestIdx;
-            } else {
-                chosenIdx = offer.slotIds.findIndex(Boolean);
+            }
+
+            // Never guess/lock bestIdx when user only rerolled or dismissed without clicking a card body
+            if (chosenIdx < 0) {
+                state.rollCandidates = [null, null, null];
+                renderAll();
+                return;
             }
 
             const chosenId = offer.slotIds[chosenIdx];
@@ -23727,41 +23801,8 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     .slice(0, 3);
 
             const build = computeAdaptiveBuild(champ, state.chosenAugments, state.enemyThreats);
-            const chosenNames = state.chosenAugments.map(id => AUGMENTS_DB.find(a => a.id === id)?.nameVi).filter(Boolean);
-            const mapTag = state.mapMode === 'pirate_60' ? '🏴‍☠️ Pirate 60s' : '❄️ Vực Gió Hú 90s';
-
-            if (state.overlayViewMode === 'minimap') {
-                const winW = state.pipWindow.innerWidth || 280;
-                const winH = state.pipWindow.innerHeight || 320;
-                const sz = Math.max(130, Math.min(winW - 22, winH - 58));
-                const dotSz = Math.max(22, Math.round(sz * 0.16));
-                const fontSz = Math.max(9, Math.round(sz * 0.055));
-
-                root.innerHTML = `
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:4px;">
-                        <button class="ov-btn ov-btn-cyan" style="padding:3px 7px; font-size:10px;" data-ov-action="switch-ov-mode">◀ HUD Đầy Đủ</button>
-                        <button class="ov-btn" style="padding:3px 7px; font-size:10px;" data-ov-action="toggle-map-mode">${mapTag}</button>
-                        <button class="ov-btn" style="padding:3px 7px; font-size:10px;" data-ov-action="relic-init">${state.mapMode === 'pirate_60' ? '0:40' : '1:45'}</button>
-                    </div>
-                    <div class="ov-minimap-stage" style="width:${sz}px; height:${sz}px;">
-                        <svg viewBox="0 0 100 100" style="position:absolute; inset:0; width:100%; height:100%; opacity:0.65; pointer-events:none;">
-                            <line x1="30" y1="78" x2="78" y2="30" stroke="#334155" stroke-width="14" stroke-linecap="round"/>
-                            <line x1="30" y1="78" x2="78" y2="30" stroke="#0ea5e9" stroke-width="1.2" stroke-dasharray="3 2"/>
-                        </svg>
-                        ${state.relicTimers.map(r => {
-                            const soon = r.running && r.remaining <= 15 && r.remaining > 0;
-                            const cls = soon ? 'soon' : (r.running ? 'running' : '');
-                            return `
-                                <button class="ov-relic-dot ${cls}" data-ov-action="relic-start" data-ov-arg1="${r.id}"
-                                        style="left:${(r.nx * 100).toFixed(1)}%; top:${(r.ny * 100).toFixed(1)}%; width:${dotSz}px; height:${dotSz}px; font-size:${fontSz}px;">
-                                    ${r.running ? r.remaining : 'OK'}
-                                </button>
-                            `;
-                        }).join('')}
-                    </div>
-                `;
-                return;
-            }
+            const chosenIds = state.chosenAugments.filter(Boolean);
+            const nextRecNames = getTopSuggestedRollAugments(champ, chosenIds, 2).map(x => `${x.aug.nameVi} (${x.eval.score}đ)`);
 
             root.innerHTML = `
                 <div class="ov-card">
@@ -23770,55 +23811,22 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                             <img src="${getChampIconUrl(champ.id)}" alt="">
                             <div>
                                 <div class="ov-title">${escapeHtml(champ.nameVi)} • ${champ.tier}</div>
-                                <div class="ov-sub">${chosenNames.length ? escapeHtml(chosenNames.join(' → ')) : 'Chưa khóa lõi nào'}</div>
+                                <div class="ov-sub">${nextRecNames.length ? 'Đề xuất: ' + escapeHtml(nextRecNames.join(' • ')) : 'Tự đồng bộ 3 Lõi & Đồ'}</div>
                             </div>
                         </div>
                         <div style="display:flex; gap:4px; align-items:center;">
-                            <button class="ov-btn" style="padding:4px 7px; font-size:10px;" data-ov-action="switch-ov-mode" title="Chuyển sang Minimap phóng to/thu nhỏ">🗺️ Minimap</button>
                             <button class="ov-btn" data-ov-action="close-ov">✕</button>
                         </div>
                     </div>
-                    <div class="ov-grid-2" style="margin-bottom: 6px;">
-                        <button class="ov-btn ov-btn-gold" data-ov-action="scan-aug">⚡ Quét Lõi</button>
-                        <button class="ov-btn ov-btn-indigo" data-ov-action="scan-combat">🔍 Quét Trận/Tab</button>
-                    </div>
                     <div class="ov-grid-2">
-                        <button class="ov-btn" data-ov-action="toggle-map-mode">${mapTag}</button>
+                        <button class="ov-btn ov-btn-gold" data-ov-action="scan-aug">⚡ Quét Lõi</button>
                         <button class="ov-btn" data-ov-action="toggle-voice">${state.voiceAlerts ? '🔊 Âm báo: BẬT' : '🔇 Âm báo: TẮT'}</button>
                     </div>
                 </div>
 
                 <div class="ov-card">
                     <div class="ov-sec-title">
-                        <span>💚 Cục Hồi Máu (Alt+1..4)</span>
-                        <span style="display:flex; gap:4px;">
-                            <button class="ov-btn" style="padding:2px 6px; font-size:10px;" data-ov-action="relic-init">${state.mapMode === 'pirate_60' ? '0:40' : '1:45'}</button>
-                            <button class="ov-btn" style="padding:2px 6px; font-size:10px;" data-ov-action="relic-reset-all">Reset</button>
-                        </span>
-                    </div>
-                    <div class="ov-grid-2">
-                        ${state.relicTimers.map(r => {
-                            const soon = r.running && r.remaining <= 15 && r.remaining > 0;
-                            return `
-                                <div class="ov-relic ${soon ? 'soon' : ''}">
-                                    <div class="ov-relic-top">
-                                        <span class="ov-relic-name">${escapeHtml(r.short)}</span>
-                                        <span class="ov-relic-time">${r.running ? formatMMSS(r.remaining) : 'Sẵn sàng'}</span>
-                                    </div>
-                                    <div style="display:flex; gap:3px;">
-                                        <button class="ov-btn ov-btn-cyan" style="flex:1; padding:3px 4px; font-size:10px;" data-ov-action="relic-start" data-ov-arg1="${r.id}">${r.running ? 'Ăn lại' : 'Đếm'}</button>
-                                        <button class="ov-btn" style="padding:3px 5px; font-size:10px;" data-ov-action="relic-adj" data-ov-arg1="${r.id}" data-ov-arg2="-5">-5</button>
-                                        <button class="ov-btn" style="padding:3px 5px; font-size:10px;" data-ov-action="relic-reset" data-ov-arg1="${r.id}">×</button>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-
-                <div class="ov-card">
-                    <div class="ov-sec-title">
-                        <span>${rollValid.length > 0 ? '🎲 Chấm Điểm 3 Lõi Đang Roll' : `✨ Gợi Ý Cho Lõi ${state.activeTargetSlot + 1}`}</span>
+                        <span>${rollValid.length > 0 ? '🎲 Chấm Điểm 3 Lõi Đang Roll' : `✨ Lõi Đề Xuất Tiếp Theo`}</span>
                     </div>
                     ${topSuggestions.map(({ aug, eval: ev }, i) => `
                         <div class="ov-aug ${i === 0 ? 'best' : ''}">
@@ -23847,11 +23855,6 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                             return `<div class="ov-item" title="${escapeHtml(info.name)}"><img src="${getItemIconUrl(id)}" alt=""><span>${escapeHtml(info.name)}</span></div>`;
                         }).join('')}
                     </div>
-                    ${state.lastCombatAnalysis ? `
-                        <div style="margin-top:8px; padding:6px 8px; border-radius:9px; background:rgba(79,70,229,0.18); border:1px solid rgba(129,140,248,0.35); font-size:10px; line-height:1.4; color:#e0e7ff;">
-                            <strong>AI Chiến Thuật:</strong> ${escapeHtml(state.lastCombatAnalysis.tacticalAdviceVi)}
-                        </div>
-                    ` : ''}
                 </div>
             `;
         }
@@ -23862,53 +23865,34 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
             const ctx = canvas.getContext('2d');
             const w = canvas.width;
             const h = canvas.height;
-            ctx.fillStyle = '#050814';
+            ctx.fillStyle = '#0c0e13';
             ctx.fillRect(0, 0, w, h);
 
             const champ = state.championsMap[state.selectedChampId] || state.championsList[0];
             ctx.fillStyle = '#fde68a';
             ctx.font = 'bold 18px sans-serif';
-            ctx.fillText(`ARAM MAYHEM • ${champ?.nameVi || 'Vi'} (${champ?.tier || 'S'})`, 16, 30);
+            ctx.fillText(`PASSION BLITZ • ${champ?.nameVi || 'Vi'} (${champ?.tier || 'S'})`, 16, 30);
 
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '12px sans-serif';
-            const chosenNames = state.chosenAugments.map(id => AUGMENTS_DB.find(a => a.id === id)?.nameVi).filter(Boolean);
-            ctx.fillText(`Lõi: ${chosenNames.join(' -> ') || 'Chưa chọn'}`, 16, 52);
+            const lockedIds = state.chosenAugments.filter(Boolean);
+            const top3 = getTopSuggestedRollAugments(champ, lockedIds, 3);
 
-            ctx.fillStyle = '#34d399';
+            ctx.fillStyle = '#24e8cc';
             ctx.font = 'bold 14px sans-serif';
-            ctx.fillText(`CỤC HỒI MÁU (${state.mapMode === 'pirate_60' ? 'Pirate 60s' : 'Vực 90s'}):`, 16, 86);
-            state.relicTimers.forEach((r, idx) => {
-                const y = 110 + idx * 24;
-                ctx.fillStyle = r.running && r.remaining <= 15 ? '#fcd34d' : '#e2e8f0';
-                ctx.font = '13px monospace';
-                ctx.fillText(`${r.label}: ${r.running ? formatMMSS(r.remaining) : 'Sẵn sàng'}`, 20, y);
-            });
-
-            const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
-            const top3 = AUGMENTS_DB
-                .filter(a => !activeIds.includes(a.id))
-                .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
-                .sort((a, b) => b.eval.score - a.eval.score)
-                .slice(0, 3);
-
-            ctx.fillStyle = '#67e8f9';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.fillText(`GỢI Ý LÕI ${state.activeTargetSlot + 1}:`, 16, 224);
+            ctx.fillText(`LÕI ĐỀ XUẤT TIẾP THEO:`, 16, 72);
             top3.forEach((item, idx) => {
-                ctx.fillStyle = idx === 0 ? '#34d399' : '#e2e8f0';
+                ctx.fillStyle = idx === 0 ? '#24e8cc' : '#e2e8f0';
                 ctx.font = 'bold 13px sans-serif';
-                ctx.fillText(`${idx + 1}. ${item.aug.nameVi} (${item.eval.score}đ)`, 20, 248 + idx * 24);
+                ctx.fillText(`${idx + 1}. ${item.aug.nameVi} (${item.eval.score}đ)`, 20, 98 + idx * 24);
             });
 
             const build = computeAdaptiveBuild(champ, state.chosenAugments, state.enemyThreats);
             ctx.fillStyle = '#c084fc';
             ctx.font = 'bold 14px sans-serif';
-            ctx.fillText('LÊN ĐỒ ĐỀ XUẤT:', 16, 344);
+            ctx.fillText('LÊN ĐỒ ĐỀ XUẤT:', 16, 198);
             [build.boots, ...build.finalCore].forEach((id, idx) => {
                 ctx.fillStyle = '#e2e8f0';
                 ctx.font = '12px sans-serif';
-                ctx.fillText(`• ${state.itemsMap[id]?.name || id}`, 20, 368 + idx * 22);
+                ctx.fillText(`• ${state.itemsMap[id]?.name || id}`, 20, 224 + idx * 22);
             });
         }
 
@@ -23916,6 +23900,46 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
         // 17. DESKTOP .EXE & RIOT LIVE CLIENT (127.0.0.1:2999) BRIDGE
         // =====================================================================
         let bridgeSyncThrottle = null;
+
+        async function initBlitzElectronTitlebar() {
+            const bar = document.getElementById('blitzElectronTitlebar');
+            if (!bar || !window.__PASSION_BLITZ__ || !window.__PASSION_BLITZ__.isBlitzElectron) return;
+            bar.classList.remove('hidden');
+            try {
+                const st = await window.__PASSION_BLITZ__.getWindowState();
+                updateBlitzTitlebarButtons(st);
+            } catch (_) {}
+        }
+
+        function updateBlitzTitlebarButtons(st) {
+            if (!st) return;
+            const pinBtn = document.getElementById('btnBlitzPin');
+            const maxBtn = document.getElementById('btnBlitzMax');
+            if (pinBtn) {
+                pinBtn.classList.toggle('text-[#24e8cc]', Boolean(st.isAlwaysOnTop));
+                pinBtn.classList.toggle('text-slate-400', !st.isAlwaysOnTop);
+            }
+            if (maxBtn) {
+                maxBtn.textContent = st.isMaximized ? '❐' : '□';
+            }
+        }
+
+        async function blitzWindowAction(action) {
+            if (!window.__PASSION_BLITZ__ || typeof window.__PASSION_BLITZ__.windowControl !== 'function') return;
+            try {
+                const st = await window.__PASSION_BLITZ__.windowControl(action);
+                updateBlitzTitlebarButtons(st);
+            } catch (_) {}
+        }
+
+        function setBlitzTitleLivePill(text, active) {
+            const pill = document.getElementById('blitzTitleLivePill');
+            if (!pill) return;
+            pill.textContent = text;
+            pill.className = active
+                ? 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#24e8cc]/15 text-[#24e8cc] border border-[#24e8cc]/35 truncate'
+                : 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/5 text-slate-400 truncate';
+        }
 
         function toggleManualVisionDrawer() {
             const dr = document.getElementById('manualVisionDrawer');
@@ -23995,6 +24019,20 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     })
                 }).catch(() => {});
 
+                // Skip stale OCR/click sequences from finished games if modal is currently closed
+                try {
+                    const initSt = await fetch('/api/mayhem/state').then(r => r.ok ? r.json() : null);
+                    if (initSt) {
+                        state.lastCapturedFrameSeq = initSt.capturedFrameSeq || 0;
+                        state.lastCardClickSeq = initSt.cardClickSeq || 0;
+                        state.lastNativeModalEventSeq = initSt.modalEventSeq || 0;
+                        state.nativeModalOpen = Boolean(initSt.modalOpen);
+                        if (!initSt.modalOpen) {
+                            state.lastNativeOcrSeq = initSt.nativeOcrSeq || 0;
+                        }
+                    }
+                } catch (_) {}
+
                 syncRecommendedBuildToGameShop(null, null, false);
                 pushMayhemStateToBridge();
                 setInterval(pollDesktopBridgeState, 220);
@@ -24039,15 +24077,13 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
             bridgeSyncThrottle = setTimeout(() => {
                 const champ = state.championsMap[state.selectedChampId] || state.championsList[0];
                 const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
+                const lockedIds = state.chosenAugments.filter(Boolean);
 
                 const candidateCards = buildCandidateCardsSummary(champ, activeIds);
                 const topCandidate = [...candidateCards].sort((a, b) => b.score - a.score)[0] || null;
-                const topFallback = !topCandidate
-                    ? AUGMENTS_DB
-                        .filter(a => !activeIds.includes(a.id))
-                        .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
-                        .sort((a, b) => b.eval.score - a.eval.score)[0]
-                    : null;
+                const recommendedList = getTopSuggestedRollAugments(champ, lockedIds, 3);
+                const topFallback = !topCandidate ? (recommendedList[0] || null) : null;
+                const recommendedAugments = recommendedList.map(x => `${x.aug.nameVi} (${x.eval.score}đ)`);
 
                 const chosenNames = state.chosenAugments
                     .map(id => AUGMENTS_DB.find(a => a.id === id)?.nameVi || '')
@@ -24068,6 +24104,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                             bestScore: topCandidate ? topCandidate.score : (topFallback ? topFallback.eval.score : 0),
                             nextItems,
                             chosenAugments: chosenNames,
+                            recommendedAugments,
                             candidateCards,
                             tacticalNote: state.lastCombatAnalysis?.tacticalAdviceVi || champ?.playstyleHint || ''
                         }
@@ -24089,11 +24126,19 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     processNativeOcrCards(data.nativeOcrCards);
                 }
 
-                // Track mouse click on Left / Center / Right card reported by PassionMayhem.exe
+                // Track mouse click on Left / Center / Right card OR Reroll button reported by PassionMayhem.exe
                 if (data.cardClickSeq && data.cardClickSeq > state.lastCardClickSeq && data.lastCardClick) {
                     state.lastCardClickSeq = data.cardClickSeq;
                     const clkIdx = Number(data.lastCardClick.index);
-                    if (state.liveOfferState && state.liveOfferState.active && clkIdx >= 0 && clkIdx <= 2) {
+                    const isReroll = Boolean(data.lastCardClick.isReroll);
+                    if (isReroll) {
+                        if (state.liveOfferState) {
+                            state.liveOfferState.clickedIdx = -1;
+                            state.liveOfferState.clickedTs = 0;
+                            state.liveOfferState.lastRerollTs = Date.now();
+                        }
+                        showToast('🎲 Đang đổi lõi — chờ quét thẻ mới...', 'info');
+                    } else if (state.liveOfferState && state.liveOfferState.active && clkIdx >= 0 && clkIdx <= 2) {
                         state.liveOfferState.clickedIdx = clkIdx;
                         state.liveOfferState.clickedTs = Date.now();
                     }
@@ -24213,6 +24258,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                             ? '⚡ Blitz Native: Đang trong Sảnh / Tìm trận LMHT'
                             : '⚡ Blitz Native: Chờ vào Sảnh Chọn Tướng hoặc Trận đấu';
                     }
+                    setBlitzTitleLivePill(state.livePhase === 'Lobby' || state.livePhase === 'Matchmaking' ? '● Đang trong Sảnh LMHT' : 'Chờ Liên Minh Huyền Thoại...', false);
                     if (rosterBox) {
                         rosterBox.textContent = 'Mở Liên Minh Huyền Thoại (Sảnh hoặc Đang Trận) để tự động đồng bộ đội hình & trang bị Shop.';
                     }
@@ -24243,6 +24289,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     if (topPill) {
                         topPill.textContent = `🏛️ LCU Champ Select${matched ? ` • ${matched.nameVi} (${matched.tier})` : ''}`;
                     }
+                    setBlitzTitleLivePill(`● Chọn Tướng: ${matched?.nameVi || 'LMHT'}`, true);
                     if (rosterBox) {
                         const benchNames = (live.benchChampionIds || []).map(id => resolveChampionByNumericId(id)?.nameVi).filter(Boolean);
                         rosterBox.innerHTML = benchNames.length > 0
@@ -24285,6 +24332,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                         ? `⏳ Đang Tải Trận (${matched?.nameVi || activeKeyOrName || 'LMHT'})`
                         : `🎮 Trong Trận (${formatMMSS(live.gameTime || 0)}) • ${matched?.nameVi || activeKeyOrName || 'LMHT'}`;
                 }
+                setBlitzTitleLivePill(`● ${matched?.nameVi || activeKeyOrName || 'LMHT'} (${formatMMSS(live.gameTime || 0)})`, true);
 
                 // Auto-infer enemy threats once players load
                 if (Array.isArray(live.allPlayers) && live.allPlayers.length > 0) {
