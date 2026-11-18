@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -9,6 +10,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
@@ -113,6 +115,7 @@ namespace PassionStarDesktop
         private readonly JavaScriptSerializer json = new JavaScriptSerializer();
 
         private Process nodeProcess;
+        private Embedded2FAHttpServer fallbackServer;
         private Process browserProcess;
         private IntPtr appHwnd = IntPtr.Zero;
         private DateTime launchTimeUtc = DateTime.UtcNow;
@@ -387,18 +390,89 @@ namespace PassionStarDesktop
             }
         }
 
-        private string FindNodeExecutable()
+        private sealed class NodeRuntimeCandidate
         {
-            string[] candidates = new string[]
+            public string ExePath;
+            public bool UseElectronAsNode;
+        }
+
+        private void AddRuntimeCandidate(List<NodeRuntimeCandidate> list, HashSet<string> seen, string exePath, bool useElectronAsNode)
+        {
+            if (string.IsNullOrEmpty(exePath)) return;
+            try
             {
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs\\node.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "nodejs\\node.exe"),
-                "C:\\Program Files\\nodejs\\node.exe",
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Antigravity\\bin\\node.exe")
+                string expanded = Environment.ExpandEnvironmentVariables(exePath.Trim().Trim('"'));
+                string full = Path.GetFullPath(expanded);
+                if (!File.Exists(full)) return;
+                string key = full.ToLowerInvariant() + "|" + (useElectronAsNode ? "1" : "0");
+                if (seen.Add(key))
+                {
+                    list.Add(new NodeRuntimeCandidate { ExePath = full, UseElectronAsNode = useElectronAsNode });
+                }
+            }
+            catch { }
+        }
+
+        private string TryExtractExeFromCmd(string cmdPath)
+        {
+            try
+            {
+                if (!File.Exists(cmdPath)) return null;
+                string text = File.ReadAllText(cmdPath, Encoding.UTF8);
+                Match quoted = Regex.Match(text, "\"([^\"]+?\\.exe)\"", RegexOptions.IgnoreCase);
+                if (quoted.Success)
+                {
+                    string p = Environment.ExpandEnvironmentVariables(quoted.Groups[1].Value);
+                    if (File.Exists(p)) return p;
+                }
+                Match unquoted = Regex.Match(text, @"([A-Za-z]:\\[^\s""']+?\.exe)", RegexOptions.IgnoreCase);
+                if (unquoted.Success && File.Exists(unquoted.Groups[1].Value)) return unquoted.Groups[1].Value;
+            }
+            catch { }
+            return null;
+        }
+
+        private List<NodeRuntimeCandidate> FindNodeRuntimes()
+        {
+            List<NodeRuntimeCandidate> list = new List<NodeRuntimeCandidate>();
+            HashSet<string> seen = new HashSet<string>();
+
+            string pf64 = Environment.GetEnvironmentVariable("ProgramW6432") ?? "";
+            string pf = Environment.GetEnvironmentVariable("ProgramFiles") ?? Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string pfx86 = Environment.GetEnvironmentVariable("ProgramFiles(x86)") ?? Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            string commonPf64 = Environment.GetEnvironmentVariable("CommonProgramW6432") ?? "";
+            string commonPf = Environment.GetEnvironmentVariable("CommonProgramFiles") ?? "";
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            // 1. Standard Node.js installations
+            AddRuntimeCandidate(list, seen, Path.Combine(pf64, "nodejs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(pf, "nodejs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(pfx86, "nodejs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, "C:\\Program Files\\nodejs\\node.exe", false);
+            AddRuntimeCandidate(list, seen, Path.Combine(localAppData, "Programs\\nodejs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(userProfile, ".volta\\bin\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(userProfile, "scoop\\apps\\nodejs-lts\\current\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(userProfile, "scoop\\apps\\nodejs\\current\\node.exe"), false);
+
+            string[] nvmRoots = new string[]
+            {
+                Path.Combine(appData, "nvm"),
+                Path.Combine(localAppData, "nvm")
             };
-            for (int i = 0; i < candidates.Length; i++)
+            for (int r = 0; r < nvmRoots.Length; r++)
             {
-                if (File.Exists(candidates[i])) return candidates[i];
+                try
+                {
+                    if (!Directory.Exists(nvmRoots[r])) continue;
+                    string[] subDirs = Directory.GetDirectories(nvmRoots[r], "v*");
+                    for (int s = 0; s < subDirs.Length; s++)
+                    {
+                        AddRuntimeCandidate(list, seen, Path.Combine(subDirs[s], "node.exe"), false);
+                    }
+                }
+                catch { }
             }
 
             string pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
@@ -407,10 +481,27 @@ namespace PassionStarDesktop
             {
                 string d = dirs[i].Trim();
                 if (string.IsNullOrEmpty(d)) continue;
-                string p = Path.Combine(d, "node.exe");
-                if (File.Exists(p)) return p;
+                AddRuntimeCandidate(list, seen, Path.Combine(d, "node.exe"), false);
             }
-            return "node.exe";
+
+            // 2. Electron-as-Node binaries (Antigravity / VS Code / Cursor)
+            string agyCmd = Path.Combine(appData, "Antigravity\\bin\\agy-node.cmd");
+            AddRuntimeCandidate(list, seen, TryExtractExeFromCmd(agyCmd), true);
+            AddRuntimeCandidate(list, seen, Path.Combine(localAppData, "Programs\\antigravity\\Antigravity.exe"), true);
+            AddRuntimeCandidate(list, seen, Path.Combine(pf, "Antigravity\\Antigravity.exe"), true);
+            AddRuntimeCandidate(list, seen, Path.Combine(localAppData, "Programs\\Microsoft VS Code\\Code.exe"), true);
+            AddRuntimeCandidate(list, seen, Path.Combine(pf, "Microsoft VS Code\\Code.exe"), true);
+            AddRuntimeCandidate(list, seen, Path.Combine(localAppData, "Programs\\cursor\\Cursor.exe"), true);
+
+            // 3. Bundled third-party Node.js runtimes (e.g. Adobe Creative Cloud)
+            AddRuntimeCandidate(list, seen, Path.Combine(pf64, "Adobe\\Adobe Creative Cloud Experience\\libs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(pf, "Adobe\\Adobe Creative Cloud Experience\\libs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, "C:\\Program Files\\Adobe\\Adobe Creative Cloud Experience\\libs\\node.exe", false);
+            AddRuntimeCandidate(list, seen, Path.Combine(commonPf64, "Adobe\\Creative Cloud Libraries\\libs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(commonPf, "Adobe\\Creative Cloud Libraries\\libs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, "C:\\Program Files\\Common Files\\Adobe\\Creative Cloud Libraries\\libs\\node.exe", false);
+
+            return list;
         }
 
         private string FindBrowserExecutable()
@@ -509,44 +600,84 @@ namespace PassionStarDesktop
                 return true;
             }
 
-            string nodeExe = FindNodeExecutable();
             string serverScript = Path.Combine(appDir, "server\\server.mjs");
-            if (!File.Exists(serverScript))
+            if (File.Exists(serverScript))
             {
-                return false;
+                List<NodeRuntimeCandidate> runtimes = FindNodeRuntimes();
+                for (int i = 0; i < runtimes.Count; i++)
+                {
+                    NodeRuntimeCandidate cand = runtimes[i];
+                    ProcessStartInfo psi = new ProcessStartInfo();
+                    psi.FileName = cand.ExePath;
+                    psi.Arguments = "\"" + serverScript + "\"";
+                    psi.WorkingDirectory = appDir;
+                    psi.UseShellExecute = false;
+                    psi.CreateNoWindow = true;
+                    psi.WindowStyle = ProcessWindowStyle.Hidden;
+                    psi.EnvironmentVariables["PORT"] = serverPort.ToString();
+                    if (cand.UseElectronAsNode)
+                    {
+                        psi.EnvironmentVariables["ELECTRON_RUN_AS_NODE"] = "1";
+                    }
+
+                    Process proc = null;
+                    try
+                    {
+                        proc = Process.Start(psi);
+                    }
+                    catch
+                    {
+                        proc = null;
+                    }
+                    if (proc == null) continue;
+
+                    DateTime deadline = DateTime.UtcNow.AddSeconds(6);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        if (CheckHealthEndpoint(serverPort))
+                        {
+                            nodeProcess = proc;
+                            return true;
+                        }
+                        if (proc.HasExited)
+                        {
+                            break;
+                        }
+                        Thread.Sleep(150);
+                    }
+
+                    try
+                    {
+                        if (!proc.HasExited) proc.Kill();
+                        proc.Dispose();
+                    }
+                    catch { }
+                }
             }
 
-            ProcessStartInfo psi = new ProcessStartInfo();
-            psi.FileName = nodeExe;
-            psi.Arguments = "\"" + serverScript + "\"";
-            psi.WorkingDirectory = appDir;
-            psi.UseShellExecute = false;
-            psi.CreateNoWindow = true;
-            psi.WindowStyle = ProcessWindowStyle.Hidden;
-            psi.EnvironmentVariables["PORT"] = serverPort.ToString();
+            return StartEmbeddedFallbackServer();
+        }
 
+        private bool StartEmbeddedFallbackServer()
+        {
             try
             {
-                nodeProcess = Process.Start(psi);
-            }
-            catch
-            {
-                return false;
-            }
+                if (fallbackServer != null)
+                {
+                    fallbackServer.Stop();
+                    fallbackServer = null;
+                }
+                fallbackServer = new Embedded2FAHttpServer(appDir, serverPort);
+                fallbackServer.Start();
 
-            DateTime deadline = DateTime.UtcNow.AddSeconds(10);
-            while (DateTime.UtcNow < deadline)
-            {
-                if (CheckHealthEndpoint(serverPort))
+                DateTime deadline = DateTime.UtcNow.AddSeconds(3);
+                while (DateTime.UtcNow < deadline)
                 {
-                    return true;
+                    if (CheckHealthEndpoint(serverPort)) return true;
+                    Thread.Sleep(50);
                 }
-                if (nodeProcess != null && nodeProcess.HasExited)
-                {
-                    return false;
-                }
-                Thread.Sleep(150);
             }
+            catch { }
             return false;
         }
 
@@ -1076,6 +1207,12 @@ namespace PassionStarDesktop
                 catch { }
             }
 
+            if (fallbackServer != null)
+            {
+                try { fallbackServer.Stop(); } catch { }
+                fallbackServer = null;
+            }
+
             try
             {
                 if (wakeEvent != null) wakeEvent.Close();
@@ -1087,6 +1224,675 @@ namespace PassionStarDesktop
                 Application.Exit();
             }
             catch { }
+        }
+    }
+
+    internal sealed class Embedded2FAHttpServer
+    {
+        private const string GAS_TARGET_URL = "https://script.google.com/macros/s/AKfycbyTs0IMHFSOi9NH-UPPCq85oieHpM7w_dKE1WdJxj01vDB4ycdwPvo9udh8Df-Ashg_Fg/exec";
+        private static readonly object tlsLock = new object();
+        private static bool tlsConfigured = false;
+
+        private static readonly Dictionary<string, string> MIME_TYPES = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { ".html", "text/html; charset=UTF-8" },
+            { ".css", "text/css; charset=UTF-8" },
+            { ".js", "application/javascript; charset=UTF-8" },
+            { ".mjs", "application/javascript; charset=UTF-8" },
+            { ".json", "application/json; charset=UTF-8" },
+            { ".png", "image/png" },
+            { ".jpg", "image/jpeg" },
+            { ".jpeg", "image/jpeg" },
+            { ".svg", "image/svg+xml" },
+            { ".ico", "image/x-icon" },
+            { ".webp", "image/webp" },
+            { ".woff2", "font/woff2" }
+        };
+
+        private readonly string rootDir;
+        private readonly int port;
+        private readonly object bridgeLock = new object();
+        private TcpListener listener;
+        private Thread acceptThread;
+        private volatile bool running = false;
+
+        private bool alwaysOnTop = false;
+        private bool visible = true;
+        private bool bossMode = false;
+        private int urgentAlarmCount = 0;
+        private string lastUrgentAlarm = "";
+        private long updatedAt = NowMs();
+
+        private long nativeSeq = 0;
+        private long webSeq = 0;
+        private readonly List<Dictionary<string, object>> nativeQueue = new List<Dictionary<string, object>>();
+        private readonly List<Dictionary<string, object>> webQueue = new List<Dictionary<string, object>>();
+
+        public Embedded2FAHttpServer(string appRootDir, int listenPort)
+        {
+            rootDir = appRootDir;
+            port = listenPort;
+            EnsureTlsConfigured();
+        }
+
+        private static long NowMs()
+        {
+            return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
+        }
+
+        private static JavaScriptSerializer CreateSerializer()
+        {
+            JavaScriptSerializer js = new JavaScriptSerializer();
+            js.MaxJsonLength = 16 * 1024 * 1024;
+            return js;
+        }
+
+        private static void EnsureTlsConfigured()
+        {
+            if (tlsConfigured) return;
+            lock (tlsLock)
+            {
+                if (tlsConfigured) return;
+                try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072 | (SecurityProtocolType)768; } catch { }
+                try { ServicePointManager.Expect100Continue = false; } catch { }
+                tlsConfigured = true;
+            }
+        }
+
+        public void Start()
+        {
+            if (running) return;
+            running = true;
+            listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+            acceptThread = new Thread(AcceptLoop);
+            acceptThread.IsBackground = true;
+            acceptThread.Start();
+        }
+
+        public void Stop()
+        {
+            running = false;
+            lock (bridgeLock)
+            {
+                Monitor.PulseAll(bridgeLock);
+            }
+            try { if (listener != null) listener.Stop(); } catch { }
+        }
+
+        private void AcceptLoop()
+        {
+            while (running)
+            {
+                try
+                {
+                    TcpClient client = listener.AcceptTcpClient();
+                    ThreadPool.QueueUserWorkItem(HandleClient, client);
+                }
+                catch
+                {
+                    if (!running) break;
+                    Thread.Sleep(50);
+                }
+            }
+        }
+
+        private sealed class ParsedHttpRequest
+        {
+            public string Method;
+            public string Path;
+            public string Query;
+            public string Body;
+        }
+
+        private static int FindHeaderEnd(List<byte> buf)
+        {
+            for (int i = 0; i <= buf.Count - 4; i++)
+            {
+                if (buf[i] == 13 && buf[i + 1] == 10 && buf[i + 2] == 13 && buf[i + 3] == 10) return i;
+            }
+            return -1;
+        }
+
+        private static ParsedHttpRequest ReadHttpRequest(NetworkStream stream)
+        {
+            List<byte> buf = new List<byte>(4096);
+            byte[] tmp = new byte[4096];
+            int headerEnd = -1;
+
+            while (headerEnd < 0)
+            {
+                int n = stream.Read(tmp, 0, tmp.Length);
+                if (n <= 0) return null;
+                for (int i = 0; i < n; i++) buf.Add(tmp[i]);
+                headerEnd = FindHeaderEnd(buf);
+                if (buf.Count > 1048576) return null;
+            }
+
+            string headerText = Encoding.ASCII.GetString(buf.ToArray(), 0, headerEnd);
+            string[] lines = headerText.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+            if (lines.Length == 0) return null;
+
+            string[] parts = lines[0].Split(' ');
+            if (parts.Length < 2) return null;
+
+            int contentLength = 0;
+            bool expectContinue = false;
+            for (int i = 1; i < lines.Length; i++)
+            {
+                int colon = lines[i].IndexOf(':');
+                if (colon <= 0) continue;
+                string name = lines[i].Substring(0, colon).Trim();
+                string val = lines[i].Substring(colon + 1).Trim();
+                if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                {
+                    int cl;
+                    if (int.TryParse(val, out cl) && cl > 0) contentLength = Math.Min(cl, 16 * 1024 * 1024);
+                }
+                else if (name.Equals("Expect", StringComparison.OrdinalIgnoreCase) && val.IndexOf("100-continue", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    expectContinue = true;
+                }
+            }
+
+            if (expectContinue)
+            {
+                byte[] cont = Encoding.ASCII.GetBytes("HTTP/1.1 100 Continue\r\n\r\n");
+                stream.Write(cont, 0, cont.Length);
+            }
+
+            int bodyStart = headerEnd + 4;
+            int alreadyHave = buf.Count - bodyStart;
+            byte[] bodyBytes = new byte[contentLength];
+            if (contentLength > 0)
+            {
+                int copyLen = Math.Min(alreadyHave, contentLength);
+                if (copyLen > 0) buf.CopyTo(bodyStart, bodyBytes, 0, copyLen);
+                int offset = copyLen;
+                while (offset < contentLength)
+                {
+                    int n = stream.Read(bodyBytes, offset, contentLength - offset);
+                    if (n <= 0) break;
+                    offset += n;
+                }
+            }
+
+            string rawTarget = parts[1];
+            string pathPart = rawTarget;
+            string queryPart = "";
+            int qIdx = rawTarget.IndexOf('?');
+            if (qIdx >= 0)
+            {
+                pathPart = rawTarget.Substring(0, qIdx);
+                queryPart = rawTarget.Substring(qIdx + 1);
+            }
+
+            return new ParsedHttpRequest
+            {
+                Method = parts[0].ToUpperInvariant(),
+                Path = pathPart,
+                Query = queryPart,
+                Body = contentLength > 0 ? Encoding.UTF8.GetString(bodyBytes) : ""
+            };
+        }
+
+        private static string GetQueryParam(string query, string key)
+        {
+            if (string.IsNullOrEmpty(query)) return null;
+            string[] pairs = query.Split('&');
+            for (int i = 0; i < pairs.Length; i++)
+            {
+                int eq = pairs[i].IndexOf('=');
+                string k = eq >= 0 ? pairs[i].Substring(0, eq) : pairs[i];
+                string v = eq >= 0 ? pairs[i].Substring(eq + 1) : "";
+                if (Uri.UnescapeDataString(k.Replace('+', ' ')) == key)
+                {
+                    return Uri.UnescapeDataString(v.Replace('+', ' '));
+                }
+            }
+            return null;
+        }
+
+        private void HandleClient(object state)
+        {
+            TcpClient client = (TcpClient)state;
+            try
+            {
+                client.ReceiveTimeout = 35000;
+                client.SendTimeout = 10000;
+                using (client)
+                using (NetworkStream stream = client.GetStream())
+                {
+                    ParsedHttpRequest req = ReadHttpRequest(stream);
+                    if (req == null) return;
+
+                    if (req.Method == "OPTIONS")
+                    {
+                        WriteHttpResponse(stream, 204, "No Content", "text/plain; charset=UTF-8", new byte[0], false);
+                        return;
+                    }
+
+                    if (req.Path == "/api/proxy" && req.Method == "POST")
+                    {
+                        SendJsonResponse(stream, 200, "OK", HandleGasProxy(req.Body));
+                        return;
+                    }
+
+                    if (req.Path == "/api/desktop/health" && req.Method == "GET")
+                    {
+                        Dictionary<string, object> health = new Dictionary<string, object>();
+                        health["status"] = "ok";
+                        health["app"] = "passion-2fa-desktop";
+                        health["port"] = port;
+                        SendJsonResponse(stream, 200, "OK", health);
+                        return;
+                    }
+
+                    if (req.Path == "/api/desktop/state" && req.Method == "GET")
+                    {
+                        SendJsonResponse(stream, 200, "OK", BuildStateSnapshot());
+                        return;
+                    }
+
+                    if (req.Path == "/api/desktop/poll-native" && req.Method == "GET")
+                    {
+                        long since;
+                        long.TryParse(GetQueryParam(req.Query, "since") ?? "0", out since);
+                        SendJsonResponse(stream, 200, "OK", HandleLongPoll(true, since));
+                        return;
+                    }
+
+                    if (req.Path == "/api/desktop/poll-web" && req.Method == "GET")
+                    {
+                        long since;
+                        long.TryParse(GetQueryParam(req.Query, "since") ?? "0", out since);
+                        SendJsonResponse(stream, 200, "OK", HandleLongPoll(false, since));
+                        return;
+                    }
+
+                    if (req.Path == "/api/desktop/command" && req.Method == "POST")
+                    {
+                        int statusCode = 200;
+                        Dictionary<string, object> resp = HandleDesktopCommand(req.Body, out statusCode);
+                        SendJsonResponse(stream, statusCode, statusCode == 200 ? "OK" : "Bad Request", resp);
+                        return;
+                    }
+
+                    if (req.Path == "/api/desktop/native-event" && req.Method == "POST")
+                    {
+                        int statusCode = 200;
+                        Dictionary<string, object> resp = HandleNativeEvent(req.Body, out statusCode);
+                        SendJsonResponse(stream, statusCode, statusCode == 200 ? "OK" : "Bad Request", resp);
+                        return;
+                    }
+
+                    TryServeStaticFile(stream, req.Path);
+                }
+            }
+            catch { }
+        }
+
+        private Dictionary<string, object> BuildDesktopStateDictLocked()
+        {
+            Dictionary<string, object> d = new Dictionary<string, object>();
+            d["alwaysOnTop"] = alwaysOnTop;
+            d["visible"] = visible;
+            d["bossMode"] = bossMode;
+            d["isDesktop"] = true;
+            d["updatedAt"] = updatedAt;
+            if (urgentAlarmCount > 0 || !string.IsNullOrEmpty(lastUrgentAlarm))
+            {
+                d["urgentAlarmCount"] = urgentAlarmCount;
+                d["lastUrgentAlarm"] = lastUrgentAlarm;
+            }
+            return d;
+        }
+
+        private Dictionary<string, object> BuildStateSnapshot()
+        {
+            lock (bridgeLock)
+            {
+                Dictionary<string, object> d = BuildDesktopStateDictLocked();
+                d["nativeSeq"] = nativeSeq;
+                d["webSeq"] = webSeq;
+                return d;
+            }
+        }
+
+        private void PushEventLocked(List<Dictionary<string, object>> queue, ref long seqCounter, Dictionary<string, object> evt)
+        {
+            seqCounter += 1;
+            evt["id"] = seqCounter;
+            evt["ts"] = NowMs();
+            queue.Add(evt);
+            if (queue.Count > 100) queue.RemoveAt(0);
+            Monitor.PulseAll(bridgeLock);
+        }
+
+        private Dictionary<string, object> HandleLongPoll(bool isNative, long since)
+        {
+            DateTime deadline = DateTime.UtcNow.AddMilliseconds(25000);
+            lock (bridgeLock)
+            {
+                List<Dictionary<string, object>> queue = isNative ? nativeQueue : webQueue;
+                while (running)
+                {
+                    List<object> pending = new List<object>();
+                    for (int i = 0; i < queue.Count; i++)
+                    {
+                        if (Convert.ToInt64(queue[i]["id"]) > since)
+                        {
+                            pending.Add(new Dictionary<string, object>(queue[i]));
+                        }
+                    }
+                    if (pending.Count > 0)
+                    {
+                        Dictionary<string, object> ok = new Dictionary<string, object>();
+                        ok["events"] = pending.ToArray();
+                        ok["seq"] = isNative ? nativeSeq : webSeq;
+                        ok["state"] = BuildDesktopStateDictLocked();
+                        return ok;
+                    }
+                    int remainingMs = (int)(deadline - DateTime.UtcNow).TotalMilliseconds;
+                    if (remainingMs <= 0) break;
+                    Monitor.Wait(bridgeLock, remainingMs);
+                }
+
+                Dictionary<string, object> empty = new Dictionary<string, object>();
+                empty["events"] = new object[0];
+                empty["seq"] = isNative ? nativeSeq : webSeq;
+                empty["state"] = BuildDesktopStateDictLocked();
+                return empty;
+            }
+        }
+
+        private Dictionary<string, object> HandleDesktopCommand(string rawBody, out int statusCode)
+        {
+            try
+            {
+                JavaScriptSerializer js = CreateSerializer();
+                Dictionary<string, object> body = string.IsNullOrEmpty(rawBody)
+                    ? new Dictionary<string, object>()
+                    : js.Deserialize<Dictionary<string, object>>(rawBody);
+                if (body == null) body = new Dictionary<string, object>();
+
+                string type = body.ContainsKey("type") && body["type"] != null ? Convert.ToString(body["type"]) : "";
+                lock (bridgeLock)
+                {
+                    updatedAt = NowMs();
+                    if (type == "toggleTopMost")
+                    {
+                        alwaysOnTop = !alwaysOnTop;
+                        Dictionary<string, object> n = new Dictionary<string, object>(); n["type"] = "setTopMost"; n["value"] = alwaysOnTop;
+                        Dictionary<string, object> w = new Dictionary<string, object>(); w["type"] = "topMostChanged"; w["value"] = alwaysOnTop;
+                        PushEventLocked(nativeQueue, ref nativeSeq, n);
+                        PushEventLocked(webQueue, ref webSeq, w);
+                    }
+                    else if (type == "setTopMost")
+                    {
+                        alwaysOnTop = body.ContainsKey("value") && body["value"] != null && Convert.ToBoolean(body["value"]);
+                        Dictionary<string, object> n = new Dictionary<string, object>(); n["type"] = "setTopMost"; n["value"] = alwaysOnTop;
+                        Dictionary<string, object> w = new Dictionary<string, object>(); w["type"] = "topMostChanged"; w["value"] = alwaysOnTop;
+                        PushEventLocked(nativeQueue, ref nativeSeq, n);
+                        PushEventLocked(webQueue, ref webSeq, w);
+                    }
+                    else if (type == "hideToTray")
+                    {
+                        visible = false;
+                        Dictionary<string, object> n = new Dictionary<string, object>(); n["type"] = "hideToTray";
+                        PushEventLocked(nativeQueue, ref nativeSeq, n);
+                    }
+                    else if (type == "showWindow")
+                    {
+                        visible = true;
+                        Dictionary<string, object> n = new Dictionary<string, object>(); n["type"] = "showWindow";
+                        PushEventLocked(nativeQueue, ref nativeSeq, n);
+                    }
+                    else if (type == "createShortcut")
+                    {
+                        Dictionary<string, object> n = new Dictionary<string, object>(); n["type"] = "createShortcut";
+                        PushEventLocked(nativeQueue, ref nativeSeq, n);
+                    }
+                    else if (type == "bossKeySynced")
+                    {
+                        bossMode = body.ContainsKey("value") && body["value"] != null && Convert.ToBoolean(body["value"]);
+                        Dictionary<string, object> n = new Dictionary<string, object>(); n["type"] = "bossModeSynced"; n["value"] = bossMode;
+                        PushEventLocked(nativeQueue, ref nativeSeq, n);
+                    }
+                    else if (type == "urgentAlarm")
+                    {
+                        urgentAlarmCount = body.ContainsKey("count") && body["count"] != null ? Convert.ToInt32(body["count"]) : 0;
+                        lastUrgentAlarm = body.ContainsKey("summary") && body["summary"] != null ? Convert.ToString(body["summary"]) : "";
+                        bool bringToFront = body.ContainsKey("bringToFront") && body["bringToFront"] is bool && (bool)body["bringToFront"];
+                        if (bringToFront || !visible)
+                        {
+                            visible = true;
+                            Dictionary<string, object> n = new Dictionary<string, object>(); n["type"] = "showWindow";
+                            PushEventLocked(nativeQueue, ref nativeSeq, n);
+                        }
+                    }
+                    else
+                    {
+                        statusCode = 400;
+                        Dictionary<string, object> bad = new Dictionary<string, object>();
+                        bad["status"] = "error";
+                        bad["message"] = "Unknown command type";
+                        return bad;
+                    }
+
+                    statusCode = 200;
+                    Dictionary<string, object> ok = new Dictionary<string, object>();
+                    ok["status"] = "ok";
+                    ok["state"] = BuildDesktopStateDictLocked();
+                    return ok;
+                }
+            }
+            catch (Exception ex)
+            {
+                statusCode = 400;
+                Dictionary<string, object> err = new Dictionary<string, object>();
+                err["status"] = "error";
+                err["message"] = ex.Message;
+                return err;
+            }
+        }
+
+        private Dictionary<string, object> HandleNativeEvent(string rawBody, out int statusCode)
+        {
+            try
+            {
+                JavaScriptSerializer js = CreateSerializer();
+                Dictionary<string, object> body = string.IsNullOrEmpty(rawBody)
+                    ? new Dictionary<string, object>()
+                    : js.Deserialize<Dictionary<string, object>>(rawBody);
+                if (body == null) body = new Dictionary<string, object>();
+
+                string type = body.ContainsKey("type") && body["type"] != null ? Convert.ToString(body["type"]) : "";
+                lock (bridgeLock)
+                {
+                    updatedAt = NowMs();
+                    if (type == "topMostChanged")
+                    {
+                        alwaysOnTop = body.ContainsKey("value") && body["value"] != null && Convert.ToBoolean(body["value"]);
+                        Dictionary<string, object> w = new Dictionary<string, object>(); w["type"] = "topMostChanged"; w["value"] = alwaysOnTop;
+                        PushEventLocked(webQueue, ref webSeq, w);
+                    }
+                    else if (type == "visibilityChanged")
+                    {
+                        visible = body.ContainsKey("value") && body["value"] != null && Convert.ToBoolean(body["value"]);
+                        Dictionary<string, object> w = new Dictionary<string, object>(); w["type"] = "visibilityChanged"; w["value"] = visible;
+                        PushEventLocked(webQueue, ref webSeq, w);
+                    }
+                    else if (type == "toggleBossKey")
+                    {
+                        bossMode = (body.ContainsKey("value") && body["value"] is bool) ? (bool)body["value"] : !bossMode;
+                        Dictionary<string, object> w = new Dictionary<string, object>(); w["type"] = "toggleBossKey"; w["value"] = bossMode;
+                        PushEventLocked(webQueue, ref webSeq, w);
+                    }
+                    else if (type == "lockApp")
+                    {
+                        Dictionary<string, object> w = new Dictionary<string, object>(); w["type"] = "lockApp";
+                        PushEventLocked(webQueue, ref webSeq, w);
+                    }
+                    else if (type == "toast")
+                    {
+                        Dictionary<string, object> w = new Dictionary<string, object>();
+                        w["type"] = "toast";
+                        w["message"] = body.ContainsKey("message") && body["message"] != null ? Convert.ToString(body["message"]) : "";
+                        w["level"] = body.ContainsKey("level") && body["level"] != null ? Convert.ToString(body["level"]) : "info";
+                        PushEventLocked(webQueue, ref webSeq, w);
+                    }
+
+                    statusCode = 200;
+                    Dictionary<string, object> ok = new Dictionary<string, object>();
+                    ok["status"] = "ok";
+                    ok["state"] = BuildDesktopStateDictLocked();
+                    return ok;
+                }
+            }
+            catch (Exception ex)
+            {
+                statusCode = 400;
+                Dictionary<string, object> err = new Dictionary<string, object>();
+                err["status"] = "error";
+                err["message"] = ex.Message;
+                return err;
+            }
+        }
+
+        private object ParseGasJson(string text, JavaScriptSerializer js)
+        {
+            try { return js.DeserializeObject(text); }
+            catch
+            {
+                string clean = Regex.Replace(text ?? "", "<[^>]+>", " ").Trim();
+                if (clean.Length > 120) clean = clean.Substring(0, 120);
+                Dictionary<string, object> err = new Dictionary<string, object>();
+                err["status"] = "error";
+                err["message"] = "Lỗi từ Google: " + clean;
+                return err;
+            }
+        }
+
+        private object HandleGasProxy(string rawBody)
+        {
+            JavaScriptSerializer js = CreateSerializer();
+            try
+            {
+                string requestBody = string.IsNullOrEmpty(rawBody) ? "{}" : rawBody;
+                try
+                {
+                    object parsed = js.DeserializeObject(requestBody);
+                    if (parsed is string) requestBody = (string)parsed;
+                }
+                catch { }
+
+                string encodedReq = Uri.EscapeDataString(requestBody);
+                if (encodedReq.Length <= 3500)
+                {
+                    try
+                    {
+                        HttpWebRequest getReq = (HttpWebRequest)WebRequest.Create(GAS_TARGET_URL + "?req=" + encodedReq);
+                        getReq.Method = "GET";
+                        getReq.Timeout = 20000;
+                        using (HttpWebResponse resp = (HttpWebResponse)getReq.GetResponse())
+                        using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                        {
+                            object getData = ParseGasJson(sr.ReadToEnd(), js);
+                            Dictionary<string, object> getDict = getData as Dictionary<string, object>;
+                            if (getDict != null && getDict.ContainsKey("status"))
+                            {
+                                string st = Convert.ToString(getDict["status"]);
+                                if (st == "success" || st == "error") return getData;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                byte[] bytes = Encoding.UTF8.GetBytes(requestBody);
+                HttpWebRequest postReq = (HttpWebRequest)WebRequest.Create(GAS_TARGET_URL);
+                postReq.Method = "POST";
+                postReq.ContentType = "text/plain;charset=utf-8";
+                postReq.ContentLength = bytes.Length;
+                postReq.Timeout = 20000;
+                using (Stream reqStream = postReq.GetRequestStream()) reqStream.Write(bytes, 0, bytes.Length);
+                using (HttpWebResponse resp = (HttpWebResponse)postReq.GetResponse())
+                using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                {
+                    return ParseGasJson(sr.ReadToEnd(), js);
+                }
+            }
+            catch (Exception ex)
+            {
+                Dictionary<string, object> err = new Dictionary<string, object>();
+                err["status"] = "error";
+                err["message"] = ex.Message;
+                return err;
+            }
+        }
+
+        private void TryServeStaticFile(NetworkStream stream, string rawPath)
+        {
+            string decoded;
+            try { decoded = Uri.UnescapeDataString(rawPath); }
+            catch
+            {
+                WriteTextResponse(stream, 400, "Bad Request", "400 Bad Request");
+                return;
+            }
+
+            if (decoded == "/" || decoded == "\\") decoded = "/mail_activator.html";
+            string rel = decoded.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar);
+            string rootFull = Path.GetFullPath(rootDir).TrimEnd(Path.DirectorySeparatorChar);
+            string filePath = Path.GetFullPath(Path.Combine(rootFull, rel));
+
+            if (!filePath.Equals(rootFull, StringComparison.OrdinalIgnoreCase) &&
+                !filePath.StartsWith(rootFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            {
+                WriteTextResponse(stream, 403, "Forbidden", "403 Forbidden");
+                return;
+            }
+
+            if (!File.Exists(filePath))
+            {
+                WriteTextResponse(stream, 404, "Not Found", "404 Not Found: " + decoded);
+                return;
+            }
+
+            string ext = Path.GetExtension(filePath);
+            string contentType;
+            if (!MIME_TYPES.TryGetValue(ext, out contentType)) contentType = "application/octet-stream";
+            byte[] data = File.ReadAllBytes(filePath);
+            WriteHttpResponse(stream, 200, "OK", contentType, data, false);
+        }
+
+        private void SendJsonResponse(NetworkStream stream, int code, string statusText, object data)
+        {
+            string jsonText = CreateSerializer().Serialize(data);
+            WriteHttpResponse(stream, code, statusText, "application/json; charset=UTF-8", Encoding.UTF8.GetBytes(jsonText), true);
+        }
+
+        private static void WriteTextResponse(NetworkStream stream, int code, string statusText, string text)
+        {
+            WriteHttpResponse(stream, code, statusText, "text/plain; charset=UTF-8", Encoding.UTF8.GetBytes(text ?? ""), false);
+        }
+
+        private static void WriteHttpResponse(NetworkStream stream, int code, string statusText, string contentType, byte[] bodyBytes, bool noStore)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("HTTP/1.1 {0} {1}\r\n", code, statusText);
+            sb.AppendFormat("Content-Type: {0}\r\n", contentType);
+            sb.AppendFormat("Content-Length: {0}\r\n", bodyBytes.Length);
+            sb.Append("Access-Control-Allow-Origin: *\r\n");
+            sb.Append("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n");
+            sb.Append("Access-Control-Allow-Headers: Content-Type\r\n");
+            if (noStore) sb.Append("Cache-Control: no-store\r\n");
+            sb.Append("Connection: close\r\n\r\n");
+
+            byte[] headerBytes = Encoding.ASCII.GetBytes(sb.ToString());
+            stream.Write(headerBytes, 0, headerBytes.Length);
+            if (bodyBytes.Length > 0) stream.Write(bodyBytes, 0, bodyBytes.Length);
         }
     }
 

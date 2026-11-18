@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -7,10 +8,13 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
@@ -561,6 +565,7 @@ namespace PassionMayhemDesktop
         private readonly JavaScriptSerializer json = new JavaScriptSerializer();
 
         private Process nodeProcess;
+        private EmbeddedMayhemHttpServer fallbackServer;
         private Process browserProcess;
         private IntPtr appHwnd = IntPtr.Zero;
         private DateTime launchTimeUtc = DateTime.UtcNow;
@@ -842,29 +847,114 @@ namespace PassionMayhemDesktop
             catch { return false; }
         }
 
-        private string FindNodeExecutable()
+        private sealed class NodeRuntimeCandidate
         {
-            string[] candidates = new string[]
+            public string ExePath;
+            public bool UseElectronAsNode;
+        }
+
+        private void AddRuntimeCandidate(List<NodeRuntimeCandidate> list, HashSet<string> seen, string exePath, bool useElectronAsNode)
+        {
+            if (string.IsNullOrEmpty(exePath)) return;
+            try
             {
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "nodejs\\node.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "nodejs\\node.exe"),
-                "C:\\Program Files\\nodejs\\node.exe",
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Antigravity\\bin\\node.exe")
-            };
-            for (int i = 0; i < candidates.Length; i++)
-            {
-                if (File.Exists(candidates[i])) return candidates[i];
+                string full = Path.GetFullPath(exePath.Trim().Trim('"'));
+                if (!File.Exists(full)) return;
+                string key = full.ToLowerInvariant() + "|" + (useElectronAsNode ? "1" : "0");
+                if (seen.Add(key))
+                {
+                    list.Add(new NodeRuntimeCandidate { ExePath = full, UseElectronAsNode = useElectronAsNode });
+                }
             }
+            catch { }
+        }
+
+        private string TryExtractExeFromCmd(string cmdPath)
+        {
+            try
+            {
+                if (!File.Exists(cmdPath)) return null;
+                string text = File.ReadAllText(cmdPath, Encoding.UTF8);
+                Match quoted = Regex.Match(text, "\"([^\"]+?\\.exe)\"", RegexOptions.IgnoreCase);
+                if (quoted.Success && File.Exists(quoted.Groups[1].Value)) return quoted.Groups[1].Value;
+                Match unquoted = Regex.Match(text, @"([A-Za-z]:\\[^\s""']+?\.exe)", RegexOptions.IgnoreCase);
+                if (unquoted.Success && File.Exists(unquoted.Groups[1].Value)) return unquoted.Groups[1].Value;
+            }
+            catch { }
+            return null;
+        }
+
+        private List<NodeRuntimeCandidate> FindNodeRuntimes()
+        {
+            List<NodeRuntimeCandidate> list = new List<NodeRuntimeCandidate>();
+            HashSet<string> seen = new HashSet<string>();
+
+            string pf64 = Environment.GetEnvironmentVariable("ProgramW6432") ?? "";
+            string pf = Environment.GetEnvironmentVariable("ProgramFiles") ?? Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string pfx86 = Environment.GetEnvironmentVariable("ProgramFiles(x86)") ?? Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            string commonPf64 = Environment.GetEnvironmentVariable("CommonProgramW6432") ?? "";
+            string commonPf = Environment.GetEnvironmentVariable("CommonProgramFiles") ?? "";
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            // 1. Standard Node.js installations
+            AddRuntimeCandidate(list, seen, Path.Combine(pf64, "nodejs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(pf, "nodejs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(pfx86, "nodejs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, "C:\\Program Files\\nodejs\\node.exe", false);
+            AddRuntimeCandidate(list, seen, Path.Combine(localAppData, "Programs\\nodejs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(userProfile, ".volta\\bin\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(userProfile, "scoop\\apps\\nodejs-lts\\current\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(userProfile, "scoop\\apps\\nodejs\\current\\node.exe"), false);
+
+            string[] nvmRoots = new string[]
+            {
+                Path.Combine(appData, "nvm"),
+                Path.Combine(localAppData, "nvm")
+            };
+            for (int r = 0; r < nvmRoots.Length; r++)
+            {
+                try
+                {
+                    if (!Directory.Exists(nvmRoots[r])) continue;
+                    string[] subDirs = Directory.GetDirectories(nvmRoots[r], "v*");
+                    for (int s = 0; s < subDirs.Length; s++)
+                    {
+                        AddRuntimeCandidate(list, seen, Path.Combine(subDirs[s], "node.exe"), false);
+                    }
+                }
+                catch { }
+            }
+
             string pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
             string[] dirs = pathEnv.Split(';');
             for (int i = 0; i < dirs.Length; i++)
             {
                 string d = dirs[i].Trim();
                 if (string.IsNullOrEmpty(d)) continue;
-                string p = Path.Combine(d, "node.exe");
-                if (File.Exists(p)) return p;
+                AddRuntimeCandidate(list, seen, Path.Combine(d, "node.exe"), false);
             }
-            return "node.exe";
+
+            // 2. Electron-as-Node binaries (Antigravity / VS Code / Cursor)
+            string agyCmd = Path.Combine(appData, "Antigravity\\bin\\agy-node.cmd");
+            string agyFromCmd = TryExtractExeFromCmd(agyCmd);
+            AddRuntimeCandidate(list, seen, agyFromCmd, true);
+            AddRuntimeCandidate(list, seen, Path.Combine(localAppData, "Programs\\antigravity\\Antigravity.exe"), true);
+            AddRuntimeCandidate(list, seen, Path.Combine(pf, "Antigravity\\Antigravity.exe"), true);
+            AddRuntimeCandidate(list, seen, Path.Combine(localAppData, "Programs\\Microsoft VS Code\\Code.exe"), true);
+            AddRuntimeCandidate(list, seen, Path.Combine(pf, "Microsoft VS Code\\Code.exe"), true);
+            AddRuntimeCandidate(list, seen, Path.Combine(localAppData, "Programs\\cursor\\Cursor.exe"), true);
+
+            // 3. Bundled third-party Node.js runtimes (e.g. Adobe Creative Cloud)
+            AddRuntimeCandidate(list, seen, Path.Combine(pf64, "Adobe\\Adobe Creative Cloud Experience\\libs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(pf, "Adobe\\Adobe Creative Cloud Experience\\libs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, "C:\\Program Files\\Adobe\\Adobe Creative Cloud Experience\\libs\\node.exe", false);
+            AddRuntimeCandidate(list, seen, Path.Combine(commonPf64, "Adobe\\Creative Cloud Libraries\\libs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, Path.Combine(commonPf, "Adobe\\Creative Cloud Libraries\\libs\\node.exe"), false);
+            AddRuntimeCandidate(list, seen, "C:\\Program Files\\Common Files\\Adobe\\Creative Cloud Libraries\\libs\\node.exe", false);
+
+            return list;
         }
 
         private string FindBrowserExecutable()
@@ -960,29 +1050,75 @@ namespace PassionMayhemDesktop
         {
             if (CheckHealthEndpoint(serverPort)) return true;
 
-            string nodeExe = FindNodeExecutable();
             string serverScript = Path.Combine(appDir, "server\\server.mjs");
-            if (!File.Exists(serverScript)) return false;
-
-            ProcessStartInfo psi = new ProcessStartInfo();
-            psi.FileName = nodeExe;
-            psi.Arguments = "\"" + serverScript + "\"";
-            psi.WorkingDirectory = appDir;
-            psi.UseShellExecute = false;
-            psi.CreateNoWindow = true;
-            psi.WindowStyle = ProcessWindowStyle.Hidden;
-            psi.EnvironmentVariables["PORT"] = serverPort.ToString();
-
-            try { nodeProcess = Process.Start(psi); }
-            catch { return false; }
-
-            DateTime deadline = DateTime.UtcNow.AddSeconds(10);
-            while (DateTime.UtcNow < deadline)
+            if (File.Exists(serverScript))
             {
-                if (CheckHealthEndpoint(serverPort)) return true;
-                if (nodeProcess != null && nodeProcess.HasExited) return false;
-                Thread.Sleep(150);
+                List<NodeRuntimeCandidate> runtimes = FindNodeRuntimes();
+                for (int i = 0; i < runtimes.Count; i++)
+                {
+                    NodeRuntimeCandidate cand = runtimes[i];
+                    ProcessStartInfo psi = new ProcessStartInfo();
+                    psi.FileName = cand.ExePath;
+                    psi.Arguments = "\"" + serverScript + "\"";
+                    psi.WorkingDirectory = appDir;
+                    psi.UseShellExecute = false;
+                    psi.CreateNoWindow = true;
+                    psi.WindowStyle = ProcessWindowStyle.Hidden;
+                    psi.EnvironmentVariables["PORT"] = serverPort.ToString();
+                    if (cand.UseElectronAsNode)
+                    {
+                        psi.EnvironmentVariables["ELECTRON_RUN_AS_NODE"] = "1";
+                    }
+
+                    Process proc = null;
+                    try { proc = Process.Start(psi); }
+                    catch { proc = null; }
+                    if (proc == null) continue;
+
+                    DateTime deadline = DateTime.UtcNow.AddSeconds(6);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        if (CheckHealthEndpoint(serverPort))
+                        {
+                            nodeProcess = proc;
+                            return true;
+                        }
+                        if (proc.HasExited) break;
+                        Thread.Sleep(150);
+                    }
+
+                    try
+                    {
+                        if (!proc.HasExited) proc.Kill();
+                        proc.Dispose();
+                    }
+                    catch { }
+                }
             }
+
+            return StartEmbeddedFallbackServer();
+        }
+
+        private bool StartEmbeddedFallbackServer()
+        {
+            try
+            {
+                if (fallbackServer != null)
+                {
+                    fallbackServer.Stop();
+                    fallbackServer = null;
+                }
+                fallbackServer = new EmbeddedMayhemHttpServer(appDir, serverPort);
+                fallbackServer.Start();
+
+                DateTime deadline = DateTime.UtcNow.AddSeconds(3);
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (CheckHealthEndpoint(serverPort)) return true;
+                    Thread.Sleep(50);
+                }
+            }
+            catch { }
             return false;
         }
 
@@ -1788,8 +1924,845 @@ namespace PassionMayhemDesktop
             {
                 try { if (!nodeProcess.HasExited) nodeProcess.Kill(); nodeProcess.Dispose(); } catch { }
             }
+            if (fallbackServer != null)
+            {
+                try { fallbackServer.Stop(); } catch { }
+                fallbackServer = null;
+            }
             try { if (wakeEvent != null) wakeEvent.Close(); } catch { }
             try { Application.Exit(); } catch { }
+        }
+    }
+
+    internal sealed class EmbeddedMayhemHttpServer
+    {
+        private const string GAS_TARGET_URL = "https://script.google.com/macros/s/AKfycbyTs0IMHFSOi9NH-UPPCq85oieHpM7w_dKE1WdJxj01vDB4ycdwPvo9udh8Df-Ashg_Fg/exec";
+        private static readonly object tlsLock = new object();
+        private static bool tlsConfigured = false;
+
+        private static readonly Dictionary<string, string> MIME_TYPES = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { ".html", "text/html; charset=UTF-8" },
+            { ".css", "text/css; charset=UTF-8" },
+            { ".js", "application/javascript; charset=UTF-8" },
+            { ".mjs", "application/javascript; charset=UTF-8" },
+            { ".json", "application/json; charset=UTF-8" },
+            { ".png", "image/png" },
+            { ".jpg", "image/jpeg" },
+            { ".jpeg", "image/jpeg" },
+            { ".svg", "image/svg+xml" },
+            { ".ico", "image/x-icon" },
+            { ".webp", "image/webp" },
+            { ".woff2", "font/woff2" }
+        };
+
+        private readonly string rootDir;
+        private readonly int port;
+        private readonly object stateLock = new object();
+        private TcpListener listener;
+        private Thread acceptThread;
+        private volatile bool running = false;
+
+        private string mapMode = "pirate_60";
+        private Dictionary<string, object> minimap;
+        private List<Dictionary<string, object>> relicTimers;
+        private Dictionary<string, object> advisorSummary;
+        private Dictionary<string, object> pendingAction = null;
+        private long pendingActionSeq = 0;
+        private long relicEventSeq = 0;
+        private Dictionary<string, object> lastRelicTrigger = null;
+        private Dictionary<string, object> lastCapturedFrame = null;
+        private long capturedFrameSeq = 0;
+        private long updatedAt = NowMs();
+
+        public EmbeddedMayhemHttpServer(string appRootDir, int listenPort)
+        {
+            rootDir = appRootDir;
+            port = listenPort;
+            InitState();
+            EnsureTlsConfigured();
+        }
+
+        private void InitState()
+        {
+            minimap = new Dictionary<string, object>();
+            minimap["scale"] = 1.0;
+            minimap["sizePx"] = 260;
+            minimap["offsetX"] = 16;
+            minimap["offsetY"] = 16;
+            minimap["flipped"] = false;
+            minimap["autoDetect"] = true;
+            minimap["calibrateMode"] = false;
+            minimap["showMinimapOverlay"] = true;
+            minimap["showHudOverlay"] = true;
+            minimap["autoWatchPixels"] = true;
+            minimap["gameWidth"] = 1920;
+            minimap["gameHeight"] = 1080;
+            minimap["detectedSource"] = "default";
+
+            relicTimers = new List<Dictionary<string, object>>();
+            relicTimers.Add(MakeRelic("ally_inner", "Trụ Trong Đồng Minh", "Trong Ta", 0.25, 0.75));
+            relicTimers.Add(MakeRelic("ally_outer", "Trụ Ngoài Đồng Minh", "Ngoài Ta", 0.41, 0.59));
+            relicTimers.Add(MakeRelic("enemy_outer", "Trụ Ngoài Đối Phương", "Ngoài Địch", 0.59, 0.41));
+            relicTimers.Add(MakeRelic("enemy_inner", "Trụ Trong Đối Phương", "Trong Địch", 0.75, 0.25));
+
+            advisorSummary = new Dictionary<string, object>();
+            advisorSummary["champName"] = "Vi";
+            advisorSummary["champTier"] = "S";
+            advisorSummary["bestAugment"] = "";
+            advisorSummary["bestScore"] = 0;
+            advisorSummary["nextItems"] = new object[0];
+            advisorSummary["tacticalNote"] = "";
+        }
+
+        private static Dictionary<string, object> MakeRelic(string id, string label, string shortLabel, double nx, double ny)
+        {
+            Dictionary<string, object> d = new Dictionary<string, object>();
+            d["id"] = id;
+            d["label"] = label;
+            d["short"] = shortLabel;
+            d["nx"] = nx;
+            d["ny"] = ny;
+            d["remaining"] = 0;
+            d["total"] = 60;
+            d["running"] = false;
+            return d;
+        }
+
+        private static long NowMs()
+        {
+            return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
+        }
+
+        private static JavaScriptSerializer CreateSerializer()
+        {
+            JavaScriptSerializer js = new JavaScriptSerializer();
+            js.MaxJsonLength = 32 * 1024 * 1024;
+            return js;
+        }
+
+        private static void EnsureTlsConfigured()
+        {
+            if (tlsConfigured) return;
+            lock (tlsLock)
+            {
+                if (tlsConfigured) return;
+                try { ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072 | (SecurityProtocolType)768; } catch { }
+                try { ServicePointManager.Expect100Continue = false; } catch { }
+                try
+                {
+                    RemoteCertificateValidationCallback existing = ServicePointManager.ServerCertificateValidationCallback;
+                    ServicePointManager.ServerCertificateValidationCallback = delegate(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
+                    {
+                        HttpWebRequest req = sender as HttpWebRequest;
+                        if (req != null && req.Address != null && (req.Address.Host == "127.0.0.1" || req.Address.Host == "localhost"))
+                        {
+                            return true;
+                        }
+                        if (existing != null) return existing(sender, cert, chain, errors);
+                        return errors == SslPolicyErrors.None;
+                    };
+                }
+                catch { }
+                tlsConfigured = true;
+            }
+        }
+
+        public void Start()
+        {
+            if (running) return;
+            running = true;
+            listener = new TcpListener(IPAddress.Loopback, port);
+            listener.Start();
+            acceptThread = new Thread(AcceptLoop);
+            acceptThread.IsBackground = true;
+            acceptThread.Start();
+        }
+
+        public void Stop()
+        {
+            running = false;
+            try { if (listener != null) listener.Stop(); } catch { }
+        }
+
+        private void AcceptLoop()
+        {
+            while (running)
+            {
+                try
+                {
+                    TcpClient client = listener.AcceptTcpClient();
+                    ThreadPool.QueueUserWorkItem(HandleClient, client);
+                }
+                catch
+                {
+                    if (!running) break;
+                    Thread.Sleep(50);
+                }
+            }
+        }
+
+        private sealed class ParsedHttpRequest
+        {
+            public string Method;
+            public string Path;
+            public string Query;
+            public string Body;
+        }
+
+        private static int FindHeaderEnd(List<byte> buf)
+        {
+            for (int i = 0; i <= buf.Count - 4; i++)
+            {
+                if (buf[i] == 13 && buf[i + 1] == 10 && buf[i + 2] == 13 && buf[i + 3] == 10) return i;
+            }
+            return -1;
+        }
+
+        private static ParsedHttpRequest ReadHttpRequest(NetworkStream stream)
+        {
+            List<byte> buf = new List<byte>(4096);
+            byte[] tmp = new byte[4096];
+            int headerEnd = -1;
+
+            while (headerEnd < 0)
+            {
+                int n = stream.Read(tmp, 0, tmp.Length);
+                if (n <= 0) return null;
+                for (int i = 0; i < n; i++) buf.Add(tmp[i]);
+                headerEnd = FindHeaderEnd(buf);
+                if (buf.Count > 1048576) return null;
+            }
+
+            string headerText = Encoding.ASCII.GetString(buf.ToArray(), 0, headerEnd);
+            string[] lines = headerText.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+            if (lines.Length == 0) return null;
+
+            string[] parts = lines[0].Split(' ');
+            if (parts.Length < 2) return null;
+
+            int contentLength = 0;
+            bool expectContinue = false;
+            for (int i = 1; i < lines.Length; i++)
+            {
+                int colon = lines[i].IndexOf(':');
+                if (colon <= 0) continue;
+                string name = lines[i].Substring(0, colon).Trim();
+                string val = lines[i].Substring(colon + 1).Trim();
+                if (name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                {
+                    int cl;
+                    if (int.TryParse(val, out cl) && cl > 0) contentLength = Math.Min(cl, 32 * 1024 * 1024);
+                }
+                else if (name.Equals("Expect", StringComparison.OrdinalIgnoreCase) && val.IndexOf("100-continue", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    expectContinue = true;
+                }
+            }
+
+            if (expectContinue)
+            {
+                byte[] cont = Encoding.ASCII.GetBytes("HTTP/1.1 100 Continue\r\n\r\n");
+                stream.Write(cont, 0, cont.Length);
+            }
+
+            int bodyStart = headerEnd + 4;
+            int alreadyHave = buf.Count - bodyStart;
+            byte[] bodyBytes = new byte[contentLength];
+            if (contentLength > 0)
+            {
+                int copyLen = Math.Min(alreadyHave, contentLength);
+                if (copyLen > 0) buf.CopyTo(bodyStart, bodyBytes, 0, copyLen);
+                int offset = copyLen;
+                while (offset < contentLength)
+                {
+                    int n = stream.Read(bodyBytes, offset, contentLength - offset);
+                    if (n <= 0) break;
+                    offset += n;
+                }
+            }
+
+            string rawTarget = parts[1];
+            string pathPart = rawTarget;
+            string queryPart = "";
+            int qIdx = rawTarget.IndexOf('?');
+            if (qIdx >= 0)
+            {
+                pathPart = rawTarget.Substring(0, qIdx);
+                queryPart = rawTarget.Substring(qIdx + 1);
+            }
+
+            return new ParsedHttpRequest
+            {
+                Method = parts[0].ToUpperInvariant(),
+                Path = pathPart,
+                Query = queryPart,
+                Body = contentLength > 0 ? Encoding.UTF8.GetString(bodyBytes) : ""
+            };
+        }
+
+        private static string GetQueryParam(string query, string key)
+        {
+            if (string.IsNullOrEmpty(query)) return null;
+            string[] pairs = query.Split('&');
+            for (int i = 0; i < pairs.Length; i++)
+            {
+                int eq = pairs[i].IndexOf('=');
+                string k = eq >= 0 ? pairs[i].Substring(0, eq) : pairs[i];
+                string v = eq >= 0 ? pairs[i].Substring(eq + 1) : "";
+                if (Uri.UnescapeDataString(k.Replace('+', ' ')) == key)
+                {
+                    return Uri.UnescapeDataString(v.Replace('+', ' '));
+                }
+            }
+            return null;
+        }
+
+        private void HandleClient(object state)
+        {
+            TcpClient client = (TcpClient)state;
+            try
+            {
+                client.ReceiveTimeout = 10000;
+                client.SendTimeout = 10000;
+                using (client)
+                using (NetworkStream stream = client.GetStream())
+                {
+                    ParsedHttpRequest req = ReadHttpRequest(stream);
+                    if (req == null) return;
+
+                    if (req.Method == "OPTIONS")
+                    {
+                        WriteHttpResponse(stream, 204, "No Content", "text/plain; charset=UTF-8", new byte[0], false);
+                        return;
+                    }
+
+                    if (req.Path == "/api/proxy" && req.Method == "POST")
+                    {
+                        SendJsonResponse(stream, 200, "OK", HandleGasProxy(req.Body));
+                        return;
+                    }
+
+                    if (req.Path == "/api/mayhem/health" && req.Method == "GET")
+                    {
+                        Dictionary<string, object> health = new Dictionary<string, object>();
+                        health["status"] = "ok";
+                        health["app"] = "passion-mayhem-desktop";
+                        health["port"] = port;
+                        SendJsonResponse(stream, 200, "OK", health);
+                        return;
+                    }
+
+                    if (req.Path == "/api/mayhem/live-client" && req.Method == "GET")
+                    {
+                        SendJsonResponse(stream, 200, "OK", FetchRiotLiveClient());
+                        return;
+                    }
+
+                    if (req.Path == "/api/mayhem/riot-config" && req.Method == "GET")
+                    {
+                        SendJsonResponse(stream, 200, "OK", ReadRiotConfig());
+                        return;
+                    }
+
+                    if (req.Path == "/api/mayhem/state" && req.Method == "GET")
+                    {
+                        bool includeFrame = GetQueryParam(req.Query, "includeFrame") == "1";
+                        SendJsonResponse(stream, 200, "OK", BuildMayhemStateSnapshot(includeFrame));
+                        return;
+                    }
+
+                    if (req.Path == "/api/mayhem/state" && req.Method == "POST")
+                    {
+                        try
+                        {
+                            SendJsonResponse(stream, 200, "OK", ApplyMayhemStatePost(req.Body));
+                        }
+                        catch (Exception ex)
+                        {
+                            Dictionary<string, object> err = new Dictionary<string, object>();
+                            err["status"] = "error";
+                            err["message"] = ex.Message;
+                            SendJsonResponse(stream, 400, "Bad Request", err);
+                        }
+                        return;
+                    }
+
+                    TryServeStaticFile(stream, req.Path);
+                }
+            }
+            catch { }
+        }
+
+        private Dictionary<string, object> BuildMayhemStateSnapshot(bool includeFrame)
+        {
+            lock (stateLock)
+            {
+                Dictionary<string, object> outObj = new Dictionary<string, object>();
+                outObj["mapMode"] = mapMode;
+                outObj["minimap"] = new Dictionary<string, object>(minimap);
+
+                List<object> relicsCopy = new List<object>(relicTimers.Count);
+                for (int i = 0; i < relicTimers.Count; i++)
+                {
+                    relicsCopy.Add(new Dictionary<string, object>(relicTimers[i]));
+                }
+                outObj["relicTimers"] = relicsCopy.ToArray();
+                outObj["advisorSummary"] = new Dictionary<string, object>(advisorSummary);
+                outObj["pendingAction"] = pendingAction != null ? new Dictionary<string, object>(pendingAction) : null;
+                outObj["pendingActionSeq"] = pendingActionSeq;
+                outObj["relicEventSeq"] = relicEventSeq;
+                outObj["lastRelicTrigger"] = lastRelicTrigger != null ? new Dictionary<string, object>(lastRelicTrigger) : null;
+                outObj["capturedFrameSeq"] = capturedFrameSeq;
+                outObj["updatedAt"] = updatedAt;
+                if (includeFrame && lastCapturedFrame != null)
+                {
+                    outObj["lastCapturedFrame"] = new Dictionary<string, object>(lastCapturedFrame);
+                }
+                return outObj;
+            }
+        }
+
+        private Dictionary<string, object> ApplyMayhemStatePost(string rawBody)
+        {
+            JavaScriptSerializer js = CreateSerializer();
+            Dictionary<string, object> body = string.IsNullOrEmpty(rawBody)
+                ? new Dictionary<string, object>()
+                : js.Deserialize<Dictionary<string, object>>(rawBody);
+            if (body == null) body = new Dictionary<string, object>();
+
+            lock (stateLock)
+            {
+                updatedAt = NowMs();
+
+                if (body.ContainsKey("mapMode") && body["mapMode"] is string)
+                {
+                    string m = (string)body["mapMode"];
+                    if (m == "pirate_60" || m == "abyss_90") mapMode = m;
+                }
+
+                Dictionary<string, object> mm = body.ContainsKey("minimap") ? body["minimap"] as Dictionary<string, object> : null;
+                if (mm != null)
+                {
+                    foreach (KeyValuePair<string, object> kv in mm) minimap[kv.Key] = kv.Value;
+                }
+
+                if (body.ContainsKey("triggerRelicIndex") && body["triggerRelicIndex"] != null)
+                {
+                    int idx = Convert.ToInt32(body["triggerRelicIndex"]);
+                    if (idx >= 0 && idx < relicTimers.Count)
+                    {
+                        int cd = (body.ContainsKey("total") && body["total"] != null && Convert.ToInt32(body["total"]) != 0)
+                            ? Convert.ToInt32(body["total"])
+                            : (mapMode == "pirate_60" ? 60 : 90);
+                        relicTimers[idx]["total"] = cd;
+                        relicTimers[idx]["remaining"] = cd;
+                        relicTimers[idx]["running"] = true;
+                        relicEventSeq += 1;
+                        Dictionary<string, object> trig = new Dictionary<string, object>();
+                        trig["seq"] = relicEventSeq;
+                        trig["index"] = idx;
+                        trig["id"] = relicTimers[idx]["id"];
+                        trig["total"] = cd;
+                        trig["ts"] = NowMs();
+                        lastRelicTrigger = trig;
+                    }
+                }
+
+                IList rtArr = body.ContainsKey("relicTimers") ? body["relicTimers"] as IList : null;
+                if (rtArr != null)
+                {
+                    List<Dictionary<string, object>> nextList = new List<Dictionary<string, object>>();
+                    for (int i = 0; i < rtArr.Count; i++)
+                    {
+                        Dictionary<string, object> merged = i < relicTimers.Count
+                            ? new Dictionary<string, object>(relicTimers[i])
+                            : new Dictionary<string, object>();
+                        Dictionary<string, object> item = rtArr[i] as Dictionary<string, object>;
+                        if (item != null)
+                        {
+                            foreach (KeyValuePair<string, object> kv in item) merged[kv.Key] = kv.Value;
+                        }
+                        nextList.Add(merged);
+                    }
+                    relicTimers = nextList;
+                }
+
+                Dictionary<string, object> adv = body.ContainsKey("advisorSummary") ? body["advisorSummary"] as Dictionary<string, object> : null;
+                if (adv != null)
+                {
+                    foreach (KeyValuePair<string, object> kv in adv) advisorSummary[kv.Key] = kv.Value;
+                }
+
+                if (body.ContainsKey("triggerAction") && body["triggerAction"] is string)
+                {
+                    string act = (string)body["triggerAction"];
+                    if (!string.IsNullOrEmpty(act))
+                    {
+                        pendingActionSeq += 1;
+                        Dictionary<string, object> pa = new Dictionary<string, object>();
+                        pa["seq"] = pendingActionSeq;
+                        pa["action"] = act;
+                        pa["ts"] = NowMs();
+                        pendingAction = pa;
+                    }
+                }
+
+                if (body.ContainsKey("clearPendingActionSeq") && body["clearPendingActionSeq"] != null && pendingAction != null)
+                {
+                    long clearSeq = Convert.ToInt64(body["clearPendingActionSeq"]);
+                    long curSeq = Convert.ToInt64(pendingAction["seq"]);
+                    if (clearSeq > 0 && clearSeq >= curSeq) pendingAction = null;
+                }
+
+                Dictionary<string, object> frame = body.ContainsKey("lastCapturedFrame") ? body["lastCapturedFrame"] as Dictionary<string, object> : null;
+                if (frame != null && frame.ContainsKey("base64") && !string.IsNullOrEmpty(Convert.ToString(frame["base64"])))
+                {
+                    capturedFrameSeq += 1;
+                    Dictionary<string, object> saved = new Dictionary<string, object>();
+                    saved["seq"] = capturedFrameSeq;
+                    saved["base64"] = Convert.ToString(frame["base64"]);
+                    saved["mimeType"] = frame.ContainsKey("mimeType") && frame["mimeType"] != null ? Convert.ToString(frame["mimeType"]) : "image/jpeg";
+                    saved["action"] = frame.ContainsKey("action") && frame["action"] != null ? Convert.ToString(frame["action"]) : "scan-aug";
+                    saved["ts"] = NowMs();
+                    lastCapturedFrame = saved;
+                }
+
+                Dictionary<string, object> resp = new Dictionary<string, object>();
+                resp["status"] = "ok";
+                resp["pendingActionSeq"] = pendingActionSeq;
+                resp["capturedFrameSeq"] = capturedFrameSeq;
+                resp["minimap"] = new Dictionary<string, object>(minimap);
+                return resp;
+            }
+        }
+
+        private Dictionary<string, object> FetchRiotLiveClient()
+        {
+            Dictionary<string, object> fail = new Dictionary<string, object>();
+            fail["connected"] = false;
+            try
+            {
+                HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://127.0.0.1:2999/liveclientdata/allgamedata");
+                req.Method = "GET";
+                req.Proxy = null;
+                req.Timeout = 1200;
+                req.ReadWriteTimeout = 1200;
+
+                string raw;
+                using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                {
+                    raw = sr.ReadToEnd();
+                }
+
+                JavaScriptSerializer js = CreateSerializer();
+                Dictionary<string, object> data = js.Deserialize<Dictionary<string, object>>(raw);
+                Dictionary<string, object> gameData = data != null && data.ContainsKey("gameData") ? data["gameData"] as Dictionary<string, object> : null;
+                Dictionary<string, object> active = data != null && data.ContainsKey("activePlayer") ? data["activePlayer"] as Dictionary<string, object> : null;
+                IList allPlayersRaw = data != null && data.ContainsKey("allPlayers") ? data["allPlayers"] as IList : null;
+
+                string activeSummoner = active != null && active.ContainsKey("summonerName") && active["summonerName"] != null ? Convert.ToString(active["summonerName"]) : "";
+                string activeRiotId = active != null && active.ContainsKey("riotId") && active["riotId"] != null ? Convert.ToString(active["riotId"]) : "";
+                string activeChamp = "";
+
+                List<object> playersOut = new List<object>();
+                if (allPlayersRaw != null)
+                {
+                    for (int i = 0; i < allPlayersRaw.Count; i++)
+                    {
+                        Dictionary<string, object> p = allPlayersRaw[i] as Dictionary<string, object>;
+                        if (p == null) continue;
+                        string pChamp = p.ContainsKey("championName") && p["championName"] != null ? Convert.ToString(p["championName"]) : "";
+                        string pSum = p.ContainsKey("summonerName") && p["summonerName"] != null ? Convert.ToString(p["summonerName"]) : "";
+                        string pRiot = p.ContainsKey("riotId") && p["riotId"] != null ? Convert.ToString(p["riotId"]) : "";
+
+                        if (active != null && active.ContainsKey("championStats") && ((pSum == activeSummoner && !string.IsNullOrEmpty(pSum)) || (pRiot == activeRiotId && !string.IsNullOrEmpty(pRiot))))
+                        {
+                            activeChamp = pChamp;
+                        }
+
+                        List<object> itemsOut = new List<object>();
+                        IList pItems = p.ContainsKey("items") ? p["items"] as IList : null;
+                        if (pItems != null)
+                        {
+                            for (int j = 0; j < pItems.Count; j++)
+                            {
+                                Dictionary<string, object> it = pItems[j] as Dictionary<string, object>;
+                                if (it == null) continue;
+                                Dictionary<string, object> itObj = new Dictionary<string, object>();
+                                itObj["itemID"] = it.ContainsKey("itemID") ? it["itemID"] : 0;
+                                itObj["displayName"] = it.ContainsKey("displayName") ? it["displayName"] : "";
+                                itemsOut.Add(itObj);
+                            }
+                        }
+
+                        Dictionary<string, object> pObj = new Dictionary<string, object>();
+                        pObj["championName"] = pChamp;
+                        pObj["team"] = p.ContainsKey("team") && p["team"] != null ? Convert.ToString(p["team"]) : "";
+                        pObj["level"] = p.ContainsKey("level") && p["level"] != null ? Convert.ToInt32(p["level"]) : 1;
+                        pObj["isDead"] = p.ContainsKey("isDead") && p["isDead"] != null && Convert.ToBoolean(p["isDead"]);
+                        pObj["items"] = itemsOut.ToArray();
+                        playersOut.Add(pObj);
+                    }
+                }
+
+                Dictionary<string, object> activeOut = new Dictionary<string, object>();
+                activeOut["championName"] = activeChamp;
+                activeOut["level"] = active != null && active.ContainsKey("level") && active["level"] != null ? Convert.ToInt32(active["level"]) : 1;
+                activeOut["currentGold"] = active != null && active.ContainsKey("currentGold") && active["currentGold"] != null ? Convert.ToDouble(active["currentGold"]) : 0.0;
+                activeOut["summonerName"] = !string.IsNullOrEmpty(activeSummoner) ? activeSummoner : activeRiotId;
+
+                Dictionary<string, object> resObj = new Dictionary<string, object>();
+                resObj["connected"] = true;
+                resObj["gameTime"] = gameData != null && gameData.ContainsKey("gameTime") && gameData["gameTime"] != null ? Convert.ToDouble(gameData["gameTime"]) : 0.0;
+                resObj["mapName"] = gameData != null && gameData.ContainsKey("mapName") && gameData["mapName"] != null ? Convert.ToString(gameData["mapName"]) : "";
+                resObj["mapNumber"] = gameData != null && gameData.ContainsKey("mapNumber") && gameData["mapNumber"] != null ? Convert.ToInt32(gameData["mapNumber"]) : 0;
+                resObj["gameMode"] = gameData != null && gameData.ContainsKey("gameMode") && gameData["gameMode"] != null ? Convert.ToString(gameData["gameMode"]) : "";
+                resObj["activePlayer"] = activeOut;
+                resObj["allPlayers"] = playersOut.ToArray();
+                return resObj;
+            }
+            catch (Exception ex)
+            {
+                fail["reason"] = ex.Message;
+                return fail;
+            }
+        }
+
+        private Dictionary<string, object> ReadRiotConfig()
+        {
+            string[] drives = new string[] { "C:", "D:", "E:", "F:" };
+            bool found = false;
+            string foundPath = "";
+            double minimapScale = 1.0;
+            double hudScale = 1.0;
+            bool flipMiniMap = false;
+            int width = 1920;
+            int height = 1080;
+
+            JavaScriptSerializer js = CreateSerializer();
+            for (int d = 0; d < drives.Length; d++)
+            {
+                string p = drives[d] + "\\Riot Games\\League of Legends\\Config\\PersistedSettings.json";
+                try
+                {
+                    if (!File.Exists(p)) continue;
+                    string raw = File.ReadAllText(p, Encoding.UTF8);
+                    Dictionary<string, object> parsed = js.Deserialize<Dictionary<string, object>>(raw);
+                    found = true;
+                    foundPath = p;
+                    IList files = parsed != null && parsed.ContainsKey("files") ? parsed["files"] as IList : null;
+                    if (files != null)
+                    {
+                        for (int fi = 0; fi < files.Count; fi++)
+                        {
+                            Dictionary<string, object> fileEntry = files[fi] as Dictionary<string, object>;
+                            IList secs = fileEntry != null && fileEntry.ContainsKey("sections") ? fileEntry["sections"] as IList : null;
+                            if (secs == null) continue;
+                            for (int si = 0; si < secs.Count; si++)
+                            {
+                                Dictionary<string, object> sec = secs[si] as Dictionary<string, object>;
+                                IList settings = sec != null && sec.ContainsKey("settings") ? sec["settings"] as IList : null;
+                                if (settings == null) continue;
+                                for (int i = 0; i < settings.Count; i++)
+                                {
+                                    Dictionary<string, object> st = settings[i] as Dictionary<string, object>;
+                                    if (st == null || !st.ContainsKey("name") || !st.ContainsKey("value")) continue;
+                                    string n = Convert.ToString(st["name"]);
+                                    string v = Convert.ToString(st["value"]);
+                                    double dv;
+                                    if (n == "MinimapScale" && double.TryParse(v, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dv) && dv >= 0.1 && dv <= 4.0)
+                                    {
+                                        minimapScale = dv;
+                                    }
+                                    else if ((n == "GlobalScale" || n == "HUDScale") && double.TryParse(v, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dv) && dv >= 0.1 && dv <= 4.0)
+                                    {
+                                        hudScale = dv;
+                                    }
+                                    else if (n == "FlipMiniMap")
+                                    {
+                                        flipMiniMap = (v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                catch { }
+            }
+
+            for (int d = 0; d < drives.Length; d++)
+            {
+                string cfgPath = drives[d] + "\\Riot Games\\League of Legends\\Config\\game.cfg";
+                try
+                {
+                    if (!File.Exists(cfgPath)) continue;
+                    string cfgText = File.ReadAllText(cfgPath, Encoding.UTF8);
+                    if (!found) { found = true; foundPath = cfgPath; }
+                    Match wm = Regex.Match(cfgText, @"^\s*Width\s*=\s*(\d+)", RegexOptions.Multiline);
+                    Match hm = Regex.Match(cfgText, @"^\s*Height\s*=\s*(\d+)", RegexOptions.Multiline);
+                    Match mm = Regex.Match(cfgText, @"^\s*MinimapScale\s*=\s*([0-9.]+)", RegexOptions.Multiline);
+                    Match fm = Regex.Match(cfgText, @"^\s*FlipMiniMap\s*=\s*(\d+)", RegexOptions.Multiline);
+                    int iv;
+                    double dv;
+                    if (wm.Success && int.TryParse(wm.Groups[1].Value, out iv)) width = iv;
+                    if (hm.Success && int.TryParse(hm.Groups[1].Value, out iv)) height = iv;
+                    if (mm.Success && minimapScale == 1.0 && double.TryParse(mm.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out dv) && dv >= 0.1 && dv <= 4.0)
+                    {
+                        minimapScale = dv;
+                    }
+                    if (fm.Success && !flipMiniMap) flipMiniMap = fm.Groups[1].Value == "1";
+                    break;
+                }
+                catch { }
+            }
+
+            Dictionary<string, object> outCfg = new Dictionary<string, object>();
+            outCfg["found"] = found;
+            outCfg["path"] = foundPath;
+            outCfg["minimapScale"] = minimapScale;
+            outCfg["hudScale"] = hudScale;
+            outCfg["flipMiniMap"] = flipMiniMap;
+            outCfg["width"] = width;
+            outCfg["height"] = height;
+            return outCfg;
+        }
+
+        private object ParseGasJson(string text, JavaScriptSerializer js)
+        {
+            try { return js.DeserializeObject(text); }
+            catch
+            {
+                string clean = Regex.Replace(text ?? "", "<[^>]+>", " ").Trim();
+                if (clean.Length > 120) clean = clean.Substring(0, 120);
+                Dictionary<string, object> err = new Dictionary<string, object>();
+                err["status"] = "error";
+                err["message"] = "Lỗi từ Google: " + clean;
+                return err;
+            }
+        }
+
+        private object HandleGasProxy(string rawBody)
+        {
+            JavaScriptSerializer js = CreateSerializer();
+            try
+            {
+                string requestBody = string.IsNullOrEmpty(rawBody) ? "{}" : rawBody;
+                try
+                {
+                    object parsed = js.DeserializeObject(requestBody);
+                    if (parsed is string) requestBody = (string)parsed;
+                }
+                catch { }
+
+                string encodedReq = Uri.EscapeDataString(requestBody);
+                if (encodedReq.Length <= 3500)
+                {
+                    try
+                    {
+                        HttpWebRequest getReq = (HttpWebRequest)WebRequest.Create(GAS_TARGET_URL + "?req=" + encodedReq);
+                        getReq.Method = "GET";
+                        getReq.Timeout = 20000;
+                        using (HttpWebResponse resp = (HttpWebResponse)getReq.GetResponse())
+                        using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                        {
+                            object getData = ParseGasJson(sr.ReadToEnd(), js);
+                            Dictionary<string, object> getDict = getData as Dictionary<string, object>;
+                            if (getDict != null && getDict.ContainsKey("status"))
+                            {
+                                string st = Convert.ToString(getDict["status"]);
+                                if (st == "success" || st == "error") return getData;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                byte[] bytes = Encoding.UTF8.GetBytes(requestBody);
+                HttpWebRequest postReq = (HttpWebRequest)WebRequest.Create(GAS_TARGET_URL);
+                postReq.Method = "POST";
+                postReq.ContentType = "text/plain;charset=utf-8";
+                postReq.ContentLength = bytes.Length;
+                postReq.Timeout = 20000;
+                using (Stream reqStream = postReq.GetRequestStream()) reqStream.Write(bytes, 0, bytes.Length);
+                using (HttpWebResponse resp = (HttpWebResponse)postReq.GetResponse())
+                using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                {
+                    return ParseGasJson(sr.ReadToEnd(), js);
+                }
+            }
+            catch (Exception ex)
+            {
+                Dictionary<string, object> err = new Dictionary<string, object>();
+                err["status"] = "error";
+                err["message"] = ex.Message;
+                return err;
+            }
+        }
+
+        private void TryServeStaticFile(NetworkStream stream, string rawPath)
+        {
+            string decoded;
+            try { decoded = Uri.UnescapeDataString(rawPath); }
+            catch
+            {
+                WriteTextResponse(stream, 400, "Bad Request", "400 Bad Request");
+                return;
+            }
+
+            if (decoded == "/" || decoded == "\\") decoded = "/mail_activator.html";
+            string rel = decoded.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar);
+            string rootFull = Path.GetFullPath(rootDir).TrimEnd(Path.DirectorySeparatorChar);
+            string filePath = Path.GetFullPath(Path.Combine(rootFull, rel));
+
+            if (!filePath.Equals(rootFull, StringComparison.OrdinalIgnoreCase) &&
+                !filePath.StartsWith(rootFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            {
+                WriteTextResponse(stream, 403, "Forbidden", "403 Forbidden");
+                return;
+            }
+
+            if (!File.Exists(filePath))
+            {
+                WriteTextResponse(stream, 404, "Not Found", "404 Not Found: " + decoded);
+                return;
+            }
+
+            string ext = Path.GetExtension(filePath);
+            string contentType;
+            if (!MIME_TYPES.TryGetValue(ext, out contentType)) contentType = "application/octet-stream";
+            byte[] data = File.ReadAllBytes(filePath);
+            WriteHttpResponse(stream, 200, "OK", contentType, data, false);
+        }
+
+        private void SendJsonResponse(NetworkStream stream, int code, string statusText, object data)
+        {
+            string jsonText = CreateSerializer().Serialize(data);
+            WriteHttpResponse(stream, code, statusText, "application/json; charset=UTF-8", Encoding.UTF8.GetBytes(jsonText), true);
+        }
+
+        private static void WriteTextResponse(NetworkStream stream, int code, string statusText, string text)
+        {
+            WriteHttpResponse(stream, code, statusText, "text/plain; charset=UTF-8", Encoding.UTF8.GetBytes(text ?? ""), false);
+        }
+
+        private static void WriteHttpResponse(NetworkStream stream, int code, string statusText, string contentType, byte[] bodyBytes, bool noStore)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendFormat("HTTP/1.1 {0} {1}\r\n", code, statusText);
+            sb.AppendFormat("Content-Type: {0}\r\n", contentType);
+            sb.AppendFormat("Content-Length: {0}\r\n", bodyBytes.Length);
+            sb.Append("Access-Control-Allow-Origin: *\r\n");
+            sb.Append("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n");
+            sb.Append("Access-Control-Allow-Headers: Content-Type\r\n");
+            if (noStore) sb.Append("Cache-Control: no-store\r\n");
+            sb.Append("Connection: close\r\n\r\n");
+
+            byte[] headerBytes = Encoding.ASCII.GetBytes(sb.ToString());
+            stream.Write(headerBytes, 0, headerBytes.Length);
+            if (bodyBytes.Length > 0) stream.Write(bodyBytes, 0, bodyBytes.Length);
         }
     }
 
