@@ -449,14 +449,15 @@
     @keyframes txSlideInFromLeft {
       0% {
         opacity: 0;
-        transform: translate3d(-48px, 0, 0) scale(0.97);
-        border-color: rgba(34, 211, 238, 0.55);
-        box-shadow: 0 0 24px -4px rgba(34, 211, 238, 0.32);
+        transform: translate3d(-76px, 0, 0) scale(0.96);
+        border-color: rgba(34, 211, 238, 0.72);
+        box-shadow: 0 8px 28px -4px rgba(34, 211, 238, 0.38);
       }
-      65% {
+      60% {
         opacity: 1;
-        transform: translate3d(4px, 0, 0) scale(1.005);
-        border-color: rgba(34, 211, 238, 0.35);
+        transform: translate3d(5px, 0, 0) scale(1.008);
+        border-color: rgba(52, 211, 153, 0.45);
+        box-shadow: 0 4px 18px -4px rgba(52, 211, 153, 0.25);
       }
       100% {
         opacity: 1;
@@ -466,18 +467,21 @@
       }
     }
     .tx-slide-in-left {
-      animation: txSlideInFromLeft 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation: txSlideInFromLeft 0.68s cubic-bezier(0.16, 1, 0.3, 1) both;
       will-change: transform, opacity;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      html.tino-preload #appScrollArea {
-        opacity: 1 !important;
+    @keyframes txSiblingPushDown {
+      0% {
+        transform: translate3d(0, -64px, 0);
       }
-      .cascade-card-enter,
-      .tx-slide-in-left {
-        animation: none !important;
+      100% {
+        transform: translate3d(0, 0, 0);
       }
+    }
+    .tx-sibling-shift-down {
+      animation: txSiblingPushDown 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+      will-change: transform;
     }
   </style>
 </head>
@@ -1570,7 +1574,7 @@
       };
 
       const DEFAULT_SETTINGS = {
-        hideBalance: false,
+        hideBalance: true,
         viewportMode: 'iphone',
         requirePinOnStart: false,
         pinCode: '0908',
@@ -1645,6 +1649,7 @@
       let lastRenderedTotal = null;
       let counterToken = 0;
       let pendingAnimatedTxIds = new Set();
+      let pendingShiftSiblings = false;
       let txSlideClearTimer = null;
 
       // =========================================================================
@@ -2007,7 +2012,7 @@
           {
             id: 'tx_demo_6', type: 'expense', wallet: 'cash', amount: 95000,
             categoryId: 'exp_food', categoryName: 'Ăn Uống & Cafe', note: 'Cơm trưa + trà sữa',
-            date: todayStr(0), time: '12:15', createdAt: Date.now() - 3600000
+            date: todayStr(0), time: '07:30', createdAt: Date.now() - 3600000
           }
         ];
       }
@@ -2237,6 +2242,7 @@
           transactions[idx] = txObj;
         } else {
           transactions.unshift(txObj);
+          pendingShiftSiblings = true;
         }
 
         pendingAnimatedTxIds.add(txObj.id);
@@ -2246,15 +2252,38 @@
         return txObj;
       }
 
+      function compareTransactionsDesc(a, b) {
+        const dateA = String((a && a.date) || '');
+        const dateB = String((b && b.date) || '');
+        if (dateB !== dateA) return dateB.localeCompare(dateA);
+        const createdDiff = (Number(b && b.createdAt) || 0) - (Number(a && a.createdAt) || 0);
+        if (createdDiff !== 0) return createdDiff;
+        return String((b && b.time) || '').localeCompare(String((a && a.time) || ''));
+      }
+
       function scheduleTxSlideCleanup() {
         clearTimeout(txSlideClearTimer);
         txSlideClearTimer = setTimeout(() => {
           pendingAnimatedTxIds.clear();
-          document.querySelectorAll('.tx-slide-in-left').forEach(el => {
-            el.classList.remove('tx-slide-in-left');
+          pendingShiftSiblings = false;
+          document.querySelectorAll('.tx-slide-in-left, .tx-sibling-shift-down').forEach(el => {
+            el.classList.remove('tx-slide-in-left', 'tx-sibling-shift-down');
             el.style.removeProperty('animation-delay');
           });
-        }, 900);
+        }, 1150);
+      }
+
+      function replayPendingTxAnimations() {
+        const targets = Array.from(document.querySelectorAll('.tx-slide-in-left, .tx-sibling-shift-down'));
+        if (targets.length === 0) return;
+        targets.forEach(el => {
+          el.style.animation = 'none';
+        });
+        void document.body.offsetWidth;
+        targets.forEach(el => {
+          el.style.removeProperty('animation');
+        });
+        scheduleTxSlideCleanup();
       }
 
       function deleteTransactionById(txId) {
@@ -2540,7 +2569,7 @@
         `;
       }
 
-      function renderTxItemHtml(tx, animOrder = 0) {
+      function renderTxItemHtml(tx, animOrder = 0, shiftSibling = false) {
         const cat = tx.type === 'transfer'
           ? { icon: '🔄', name: 'Chuyển Ví Nội Bộ' }
           : (tx.categoryId === 'adj_balance'
@@ -2571,7 +2600,9 @@
         const safeIcon = escapeHtml(cat.icon || '💳');
         const safeDate = escapeHtml(`${tx.date} ${tx.time || ''}`.trim());
         const shouldSlideIn = pendingAnimatedTxIds.has(tx.id);
-        const slideClass = shouldSlideIn ? ' tx-slide-in-left' : '';
+        const slideClass = shouldSlideIn
+          ? ' tx-slide-in-left'
+          : (shiftSibling ? ' tx-sibling-shift-down' : '');
         const slideDelayStyle = (shouldSlideIn && animOrder > 0)
           ? ` style="animation-delay: ${Math.min(animOrder, 6) * 55}ms"`
           : '';
@@ -2743,12 +2774,7 @@
         }
 
         // Recent 8 transactions sorted newest first
-        const sorted = [...transactions].sort((a, b) => {
-          const da = `${a.date || ''} ${a.time || ''}`;
-          const db = `${b.date || ''} ${b.time || ''}`;
-          if (db !== da) return db.localeCompare(da);
-          return (b.createdAt || 0) - (a.createdAt || 0);
-        });
+        const sorted = [...transactions].sort(compareTransactionsDesc);
 
         const recentEl = document.getElementById('recentTxList');
         if (sorted.length === 0) {
@@ -2764,9 +2790,13 @@
           `;
         } else {
           let animCounter = 0;
+          let seenAnimated = false;
           recentEl.innerHTML = sorted.slice(0, 8).map(tx => {
-            const order = pendingAnimatedTxIds.has(tx.id) ? animCounter++ : 0;
-            return renderTxItemHtml(tx, order);
+            const isAnimated = pendingAnimatedTxIds.has(tx.id);
+            const order = isAnimated ? animCounter++ : 0;
+            const shift = !isAnimated && pendingShiftSiblings && seenAnimated;
+            if (isAnimated) seenAnimated = true;
+            return renderTxItemHtml(tx, order, shift);
           }).join('');
         }
       }
@@ -2822,11 +2852,7 @@
             if (!haystack.includes(search)) return false;
           }
           return true;
-        }).sort((a, b) => {
-          const da = `${a.date || ''} ${a.time || ''}`;
-          const db = `${b.date || ''} ${b.time || ''}`;
-          return db !== da ? db.localeCompare(da) : (b.createdAt || 0) - (a.createdAt || 0);
-        });
+        }).sort(compareTransactionsDesc);
 
         let sumIn = 0;
         let sumOut = 0;
@@ -2865,6 +2891,7 @@
         }
 
         let ledgerAnimCounter = 0;
+        let ledgerSeenAnimated = false;
         const html = Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(dateKey => {
           const items = groups[dateKey];
           let dayIn = 0, dayOut = 0;
@@ -2885,8 +2912,11 @@
               </div>
               <div class="space-y-2">
                 ${items.map(tx => {
-                  const order = pendingAnimatedTxIds.has(tx.id) ? ledgerAnimCounter++ : 0;
-                  return renderTxItemHtml(tx, order);
+                  const isAnimated = pendingAnimatedTxIds.has(tx.id);
+                  const order = isAnimated ? ledgerAnimCounter++ : 0;
+                  const shift = !isAnimated && pendingShiftSiblings && ledgerSeenAnimated;
+                  if (isAnimated) ledgerSeenAnimated = true;
+                  return renderTxItemHtml(tx, order, shift);
                 }).join('')}
               </div>
             </div>
@@ -3204,6 +3234,13 @@
       function openModal(id) {
         const overlay = document.getElementById(id);
         if (!overlay) return;
+        if (overlay._closeSmoothTimer) {
+          clearTimeout(overlay._closeSmoothTimer);
+          overlay._closeSmoothTimer = null;
+        }
+        overlay.style.transition = '';
+        const panel = overlay.querySelector('.sheet-panel');
+        if (panel) panel.style.transition = '';
         resetModalSheetPosition(overlay);
         overlay.classList.remove('hidden');
         safeRefreshIcons();
@@ -3212,8 +3249,40 @@
       function closeModal(id) {
         const overlay = document.getElementById(id);
         if (!overlay) return;
+        if (overlay._closeSmoothTimer) {
+          clearTimeout(overlay._closeSmoothTimer);
+          overlay._closeSmoothTimer = null;
+        }
+        overlay.style.transition = '';
+        const panel = overlay.querySelector('.sheet-panel');
+        if (panel) panel.style.transition = '';
         overlay.classList.add('hidden');
         resetModalSheetPosition(overlay);
+      }
+
+      function closeModalSmooth(id, onClosed) {
+        const overlay = document.getElementById(id);
+        if (!overlay) {
+          if (typeof onClosed === 'function') onClosed();
+          return;
+        }
+        if (overlay._closeSmoothTimer) {
+          clearTimeout(overlay._closeSmoothTimer);
+        }
+        const panel = overlay.querySelector('.sheet-panel');
+        overlay.style.transition = 'opacity 180ms ease';
+        overlay.style.opacity = '0';
+        if (panel) {
+          panel.classList.remove('is-dragging');
+          panel.style.transition = 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease';
+          panel.style.transform = 'translateY(100%)';
+          panel.style.opacity = '0.5';
+        }
+        overlay._closeSmoothTimer = setTimeout(() => {
+          overlay._closeSmoothTimer = null;
+          closeModal(id);
+          if (typeof onClosed === 'function') onClosed();
+        }, 180);
       }
 
       function initIosSheetGestures() {
@@ -3571,6 +3640,30 @@
         document.getElementById('txAmountWords').textContent = 'Không đồng';
       }
 
+      function scrollRecentTxIntoViewIfHome() {
+        if (activeTab !== 'home') return;
+        const scrollArea = document.getElementById('appScrollArea');
+        const recentSec = document.getElementById('recentTxSection');
+        if (!scrollArea || !recentSec) return;
+        const ovY = getComputedStyle(scrollArea).overflowY;
+        if (ovY === 'auto' || ovY === 'scroll') {
+          const targetTop = Math.max(0, recentSec.offsetTop - 16);
+          if (Math.abs(scrollArea.scrollTop - targetTop) > 30) {
+            if (typeof scrollArea.scrollTo === 'function') {
+              scrollArea.scrollTo({ top: targetTop, behavior: 'smooth' });
+            } else {
+              scrollArea.scrollTop = targetTop;
+            }
+          }
+        } else {
+          const rect = recentSec.getBoundingClientRect();
+          if (rect.top < 56 || rect.top > window.innerHeight - 160) {
+            const targetY = Math.max(0, rect.top + window.scrollY - 72);
+            window.scrollTo({ top: targetY, behavior: 'smooth' });
+          }
+        }
+      }
+
       function saveTxFromModal() {
         const amount = getRawTxAmount();
         const saved = addOrUpdateTransaction({
@@ -3585,11 +3678,14 @@
           amount
         });
         if (saved) {
-          closeModal('txModal');
           const prefix = saved.type === 'income' ? '+' : saved.type === 'expense' ? '-' : '⇄ ';
           const wMeta = getWalletMeta(saved.wallet);
           playFeedback('success');
           showToast(`Đã lưu ${prefix}${formatNumberDot(saved.amount)} ₫ (${wMeta.shortName})`, 'success');
+          scrollRecentTxIntoViewIfHome();
+          closeModalSmooth('txModal', () => {
+            replayPendingTxAnimations();
+          });
         }
       }
 
@@ -3658,9 +3754,12 @@
         for (const item of smartPasteParsed) {
           if (addOrUpdateTransaction(item)) count++;
         }
-        closeModal('smartPasteModal');
         playFeedback('success');
         showToast(`Đã nhập thành công ${count} giao dịch từ Smart Paste!`, 'success');
+        scrollRecentTxIntoViewIfHome();
+        closeModalSmooth('smartPasteModal', () => {
+          replayPendingTxAnimations();
+        });
       }
 
       // Adjust Balance Modal
@@ -4607,7 +4706,9 @@
 
       function lockAppWithPin(silent = false) {
         pinBuffer = '';
+        settings.hideBalance = true;
         sessionStorage.removeItem(STORAGE_KEYS.SESSION_PIN);
+        renderAllViews();
         updatePinDots();
         document.getElementById('pinStatusText').textContent = 'Nhập mã PIN 4 số để mở ví';
         document.getElementById('pinLockOverlay').classList.remove('hidden');
@@ -4725,11 +4826,9 @@
           sessionStorage.setItem(STORAGE_KEYS.SESSION_PIN, 'ok');
           if (wasDecoy) {
             loadState();
-            renderAllViews();
-          } else {
-            renderSettingsPanel();
-            applyDecoyModeUI();
           }
+          settings.hideBalance = true;
+          renderAllViews();
           document.getElementById('pinLockOverlay').classList.add('hidden');
           updatePinDots();
           playFeedback('success');
@@ -4749,6 +4848,7 @@
           lastRenderedTotal = null;
           sessionStorage.setItem(STORAGE_KEYS.SESSION_PIN, 'decoy');
           loadState();
+          settings.hideBalance = true;
           renderAllViews();
           document.getElementById('pinLockOverlay').classList.add('hidden');
           updatePinDots();
@@ -5081,9 +5181,6 @@
       }
 
       function playTabCascadeAnimation(tabName = activeTab) {
-        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          return;
-        }
         const section = document.getElementById(`tab-${tabName}`);
         if (!section || section.classList.contains('hidden')) return;
 
@@ -5121,6 +5218,7 @@
 
       function initApp() {
         loadState();
+        settings.hideBalance = true;
         applyViewportMode();
         renderAllViews();
         updateIosStatusClock();
