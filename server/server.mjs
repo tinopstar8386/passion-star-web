@@ -103,18 +103,263 @@ const mayhemState = {
     lastCardClick: null,
     lastCapturedFrame: null,
     capturedFrameSeq: 0,
+    modalOpen: false,
+    modalEventSeq: 0,
+    minimapThumbBase64: '',
+    minimapThumbSeq: 0,
+    recommendedItemPath: '',
     updatedAt: Date.now()
 };
 
+function discoverLeagueConfigDirs() {
+    const drives = ['C:', 'D:', 'E:', 'F:', 'G:'];
+    const subPaths = [
+        '\\Riot Games\\League of Legends\\Config',
+        '\\Games\\Riot Games\\League of Legends\\Config'
+    ];
+    const dirs = [];
+    for (const d of drives) {
+        for (const sp of subPaths) {
+            const dir = `${d}${sp}`;
+            if (fs.existsSync(dir)) dirs.push(dir);
+        }
+    }
+    return dirs;
+}
+
+function lcuRequestJson(port, password, reqPath) {
+    return new Promise((resolve) => {
+        const auth = Buffer.from(`riot:${password}`).toString('base64');
+        const req = https.get(
+            {
+                hostname: '127.0.0.1',
+                port: Number(port),
+                path: reqPath,
+                headers: { Authorization: `Basic ${auth}` },
+                rejectUnauthorized: false,
+                timeout: 900
+            },
+            (res) => {
+                const chunks = [];
+                res.on('data', c => chunks.push(c));
+                res.on('end', () => {
+                    try {
+                        const raw = Buffer.concat(chunks).toString('utf8');
+                        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, data: JSON.parse(raw) });
+                    } catch (_) {
+                        resolve({ ok: false, data: null });
+                    }
+                });
+            }
+        );
+        req.on('timeout', () => { req.destroy(); resolve({ ok: false, data: null }); });
+        req.on('error', () => resolve({ ok: false, data: null }));
+    });
+}
+
+async function tryReadLcuSession() {
+    const cfgDirs = discoverLeagueConfigDirs();
+    for (const cfgDir of cfgDirs) {
+        const rootDir = path.dirname(cfgDir);
+        const lockPath = path.join(rootDir, 'lockfile');
+        if (!fs.existsSync(lockPath)) continue;
+        try {
+            const raw = fs.readFileSync(lockPath, 'utf8').trim();
+            const parts = raw.split(':');
+            if (parts.length < 4) continue;
+            const lcuPort = parts[2].trim();
+            const lcuPass = parts[3].trim();
+
+            const phaseRes = await lcuRequestJson(lcuPort, lcuPass, '/lol-gameflow/v1/gameflow-phase');
+            const phase = typeof phaseRes.data === 'string' ? phaseRes.data : '';
+            if (phase === 'ChampSelect') {
+                const [csRes, gfRes] = await Promise.all([
+                    lcuRequestJson(lcuPort, lcuPass, '/lol-champ-select/v1/session'),
+                    lcuRequestJson(lcuPort, lcuPass, '/lol-gameflow/v1/session')
+                ]);
+                if (csRes.ok && csRes.data) {
+                    const cs = csRes.data;
+                    const localCellId = cs.localPlayerCellId ?? -1;
+                    let chosenChampId = 0;
+                    const myTeamChampionIds = [];
+                    for (const tm of (cs.myTeam || [])) {
+                        const effective = Number(tm.championId || tm.championPickIntent || 0);
+                        if (effective > 0) myTeamChampionIds.push(effective);
+                        if (tm.cellId === localCellId) chosenChampId = effective;
+                    }
+                    const benchChampionIds = (cs.benchChampions || [])
+                        .map(b => Number(typeof b === 'object' ? b.championId : b))
+                        .filter(id => id > 0);
+                    const queue = gfRes.data?.gameData?.queue || {};
+                    return {
+                        connected: true,
+                        phase: 'ChampSelect',
+                        source: 'lcu-lockfile',
+                        mapNumber: Number(queue.mapId || 12),
+                        gameMode: String(queue.gameMode || 'ARAM'),
+                        championId: chosenChampId,
+                        myTeamChampionIds,
+                        benchChampionIds
+                    };
+                }
+            }
+            if (phase && phase !== 'None') {
+                return { connected: false, phase, source: 'lcu-lockfile', rootDir };
+            }
+        } catch (_) {}
+    }
+    return null;
+}
+
+function tryReadLatestR3dLogRoster(allowRecentWithoutLcu = false) {
+    const cfgDirs = discoverLeagueConfigDirs();
+    let newestPath = '';
+    let newestMtime = 0;
+
+    for (const cfgDir of cfgDirs) {
+        const gameLogsDir = path.join(path.dirname(cfgDir), 'Logs', 'GameLogs');
+        if (!fs.existsSync(gameLogsDir)) continue;
+        try {
+            for (const sub of fs.readdirSync(gameLogsDir)) {
+                const subPath = path.join(gameLogsDir, sub);
+                if (!fs.statSync(subPath).isDirectory()) continue;
+                for (const fn of fs.readdirSync(subPath)) {
+                    if (!fn.endsWith('_r3dlog.txt')) continue;
+                    const full = path.join(subPath, fn);
+                    const mt = fs.statSync(full).mtimeMs;
+                    if (mt > newestMtime) {
+                        newestMtime = mt;
+                        newestPath = full;
+                    }
+                }
+            }
+        } catch (_) {}
+    }
+
+    if (!newestPath) return null;
+    const ageMs = Date.now() - newestMtime;
+    if (ageMs > (allowRecentWithoutLcu ? 180000 : 45 * 60000)) return null;
+
+    try {
+        const content = fs.readFileSync(newestPath, 'utf8');
+        if (content.includes('GAMESTATE_ENDGAME') || content.includes('GAMESTATE_EXIT')) return null;
+
+        const rx = /ROST\|\s+CONNECTION READY\s+\|\s+(TeamOrder|TeamChaos)\s+\d+\)\s+'([^']+)'(\s+\*\*LOCAL\*\*)?\s+-\s+Champion\(([^)]+)\)/g;
+        const players = [];
+        let localChamp = '';
+        let localSummoner = '';
+        let match;
+        while ((match = rx.exec(content)) !== null) {
+            const teamNorm = match[1] === 'TeamOrder' ? 'ORDER' : 'CHAOS';
+            const sum = match[2];
+            const isLocal = Boolean(match[3]);
+            const champKey = match[4];
+            if (isLocal) {
+                localChamp = champKey;
+                localSummoner = sum;
+            }
+            players.push({
+                championName: champKey,
+                rawChampionKey: champKey,
+                team: teamNorm,
+                level: 3,
+                isDead: false,
+                items: []
+            });
+        }
+        if (!localChamp) return null;
+        return {
+            connected: true,
+            phase: 'LoadingScreen',
+            source: 'r3dlog',
+            gameTime: 0,
+            activePlayer: {
+                championName: localChamp,
+                rawChampionKey: localChamp,
+                level: 3,
+                currentGold: 1400,
+                summonerName: localSummoner
+            },
+            allPlayers: players
+        };
+    } catch (_) {
+        return null;
+    }
+}
+
+function importRecommendedItemSet(body) {
+    const cfgDirs = discoverLeagueConfigDirs();
+    const bestCfg = cfgDirs.find(d => fs.existsSync(path.join(d, 'PersistedSettings.json')) || fs.existsSync(path.join(d, 'game.cfg'))) || cfgDirs[0];
+    if (!bestCfg) throw new Error('Không tìm thấy thư mục Config của LMHT');
+
+    const recDir = path.join(bestCfg, 'Global', 'Recommended');
+    fs.mkdirSync(recDir, { recursive: true });
+    const outPath = path.join(recDir, '!!!passion-mayhem.json');
+
+    const champKey = String(body?.championKey || 'any');
+    const title = String(body?.title || `Passion Mayhem: ${champKey}`);
+    const blocksOut = (Array.isArray(body?.blocks) ? body.blocks : [])
+        .map(blk => {
+            const items = (Array.isArray(blk?.items) ? blk.items : [])
+                .map(it => String(typeof it === 'object' ? it.id : it).trim())
+                .filter(id => /^\d+$/.test(id))
+                .map(id => ({ id, count: 1 }));
+            return {
+                recMath: false,
+                minSummonerLevel: -1,
+                maxSummonerLevel: -1,
+                showIfSummonerSpell: '',
+                hideIfSummonerSpell: '',
+                type: String(blk?.type || 'Gợi Ý Trang Bị'),
+                items
+            };
+        })
+        .filter(blk => blk.items.length > 0);
+
+    const doc = {
+        title,
+        championKey: champKey,
+        map: 'any',
+        mode: 'any',
+        type: 'custom',
+        priority: true,
+        sortrank: 1000000001,
+        blocks: blocksOut
+    };
+    fs.writeFileSync(outPath, JSON.stringify(doc), 'utf8');
+    mayhemState.recommendedItemPath = outPath;
+    return { status: 'ok', path: outPath, championKey: champKey, blocksCount: blocksOut.length };
+}
+
 function fetchRiotLiveClient() {
     return new Promise((resolve) => {
+        const handleFallback = async (reason) => {
+            const lcuRes = await tryReadLcuSession();
+            if (lcuRes && lcuRes.connected) {
+                resolve(lcuRes);
+                return;
+            }
+            const inProgress = lcuRes && (lcuRes.phase === 'InProgress' || lcuRes.phase === 'GameStart');
+            const r3d = tryReadLatestR3dLogRoster(!inProgress);
+            if (r3d) {
+                resolve(r3d);
+                return;
+            }
+            resolve({
+                connected: false,
+                phase: lcuRes?.phase || 'Idle',
+                source: lcuRes?.source || 'none',
+                reason
+            });
+        };
+
         const req = https.get(
             {
                 hostname: '127.0.0.1',
                 port: 2999,
                 path: '/liveclientdata/allgamedata',
                 rejectUnauthorized: false,
-                timeout: 1200
+                timeout: 1000
             },
             (res) => {
                 const chunks = [];
@@ -123,38 +368,52 @@ function fetchRiotLiveClient() {
                     try {
                         const raw = Buffer.concat(chunks).toString('utf8');
                         const data = JSON.parse(raw);
+                        const activeSum = data?.activePlayer?.summonerName || '';
+                        const activeRiot = data?.activePlayer?.riotId || '';
+                        const me = (data?.allPlayers || []).find(p => (activeSum && p.summonerName === activeSum) || (activeRiot && p.riotId === activeRiot));
+                        const activeRawKey = String(me?.rawChampionName || '').replace('game_character_displayname_', '');
+
                         resolve({
                             connected: true,
+                            phase: 'InGame',
+                            source: 'live-client-2999',
                             gameTime: data?.gameData?.gameTime ?? 0,
                             mapName: data?.gameData?.mapName || '',
                             mapNumber: data?.gameData?.mapNumber || 0,
+                            mapTerrain: data?.gameData?.mapTerrain || '',
                             gameMode: data?.gameData?.gameMode || '',
                             activePlayer: {
-                                championName: data?.activePlayer?.championStats ? (data?.allPlayers?.find(p => p.summonerName === data?.activePlayer?.summonerName || p.riotId === data?.activePlayer?.riotId)?.championName || '') : '',
+                                championName: me?.championName || '',
+                                rawChampionKey: activeRawKey,
                                 level: data?.activePlayer?.level || 1,
                                 currentGold: data?.activePlayer?.currentGold || 0,
-                                summonerName: data?.activePlayer?.summonerName || data?.activePlayer?.riotId || ''
+                                summonerName: activeSum || activeRiot || '',
+                                stats: data?.activePlayer?.championStats || null,
+                                scores: me?.scores || null,
+                                items: (me?.items || []).map(it => ({ itemID: it.itemID, displayName: it.displayName }))
                             },
                             allPlayers: (data?.allPlayers || []).map(p => ({
                                 championName: p.championName || '',
+                                rawChampionKey: String(p.rawChampionName || '').replace('game_character_displayname_', ''),
                                 team: p.team || '',
                                 level: p.level || 1,
                                 isDead: Boolean(p.isDead),
+                                scores: p.scores || null,
                                 items: (p.items || []).map(it => ({ itemID: it.itemID, displayName: it.displayName }))
                             }))
                         });
                     } catch (err) {
-                        resolve({ connected: false, reason: 'Parse error: ' + err.message });
+                        handleFallback('Parse error: ' + err.message);
                     }
                 });
             }
         );
         req.on('timeout', () => {
             req.destroy();
-            resolve({ connected: false, reason: 'Timeout' });
+            handleFallback('Timeout');
         });
         req.on('error', (err) => {
-            resolve({ connected: false, reason: err.message });
+            handleFallback(err.message);
         });
     });
 }
@@ -500,6 +759,18 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    if (pathname === '/api/mayhem/import-item-set' && req.method === 'POST') {
+        try {
+            const raw = await readRequestBody(req);
+            const body = JSON.parse(raw || '{}');
+            const out = importRecommendedItemSet(body);
+            sendJson(res, 200, out);
+        } catch (err) {
+            sendJson(res, 400, { status: 'error', message: err.message });
+        }
+        return;
+    }
+
     if (pathname === '/api/mayhem/state' && req.method === 'GET') {
         const includeFrame = parsedUrl.searchParams.get('includeFrame') === '1';
         const out = {
@@ -514,6 +785,11 @@ const server = http.createServer(async (req, res) => {
             cardClickSeq: mayhemState.cardClickSeq,
             lastCardClick: mayhemState.lastCardClick,
             capturedFrameSeq: mayhemState.capturedFrameSeq,
+            modalOpen: mayhemState.modalOpen,
+            modalEventSeq: mayhemState.modalEventSeq,
+            minimapThumbSeq: mayhemState.minimapThumbSeq,
+            minimapThumbBase64: mayhemState.minimapThumbBase64,
+            recommendedItemPath: mayhemState.recommendedItemPath,
             updatedAt: mayhemState.updatedAt
         };
         if (includeFrame && mayhemState.lastCapturedFrame) {
@@ -591,8 +867,19 @@ const server = http.createServer(async (req, res) => {
                     base64: body.lastCapturedFrame.base64,
                     mimeType: body.lastCapturedFrame.mimeType || 'image/jpeg',
                     action: body.lastCapturedFrame.action || 'scan-aug',
+                    silent: Boolean(body.lastCapturedFrame.silent),
                     ts: Date.now()
                 };
+            }
+            if (typeof body.modalOpen === 'boolean') {
+                if (body.modalOpen !== mayhemState.modalOpen) {
+                    mayhemState.modalOpen = body.modalOpen;
+                    mayhemState.modalEventSeq += 1;
+                }
+            }
+            if (typeof body.minimapThumbBase64 === 'string' && body.minimapThumbBase64) {
+                mayhemState.minimapThumbBase64 = body.minimapThumbBase64;
+                mayhemState.minimapThumbSeq += 1;
             }
             if (body.lastCardClick && typeof body.lastCardClick.index === 'number') {
                 mayhemState.cardClickSeq += 1;
@@ -608,6 +895,9 @@ const server = http.createServer(async (req, res) => {
                 pendingActionSeq: mayhemState.pendingActionSeq,
                 cardClickSeq: mayhemState.cardClickSeq,
                 capturedFrameSeq: mayhemState.capturedFrameSeq,
+                modalOpen: mayhemState.modalOpen,
+                modalEventSeq: mayhemState.modalEventSeq,
+                minimapThumbSeq: mayhemState.minimapThumbSeq,
                 minimap: mayhemState.minimap
             });
         } catch (err) {

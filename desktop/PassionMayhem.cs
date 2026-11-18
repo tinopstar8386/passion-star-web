@@ -143,6 +143,21 @@ namespace PassionMayhemDesktop
 
         [DllImport("user32.dll")]
         public static extern short GetAsyncKeyState(int vKey);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetDC(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        [DllImport("gdi32.dll")]
+        public static extern int SetStretchBltMode(IntPtr hdc, int mode);
+
+        [DllImport("gdi32.dll")]
+        public static extern bool StretchBlt(IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest, IntPtr hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, uint rop);
+
+        public const uint SRCCOPY = 0x00CC0020;
+        public const int COLORONCOLOR = 3;
     }
 
     internal sealed class RelicTimerModel
@@ -593,6 +608,13 @@ namespace PassionMayhemDesktop
         private long lastHandledPendingActionSeq = 0;
         private bool wasLeftMouseDown = false;
         private DateTime lastRiotConfigPollUtc = DateTime.MinValue;
+        private DateTime lastMinimapThumbPushUtc = DateTime.MinValue;
+        private bool nativeModalOpen = false;
+        private int nativeModalOpenStreak = 0;
+        private int nativeModalCloseStreak = 0;
+        private byte[] lastCardTitleSample = null;
+        private DateTime lastNativeAutoCaptureUtc = DateTime.MinValue;
+        private int nativeCaptureCooldownTicks = 0;
 
         private MinimapOverlayForm minimapForm;
         private HudOverlayForm hudForm;
@@ -1053,7 +1075,7 @@ namespace PassionMayhemDesktop
             monitorTimer.Start();
 
             overlayTickTimer = new System.Windows.Forms.Timer();
-            overlayTickTimer.Interval = 650;
+            overlayTickTimer.Interval = 500;
             overlayTickTimer.Tick += OverlayTick;
             overlayTickTimer.Start();
 
@@ -1273,15 +1295,20 @@ namespace PassionMayhemDesktop
                 ThreadPool.QueueUserWorkItem(delegate { AutoDetectFromRiotConfig(); });
             }
 
-            // Optional pixel watcher for health relics inside the League minimap
-            if (shouldShow && leagueHwnd != IntPtr.Zero && gameFocused && minimapCfg.autoWatchPixels && !minimapCfg.calibrateMode)
+            // Native background minimap watcher & live thumbnail stream (Zero Browser Screen-Share)
+            if (leagueHwnd != IntPtr.Zero && gameFocused && !minimapCfg.calibrateMode)
             {
-                WatchMinimapRelicPixels(gameBounds);
-            }
-
-            if (leagueHwnd != IntPtr.Zero && gameFocused)
-            {
+                WatchMinimapRelicPixels(gameBounds, overlaysEnabled && minimapCfg.autoWatchPixels);
                 WatchCardClickInGame(gameBounds);
+                CheckAndAutoCaptureAugmentModal(gameBounds);
+            }
+            else if (nativeModalOpen)
+            {
+                nativeModalOpen = false;
+                nativeModalOpenStreak = 0;
+                nativeModalCloseStreak = 0;
+                lastCardTitleSample = null;
+                PushModalOpenStateToServer(false);
             }
 
             if (minimapForm != null && !minimapForm.IsDisposed)
@@ -1356,98 +1383,315 @@ namespace PassionMayhemDesktop
             wasLeftMouseDown = isDown;
         }
 
-        private void WatchMinimapRelicPixels(Rectangle gameBounds)
+        private void PushModalOpenStateToServer(bool isOpen)
+        {
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                try
+                {
+                    Dictionary<string, object> body = new Dictionary<string, object>();
+                    body["modalOpen"] = isOpen;
+                    HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
+                }
+                catch { }
+            });
+        }
+
+        private static string EncodeBitmapToJpegBase64(Bitmap bmp, long quality)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                ImageCodecInfo jpgEncoder = null;
+                ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
+                for (int i = 0; i < codecs.Length; i++)
+                {
+                    if (codecs[i].FormatID == ImageFormat.Jpeg.Guid)
+                    {
+                        jpgEncoder = codecs[i];
+                        break;
+                    }
+                }
+                if (jpgEncoder != null)
+                {
+                    using (EncoderParameters ep = new EncoderParameters(1))
+                    {
+                        ep.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, quality);
+                        bmp.Save(ms, jpgEncoder, ep);
+                    }
+                }
+                else
+                {
+                    bmp.Save(ms, ImageFormat.Jpeg);
+                }
+                return Convert.ToBase64String(ms.ToArray());
+            }
+        }
+
+        private void CheckAndAutoCaptureAugmentModal(Rectangle gameBounds)
+        {
+            if (gameBounds.Width < 800 || gameBounds.Height < 600) return;
+
+            const int SW = 240;
+            const int SH = 135;
+            try
+            {
+                using (Bitmap sampleBmp = new Bitmap(SW, SH, PixelFormat.Format24bppRgb))
+                {
+                    using (Graphics gDest = Graphics.FromImage(sampleBmp))
+                    {
+                        IntPtr hdcDest = IntPtr.Zero;
+                        IntPtr hdcSrc = IntPtr.Zero;
+                        try
+                        {
+                            hdcSrc = NativeMethods.GetDC(IntPtr.Zero);
+                            hdcDest = gDest.GetHdc();
+                            if (hdcSrc != IntPtr.Zero && hdcDest != IntPtr.Zero)
+                            {
+                                NativeMethods.SetStretchBltMode(hdcDest, NativeMethods.COLORONCOLOR);
+                                NativeMethods.StretchBlt(
+                                    hdcDest, 0, 0, SW, SH,
+                                    hdcSrc, gameBounds.Left, gameBounds.Top, gameBounds.Width, gameBounds.Height,
+                                    NativeMethods.SRCCOPY
+                                );
+                            }
+                        }
+                        finally
+                        {
+                            if (hdcDest != IntPtr.Zero) try { gDest.ReleaseHdc(hdcDest); } catch { }
+                            if (hdcSrc != IntPtr.Zero) try { NativeMethods.ReleaseDC(IntPtr.Zero, hdcSrc); } catch { }
+                        }
+                    }
+
+                    int[] zoneX0 = new int[] { (int)Math.Round(SW * 0.18), (int)Math.Round(SW * 0.41), (int)Math.Round(SW * 0.64) };
+                    int[] zoneX1 = new int[] { (int)Math.Round(SW * 0.36), (int)Math.Round(SW * 0.59), (int)Math.Round(SW * 0.82) };
+                    int y0 = (int)Math.Round(SH * 0.24);
+                    int y1 = (int)Math.Round(SH * 0.72);
+
+                    int validPanels = 0;
+                    bool centerLooksLikeCard = false;
+
+                    for (int zi = 0; zi < 3; zi++)
+                    {
+                        int total = 0;
+                        int darkNavy = 0;
+                        int brightText = 0;
+                        for (int y = y0; y < y1; y += 2)
+                        {
+                            for (int x = zoneX0[zi]; x < zoneX1[zi]; x += 2)
+                            {
+                                Color c = sampleBmp.GetPixel(x, y);
+                                total++;
+                                if (c.R < 56 && c.G < 68 && c.B < 105 && c.B >= c.R - 3) darkNavy++;
+                                if (c.R > 160 && c.G > 150 && c.B > 120) brightText++;
+                            }
+                        }
+                        int safeT = Math.Max(1, total);
+                        double darkPct = (darkNavy * 100.0) / safeT;
+                        double brightPct = (brightText * 100.0) / safeT;
+                        if (darkPct >= 26.0 && brightPct >= 1.2 && brightPct <= 35.0) validPanels++;
+                        if (zi == 1 && darkPct >= 22.0 && brightPct >= 1.0) centerLooksLikeCard = true;
+                    }
+
+                    bool isModalOpen = validPanels >= 2 && centerLooksLikeCard;
+
+                    // Extract compact luminance sample from the title bands of all 3 cards to detect Rerolls
+                    int titleY0 = (int)Math.Round(SH * 0.42);
+                    int titleY1 = (int)Math.Round(SH * 0.56);
+                    List<byte> sigList = new List<byte>(280);
+                    for (int zi = 0; zi < 3; zi++)
+                    {
+                        for (int y = titleY0; y < titleY1; y += 2)
+                        {
+                            for (int x = zoneX0[zi] + 2; x < zoneX1[zi] - 2; x += 3)
+                            {
+                                Color c = sampleBmp.GetPixel(x, y);
+                                int luma = (c.R * 3 + c.G * 6 + c.B) / 10;
+                                sigList.Add((byte)luma);
+                            }
+                        }
+                    }
+                    byte[] curSig = sigList.ToArray();
+
+                    if (isModalOpen)
+                    {
+                        nativeModalCloseStreak = 0;
+                        nativeModalOpenStreak++;
+
+                        bool justOpened = !nativeModalOpen && (validPanels == 3 || nativeModalOpenStreak >= 2);
+                        bool rerolled = false;
+                        if (nativeModalOpen && lastCardTitleSample != null && lastCardTitleSample.Length == curSig.Length && curSig.Length > 0)
+                        {
+                            int diffCount = 0;
+                            for (int k = 0; k < curSig.Length; k++)
+                            {
+                                if (Math.Abs((int)curSig[k] - (int)lastCardTitleSample[k]) >= 22) diffCount++;
+                            }
+                            if ((double)diffCount / curSig.Length >= 0.14) rerolled = true;
+                        }
+
+                        if (justOpened || rerolled)
+                        {
+                            nativeModalOpen = true;
+                            lastCardTitleSample = curSig;
+                            PushModalOpenStateToServer(true);
+                            nativeCaptureCooldownTicks = 1; // Wait one 500ms tick if rerolling animation settles, OR capture immediately if opened
+                            if (justOpened && (DateTime.UtcNow - lastNativeAutoCaptureUtc).TotalMilliseconds >= 1100)
+                            {
+                                lastNativeAutoCaptureUtc = DateTime.UtcNow;
+                                nativeCaptureCooldownTicks = 0;
+                                CaptureAndUploadFrame("scan-aug", true);
+                            }
+                        }
+                        else if (nativeCaptureCooldownTicks > 0)
+                        {
+                            nativeCaptureCooldownTicks--;
+                            if (nativeCaptureCooldownTicks == 0 && (DateTime.UtcNow - lastNativeAutoCaptureUtc).TotalMilliseconds >= 1100)
+                            {
+                                lastNativeAutoCaptureUtc = DateTime.UtcNow;
+                                lastCardTitleSample = curSig;
+                                CaptureAndUploadFrame("scan-aug", true);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        nativeModalOpenStreak = 0;
+                        nativeCaptureCooldownTicks = 0;
+                        if (nativeModalOpen)
+                        {
+                            nativeModalCloseStreak++;
+                            if (nativeModalCloseStreak >= 2)
+                            {
+                                nativeModalOpen = false;
+                                nativeModalCloseStreak = 0;
+                                lastCardTitleSample = null;
+                                PushModalOpenStateToServer(false);
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void WatchMinimapRelicPixels(Rectangle gameBounds, bool watchRelics)
         {
             int sz = Math.Max(110, minimapCfg.sizePx);
             int mx = minimapCfg.flipped ? gameBounds.Left + minimapCfg.offsetX : gameBounds.Right - sz - minimapCfg.offsetX;
             int my = gameBounds.Bottom - sz - minimapCfg.offsetY;
-            int patch = 7;
+            if (mx < 0 || my < 0 || sz < 80) return;
 
-            bool triggeredAny = false;
-            lock (syncLock)
+            bool needThumb = (DateTime.UtcNow - lastMinimapThumbPushUtc).TotalMilliseconds >= 1100;
+            if (!watchRelics && !needThumb) return;
+
+            try
             {
-                for (int i = 0; i < relics.Count; i++)
+                using (Bitmap mmBmp = new Bitmap(sz, sz, PixelFormat.Format24bppRgb))
                 {
-                    RelicTimerModel r = relics[i];
-                    int px = mx + (int)Math.Round(r.nx * sz) - patch / 2;
-                    int py = my + (int)Math.Round(r.ny * sz) - patch / 2;
-
-                    try
+                    using (Graphics g = Graphics.FromImage(mmBmp))
                     {
-                        using (Bitmap bmp = new Bitmap(patch, patch, PixelFormat.Format24bppRgb))
-                        using (Graphics g = Graphics.FromImage(bmp))
+                        g.CopyFromScreen(mx, my, 0, 0, new Size(sz, sz), CopyPixelOperation.SourceCopy);
+                    }
+
+                    if (watchRelics)
+                    {
+                        int half = 3;
+                        lock (syncLock)
                         {
-                            g.CopyFromScreen(px, py, 0, 0, new Size(patch, patch), CopyPixelOperation.SourceCopy);
-                            int brightGreenCount = 0;
-                            for (int x = 0; x < patch; x++)
+                            for (int i = 0; i < relics.Count; i++)
                             {
-                                for (int y = 0; y < patch; y++)
+                                RelicTimerModel r = relics[i];
+                                int cx = (int)Math.Round(r.nx * sz);
+                                int cy = (int)Math.Round(r.ny * sz);
+                                int brightGreenCount = 0;
+                                for (int dx = -half; dx <= half; dx++)
                                 {
-                                    Color c = bmp.GetPixel(x, y);
-                                    // Olive-green ARAM/Pirate health relic cross detector (excludes translucent cyan/emerald overlay ring)
-                                    if (c.G >= 102 && c.G <= 185 && c.R >= 50 && c.R <= 172 && c.B <= 130 && (c.G - c.R) >= 9 && (c.G - c.R) <= 45 && (c.G - c.B) >= 28)
+                                    int px = cx + dx;
+                                    if (px < 0 || px >= sz) continue;
+                                    for (int dy = -half; dy <= half; dy++)
                                     {
-                                        brightGreenCount++;
+                                        int py = cy + dy;
+                                        if (py < 0 || py >= sz) continue;
+                                        Color c = mmBmp.GetPixel(px, py);
+                                        if (c.G >= 102 && c.G <= 185 && c.R >= 50 && c.R <= 172 && c.B <= 130 && (c.G - c.R) >= 9 && (c.G - c.R) <= 45 && (c.G - c.B) >= 28)
+                                        {
+                                            brightGreenCount++;
+                                        }
                                     }
                                 }
-                            }
-                            bool isVisible = brightGreenCount >= 3;
-                            if (!r.running)
-                            {
-                                if (isVisible)
+                                bool isVisible = brightGreenCount >= 3;
+                                if (!r.running)
                                 {
-                                    r.visibleStreak = Math.Min(10, r.visibleStreak + 1);
-                                    r.missingStreak = 0;
-                                    r.respawnStreak = 0;
-                                }
-                                else if (r.visibleStreak >= 2)
-                                {
-                                    r.missingStreak++;
-                                    if (r.missingStreak >= 3)
+                                    if (isVisible)
                                     {
-                                        int cd = mapMode == "pirate_60" ? 60 : 90;
-                                        r.total = cd;
-                                        r.remaining = cd;
-                                        r.running = true;
-                                        r.visibleStreak = 0;
+                                        r.visibleStreak = Math.Min(10, r.visibleStreak + 1);
                                         r.missingStreak = 0;
                                         r.respawnStreak = 0;
-                                        triggeredAny = true;
-                                        PushRelicTriggerToServer(i, cd);
                                     }
-                                }
-                            }
-                            else if (r.remaining <= Math.Max(0, r.total - 5))
-                            {
-                                if (isVisible)
-                                {
-                                    r.respawnStreak++;
-                                    if (r.respawnStreak >= 4)
+                                    else if (r.visibleStreak >= 2)
                                     {
-                                        r.running = false;
-                                        r.remaining = 0;
-                                        r.visibleStreak = 2;
-                                        r.missingStreak = 0;
-                                        r.respawnStreak = 0;
-                                        triggeredAny = true;
-                                        PushRelicTriggerToServer(i, -1);
+                                        r.missingStreak++;
+                                        if (r.missingStreak >= 3)
+                                        {
+                                            int cd = mapMode == "pirate_60" ? 60 : 90;
+                                            r.total = cd;
+                                            r.remaining = cd;
+                                            r.running = true;
+                                            r.visibleStreak = 0;
+                                            r.missingStreak = 0;
+                                            r.respawnStreak = 0;
+                                            PushRelicTriggerToServer(i, cd);
+                                        }
                                     }
                                 }
-                                else
+                                else if (r.remaining <= Math.Max(0, r.total - 5))
                                 {
-                                    r.respawnStreak = 0;
+                                    if (isVisible)
+                                    {
+                                        r.respawnStreak++;
+                                        if (r.respawnStreak >= 4)
+                                        {
+                                            r.running = false;
+                                            r.remaining = 0;
+                                            r.visibleStreak = 2;
+                                            r.missingStreak = 0;
+                                            r.respawnStreak = 0;
+                                            PushRelicTriggerToServer(i, -1);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        r.respawnStreak = 0;
+                                    }
                                 }
                             }
                         }
                     }
-                    catch { }
+
+                    if (needThumb)
+                    {
+                        lastMinimapThumbPushUtc = DateTime.UtcNow;
+                        using (Bitmap thumb = new Bitmap(160, 160, PixelFormat.Format24bppRgb))
+                        using (Graphics gt = Graphics.FromImage(thumb))
+                        {
+                            gt.InterpolationMode = InterpolationMode.Bilinear;
+                            gt.DrawImage(mmBmp, 0, 0, 160, 160);
+                            string b64 = EncodeBitmapToJpegBase64(thumb, 70L);
+                            ThreadPool.QueueUserWorkItem(delegate
+                            {
+                                try
+                                {
+                                    Dictionary<string, object> body = new Dictionary<string, object>();
+                                    body["minimapThumbBase64"] = "data:image/jpeg;base64," + b64;
+                                    HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
+                                }
+                                catch { }
+                            });
+                        }
+                    }
                 }
             }
-
-            if (triggeredAny)
-            {
-                // Already pushed via PushRelicTriggerToServer
-            }
+            catch { }
         }
 
         private void StartStateSyncThread()
@@ -1660,6 +1904,11 @@ namespace PassionMayhemDesktop
 
         private void CaptureAndUploadFrame(string scanAction)
         {
+            CaptureAndUploadFrame(scanAction, false);
+        }
+
+        private void CaptureAndUploadFrame(string scanAction, bool silentBalloon)
+        {
             Rectangle captureRect;
             bool fg;
             FindLeagueGameWindow(out captureRect, out fg);
@@ -1670,28 +1919,25 @@ namespace PassionMayhemDesktop
                 using (Graphics g = Graphics.FromImage(bmp))
                 {
                     g.CopyFromScreen(captureRect.Left, captureRect.Top, 0, 0, captureRect.Size, CopyPixelOperation.SourceCopy);
-                    using (MemoryStream ms = new MemoryStream())
+                    string base64 = EncodeBitmapToJpegBase64(bmp, 84L);
+
+                    Dictionary<string, object> frameObj = new Dictionary<string, object>();
+                    frameObj["base64"] = base64;
+                    frameObj["mimeType"] = "image/jpeg";
+                    frameObj["action"] = scanAction;
+                    frameObj["silent"] = silentBalloon;
+
+                    Dictionary<string, object> body = new Dictionary<string, object>();
+                    body["lastCapturedFrame"] = frameObj;
+
+                    ThreadPool.QueueUserWorkItem(delegate
                     {
-                        bmp.Save(ms, ImageFormat.Jpeg);
-                        string base64 = Convert.ToBase64String(ms.ToArray());
+                        try { HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body)); } catch { }
+                    });
 
-                        Dictionary<string, object> frameObj = new Dictionary<string, object>();
-                        frameObj["base64"] = base64;
-                        frameObj["mimeType"] = "image/jpeg";
-                        frameObj["action"] = scanAction;
-
-                        Dictionary<string, object> body = new Dictionary<string, object>();
-                        body["lastCapturedFrame"] = frameObj;
-
-                        ThreadPool.QueueUserWorkItem(delegate
-                        {
-                            try { HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body)); } catch { }
-                        });
-
-                        if (trayIcon != null)
-                        {
-                            trayIcon.ShowBalloonTip(1500, "ARAM Mayhem AI", scanAction == "scan-combat" ? "Đã chụp trận đấu / Bảng Tab gửi AI phân tích..." : "Đã chụp màn hình 3 Lõi gửi AI chấm điểm...", ToolTipIcon.Info);
-                        }
+                    if (!silentBalloon && trayIcon != null)
+                    {
+                        trayIcon.ShowBalloonTip(1500, "ARAM Mayhem AI", scanAction == "scan-combat" ? "Đã chụp trận đấu / Bảng Tab gửi AI phân tích..." : "Đã chụp màn hình 3 Lõi gửi AI chấm điểm...", ToolTipIcon.Info);
                     }
                 }
             }
@@ -2079,6 +2325,11 @@ namespace PassionMayhemDesktop
         private Dictionary<string, object> lastCardClick = null;
         private Dictionary<string, object> lastCapturedFrame = null;
         private long capturedFrameSeq = 0;
+        private bool modalOpen = false;
+        private long modalEventSeq = 0;
+        private string minimapThumbBase64 = "";
+        private long minimapThumbSeq = 0;
+        private string recommendedItemPath = "";
         private long updatedAt = NowMs();
 
         public EmbeddedMayhemHttpServer(string appRootDir, int listenPort)
@@ -2371,6 +2622,22 @@ namespace PassionMayhemDesktop
                         return;
                     }
 
+                    if (req.Path == "/api/mayhem/import-item-set" && req.Method == "POST")
+                    {
+                        try
+                        {
+                            SendJsonResponse(stream, 200, "OK", ImportRecommendedItemSet(req.Body));
+                        }
+                        catch (Exception ex)
+                        {
+                            Dictionary<string, object> err = new Dictionary<string, object>();
+                            err["status"] = "error";
+                            err["message"] = ex.Message;
+                            SendJsonResponse(stream, 400, "Bad Request", err);
+                        }
+                        return;
+                    }
+
                     if (req.Path == "/api/mayhem/state" && req.Method == "GET")
                     {
                         bool includeFrame = GetQueryParam(req.Query, "includeFrame") == "1";
@@ -2422,6 +2689,11 @@ namespace PassionMayhemDesktop
                 outObj["cardClickSeq"] = cardClickSeq;
                 outObj["lastCardClick"] = lastCardClick != null ? new Dictionary<string, object>(lastCardClick) : null;
                 outObj["capturedFrameSeq"] = capturedFrameSeq;
+                outObj["modalOpen"] = modalOpen;
+                outObj["modalEventSeq"] = modalEventSeq;
+                outObj["minimapThumbSeq"] = minimapThumbSeq;
+                outObj["minimapThumbBase64"] = minimapThumbBase64;
+                outObj["recommendedItemPath"] = recommendedItemPath;
                 outObj["updatedAt"] = updatedAt;
                 if (includeFrame && lastCapturedFrame != null)
                 {
@@ -2547,8 +2819,29 @@ namespace PassionMayhemDesktop
                     saved["base64"] = Convert.ToString(frame["base64"]);
                     saved["mimeType"] = frame.ContainsKey("mimeType") && frame["mimeType"] != null ? Convert.ToString(frame["mimeType"]) : "image/jpeg";
                     saved["action"] = frame.ContainsKey("action") && frame["action"] != null ? Convert.ToString(frame["action"]) : "scan-aug";
+                    saved["silent"] = frame.ContainsKey("silent") && frame["silent"] != null && Convert.ToBoolean(frame["silent"]);
                     saved["ts"] = NowMs();
                     lastCapturedFrame = saved;
+                }
+
+                if (body.ContainsKey("modalOpen") && body["modalOpen"] != null)
+                {
+                    bool nextOpen = Convert.ToBoolean(body["modalOpen"]);
+                    if (nextOpen != modalOpen)
+                    {
+                        modalOpen = nextOpen;
+                        modalEventSeq += 1;
+                    }
+                }
+
+                if (body.ContainsKey("minimapThumbBase64") && body["minimapThumbBase64"] is string)
+                {
+                    string thumbStr = (string)body["minimapThumbBase64"];
+                    if (!string.IsNullOrEmpty(thumbStr))
+                    {
+                        minimapThumbBase64 = thumbStr;
+                        minimapThumbSeq += 1;
+                    }
                 }
 
                 Dictionary<string, object> clk = body.ContainsKey("lastCardClick") ? body["lastCardClick"] as Dictionary<string, object> : null;
@@ -2567,9 +2860,328 @@ namespace PassionMayhemDesktop
                 resp["pendingActionSeq"] = pendingActionSeq;
                 resp["cardClickSeq"] = cardClickSeq;
                 resp["capturedFrameSeq"] = capturedFrameSeq;
+                resp["modalOpen"] = modalOpen;
+                resp["modalEventSeq"] = modalEventSeq;
+                resp["minimapThumbSeq"] = minimapThumbSeq;
                 resp["minimap"] = new Dictionary<string, object>(minimap);
                 return resp;
             }
+        }
+
+        private List<string> DiscoverLeagueRootDirs()
+        {
+            List<string> roots = new List<string>();
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<string> cfgDirs = DiscoverLeagueConfigDirs();
+            for (int i = 0; i < cfgDirs.Count; i++)
+            {
+                try
+                {
+                    DirectoryInfo p = Directory.GetParent(cfgDirs[i]);
+                    if (p != null && Directory.Exists(p.FullName) && seen.Add(p.FullName)) roots.Add(p.FullName);
+                }
+                catch { }
+            }
+            return roots;
+        }
+
+        private static string ReadTextShared(string filePath)
+        {
+            using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            using (StreamReader sr = new StreamReader(fs, Encoding.UTF8))
+            {
+                return sr.ReadToEnd();
+            }
+        }
+
+        private static string HttpGetBasicAuth(string url, string password, int timeoutMs)
+        {
+            HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
+            req.Method = "GET";
+            req.Proxy = null;
+            req.Timeout = timeoutMs;
+            req.ReadWriteTimeout = timeoutMs;
+            string token = Convert.ToBase64String(Encoding.ASCII.GetBytes("riot:" + password));
+            req.Headers[HttpRequestHeader.Authorization] = "Basic " + token;
+            using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+            using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+            {
+                return sr.ReadToEnd();
+            }
+        }
+
+        private Dictionary<string, object> TryReadLcuSession(out string gameflowPhase)
+        {
+            gameflowPhase = "";
+            List<string> roots = DiscoverLeagueRootDirs();
+            for (int i = 0; i < roots.Count; i++)
+            {
+                string lockPath = Path.Combine(roots[i], "lockfile");
+                if (!File.Exists(lockPath)) continue;
+                try
+                {
+                    string rawLock = ReadTextShared(lockPath).Trim();
+                    string[] parts = rawLock.Split(':');
+                    if (parts.Length < 4) continue;
+                    string lcuPort = parts[2].Trim();
+                    string lcuPass = parts[3].Trim();
+                    string proto = parts.Length >= 5 && !string.IsNullOrEmpty(parts[4].Trim()) ? parts[4].Trim() : "https";
+                    string baseUri = proto + "://127.0.0.1:" + lcuPort;
+
+                    JavaScriptSerializer js = CreateSerializer();
+                    string phaseRaw = HttpGetBasicAuth(baseUri + "/lol-gameflow/v1/gameflow-phase", lcuPass, 900);
+                    gameflowPhase = (phaseRaw ?? "").Trim().Trim('"');
+
+                    if (gameflowPhase == "ChampSelect")
+                    {
+                        string csRaw = HttpGetBasicAuth(baseUri + "/lol-champ-select/v1/session", lcuPass, 900);
+                        Dictionary<string, object> cs = js.Deserialize<Dictionary<string, object>>(csRaw);
+                        if (cs != null)
+                        {
+                            long localCellId = cs.ContainsKey("localPlayerCellId") && cs["localPlayerCellId"] != null ? Convert.ToInt64(cs["localPlayerCellId"]) : -1;
+                            int chosenChampId = 0;
+                            List<int> myTeamChamps = new List<int>();
+                            IList myTeam = cs.ContainsKey("myTeam") ? cs["myTeam"] as IList : null;
+                            if (myTeam != null)
+                            {
+                                for (int t = 0; t < myTeam.Count; t++)
+                                {
+                                    Dictionary<string, object> tm = myTeam[t] as Dictionary<string, object>;
+                                    if (tm == null) continue;
+                                    int cid = tm.ContainsKey("championId") && tm["championId"] != null ? Convert.ToInt32(tm["championId"]) : 0;
+                                    int cintent = tm.ContainsKey("championPickIntent") && tm["championPickIntent"] != null ? Convert.ToInt32(tm["championPickIntent"]) : 0;
+                                    int effectiveId = cid > 0 ? cid : cintent;
+                                    if (effectiveId > 0) myTeamChamps.Add(effectiveId);
+                                    long cellId = tm.ContainsKey("cellId") && tm["cellId"] != null ? Convert.ToInt64(tm["cellId"]) : -99;
+                                    if (cellId == localCellId) chosenChampId = effectiveId;
+                                }
+                            }
+
+                            List<int> benchChamps = new List<int>();
+                            IList benchRaw = cs.ContainsKey("benchChampions") ? cs["benchChampions"] as IList : null;
+                            if (benchRaw != null)
+                            {
+                                for (int b = 0; b < benchRaw.Count; b++)
+                                {
+                                    Dictionary<string, object> bc = benchRaw[b] as Dictionary<string, object>;
+                                    if (bc != null && bc.ContainsKey("championId") && bc["championId"] != null)
+                                    {
+                                        int bcId = Convert.ToInt32(bc["championId"]);
+                                        if (bcId > 0) benchChamps.Add(bcId);
+                                    }
+                                    else if (bc == null && benchRaw[b] != null)
+                                    {
+                                        int bcId = Convert.ToInt32(benchRaw[b]);
+                                        if (bcId > 0) benchChamps.Add(bcId);
+                                    }
+                                }
+                            }
+
+                            int mapId = 12;
+                            string queueMode = "ARAM";
+                            try
+                            {
+                                string gfRaw = HttpGetBasicAuth(baseUri + "/lol-gameflow/v1/session", lcuPass, 800);
+                                Dictionary<string, object> gf = js.Deserialize<Dictionary<string, object>>(gfRaw);
+                                Dictionary<string, object> gd = gf != null && gf.ContainsKey("gameData") ? gf["gameData"] as Dictionary<string, object> : null;
+                                Dictionary<string, object> q = gd != null && gd.ContainsKey("queue") ? gd["queue"] as Dictionary<string, object> : null;
+                                if (q != null && q.ContainsKey("mapId") && q["mapId"] != null) mapId = Convert.ToInt32(q["mapId"]);
+                                if (q != null && q.ContainsKey("gameMode") && q["gameMode"] != null) queueMode = Convert.ToString(q["gameMode"]);
+                            }
+                            catch { }
+
+                            Dictionary<string, object> res = new Dictionary<string, object>();
+                            res["connected"] = true;
+                            res["phase"] = "ChampSelect";
+                            res["source"] = "lcu-lockfile";
+                            res["mapNumber"] = mapId;
+                            res["gameMode"] = queueMode;
+                            res["championId"] = chosenChampId;
+                            res["myTeamChampionIds"] = myTeamChamps.ToArray();
+                            res["benchChampionIds"] = benchChamps.ToArray();
+                            return res;
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(gameflowPhase) && gameflowPhase != "None")
+                    {
+                        Dictionary<string, object> res = new Dictionary<string, object>();
+                        res["connected"] = false;
+                        res["phase"] = gameflowPhase;
+                        res["source"] = "lcu-lockfile";
+                        return res;
+                    }
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        private Dictionary<string, object> TryReadLatestR3dLogRoster()
+        {
+            bool gameProcRunning = false;
+            try { gameProcRunning = Process.GetProcessesByName("League of Legends").Length > 0; } catch { }
+            if (!gameProcRunning) return null;
+
+            List<string> roots = DiscoverLeagueRootDirs();
+            FileInfo newestLog = null;
+            for (int i = 0; i < roots.Count; i++)
+            {
+                string gameLogsDir = Path.Combine(roots[i], "Logs\\GameLogs");
+                if (!Directory.Exists(gameLogsDir)) continue;
+                try
+                {
+                    string[] subDirs = Directory.GetDirectories(gameLogsDir);
+                    for (int d = 0; d < subDirs.Length; d++)
+                    {
+                        string[] logs = Directory.GetFiles(subDirs[d], "*_r3dlog.txt");
+                        for (int f = 0; f < logs.Length; f++)
+                        {
+                            FileInfo fi = new FileInfo(logs[f]);
+                            if (newestLog == null || fi.LastWriteTimeUtc > newestLog.LastWriteTimeUtc) newestLog = fi;
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            if (newestLog == null || (DateTime.UtcNow - newestLog.LastWriteTimeUtc).TotalMinutes > 45.0) return null;
+            try
+            {
+                string content = ReadTextShared(newestLog.FullName);
+                if (content.IndexOf("GAMESTATE_ENDGAME", StringComparison.Ordinal) >= 0 ||
+                    content.IndexOf("GAMESTATE_EXIT", StringComparison.Ordinal) >= 0)
+                {
+                    return null;
+                }
+
+                Regex rx = new Regex(@"ROST\|\s+CONNECTION READY\s+\|\s+(TeamOrder|TeamChaos)\s+\d+\)\s+'([^']+)'(\s+\*\*LOCAL\*\*)?\s+-\s+Champion\(([^)]+)\)");
+                MatchCollection matches = rx.Matches(content);
+                if (matches.Count == 0) return null;
+
+                string localChamp = "";
+                string localSummoner = "";
+                List<object> players = new List<object>();
+                for (int m = 0; m < matches.Count; m++)
+                {
+                    Match mt = matches[m];
+                    string teamRaw = mt.Groups[1].Value;
+                    string playerSum = mt.Groups[2].Value;
+                    bool isLocal = !string.IsNullOrEmpty(mt.Groups[3].Value);
+                    string champKey = mt.Groups[4].Value;
+                    string teamNorm = teamRaw == "TeamOrder" ? "ORDER" : "CHAOS";
+                    if (isLocal)
+                    {
+                        localChamp = champKey;
+                        localSummoner = playerSum;
+                    }
+                    Dictionary<string, object> pObj = new Dictionary<string, object>();
+                    pObj["championName"] = champKey;
+                    pObj["rawChampionKey"] = champKey;
+                    pObj["team"] = teamNorm;
+                    pObj["level"] = 3;
+                    pObj["isDead"] = false;
+                    pObj["items"] = new object[0];
+                    players.Add(pObj);
+                }
+
+                if (string.IsNullOrEmpty(localChamp)) return null;
+                Dictionary<string, object> activeOut = new Dictionary<string, object>();
+                activeOut["championName"] = localChamp;
+                activeOut["rawChampionKey"] = localChamp;
+                activeOut["level"] = 3;
+                activeOut["currentGold"] = 1400.0;
+                activeOut["summonerName"] = localSummoner;
+
+                Dictionary<string, object> res = new Dictionary<string, object>();
+                res["connected"] = true;
+                res["phase"] = "LoadingScreen";
+                res["source"] = "r3dlog";
+                res["gameTime"] = 0.0;
+                res["activePlayer"] = activeOut;
+                res["allPlayers"] = players.ToArray();
+                return res;
+            }
+            catch { return null; }
+        }
+
+        private Dictionary<string, object> ImportRecommendedItemSet(string rawBody)
+        {
+            JavaScriptSerializer js = CreateSerializer();
+            Dictionary<string, object> body = string.IsNullOrEmpty(rawBody)
+                ? new Dictionary<string, object>()
+                : js.Deserialize<Dictionary<string, object>>(rawBody);
+            if (body == null) throw new Exception("Empty item set payload");
+
+            List<string> cfgDirs = DiscoverLeagueConfigDirs();
+            string targetCfg = cfgDirs.Count > 0 ? cfgDirs[0] : "";
+            if (string.IsNullOrEmpty(targetCfg)) throw new Exception("Không tìm thấy thư mục Config của LMHT");
+
+            string recDir = Path.Combine(targetCfg, "Global\\Recommended");
+            Directory.CreateDirectory(recDir);
+            string outPath = Path.Combine(recDir, "!!!passion-mayhem.json");
+
+            string champKey = body.ContainsKey("championKey") && body["championKey"] != null ? Convert.ToString(body["championKey"]) : "any";
+            string title = body.ContainsKey("title") && body["title"] != null ? Convert.ToString(body["title"]) : ("Passion Mayhem: " + champKey);
+            IList blocksIn = body.ContainsKey("blocks") ? body["blocks"] as IList : null;
+
+            List<object> blocksOut = new List<object>();
+            if (blocksIn != null)
+            {
+                for (int bi = 0; bi < blocksIn.Count; bi++)
+                {
+                    Dictionary<string, object> blk = blocksIn[bi] as Dictionary<string, object>;
+                    if (blk == null) continue;
+                    string blkTitle = blk.ContainsKey("type") && blk["type"] != null ? Convert.ToString(blk["type"]) : "Gợi Ý Trang Bị";
+                    IList itemsIn = blk.ContainsKey("items") ? blk["items"] as IList : null;
+                    List<object> itemsOut = new List<object>();
+                    if (itemsIn != null)
+                    {
+                        for (int ii = 0; ii < itemsIn.Count; ii++)
+                        {
+                            Dictionary<string, object> it = itemsIn[ii] as Dictionary<string, object>;
+                            string itemId = it != null && it.ContainsKey("id") ? Convert.ToString(it["id"]) : Convert.ToString(itemsIn[ii]);
+                            itemId = (itemId ?? "").Trim();
+                            if (!Regex.IsMatch(itemId, @"^\d+$")) continue;
+                            Dictionary<string, object> itEntry = new Dictionary<string, object>();
+                            itEntry["id"] = itemId;
+                            itEntry["count"] = 1;
+                            itemsOut.Add(itEntry);
+                        }
+                    }
+                    if (itemsOut.Count > 0)
+                    {
+                        Dictionary<string, object> bObj = new Dictionary<string, object>();
+                        bObj["recMath"] = false;
+                        bObj["minSummonerLevel"] = -1;
+                        bObj["maxSummonerLevel"] = -1;
+                        bObj["showIfSummonerSpell"] = "";
+                        bObj["hideIfSummonerSpell"] = "";
+                        bObj["type"] = blkTitle;
+                        bObj["items"] = itemsOut.ToArray();
+                        blocksOut.Add(bObj);
+                    }
+                }
+            }
+
+            Dictionary<string, object> itemSetDoc = new Dictionary<string, object>();
+            itemSetDoc["title"] = title;
+            itemSetDoc["championKey"] = champKey;
+            itemSetDoc["map"] = "any";
+            itemSetDoc["mode"] = "any";
+            itemSetDoc["type"] = "custom";
+            itemSetDoc["priority"] = true;
+            itemSetDoc["sortrank"] = 1000000001;
+            itemSetDoc["blocks"] = blocksOut.ToArray();
+
+            File.WriteAllText(outPath, js.Serialize(itemSetDoc), new UTF8Encoding(false));
+            lock (stateLock) { recommendedItemPath = outPath; }
+
+            Dictionary<string, object> ok = new Dictionary<string, object>();
+            ok["status"] = "ok";
+            ok["path"] = outPath;
+            ok["championKey"] = champKey;
+            ok["blocksCount"] = blocksOut.Count;
+            return ok;
         }
 
         private Dictionary<string, object> FetchRiotLiveClient()
@@ -2581,8 +3193,8 @@ namespace PassionMayhemDesktop
                 HttpWebRequest req = (HttpWebRequest)WebRequest.Create("https://127.0.0.1:2999/liveclientdata/allgamedata");
                 req.Method = "GET";
                 req.Proxy = null;
-                req.Timeout = 1200;
-                req.ReadWriteTimeout = 1200;
+                req.Timeout = 1000;
+                req.ReadWriteTimeout = 1000;
 
                 string raw;
                 using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
@@ -2600,6 +3212,9 @@ namespace PassionMayhemDesktop
                 string activeSummoner = active != null && active.ContainsKey("summonerName") && active["summonerName"] != null ? Convert.ToString(active["summonerName"]) : "";
                 string activeRiotId = active != null && active.ContainsKey("riotId") && active["riotId"] != null ? Convert.ToString(active["riotId"]) : "";
                 string activeChamp = "";
+                string activeRawKey = "";
+                object[] activeItems = new object[0];
+                Dictionary<string, object> activeScores = null;
 
                 List<object> playersOut = new List<object>();
                 if (allPlayersRaw != null)
@@ -2609,13 +3224,10 @@ namespace PassionMayhemDesktop
                         Dictionary<string, object> p = allPlayersRaw[i] as Dictionary<string, object>;
                         if (p == null) continue;
                         string pChamp = p.ContainsKey("championName") && p["championName"] != null ? Convert.ToString(p["championName"]) : "";
+                        string pRawChamp = p.ContainsKey("rawChampionName") && p["rawChampionName"] != null ? Convert.ToString(p["rawChampionName"]) : "";
+                        string pRawKey = pRawChamp.Replace("game_character_displayname_", "");
                         string pSum = p.ContainsKey("summonerName") && p["summonerName"] != null ? Convert.ToString(p["summonerName"]) : "";
                         string pRiot = p.ContainsKey("riotId") && p["riotId"] != null ? Convert.ToString(p["riotId"]) : "";
-
-                        if (active != null && active.ContainsKey("championStats") && ((pSum == activeSummoner && !string.IsNullOrEmpty(pSum)) || (pRiot == activeRiotId && !string.IsNullOrEmpty(pRiot))))
-                        {
-                            activeChamp = pChamp;
-                        }
 
                         List<object> itemsOut = new List<object>();
                         IList pItems = p.ContainsKey("items") ? p["items"] as IList : null;
@@ -2632,27 +3244,44 @@ namespace PassionMayhemDesktop
                             }
                         }
 
+                        if (active != null && active.ContainsKey("championStats") && ((pSum == activeSummoner && !string.IsNullOrEmpty(pSum)) || (pRiot == activeRiotId && !string.IsNullOrEmpty(pRiot))))
+                        {
+                            activeChamp = pChamp;
+                            activeRawKey = pRawKey;
+                            activeItems = itemsOut.ToArray();
+                            activeScores = p.ContainsKey("scores") ? p["scores"] as Dictionary<string, object> : null;
+                        }
+
                         Dictionary<string, object> pObj = new Dictionary<string, object>();
                         pObj["championName"] = pChamp;
+                        pObj["rawChampionKey"] = pRawKey;
                         pObj["team"] = p.ContainsKey("team") && p["team"] != null ? Convert.ToString(p["team"]) : "";
                         pObj["level"] = p.ContainsKey("level") && p["level"] != null ? Convert.ToInt32(p["level"]) : 1;
                         pObj["isDead"] = p.ContainsKey("isDead") && p["isDead"] != null && Convert.ToBoolean(p["isDead"]);
                         pObj["items"] = itemsOut.ToArray();
+                        if (p.ContainsKey("scores") && p["scores"] != null) pObj["scores"] = p["scores"];
                         playersOut.Add(pObj);
                     }
                 }
 
                 Dictionary<string, object> activeOut = new Dictionary<string, object>();
                 activeOut["championName"] = activeChamp;
+                activeOut["rawChampionKey"] = activeRawKey;
                 activeOut["level"] = active != null && active.ContainsKey("level") && active["level"] != null ? Convert.ToInt32(active["level"]) : 1;
                 activeOut["currentGold"] = active != null && active.ContainsKey("currentGold") && active["currentGold"] != null ? Convert.ToDouble(active["currentGold"]) : 0.0;
                 activeOut["summonerName"] = !string.IsNullOrEmpty(activeSummoner) ? activeSummoner : activeRiotId;
+                activeOut["items"] = activeItems;
+                if (active != null && active.ContainsKey("championStats") && active["championStats"] != null) activeOut["stats"] = active["championStats"];
+                if (activeScores != null) activeOut["scores"] = activeScores;
 
                 Dictionary<string, object> resObj = new Dictionary<string, object>();
                 resObj["connected"] = true;
+                resObj["phase"] = "InGame";
+                resObj["source"] = "live-client-2999";
                 resObj["gameTime"] = gameData != null && gameData.ContainsKey("gameTime") && gameData["gameTime"] != null ? Convert.ToDouble(gameData["gameTime"]) : 0.0;
                 resObj["mapName"] = gameData != null && gameData.ContainsKey("mapName") && gameData["mapName"] != null ? Convert.ToString(gameData["mapName"]) : "";
                 resObj["mapNumber"] = gameData != null && gameData.ContainsKey("mapNumber") && gameData["mapNumber"] != null ? Convert.ToInt32(gameData["mapNumber"]) : 0;
+                resObj["mapTerrain"] = gameData != null && gameData.ContainsKey("mapTerrain") && gameData["mapTerrain"] != null ? Convert.ToString(gameData["mapTerrain"]) : "";
                 resObj["gameMode"] = gameData != null && gameData.ContainsKey("gameMode") && gameData["gameMode"] != null ? Convert.ToString(gameData["gameMode"]) : "";
                 resObj["activePlayer"] = activeOut;
                 resObj["allPlayers"] = playersOut.ToArray();
@@ -2660,6 +3289,22 @@ namespace PassionMayhemDesktop
             }
             catch (Exception ex)
             {
+                string lcuPhase;
+                Dictionary<string, object> lcuRes = TryReadLcuSession(out lcuPhase);
+                if (lcuRes != null && lcuRes.ContainsKey("connected") && Convert.ToBoolean(lcuRes["connected"]))
+                {
+                    return lcuRes;
+                }
+                Dictionary<string, object> r3dRes = TryReadLatestR3dLogRoster();
+                if (r3dRes != null)
+                {
+                    return r3dRes;
+                }
+                if (lcuRes != null && lcuRes.ContainsKey("phase"))
+                {
+                    fail["phase"] = lcuRes["phase"];
+                    fail["source"] = "lcu-lockfile";
+                }
                 fail["reason"] = ex.Message;
                 return fail;
             }

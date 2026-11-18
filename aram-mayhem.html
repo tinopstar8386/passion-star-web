@@ -266,8 +266,8 @@
 
                         <div id="visionEmptyState" class="space-y-1.5 pointer-events-none">
                             <i class="fa-solid fa-desktop text-2xl text-slate-500"></i>
-                            <p class="text-xs text-slate-300 font-semibold">Bấm <span class="text-cyan-300">Bắt màn hình Game</span> hoặc dán ảnh <span class="text-amber-300">Ctrl+V</span></p>
-                            <p class="text-[10px] text-slate-500">AI nhận diện Tướng + 3 Lõi + Bảng Tab trận đấu & hỗ trợ Overlay nổi trên game</p>
+                            <p id="visionEmptyTitle" class="text-xs text-slate-300 font-semibold">Bấm <span class="text-cyan-300">Bắt màn hình Game</span> hoặc dán ảnh <span class="text-amber-300">Ctrl+V</span></p>
+                            <p id="visionEmptySub" class="text-[10px] text-slate-500">AI nhận diện Tướng + 3 Lõi + Bảng Tab trận đấu & hỗ trợ Overlay nổi trên game</p>
                         </div>
 
                         <div id="visionLoadingOverlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
@@ -546,7 +546,7 @@
 
                     <!-- DYNAMIC AUGMENT-ADAPTIVE ITEM BUILD -->
                     <div class="glass-panel rounded-3xl p-4 sm:p-5 space-y-3.5">
-                        <div class="flex items-center justify-between gap-2">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 flex items-center justify-center text-xs">
                                     <i class="fa-solid fa-shield-halved"></i>
@@ -556,6 +556,13 @@
                                     <p class="text-[11px] text-slate-400">Trang bị tự động biến đổi theo lõi & đội hình địch</p>
                                 </div>
                             </div>
+                            <button type="button" id="btnImportItemsShop" onclick="syncRecommendedBuildToGameShop(null, null, true)" class="hidden py-1 px-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-[10px] font-extrabold text-emerald-300 flex items-center gap-1 cursor-pointer transition" title="Xuất bộ trang bị này trực tiếp vào Cửa Hàng (Shop) trong game LMHT giống Blitz">
+                                <i class="fa-solid fa-cart-plus"></i>
+                                <span id="shopSyncLabel">Nạp Shop LMHT</span>
+                            </button>
+                        </div>
+
+                        <div id="liveMatchTelemetryBar" class="hidden flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-2xl bg-slate-900/90 border border-emerald-500/30 text-[11px]">
                         </div>
 
                         <!-- Enemy Threat Quick-Toggles -->
@@ -20280,6 +20287,7 @@
             ddVersion: '16.23.1',
             championsMap: {},      // id -> unified champion object
             championsList: [],     // sorted array
+            championKeyByNumId: {},// numeric Riot championId (e.g. 26) -> champion id ('Zilean')
             itemsMap: { ...FALLBACK_ITEMS },
             selectedChampId: 'Vi',
             chosenAugments: [null, null, null, null], // [Lõi 1, Lõi 2, Lõi 3, Lõi 4]
@@ -20360,8 +20368,19 @@
             },
             isDesktopBridgeConnected: false,
             liveClientConnected: false,
+            livePhase: 'Idle',
+            liveSource: 'none',
             lastCapturedFrameSeq: 0,
             lastRelicEventSeq: 0,
+            lastMinimapThumbSeq: 0,
+            lastNativeModalEventSeq: 0,
+            nativeModalOpen: false,
+            purchasedItemIds: [],
+            liveCurrentGold: 0,
+            livePlayerLevel: 1,
+            livePlayerScores: null,
+            liveChampionStats: null,
+            lastImportedShopKey: '',
             initialSpawnSyncedForMatch: false,
             lastLiveGameTime: 0
         };
@@ -20423,14 +20442,18 @@
                     const champJson = await champRes.json();
                     const ddChamps = champJson.data || {};
                     Object.values(ddChamps).forEach(dc => {
+                        const numKey = Number(dc.key);
+                        if (numKey > 0) state.championKeyByNumId[numKey] = dc.id;
                         const existing = state.championsMap[dc.id];
                         if (existing) {
+                            existing.numKey = numKey;
                             existing.nameVi = dc.name || existing.nameVi;
                             existing.titleVi = dc.title || existing.titleVi;
                         } else {
                             const inferred = inferChampionArchetype(dc);
                             state.championsMap[dc.id] = {
                                 id: dc.id,
+                                numKey,
                                 nameVi: dc.name,
                                 nameEn: dc.id,
                                 titleVi: dc.title,
@@ -21391,13 +21414,86 @@
             pushMayhemStateToBridge();
         }
 
+        async function syncRecommendedBuildToGameShop(champArg = null, buildArg = null, manualForce = false) {
+            if (!state.isDesktopBridgeConnected) return;
+            const champ = champArg || state.championsMap[state.selectedChampId];
+            if (!champ) return;
+            const build = buildArg || computeAdaptiveBuild(champ, state.chosenAugments);
+            const dedupeKey = `${champ.id}:${build.boots}:${build.finalCore.join(',')}:${build.situational.join(',')}`;
+            if (!manualForce && dedupeKey === state.lastImportedShopKey) return;
+            state.lastImportedShopKey = dedupeKey;
+
+            const starterItems = ['3802', '2031'].filter(id => state.itemsMap[id]);
+            const payload = {
+                title: `⚡ Passion Mayhem: ${champ.nameVi} (26.22)`,
+                championKey: champ.id,
+                blocks: [
+                    {
+                        type: '⚡ Giày & Core PeakBuild 26.22 (Thứ Tự Mua)',
+                        items: [build.boots, ...build.finalCore].filter(Boolean).map(id => ({ id: String(id), count: 1 }))
+                    },
+                    ...(build.situational.length > 0 ? [{
+                        type: '🛡️ Trang Bị Tình Huống Khắc Chế',
+                        items: build.situational.map(id => ({ id: String(id), count: 1 }))
+                    }] : []),
+                    ...(starterItems.length > 0 ? [{
+                        type: '🛒 Khởi Đầu Nhanh ARAM',
+                        items: starterItems.map(id => ({ id, count: 1 }))
+                    }] : [])
+                ]
+            };
+
+            try {
+                const res = await fetch('/api/mayhem/import-item-set', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    const out = await res.json();
+                    const lbl = document.getElementById('shopSyncLabel');
+                    if (lbl) lbl.textContent = `✓ Đã nạp Shop (${champ.nameVi})`;
+                    if (manualForce) showToast(`Đã nạp bộ đồ "${champ.nameVi}" trực tiếp vào Shop LMHT (!!!passion-mayhem.json)!`, 'success');
+                }
+            } catch (_) {}
+        }
+
         function renderAdaptiveBuild() {
             const container = document.getElementById('adaptiveBuildContainer');
             const pivotEl = document.getElementById('adaptiveBuildPivotNote');
+            const telemetryEl = document.getElementById('liveMatchTelemetryBar');
+            const shopBtn = document.getElementById('btnImportItemsShop');
             const champ = state.championsMap[state.selectedChampId];
             if (!champ || !container) return;
 
+            if (shopBtn) shopBtn.classList.toggle('hidden', !state.isDesktopBridgeConnected);
+
             const build = computeAdaptiveBuild(champ, state.chosenAugments);
+            const purchasedSet = new Set((state.purchasedItemIds || []).map(Number).filter(n => n > 0));
+
+            if (telemetryEl) {
+                if (state.liveClientConnected && state.livePhase === 'InGame') {
+                    const st = state.liveChampionStats || {};
+                    const sc = state.livePlayerScores || {};
+                    telemetryEl.classList.remove('hidden');
+                    telemetryEl.innerHTML = `
+                        <div class="flex items-center gap-2 text-emerald-300 font-extrabold">
+                            <span>🪙 ${Math.round(state.liveCurrentGold || 0).toLocaleString('vi-VN')} Vàng</span>
+                            <span class="text-slate-600">•</span>
+                            <span class="text-cyan-300">Lv.${state.livePlayerLevel || 1}</span>
+                            ${sc.kills !== undefined ? `<span class="text-slate-600">•</span><span class="text-amber-300">${sc.kills}/${sc.deaths}/${sc.assists} (${sc.creepScore || 0} CS)</span>` : ''}
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] font-mono text-slate-300">
+                            <span>SMPT: <b class="text-cyan-300">${Math.round(st.abilityPower || 0)}</b></span>
+                            <span>SMCK: <b class="text-amber-300">${Math.round(st.attackDamage || 0)}</b></span>
+                            <span>Giáp: <b class="text-emerald-300">${Math.round(st.armor || 0)}</b></span>
+                            <span>KP: <b class="text-purple-300">${Math.round(st.magicResist || 0)}</b></span>
+                        </div>
+                    `;
+                } else {
+                    telemetryEl.classList.add('hidden');
+                }
+            }
 
             if (build.pivotNotes.length > 0) {
                 pivotEl.classList.remove('hidden');
@@ -21416,13 +21512,17 @@
 
             const renderItemCard = (itemId, slotLabel) => {
                 const info = state.itemsMap[itemId] || { name: `Trang bị #${itemId}`, tag: '' };
+                const isBought = purchasedSet.has(Number(itemId));
                 return `
-                    <div class="flex items-center gap-2.5 p-2 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-cyan-500/40 transition">
+                    <div class="flex items-center gap-2.5 p-2 rounded-2xl ${isBought ? 'bg-emerald-950/50 border-emerald-400/60' : 'bg-slate-900/80 border-slate-800 hover:border-cyan-500/40'} border transition">
                         <img src="${getItemIconUrl(itemId)}" alt="${escapeHtml(info.name)}"
                              onerror="this.src='https://ddragon.leagueoflegends.com/cdn/16.23.1/img/item/${itemId}.png'"
-                             class="w-10 h-10 rounded-xl object-cover border border-amber-500/30 bg-slate-800 shrink-0">
+                             class="w-10 h-10 rounded-xl object-cover border ${isBought ? 'border-emerald-400' : 'border-amber-500/30'} bg-slate-800 shrink-0">
                         <div class="min-w-0 flex-1">
-                            <div class="text-[10px] font-bold text-amber-300/90 uppercase">${slotLabel}</div>
+                            <div class="flex items-center justify-between gap-1">
+                                <span class="text-[10px] font-bold ${isBought ? 'text-emerald-300' : 'text-amber-300/90'} uppercase">${slotLabel}</span>
+                                ${isBought ? '<span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">✓ ĐÃ MUA</span>' : ''}
+                            </div>
                             <div class="text-xs font-bold text-slate-100 truncate">${escapeHtml(info.name)}</div>
                             ${info.tag ? `<div class="text-[10px] text-slate-400 truncate">${escapeHtml(info.tag)}</div>` : ''}
                         </div>
@@ -21447,6 +21547,8 @@
                     </div>
                 ` : ''}
             `;
+
+            syncRecommendedBuildToGameShop(champ, build, false);
         }
 
         // =====================================================================
@@ -22870,7 +22972,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
             box.style.height = `${previewSz}px`;
             const markerSz = Math.max(18, Math.round(previewSz * 0.19));
             const fontSz = Math.max(8, Math.round(previewSz * 0.075));
-            const hasLiveBg = Boolean(state.screenStream && liveCanvas && !liveCanvas.classList.contains('hidden'));
+            const hasLiveBg = Boolean(liveCanvas && !liveCanvas.classList.contains('hidden'));
 
             layer.innerHTML = `
                 <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full pointer-events-none ${hasLiveBg ? 'opacity-20' : 'opacity-65'}">
@@ -23858,6 +23960,32 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
         // =====================================================================
         let bridgeSyncThrottle = null;
 
+        function resolveChampionByNumericId(numId) {
+            const idNum = Number(numId);
+            if (!idNum) return null;
+            const key = state.championKeyByNumId[idNum];
+            if (key && state.championsMap[key]) return state.championsMap[key];
+            return state.championsList.find(c => Number(c.numKey) === idNum) || null;
+        }
+
+        function drawNativeMinimapThumb(dataUrl) {
+            if (!dataUrl || state.screenStream) return;
+            const previewCanvas = document.getElementById('liveMinimapCanvas');
+            if (!previewCanvas) return;
+            const img = new Image();
+            img.onload = () => {
+                if (state.screenStream) return;
+                const ctx = previewCanvas.getContext('2d');
+                if (!ctx) return;
+                ctx.drawImage(img, 0, 0, previewCanvas.width, previewCanvas.height);
+                if (previewCanvas.classList.contains('hidden')) {
+                    previewCanvas.classList.remove('hidden');
+                    renderMinimapRadar();
+                }
+            };
+            img.src = dataUrl;
+        }
+
         async function initDesktopAndLiveClientBridge() {
             const isLocal = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
             if (!isLocal) return;
@@ -23870,12 +23998,30 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
 
                 state.isDesktopBridgeConnected = true;
                 const badge = document.getElementById('desktopBridgeBadge');
-                if (badge) badge.classList.remove('hidden');
+                if (badge) {
+                    badge.textContent = '⚡ Blitz Native Hook';
+                    badge.classList.remove('hidden');
+                }
                 const quickRow = document.getElementById('desktopQuickCaptureRow');
                 if (quickRow) quickRow.classList.remove('hidden');
+                const shopBtn = document.getElementById('btnImportItemsShop');
+                if (shopBtn) shopBtn.classList.remove('hidden');
+
+                const emptyTitle = document.getElementById('visionEmptyTitle');
+                if (emptyTitle) emptyTitle.innerHTML = '⚡ <span class="text-emerald-300">Blitz Native Hook đang bật</span> — Không cần Share màn hình!';
+                const emptySub = document.getElementById('visionEmptySub');
+                if (emptySub) emptySub.textContent = 'Tự đọc LCU Sảnh chờ + File Log Game + Cửa sổ 3 Lõi & Minimap ngầm trên Desktop';
+                const capLbl = document.getElementById('btnStartCaptureLabel');
+                if (capLbl && !state.screenStream) capLbl.textContent = 'Share màn hình (Tuỳ chọn)';
+                const modeBadge = document.getElementById('scanModeBadge');
+                if (modeBadge) {
+                    modeBadge.textContent = '⚡ Blitz Native';
+                    modeBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                }
 
                 // Initial sync from server / Riot config
                 await detectRiotMinimapConfig();
+                syncRecommendedBuildToGameShop(null, null, false);
                 setInterval(pollDesktopBridgeState, 650);
                 setInterval(pollRiotLiveClient, 2500);
                 pollRiotLiveClient();
@@ -23958,6 +24104,12 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     }
                 }
 
+                // Render native live minimap thumbnail without browser screen share
+                if (!state.screenStream && data.minimapThumbSeq && data.minimapThumbSeq > state.lastMinimapThumbSeq && data.minimapThumbBase64) {
+                    state.lastMinimapThumbSeq = data.minimapThumbSeq;
+                    drawNativeMinimapThumb(data.minimapThumbBase64);
+                }
+
                 // Track mouse click on Left / Center / Right card reported by PassionMayhem.exe
                 if (data.cardClickSeq && data.cardClickSeq > state.lastCardClickSeq && data.lastCardClick) {
                     state.lastCardClickSeq = data.cardClickSeq;
@@ -23965,6 +24117,16 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     if (state.liveOfferState && state.liveOfferState.active && clkIdx >= 0 && clkIdx <= 2) {
                         state.liveOfferState.clickedIdx = clkIdx;
                         state.liveOfferState.clickedTs = Date.now();
+                    }
+                }
+
+                // Track native 3-card modal open/close transitions from PassionMayhem.exe -> auto-lock picked augment
+                if (data.modalEventSeq && data.modalEventSeq > state.lastNativeModalEventSeq) {
+                    state.lastNativeModalEventSeq = data.modalEventSeq;
+                    const wasNativeOpen = state.nativeModalOpen;
+                    state.nativeModalOpen = Boolean(data.modalOpen);
+                    if (!state.screenStream && wasNativeOpen && !state.nativeModalOpen && state.liveOfferState && state.liveOfferState.active) {
+                        handleLiveOfferClose();
                     }
                 }
 
@@ -23978,7 +24140,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     }
                 }
 
-                // Handle silent frame captured via Alt+Shift+Q or Alt+Shift+E
+                // Handle silent frame captured via Native Auto-Watch or Alt+Shift+Q / Alt+Shift+E
                 if (data.capturedFrameSeq && data.capturedFrameSeq > state.lastCapturedFrameSeq) {
                     state.lastCapturedFrameSeq = data.capturedFrameSeq;
                     const frameRes = await fetch('/api/mayhem/state?includeFrame=1');
@@ -24001,7 +24163,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                             if (f.action === 'scan-combat') {
                                 analyzeInGameCombatScreen(state.lastImageBase64, state.lastImageMime);
                             } else {
-                                analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime);
+                                analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime, Boolean(f.silent));
                             }
                         }
                     }
@@ -24019,7 +24181,7 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
             let ccCount = 0;
 
             for (const ep of enemies) {
-                const mc = fuzzyMatchChampion(ep.championName);
+                const mc = fuzzyMatchChampion(ep.rawChampionKey || ep.championName);
                 const tags = new Set(mc?.tags || []);
                 if (tags.has('tank') || tags.has('hp') || tags.has('juggernaut')) tankCount++;
                 if (tags.has('heal') || tags.has('enchanter')) healCount++;
@@ -24045,24 +24207,87 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                 if (!res.ok) return;
                 const live = await res.json();
                 if (!live || !live.connected) {
+                    const wasConnected = state.liveClientConnected;
                     state.liveClientConnected = false;
+                    state.livePhase = live?.phase || 'Idle';
+                    state.liveSource = live?.source || 'none';
                     state.initialSpawnSyncedForMatch = false;
+                    if (wasConnected) {
+                        state.purchasedItemIds = [];
+                        state.liveCurrentGold = 0;
+                        state.livePlayerLevel = 1;
+                        state.livePlayerScores = null;
+                        state.liveChampionStats = null;
+                        renderAdaptiveBuild();
+                    }
                     if (badge) {
-                        badge.textContent = '🖥️ Blitz Desktop Ready';
+                        badge.textContent = state.livePhase === 'Lobby' || state.livePhase === 'Matchmaking'
+                            ? '⚡ Blitz Native • Đang tìm trận'
+                            : '⚡ Blitz Native Ready';
                         badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/35';
                     }
                     return;
                 }
 
                 state.liveClientConnected = true;
+                state.livePhase = live.phase || 'InGame';
+                state.liveSource = live.source || 'live-client-2999';
                 state.lastLiveGameTime = live.gameTime || 0;
+
+                // Stage A: LCU Champ Select Lobby -> Auto-select champion & write item set to LoL Shop immediately!
+                if (state.livePhase === 'ChampSelect') {
+                    const matched = resolveChampionByNumericId(live.championId);
+                    if (matched && matched.id !== state.selectedChampId) {
+                        state.selectedChampId = matched.id;
+                        state.chosenAugments = [null, null, null, null];
+                        state.slotAlternatives = [[], [], [], []];
+                        state.rollCandidates = [null, null, null];
+                        state.enemyThreats = [];
+                        state.purchasedItemIds = [];
+                        renderAll();
+                    }
+                    if (badge) {
+                        badge.textContent = `🏛️ Sảnh Chọn Tướng${matched ? ` • ${matched.nameVi}` : ''}`;
+                        badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40';
+                    }
+                    return;
+                }
+
+                // Stage B & C: LoadingScreen (r3dlog.txt) or InGame (2999 Live Client)
+                const activeKeyOrName = live.activePlayer?.rawChampionKey || live.activePlayer?.championName;
+                if (activeKeyOrName) {
+                    const matched = fuzzyMatchChampion(activeKeyOrName);
+                    if (matched && matched.id !== state.selectedChampId) {
+                        state.selectedChampId = matched.id;
+                        renderAll();
+                    }
+                }
+
+                const prevItemsKey = (state.purchasedItemIds || []).join(',');
+                const prevGoldBucket = Math.floor((state.liveCurrentGold || 0) / 50);
+                if (live.activePlayer) {
+                    state.liveCurrentGold = Number(live.activePlayer.currentGold || 0);
+                    state.livePlayerLevel = Number(live.activePlayer.level || 1);
+                    state.livePlayerScores = live.activePlayer.scores || null;
+                    state.liveChampionStats = live.activePlayer.stats || null;
+                    state.purchasedItemIds = Array.isArray(live.activePlayer.items)
+                        ? live.activePlayer.items.map(it => Number(it.itemID)).filter(id => id > 0)
+                        : [];
+                }
+                const nextItemsKey = state.purchasedItemIds.join(',');
+                const nextGoldBucket = Math.floor((state.liveCurrentGold || 0) / 50);
+
                 if (badge) {
-                    badge.textContent = `🎮 Live Match (${formatMMSS(live.gameTime || 0)})`;
-                    badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                    badge.textContent = state.livePhase === 'LoadingScreen'
+                        ? `⏳ Đang Vào Trận (${activeKeyOrName || 'LMHT'})`
+                        : `🎮 Live Match (${formatMMSS(live.gameTime || 0)})`;
+                    badge.className = state.livePhase === 'LoadingScreen'
+                        ? 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                        : 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
                 }
 
                 // Auto-detect Pirate vs Howling Abyss map if not overridden
-                const mapStr = String(live.mapName || '').toLowerCase();
+                const mapStr = String(live.mapName || live.mapTerrain || '').toLowerCase();
                 if (!state.manualMapModeOverride) {
                     if (mapStr.includes('butcher') || mapStr.includes('bilgewater') || mapStr.includes('pirate') || live.mapNumber === 35 || live.mapNumber === 14) {
                         if (state.mapMode !== 'pirate_60') setMapMode('pirate_60', false);
@@ -24071,19 +24296,12 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     }
                 }
 
-                // Auto-select player's champion
-                const activeChampName = live.activePlayer?.championName;
-                if (activeChampName) {
-                    const matched = fuzzyMatchChampion(activeChampName);
-                    if (matched && matched.id !== state.selectedChampId) {
-                        state.selectedChampId = matched.id;
-                        renderAll();
-                    }
-                }
-
                 // Auto-infer enemy threats once players load
                 if (Array.isArray(live.allPlayers) && live.allPlayers.length > 0 && state.enemyThreats.length === 0) {
-                    const me = live.allPlayers.find(p => p.championName === activeChampName);
+                    const me = live.allPlayers.find(p =>
+                        (p.rawChampionKey && p.rawChampionKey === live.activePlayer?.rawChampionKey) ||
+                        p.championName === live.activePlayer?.championName
+                    );
                     const allyTeam = me?.team || 'ORDER';
                     const threats = inferEnemyThreatsFromPlayers(live.allPlayers, allyTeam);
                     if (threats.length > 0) {
@@ -24092,6 +24310,10 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                         renderAdaptiveBuild();
                         pushMayhemStateToBridge();
                     }
+                }
+
+                if (nextItemsKey !== prevItemsKey || nextGoldBucket !== prevGoldBucket) {
+                    renderAdaptiveBuild();
                 }
 
                 // Auto-sync initial spawn countdown when game just started
