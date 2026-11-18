@@ -320,7 +320,7 @@
                     <div id="liveCaptureControls" class="hidden flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-[11px]">
                         <label class="flex items-center gap-2 cursor-pointer font-semibold text-cyan-200">
                             <input type="checkbox" id="autoScanToggle" onchange="toggleAutoScan(this.checked)" class="accent-cyan-400 rounded cursor-pointer">
-                            <span>Auto-Scan (4s)</span>
+                            <span>Tự quét Lõi + Cục Máu Live</span>
                         </label>
                         <label class="flex items-center gap-1.5 cursor-pointer font-semibold text-amber-200">
                             <input type="checkbox" id="voiceAlertCheckbox" checked onchange="toggleVoiceAlerts(this.checked)" class="accent-amber-400 rounded cursor-pointer">
@@ -375,13 +375,28 @@
                                     <i class="fa-solid fa-dice"></i>
                                 </span>
                                 <div>
-                                    <h2 class="text-sm font-extrabold uppercase tracking-wider text-emerald-200">3. Chấm Điểm 3 Lõi Đang Roll</h2>
-                                    <p class="text-[11px] text-slate-400">Chọn (hoặc quét ảnh) 3 lõi hiện trên màn hình để biết ngay nên lấy lõi nào hay bấm Reroll</p>
+                                    <h2 class="text-sm font-extrabold uppercase tracking-wider text-emerald-200">3. So Sánh &amp; Chấm Điểm Lõi (Tức Thì 0ms)</h2>
+                                    <p class="text-[11px] text-slate-400">Luôn hiện Top 3 Best-in-Slot ngay lập tức • Gõ nhanh hoặc chia sẻ màn hình để so sánh 3 lõi đang roll</p>
                                 </div>
                             </div>
                             <button type="button" onclick="clearRollCandidates()" class="text-[11px] font-semibold text-slate-400 hover:text-slate-200 cursor-pointer">
                                 <i class="fa-solid fa-eraser mr-1"></i>Xóa 3 ô
                             </button>
+                        </div>
+
+                        <!-- 0ms Inline Quick-Search & Instant Add-to-Compare Pills -->
+                        <div class="space-y-1.5">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="relative flex-1 min-w-[200px]">
+                                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 text-[11px]"></i>
+                                    <input id="quickRollSearchInput" type="text" autocomplete="off"
+                                           placeholder="Gõ 2-3 chữ tên lõi hiện trên màn hình để đưa vào so sánh ngay (0ms)..."
+                                           oninput="renderQuickRollSuggestPills()"
+                                           onkeydown="handleQuickRollKeydown(event)"
+                                           class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900/90 border border-emerald-500/35 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-400">
+                                </div>
+                            </div>
+                            <div id="quickRollSuggestPills" class="flex flex-wrap items-center gap-1.5"></div>
                         </div>
 
                         <div id="rollEvaluatorGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -478,7 +493,8 @@
                                 <!-- Live Bridge Minimap Radar Preview -->
                                 <div class="shrink-0 flex items-center justify-center p-1.5 rounded-2xl bg-slate-900 border border-slate-800">
                                     <div id="minimapRadarBox" class="relative rounded-xl bg-slate-950 border border-amber-500/30 overflow-hidden transition-all duration-200" style="width: 136px; height: 136px;">
-                                        <!-- Rendered dynamically -->
+                                        <canvas id="liveMinimapCanvas" width="160" height="160" class="hidden absolute inset-0 w-full h-full object-cover pointer-events-none opacity-85"></canvas>
+                                        <div id="minimapMarkersLayer" class="absolute inset-0"></div>
                                     </div>
                                 </div>
 
@@ -19569,6 +19585,13 @@
             apiKey: localStorage.getItem('aram_mayhem_api_key') || localStorage.getItem('tino_translator_api_key') || '',
             screenStream: null,
             autoScanTimer: null,
+            liveMinimapInterval: null,
+            minimapWatchTick: 0,
+            manualMinimapScaleOverride: false,
+            ocrWorker: null,
+            ocrWorkerPromise: null,
+            lastOcrCardKey: '',
+            lastBgGeminiTs: 0,
             lastImageBase64: null,
             lastImageMime: 'image/jpeg',
             isScanning: false,
@@ -19589,7 +19612,10 @@
                 total: 60,
                 running: false,
                 warned15: false,
-                warned0: false
+                warned0: false,
+                visibleStreak: 0,
+                missingStreak: 0,
+                respawnStreak: 0
             })),
             relicInterval: null,
             pipWindow: null,
@@ -20053,6 +20079,7 @@
             renderSelectedChampion();
             renderQuickChampChips();
             renderAugmentSlots();
+            renderQuickRollSuggestPills();
             renderRollEvaluator();
             renderNextAugmentAdvisor();
             renderHealthRelics();
@@ -20274,17 +20301,91 @@
             showToast('Đã làm mới cho trận đấu mới!', 'info');
         }
 
+        function getTopSuggestedRollAugments(champ, activeIds, limit = 3) {
+            if (!champ) return [];
+            return AUGMENTS_DB
+                .filter(a => !activeIds.includes(a.id))
+                .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
+                .sort((a, b) => (b.eval.score - a.eval.score) || ((b.aug.inKiwi ? 1 : 0) - (a.aug.inKiwi ? 1 : 0)))
+                .slice(0, limit);
+        }
+
+        function renderQuickRollSuggestPills() {
+            const container = document.getElementById('quickRollSuggestPills');
+            const input = document.getElementById('quickRollSearchInput');
+            if (!container) return;
+            const champ = state.championsMap[state.selectedChampId] || state.championsList[0];
+            const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
+            const rawQ = input ? input.value : '';
+            const nq = normalizeText(rawQ);
+
+            const candidates = AUGMENTS_DB
+                .filter(a => !activeIds.includes(a.id))
+                .filter(a => matchesAugmentQuery(a, nq))
+                .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
+                .sort((a, b) => (b.eval.score - a.eval.score) || ((b.aug.inKiwi ? 1 : 0) - (a.aug.inKiwi ? 1 : 0)))
+                .slice(0, nq ? 8 : 6);
+
+            if (candidates.length === 0) {
+                container.innerHTML = `<span class="text-[10px] text-slate-500 italic">Không tìm thấy lõi khớp "${escapeHtml(rawQ)}"</span>`;
+                return;
+            }
+
+            container.innerHTML = candidates.map(({ aug, eval: ev }) => {
+                const inRoll = state.rollCandidates.includes(aug.id);
+                const cls = inRoll
+                    ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200'
+                    : 'bg-slate-900/90 hover:bg-slate-800 border-slate-700 hover:border-emerald-400/60 text-slate-200';
+                return `
+                    <button type="button" onclick="addToRollCandidate('${aug.id}', true)"
+                            class="px-2 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${cls}">
+                        <span>${escapeHtml(aug.nameVi)}</span>
+                        <span class="text-[9px] font-extrabold text-cyan-300">${ev.score}đ</span>
+                        ${inRoll ? '<i class="fa-solid fa-check text-emerald-300 text-[9px]"></i>' : ''}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function handleQuickRollKeydown(event) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            const input = document.getElementById('quickRollSearchInput');
+            const nq = normalizeText(input ? input.value : '');
+            if (!nq) return;
+            const champ = state.championsMap[state.selectedChampId] || state.championsList[0];
+            const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
+            const firstMatch = AUGMENTS_DB
+                .filter(a => !activeIds.includes(a.id) && matchesAugmentQuery(a, nq))
+                .map(aug => ({ aug, eval: scoreAugmentForContext(aug, champ, activeIds) }))
+                .sort((a, b) => b.eval.score - a.eval.score)[0];
+            if (firstMatch) {
+                addToRollCandidate(firstMatch.aug.id, true);
+                if (input) input.value = '';
+                renderQuickRollSuggestPills();
+            }
+        }
+
         function renderRollEvaluator() {
             const grid = document.getElementById('rollEvaluatorGrid');
             const banner = document.getElementById('rollVerdictBanner');
-            const champ = state.championsMap[state.selectedChampId];
+            if (!grid || !banner) return;
+            const champ = state.championsMap[state.selectedChampId] || state.championsList[0];
             const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
+            const hasManualRoll = state.rollCandidates.some(Boolean);
 
-            const scored = state.rollCandidates.map((augId, idx) => {
-                const aug = augId ? AUGMENTS_DB.find(a => a.id === augId) : null;
-                if (!aug) return { idx, aug: null, eval: null };
-                return { idx, aug, eval: scoreAugmentForContext(aug, champ, activeIds) };
-            });
+            const scored = hasManualRoll
+                ? state.rollCandidates.map((augId, idx) => {
+                    const aug = augId ? AUGMENTS_DB.find(a => a.id === augId) : null;
+                    if (!aug) return { idx, aug: null, eval: null, isSuggestedPreview: false };
+                    return { idx, aug, eval: scoreAugmentForContext(aug, champ, activeIds), isSuggestedPreview: false };
+                })
+                : [0, 1, 2].map(idx => {
+                    const topSuggested = getTopSuggestedRollAugments(champ, activeIds, 3);
+                    const item = topSuggested[idx];
+                    if (!item) return { idx, aug: null, eval: null, isSuggestedPreview: true };
+                    return { idx, aug: item.aug, eval: item.eval, isSuggestedPreview: true };
+                });
 
             // Determine best candidate
             const validScored = scored.filter(s => s.aug && s.eval);
@@ -20298,7 +20399,7 @@
             }
 
             grid.innerHTML = scored.map(item => {
-                const { idx, aug, eval: ev } = item;
+                const { idx, aug, eval: ev, isSuggestedPreview } = item;
                 if (!aug) {
                     return `
                         <button type="button" onclick="openAugmentPicker('roll', ${idx})"
@@ -20307,25 +20408,34 @@
                                 <i class="fa-solid fa-plus"></i>
                             </span>
                             <div class="text-xs font-bold text-slate-300">Lựa chọn ${idx + 1}</div>
-                            <div class="text-[10px] text-slate-500">Click chọn lõi hoặc dán ảnh game</div>
+                            <div class="text-[10px] text-slate-500">Click chọn lõi hoặc gõ tên ở ô trên</div>
                         </button>
                     `;
                 }
 
                 const st = getTierStyle(aug.tier);
-                const isBest = idx === bestIdx && validScored.length >= 1 && bestScore >= 60;
+                const isBest = !isSuggestedPreview && idx === bestIdx && validScored.length >= 1 && bestScore >= 60;
+                const isTopPreview = isSuggestedPreview && idx === bestIdx;
                 const scoreColor = ev.score >= 80 ? 'text-emerald-300 bg-emerald-500/20 border-emerald-400/40' : (ev.score >= 62 ? 'text-amber-300 bg-amber-500/20 border-amber-400/40' : 'text-rose-300 bg-rose-500/20 border-rose-400/40');
+                const ringCls = isBest ? 'ring-2 ring-emerald-400 best-pick-glow' : (isTopPreview ? 'ring-1 ring-amber-400/60' : '');
 
                 return `
-                    <div class="rounded-2xl p-3.5 border ${st.cls} flex flex-col justify-between gap-2.5 relative ${isBest ? 'ring-2 ring-emerald-400 best-pick-glow' : ''}">
+                    <div class="rounded-2xl p-3.5 border ${st.cls} flex flex-col justify-between gap-2.5 relative ${ringCls}">
                         ${isBest ? `<div class="absolute -top-2.5 left-3 px-2 py-0.5 rounded-full bg-emerald-400 text-slate-950 text-[10px] font-extrabold shadow">★ #1 KHUYÊN CHỌN</div>` : ''}
+                        ${isSuggestedPreview ? `<div class="absolute -top-2.5 left-3 px-2 py-0.5 rounded-full bg-amber-400/95 text-slate-950 text-[10px] font-extrabold shadow">⚡ GỢI Ý TOP ${idx + 1} (TỨC THÌ)</div>` : ''}
                         <div class="flex items-start justify-between gap-1.5 pt-1">
                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${st.badge}">${st.label}</span>
                             <div class="flex items-center gap-1">
                                 <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-lg border ${scoreColor}">${ev.score}/100</span>
-                                <button type="button" onclick="clearRollCandidate(${idx})" class="w-5 h-5 rounded bg-slate-950/60 hover:bg-rose-500/50 text-slate-400 hover:text-white text-[10px] flex items-center justify-center cursor-pointer">
-                                    <i class="fa-solid fa-xmark"></i>
-                                </button>
+                                ${!isSuggestedPreview ? `
+                                    <button type="button" onclick="clearRollCandidate(${idx})" class="w-5 h-5 rounded bg-slate-950/60 hover:bg-rose-500/50 text-slate-400 hover:text-white text-[10px] flex items-center justify-center cursor-pointer">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                ` : `
+                                    <button type="button" onclick="openAugmentPicker('roll', ${idx})" title="Đổi sang lõi hiện trên màn hình" class="w-5 h-5 rounded bg-slate-950/60 hover:bg-cyan-500/50 text-slate-300 hover:text-white text-[10px] flex items-center justify-center cursor-pointer">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                `}
                             </div>
                         </div>
 
@@ -20344,11 +20454,19 @@
                             ` : `<div class="text-[10px] text-slate-300 leading-snug">${escapeHtml(ev.reasons[0] || aug.descVi)}</div>`}
                         </div>
 
-                        <button type="button" onclick="lockAugmentToTargetSlot('${aug.id}')"
-                                class="w-full py-1.5 px-2.5 rounded-xl text-[11px] font-extrabold transition cursor-pointer flex items-center justify-center gap-1.5 ${isBest ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950' : 'bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700'}">
-                            <i class="fa-solid fa-check"></i>
-                            <span>Khóa vào Lõi ${state.activeTargetSlot + 1}</span>
-                        </button>
+                        <div class="flex items-center gap-1.5">
+                            ${isSuggestedPreview ? `
+                                <button type="button" onclick="openAugmentPicker('roll', ${idx})"
+                                        class="px-2.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-[10px] font-bold text-cyan-300 cursor-pointer">
+                                    Đổi lõi
+                                </button>
+                            ` : ''}
+                            <button type="button" onclick="lockAugmentToTargetSlot('${aug.id}')"
+                                    class="flex-1 py-1.5 px-2.5 rounded-xl text-[11px] font-extrabold transition cursor-pointer flex items-center justify-center gap-1.5 ${isBest || isTopPreview ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950' : 'bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700'}">
+                                <i class="fa-solid fa-check"></i>
+                                <span>Khóa Lõi ${state.activeTargetSlot + 1}</span>
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -20356,13 +20474,19 @@
             if (validScored.length > 0) {
                 banner.classList.remove('hidden');
                 const bestItem = scored[bestIdx];
-                if (bestScore < 60) {
-                    banner.className = 'rounded-2xl p-3 border bg-rose-500/10 border-rose-500/35 text-rose-200 text-xs leading-relaxed';
-                    banner.innerHTML = `<i class="fa-solid fa-rotate mr-1.5 text-rose-400"></i><strong>Khuyên REROLL (Đổi Lõi):</strong> Cả ${validScored.length} lựa chọn đều đạt điểm thấp (&lt;60/100) với <strong>${escapeHtml(champ.nameVi)}</strong>. Bạn nên bấm Đổi Lõi để tìm lõi hợp chất tướng hơn (tốt nhất tạm thời là <em>${escapeHtml(bestItem.aug.nameVi)}</em> - ${bestScore}đ).`;
+                if (hasManualRoll) {
+                    if (bestScore < 60) {
+                        banner.className = 'rounded-2xl p-3 border bg-rose-500/10 border-rose-500/35 text-rose-200 text-xs leading-relaxed';
+                        banner.innerHTML = `<i class="fa-solid fa-rotate mr-1.5 text-rose-400"></i><strong>Khuyên REROLL (Đổi Lõi):</strong> Cả ${validScored.length} lựa chọn đều đạt điểm thấp (&lt;60/100) với <strong>${escapeHtml(champ.nameVi)}</strong>. Bạn nên bấm Đổi Lõi để tìm lõi hợp chất tướng hơn (tốt nhất tạm thời là <em>${escapeHtml(bestItem.aug.nameVi)}</em> - ${bestScore}đ).`;
+                    } else {
+                        const topCombo = bestItem.eval.comboHits[0];
+                        banner.className = 'rounded-2xl p-3 border bg-emerald-500/10 border-emerald-500/35 text-emerald-200 text-xs leading-relaxed';
+                        banner.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5 text-emerald-400"></i><strong>Khuyên lấy ngay: ${escapeHtml(bestItem.aug.nameVi)} (${bestScore}/100)</strong> — ${topCombo ? `Tạo combo siêu mạnh với <strong>${escapeHtml(topCombo.partner)}</strong>: ${escapeHtml(topCombo.note)}` : escapeHtml(bestItem.eval.reasons.join(' • ') || bestItem.aug.descVi)}`;
+                    }
                 } else {
                     const topCombo = bestItem.eval.comboHits[0];
-                    banner.className = 'rounded-2xl p-3 border bg-emerald-500/10 border-emerald-500/35 text-emerald-200 text-xs leading-relaxed';
-                    banner.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5 text-emerald-400"></i><strong>Khuyên lấy ngay: ${escapeHtml(bestItem.aug.nameVi)} (${bestScore}/100)</strong> — ${topCombo ? `Tạo combo siêu mạnh với <strong>${escapeHtml(topCombo.partner)}</strong>: ${escapeHtml(topCombo.note)}` : escapeHtml(bestItem.eval.reasons.join(' • ') || bestItem.aug.descVi)}`;
+                    banner.className = 'rounded-2xl p-3 border bg-amber-500/10 border-amber-500/35 text-amber-100 text-xs leading-relaxed';
+                    banner.innerHTML = `<i class="fa-solid fa-bolt mr-1.5 text-amber-400"></i><strong>Gợi ý Tức Thì cho ${escapeHtml(champ.nameVi)} (Lõi ${state.activeTargetSlot + 1}):</strong> Ưu tiên cao nhất <strong>${escapeHtml(bestItem.aug.nameVi)} (${bestScore}/100)</strong> ${topCombo ? `— ${escapeHtml(topCombo.note)}` : (bestItem.eval.reasons[0] ? `— ${escapeHtml(bestItem.eval.reasons[0])}` : '')}. <em>Khi màn hình game vừa hiện 3 thẻ lõi, gõ 2–3 chữ ở ô trên (0ms) hoặc bật Bắt Màn Hình Live để tự động so sánh!</em>`;
                 }
             } else {
                 banner.classList.add('hidden');
@@ -20371,12 +20495,18 @@
 
         function clearRollCandidate(idx) {
             state.rollCandidates[idx] = null;
+            renderQuickRollSuggestPills();
             renderRollEvaluator();
+            syncOverlayUI();
+            pushMayhemStateToBridge();
         }
 
         function clearRollCandidates() {
             state.rollCandidates = [null, null, null];
+            renderQuickRollSuggestPills();
             renderRollEvaluator();
+            syncOverlayUI();
+            pushMayhemStateToBridge();
         }
 
         function lockAugmentToTargetSlot(augId) {
@@ -20479,9 +20609,9 @@
             }).join('');
         }
 
-        function addToRollCandidate(augId) {
+        function addToRollCandidate(augId, silentToast = false) {
             if (state.rollCandidates.includes(augId)) {
-                showToast('Lõi này đã có trong 3 ô so sánh!', 'info');
+                if (!silentToast) showToast('Lõi này đã có trong 3 ô so sánh!', 'info');
                 return;
             }
             const emptyIdx = state.rollCandidates.findIndex(x => !x);
@@ -20490,7 +20620,10 @@
             } else {
                 state.rollCandidates[2] = augId;
             }
+            renderQuickRollSuggestPills();
             renderRollEvaluator();
+            syncOverlayUI();
+            pushMayhemStateToBridge();
         }
 
         function renderAdaptiveBuild() {
@@ -20891,10 +21024,12 @@
             }
             try {
                 const stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: { frameRate: 10 },
+                    video: { frameRate: 15 },
                     audio: false
                 });
                 state.screenStream = stream;
+                state.manualMinimapScaleOverride = false;
+                state.lastOcrCardKey = '';
                 const video = document.getElementById('screenVideo');
                 video.srcObject = stream;
                 video.classList.remove('hidden');
@@ -20905,21 +21040,37 @@
 
                 document.getElementById('btnStartCaptureLabel').textContent = 'Dừng bắt màn hình';
                 document.getElementById('btnStartCapture').className = 'flex-1 min-w-[130px] py-2 px-3 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 cursor-pointer';
-                document.getElementById('scanModeBadge').textContent = 'Đang kết nối màn hình';
+                document.getElementById('scanModeBadge').textContent = 'LIVE: Đang theo dõi Lõi + Cục Máu';
                 document.getElementById('scanModeBadge').className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
 
+                // Automatically start real-time Minimap 4-Relic watcher + Live Augment 3-card scanner
+                startLiveMinimapWatcher();
+                const autoToggle = document.getElementById('autoScanToggle');
+                if (autoToggle) autoToggle.checked = true;
+                video.onloadedmetadata = () => {
+                    watchLiveStreamMinimap();
+                    toggleAutoScan(true);
+                };
+                setTimeout(() => {
+                    if (state.screenStream && !state.autoScanTimer) {
+                        toggleAutoScan(true);
+                    }
+                }, 450);
+
                 stream.getVideoTracks()[0].addEventListener('ended', stopScreenCapture);
-                showToast('Đã kết nối màn hình Game! Hãy bật "Game Overlay" để nổi trên màn hình game.', 'success');
+                showToast('Đã bật Live Screen: Tự động đếm 4 cục máu trên Minimap & quét 3 thẻ lõi!', 'success');
             } catch (err) {
                 console.warn('Screen capture cancelled:', err);
             }
         }
 
         function stopScreenCapture() {
+            stopLiveMinimapWatcher();
             if (state.autoScanTimer) {
                 clearInterval(state.autoScanTimer);
                 state.autoScanTimer = null;
             }
+            state.lastOcrCardKey = '';
             const toggle = document.getElementById('autoScanToggle');
             if (toggle) toggle.checked = false;
             if (state.screenStream) {
@@ -20929,6 +21080,8 @@
             const video = document.getElementById('screenVideo');
             video.srcObject = null;
             video.classList.add('hidden');
+            const mmCanvas = document.getElementById('liveMinimapCanvas');
+            if (mmCanvas) mmCanvas.classList.add('hidden');
             if (!state.lastImageBase64) {
                 document.getElementById('visionEmptyState').classList.remove('hidden');
                 document.getElementById('scanActionRow').classList.add('hidden');
@@ -20950,13 +21103,14 @@
             }
             const timerText = document.getElementById('autoScanTimerText');
             if (enabled && state.screenStream) {
-                scanCurrentSource();
+                ensureOcrWorker().catch(() => {});
+                scanCurrentSource(true);
                 state.autoScanTimer = setInterval(() => {
                     if (!state.isScanning && state.screenStream) {
-                        scanCurrentSource();
+                        scanCurrentSource(true);
                     }
-                }, 4000);
-                if (timerText) timerText.textContent = 'Đang bật (4s/lần)';
+                }, 1600);
+                if (timerText) timerText.textContent = 'Live OCR 1.6s + Minimap 0.35s';
             } else {
                 if (timerText) timerText.textContent = '';
             }
@@ -20981,68 +21135,95 @@
                 document.getElementById('screenVideo').classList.add('hidden');
                 document.getElementById('visionEmptyState').classList.add('hidden');
                 document.getElementById('scanActionRow').classList.remove('hidden');
-                analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime);
+                analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime, false);
             };
             reader.readAsDataURL(file);
         }
 
-        function scanCurrentSource() {
+        function scanCurrentSource(silent = false) {
             if (state.screenStream) {
                 const video = document.getElementById('screenVideo');
-                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                if (video && video.videoWidth > 0 && video.videoHeight > 0) {
                     const canvas = document.getElementById('captureCanvas');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
                     state.lastImageBase64 = dataUrl.split(',')[1];
                     state.lastImageMime = 'image/jpeg';
-                    analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime);
+                    analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime, silent);
                     return;
                 }
             }
-            if (state.lastImageBase64) {
-                analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime);
-            } else {
-                showToast('Chưa có ảnh hoặc màn hình game nào để quét!', 'info');
+            if (!silent) {
+                if (state.lastImageBase64) {
+                    analyzeGameScreenshot(state.lastImageBase64, state.lastImageMime, false);
+                } else {
+                    showToast('Chưa có ảnh hoặc màn hình game nào để quét!', 'info');
+                }
             }
         }
 
-        async function analyzeGameScreenshot(base64Data, mimeType) {
+        async function analyzeGameScreenshot(base64Data, mimeType, silent = false) {
             if (state.isScanning) return;
             state.isScanning = true;
             const overlay = document.getElementById('visionLoadingOverlay');
             const loadText = document.getElementById('visionLoadingText');
             const noteBox = document.getElementById('visionResultNote');
-            overlay.classList.remove('hidden');
+            if (!silent && overlay) {
+                overlay.classList.remove('hidden');
+                if (loadText) loadText.textContent = 'Đang quét nhanh 3 thẻ Lõi (Local OCR)...';
+            }
 
             try {
-                const hasKey = Boolean(getEffectiveApiKey());
-                let detectedResult = null;
+                // Local-First: scan cropped 3-card zones cleanly in <600ms without blocking on external AI
+                let detectedResult = await runFastCardRegionOCR(base64Data, mimeType);
+                let offeredCount = (detectedResult.offeredAugments || []).filter(Boolean).length;
 
-                if (hasKey) {
-                    loadText.textContent = 'Gemini AI Vision đang đọc Tướng & 3 Lõi...';
-                    try {
-                        detectedResult = await callGeminiVisionScan(base64Data, mimeType);
-                    } catch (err) {
-                        console.warn('Gemini Vision failed, falling back to OCR:', err);
-                        showToast('Gemini AI gặp lỗi tạm thời, chuyển sang quét OCR miễn phí...', 'info');
+                if (offeredCount < 2 && !silent) {
+                    if (loadText) loadText.textContent = 'Đang quét toàn khung ảnh (Local OCR)...';
+                    const fullRes = await runFreeOCRFallback(base64Data, mimeType);
+                    if ((fullRes.offeredAugments || []).filter(Boolean).length > offeredCount || (!detectedResult.championName && fullRes.championName)) {
+                        detectedResult = fullRes;
+                        offeredCount = (detectedResult.offeredAugments || []).filter(Boolean).length;
                     }
                 }
 
-                if (!detectedResult) {
-                    loadText.textContent = 'Đang quét chữ miễn phí (Tesseract OCR)...';
-                    detectedResult = await runFreeOCRFallback(base64Data, mimeType);
+                if (silent) {
+                    const cardKey = (detectedResult.offeredAugments || []).map(n => n || '').join('|');
+                    if (offeredCount >= 2 && cardKey !== state.lastOcrCardKey) {
+                        state.lastOcrCardKey = cardKey;
+                        applyVisionScanResult(detectedResult, true);
+                    } else if (offeredCount === 0) {
+                        state.lastOcrCardKey = '';
+                    }
+                    return;
                 }
 
-                applyVisionScanResult(detectedResult);
+                applyVisionScanResult(detectedResult, false);
+
+                // Non-blocking Gemini refinement in background if API Key is configured
+                if (getEffectiveApiKey() && (Date.now() - state.lastBgGeminiTs > 2500)) {
+                    state.lastBgGeminiTs = Date.now();
+                    callGeminiVisionScan(base64Data, mimeType)
+                        .then(aiRes => {
+                            if (aiRes && ((aiRes.offeredAugments && aiRes.offeredAugments.length > 0) || aiRes.aiAdviceVi)) {
+                                applyVisionScanResult(aiRes, true);
+                            }
+                        })
+                        .catch(err => console.warn('Background Gemini Vision skipped:', err));
+                }
             } catch (err) {
-                console.error(err);
-                noteBox.classList.remove('hidden');
-                noteBox.innerHTML = `<span class="text-rose-300 font-bold">Không thể đọc ảnh:</span> ${escapeHtml(err.message || 'Vui lòng thử ảnh rõ nét hơn hoặc chọn tay.')}`;
+                if (!silent) {
+                    console.error(err);
+                    if (noteBox) {
+                        noteBox.classList.remove('hidden');
+                        noteBox.innerHTML = `<span class="text-rose-300 font-bold">Không thể đọc ảnh:</span> ${escapeHtml(err.message || 'Vui lòng thử ảnh rõ nét hơn hoặc gõ tên 2-3 chữ ở Mục 3.')}`;
+                    }
+                }
             } finally {
-                overlay.classList.add('hidden');
+                if (!silent && overlay) overlay.classList.add('hidden');
                 state.isScanning = false;
             }
         }
@@ -21081,18 +21262,121 @@
             };
         }
 
-        async function runFreeOCRFallback(base64Data, mimeType) {
-            if (!window.Tesseract) {
-                await new Promise((resolve, reject) => {
-                    const s = document.createElement('script');
-                    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-                    s.onload = resolve;
-                    s.onerror = () => reject(new Error('Không thể tải thư viện Tesseract OCR'));
-                    document.head.appendChild(s);
-                });
+        async function ensureOcrWorker() {
+            if (state.ocrWorker) return state.ocrWorker;
+            if (state.ocrWorkerPromise) return state.ocrWorkerPromise;
+
+            state.ocrWorkerPromise = (async () => {
+                if (!window.Tesseract) {
+                    await new Promise((resolve, reject) => {
+                        const s = document.createElement('script');
+                        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                        s.onload = resolve;
+                        s.onerror = () => reject(new Error('Không thể tải thư viện Tesseract OCR'));
+                        document.head.appendChild(s);
+                    });
+                }
+                const worker = await window.Tesseract.createWorker('vie+eng');
+                state.ocrWorker = worker;
+                return worker;
+            })().catch(err => {
+                state.ocrWorkerPromise = null;
+                throw err;
+            });
+
+            return state.ocrWorkerPromise;
+        }
+
+        function matchAugmentInCardText(rawText) {
+            if (!rawText) return null;
+            const normAll = normalizeText(rawText);
+            if (normAll.length < 3) return null;
+
+            // 1. Substring exact variant hit (prioritizing longest match so short names don't hijack longer ones)
+            let bestAug = null;
+            let bestLen = 0;
+            for (const aug of AUGMENTS_DB) {
+                for (const v of getAugmentNameVariants(aug)) {
+                    if (v.length >= 4 && normAll.includes(v) && v.length > bestLen) {
+                        bestLen = v.length;
+                        bestAug = aug;
+                    }
+                }
             }
+            if (bestAug) return bestAug;
+
+            // 2. Line-by-line fuzzy fallback on the cropped card title lines
+            const lines = String(rawText).split(/\r?\n/).map(l => l.trim()).filter(l => l.length >= 3);
+            for (const line of lines.slice(0, 6)) {
+                const m = fuzzyMatchAugment(line);
+                if (m) return m;
+            }
+            return null;
+        }
+
+        async function runFastCardRegionOCR(base64Data, mimeType) {
+            const worker = await ensureOcrWorker();
+            const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${base64Data}`;
+            const img = await new Promise((resolve, reject) => {
+                const im = new Image();
+                im.onload = () => resolve(im);
+                im.onerror = () => reject(new Error('Không thể giải mã khung hình'));
+                im.src = dataUrl;
+            });
+
+            const w = img.naturalWidth || img.width;
+            const h = img.naturalHeight || img.height;
+            if (!w || !h) {
+                return { source: 'Local Live Card OCR', championName: '', chosenAugments: [], offeredAugments: [], aiAdviceVi: '' };
+            }
+
+            if (!state._ocrCropCanvas) state._ocrCropCanvas = document.createElement('canvas');
+            const cropCanvas = state._ocrCropCanvas;
+            const ctx = cropCanvas.getContext('2d', { willReadFrequently: true });
+
+            // Left, Center, Right ARAM Mayhem Augment card header & title bands
+            const zones = [
+                { rx: 0.16, rw: 0.22, ry: 0.22, rh: 0.34 },
+                { rx: 0.39, rw: 0.22, ry: 0.22, rh: 0.34 },
+                { rx: 0.62, rw: 0.22, ry: 0.22, rh: 0.34 }
+            ];
+
+            const slotResults = [null, null, null];
+            for (let i = 0; i < zones.length; i++) {
+                const z = zones[i];
+                const sx = Math.max(0, Math.round(w * z.rx));
+                const sy = Math.max(0, Math.round(h * z.ry));
+                const sw = Math.max(40, Math.round(w * z.rw));
+                const sh = Math.max(40, Math.round(h * z.rh));
+                const targetW = 340;
+                const targetH = Math.max(120, Math.round(sh * (targetW / sw)));
+                cropCanvas.width = targetW;
+                cropCanvas.height = targetH;
+                ctx.filter = 'contrast(1.35) grayscale(1)';
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+                ctx.filter = 'none';
+
+                const { data: { text } } = await worker.recognize(cropCanvas);
+                const matched = matchAugmentInCardText(text);
+                if (matched) slotResults[i] = matched.nameVi;
+            }
+
+            const matchedCount = slotResults.filter(Boolean).length;
+            return {
+                source: 'Local Fast Card OCR (<0.6s)',
+                championName: '',
+                chosenAugments: [],
+                offeredAugments: matchedCount > 0 ? slotResults : [],
+                aiAdviceVi: matchedCount > 0
+                    ? `Đã quét trực tiếp ${matchedCount}/3 thẻ lõi trên màn hình & chấm điểm tức thì theo PeakBuild 26.22.`
+                    : ''
+            };
+        }
+
+        async function runFreeOCRFallback(base64Data, mimeType) {
+            const worker = await ensureOcrWorker();
             const dataUrl = `data:${mimeType || 'image/png'};base64,${base64Data}`;
-            const { data: { text } } = await window.Tesseract.recognize(dataUrl, 'vie+eng');
+            const { data: { text } } = await worker.recognize(dataUrl);
             const normAll = normalizeText(text || '');
 
             // Match champions
@@ -21118,13 +21402,13 @@
             }
 
             return {
-                source: 'Tesseract OCR Miễn Phí',
+                source: 'Local Tesseract OCR',
                 championName: matchedChamp,
                 chosenAugments: [],
                 offeredAugments: foundAugs.slice(0, 3),
                 aiAdviceVi: foundAugs.length > 0
                     ? `Đã đọc được ${foundAugs.length} lõi từ ảnh và chấm điểm tự động.`
-                    : `Chưa nhận diện rõ tên lõi trong ảnh. Bạn có thể nhập Gemini API Key để AI Vision đọc chính xác hơn hoặc chọn nhanh bằng tay.`
+                    : `Chưa nhận diện rõ tên lõi trong ảnh. Bạn có thể gõ 2–3 chữ ở Mục 3 để so sánh tức thì trong 0ms.`
             };
         }
 
@@ -21196,7 +21480,7 @@
             return best || null;
         }
 
-        function applyVisionScanResult(result) {
+        function applyVisionScanResult(result, silent = false) {
             const noteBox = document.getElementById('visionResultNote');
             const summaryParts = [];
 
@@ -21215,32 +21499,36 @@
                 summaryParts.push(`Lõi đã có: <strong class="text-purple-300">${matchedChosen.map(a => escapeHtml(a.nameVi)).join(', ')}</strong>`);
             }
 
-            const matchedOffered = (result.offeredAugments || []).map(fuzzyMatchAugment).filter(Boolean);
-            if (matchedOffered.length > 0) {
+            const rawOffered = Array.isArray(result.offeredAugments) ? result.offeredAugments : [];
+            const matchedSlots = rawOffered.slice(0, 3).map(n => n ? fuzzyMatchAugment(n) : null);
+            const validOffered = matchedSlots.filter(Boolean);
+            if (validOffered.length > 0) {
                 state.rollCandidates = [
-                    matchedOffered[0]?.id || null,
-                    matchedOffered[1]?.id || null,
-                    matchedOffered[2]?.id || null
+                    matchedSlots[0]?.id || null,
+                    matchedSlots[1]?.id || null,
+                    matchedSlots[2]?.id || null
                 ];
-                summaryParts.push(`3 Lõi đang roll: <strong class="text-emerald-300">${matchedOffered.map(a => escapeHtml(a.nameVi)).join(' / ')}</strong>`);
+                summaryParts.push(`3 Lõi đang roll: <strong class="text-emerald-300">${validOffered.map(a => escapeHtml(a.nameVi)).join(' / ')}</strong>`);
             }
 
-            noteBox.classList.remove('hidden');
-            noteBox.innerHTML = `
-                <div class="flex items-center justify-between gap-2 mb-1">
-                    <span class="text-[10px] font-extrabold text-cyan-300 uppercase"><i class="fa-solid fa-check-double mr-1"></i>${escapeHtml(result.source)}</span>
-                </div>
-                ${summaryParts.length > 0 ? `<div class="mb-1">${summaryParts.join(' • ')}</div>` : ''}
-                ${result.aiAdviceVi ? `<div class="text-slate-200">${escapeHtml(result.aiAdviceVi)}</div>` : ''}
-            `;
+            if (noteBox) {
+                noteBox.classList.remove('hidden');
+                noteBox.innerHTML = `
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <span class="text-[10px] font-extrabold text-cyan-300 uppercase"><i class="fa-solid fa-check-double mr-1"></i>${escapeHtml(result.source)}</span>
+                    </div>
+                    ${summaryParts.length > 0 ? `<div class="mb-1">${summaryParts.join(' • ')}</div>` : ''}
+                    ${result.aiAdviceVi ? `<div class="text-slate-200">${escapeHtml(result.aiAdviceVi)}</div>` : ''}
+                `;
+            }
 
             renderAll();
-            if (matchedOffered.length > 0) {
+            if (validOffered.length > 0) {
                 const champ = state.championsMap[state.selectedChampId];
                 const activeIds = state.chosenAugments.filter((id, i) => id && i !== state.activeTargetSlot);
                 let topAug = null;
                 let topScore = -1;
-                for (const aug of matchedOffered) {
+                for (const aug of validOffered) {
                     const ev = scoreAugmentForContext(aug, champ, activeIds);
                     if (ev.score > topScore) {
                         topScore = ev.score;
@@ -21254,8 +21542,10 @@
                     speakAlertVi(msg);
                 }
             }
-            if (matchedOffered.length > 0 || matchedChamp) {
-                showToast('AI đã cập nhật Tướng & Lõi từ ảnh!', 'success');
+            if (!silent && (validOffered.length > 0 || matchedChamp)) {
+                showToast('Đã cập nhật & chấm điểm tức thì Tướng & Lõi!', 'success');
+            } else if (silent && validOffered.length > 0) {
+                showToast(`Live phát hiện ${validOffered.length} lõi: ${validOffered.map(a => a.nameVi).join(' / ')}`, 'success');
             }
         }
 
@@ -21300,31 +21590,32 @@
             const box = document.getElementById('deepAiResponseBox');
             const btn = document.getElementById('btnAskDeepAI');
             const champ = state.championsMap[state.selectedChampId];
-            if (!champ) return;
+            if (!champ || !box) return;
 
             const chosenNames = state.chosenAugments.map(id => AUGMENTS_DB.find(a => a.id === id)?.nameVi).filter(Boolean);
             const rollNames = state.rollCandidates.map(id => AUGMENTS_DB.find(a => a.id === id)?.nameVi).filter(Boolean);
             const enemyNote = document.getElementById('enemyContextInput')?.value.trim() || 'Chưa ghi rõ đội hình địch';
+            const build = computeAdaptiveBuild(champ, state.chosenAugments, state.enemyThreats);
+            const topRoll = getTopSuggestedRollAugments(champ, state.chosenAugments.filter(Boolean), 1)[0];
 
-            if (!getEffectiveApiKey()) {
-                // Provide instant offline tactical breakdown + prompt to add key for custom matchup Q&A
-                const build = computeAdaptiveBuild(champ, state.chosenAugments);
-                box.classList.remove('hidden');
-                box.innerHTML = `
-                    <div class="font-bold text-amber-300"><i class="fa-solid fa-bolt mr-1"></i>Phân tích tức thì (Offline Engine):</div>
-                    <p><strong>Tướng:</strong> ${escapeHtml(champ.nameVi)} — ${escapeHtml(champ.playstyleHint)}</p>
-                    <p><strong>Chuỗi lõi hiện tại:</strong> ${chosenNames.length ? escapeHtml(chosenNames.join(' → ')) : 'Chưa khóa lõi nào'}</p>
-                    <p><strong>Định hướng đồ:</strong> Lên <strong>${escapeHtml(state.itemsMap[build.boots]?.name || '')}</strong> + ${build.finalCore.slice(0, 3).map(id => `<strong>${escapeHtml(state.itemsMap[id]?.name || id)}</strong>`).join(', ')}.</p>
-                    <p class="text-[11px] text-cyan-300 pt-1 border-t border-slate-800">💡 Mẹo: Thêm Gemini API Key trong mục <strong>Cài Đặt (⚙️)</strong> ở góc trên để AI trả lời chi tiết theo đội hình địch thực tế ("${escapeHtml(enemyNote)}").</p>
-                `;
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Gemini AI đang phân tích...</span>';
+            // Local-First (0ms): always show instant PeakBuild 26.22 breakdown immediately without waiting on any AI API
+            const hasKey = Boolean(getEffectiveApiKey());
             box.classList.remove('hidden');
-            box.innerHTML = '<div class="text-cyan-300">Đang tổng hợp chiến thuật cho bạn...</div>';
+            const instantHtml = `
+                <div class="font-bold text-amber-300 flex items-center justify-between gap-2">
+                    <span><i class="fa-solid fa-bolt mr-1"></i>Phân tích tức thì (PeakBuild 26.22 Engine • 0ms):</span>
+                    ${hasKey ? '<span id="geminiBgStatus" class="text-[10px] text-cyan-300 font-semibold"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i>Đang bổ sung Gemini...</span>' : ''}
+                </div>
+                <p><strong>Tướng:</strong> ${escapeHtml(champ.nameVi)} (${champ.tier}) — ${escapeHtml(champ.playstyleHint)}</p>
+                <p><strong>Chuỗi lõi hiện tại:</strong> ${chosenNames.length ? escapeHtml(chosenNames.join(' → ')) : (topRoll ? `Khuyên mở đầu <strong>${escapeHtml(topRoll.aug.nameVi)} (${topRoll.eval.score}đ)</strong>` : 'Chưa khóa lõi nào')}</p>
+                <p><strong>Định hướng đồ:</strong> Lên <strong>${escapeHtml(state.itemsMap[build.boots]?.name || '')}</strong> + ${build.finalCore.slice(0, 4).map(id => `<strong>${escapeHtml(state.itemsMap[id]?.name || id)}</strong>`).join(', ')}.</p>
+                ${!hasKey ? `<p class="text-[11px] text-cyan-300 pt-1 border-t border-slate-800">💡 Đã phân tích tức thì hoàn toàn offline. Có thể nhập thêm Gemini Key trong <strong>Cài Đặt (⚙️)</strong> nếu muốn hỏi đáp tự do theo kèo.</p>` : ''}
+            `;
+            box.innerHTML = instantHtml;
 
+            if (!hasKey) return;
+
+            if (btn) btn.disabled = true;
             try {
                 const prompt = `Bạn là cao thủ Liên Minh Huyền Thoại chế độ ARAM: Hỗn Loạn (ARAM Mayhem). Hãy tư vấn ngắn gọn, thực chiến bằng tiếng Việt:
 - Tướng đang chơi: ${champ.nameVi} (${champ.roles.join(', ')})
@@ -21342,13 +21633,16 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: { temperature: 0.4 }
                 });
-                const answer = res?.candidates?.[0]?.content?.parts?.[0]?.text || 'Không nhận được phản hồi.';
-                box.innerHTML = `<div class="whitespace-pre-wrap text-slate-200 leading-relaxed">${escapeHtml(answer).replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-200">$1</strong>')}</div>`;
+                const answer = res?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                if (answer) {
+                    box.innerHTML = instantHtml.replace(/<span id="geminiBgStatus"[\s\S]*?<\/span>/, '<span class="text-[10px] text-emerald-300 font-semibold">✓ Đã bổ sung Gemini AI</span>')
+                        + `<div class="mt-2 pt-2 border-t border-slate-800 whitespace-pre-wrap text-slate-200 leading-relaxed">${escapeHtml(answer).replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-200">$1</strong>')}</div>`;
+                }
             } catch (err) {
-                box.innerHTML = `<div class="text-rose-300">Lỗi Gemini AI: ${escapeHtml(err.message)}</div>`;
+                const st = document.getElementById('geminiBgStatus');
+                if (st) st.innerHTML = `<span class="text-slate-400">Offline mode (${escapeHtml(err.message)})</span>`;
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> <span>Hỏi Gemini AI Phân Tích Sâu Trận Này</span>';
+                if (btn) btn.disabled = false;
             }
         }
 
@@ -21608,6 +21902,8 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
 
         function renderMinimapRadar() {
             const box = document.getElementById('minimapRadarBox');
+            const layer = document.getElementById('minimapMarkersLayer') || box;
+            const liveCanvas = document.getElementById('liveMinimapCanvas');
             const badge = document.getElementById('minimapScaleBadge');
             const resLbl = document.getElementById('minimapGameResLabel');
             const slider = document.getElementById('minimapScaleSlider');
@@ -21635,16 +21931,17 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     : 'py-1.5 px-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer transition';
             }
 
-            if (!box) return;
+            if (!box || !layer) return;
             // Visual scale preview inside box (clamped 96px..168px)
             const previewSz = Math.round(Math.max(96, Math.min(168, 128 * (mm.scale || 1.0))));
             box.style.width = `${previewSz}px`;
             box.style.height = `${previewSz}px`;
             const markerSz = Math.max(18, Math.round(previewSz * 0.19));
             const fontSz = Math.max(8, Math.round(previewSz * 0.075));
+            const hasLiveBg = Boolean(state.screenStream && liveCanvas && !liveCanvas.classList.contains('hidden'));
 
-            box.innerHTML = `
-                <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full pointer-events-none opacity-65">
+            layer.innerHTML = `
+                <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full pointer-events-none ${hasLiveBg ? 'opacity-20' : 'opacity-65'}">
                     <line x1="30" y1="78" x2="78" y2="30" stroke="#334155" stroke-width="14" stroke-linecap="round"/>
                     <line x1="30" y1="78" x2="78" y2="30" stroke="#0ea5e9" stroke-width="1.2" stroke-dasharray="3 2"/>
                     <circle cx="30" cy="78" r="4.5" fill="#10b981" opacity="0.7"/>
@@ -21654,16 +21951,193 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     const isSoon = r.running && r.remaining <= 15 && r.remaining > 0;
                     const bg = r.running
                         ? (isSoon ? 'bg-amber-400 text-slate-950 border-amber-200 animate-pulse' : 'bg-slate-900/95 text-cyan-300 border-cyan-400')
-                        : 'bg-emerald-500/25 text-emerald-300 border-emerald-400';
+                        : 'bg-slate-950/35 text-emerald-300 border-emerald-400 ring-1 ring-emerald-400/50';
                     return `
                         <button type="button" onclick="startRelicTimer('${r.id}')" title="${escapeHtml(r.label)} (${r.hotkey}) — Click để đếm"
-                                class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border font-mono font-extrabold flex items-center justify-center shadow cursor-pointer hover:scale-110 transition ${bg}"
+                                class="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 font-mono font-extrabold flex items-center justify-center shadow cursor-pointer hover:scale-110 transition ${bg}"
                                 style="left: ${(r.nx * 100).toFixed(1)}%; top: ${(r.ny * 100).toFixed(1)}%; width: ${markerSz}px; height: ${markerSz}px; font-size: ${fontSz}px;">
-                            ${r.running ? r.remaining : '✓'}
+                            ${r.running ? r.remaining : ''}
                         </button>
                     `;
                 }).join('')}
             `;
+        }
+
+        function isHealthRelicOliveGreen(r, g, b) {
+            return g >= 102 && g <= 185 && r >= 50 && r <= 172 && b <= 130 && (g - r) >= 9 && (g - r) <= 45 && (g - b) >= 28;
+        }
+
+        function startLiveMinimapWatcher() {
+            stopLiveMinimapWatcher();
+            state.minimapWatchTick = 0;
+            state.relicTimers.forEach(r => {
+                r.visibleStreak = 0;
+                r.missingStreak = 0;
+                r.respawnStreak = 0;
+            });
+            state.liveMinimapInterval = setInterval(watchLiveStreamMinimap, 350);
+        }
+
+        function stopLiveMinimapWatcher() {
+            if (state.liveMinimapInterval) {
+                clearInterval(state.liveMinimapInterval);
+                state.liveMinimapInterval = null;
+            }
+            state.relicTimers.forEach(r => {
+                r.visibleStreak = 0;
+                r.missingStreak = 0;
+                r.respawnStreak = 0;
+            });
+            const mmCanvas = document.getElementById('liveMinimapCanvas');
+            if (mmCanvas) mmCanvas.classList.add('hidden');
+        }
+
+        function countRelicGreenInCorner(data, regionSize, localX, localY) {
+            let count = 0;
+            for (let dy = -3; dy <= 3; dy++) {
+                const y = localY + dy;
+                if (y < 0 || y >= regionSize) continue;
+                for (let dx = -3; dx <= 3; dx++) {
+                    const x = localX + dx;
+                    if (x < 0 || x >= regionSize) continue;
+                    const idx = (y * regionSize + x) * 4;
+                    if (isHealthRelicOliveGreen(data[idx], data[idx + 1], data[idx + 2])) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function watchLiveStreamMinimap() {
+            if (!state.screenStream) return;
+            const video = document.getElementById('screenVideo');
+            if (!video || !video.videoWidth || !video.videoHeight || video.videoWidth < 640 || video.videoHeight < 480) return;
+
+            const W = video.videoWidth;
+            const H = video.videoHeight;
+            const ratioH = H / 1080;
+            const mm = state.minimap;
+            const flipped = Boolean(mm.flipped);
+            const regionSize = Math.min(Math.floor(W / 2), Math.floor(H * 0.45));
+            const srcCornerX = flipped ? 0 : (W - regionSize);
+            const srcCornerY = H - regionSize;
+
+            if (!state._mmWatchCanvas) state._mmWatchCanvas = document.createElement('canvas');
+            const c = state._mmWatchCanvas;
+            if (c.width !== regionSize || c.height !== regionSize) {
+                c.width = regionSize;
+                c.height = regionSize;
+            }
+            const ctx = c.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(video, srcCornerX, srcCornerY, regionSize, regionSize, 0, 0, regionSize, regionSize);
+            const imgData = ctx.getImageData(0, 0, regionSize, regionSize).data;
+
+            mm.gameWidth = W;
+            mm.gameHeight = H;
+            state.minimapWatchTick = (state.minimapWatchTick || 0) + 1;
+
+            const ox = Math.max(2, Math.round(14 * ratioH));
+            const oy = Math.max(2, Math.round(13 * ratioH));
+
+            // Periodically auto-calibrate scale directly from the live shared video frame if user hasn't locked manual slider
+            if (!state.manualMinimapScaleOverride && mm.autoDetect && !mm.calibrateMode && (state.minimapWatchTick <= 6 || state.minimapWatchTick % 8 === 0)) {
+                let bestScale = mm.scale;
+                let bestScore = -1;
+                let bestHits = 0;
+                for (let sc = 0.75; sc <= 1.65; sc += 0.02) {
+                    const szTry = Math.round(221 * ratioH * sc);
+                    if (szTry + oy + 4 >= regionSize || szTry + ox + 4 >= regionSize) continue;
+                    const mxLocal = flipped ? ox : (regionSize - szTry - ox);
+                    const myLocal = regionSize - szTry - oy;
+                    let hits = 0;
+                    let totalG = 0;
+                    for (let i = 0; i < state.relicTimers.length; i++) {
+                        const r = state.relicTimers[i];
+                        const cx = Math.round(mxLocal + r.nx * szTry);
+                        const cy = Math.round(myLocal + r.ny * szTry);
+                        const gc = countRelicGreenInCorner(imgData, regionSize, cx, cy);
+                        if (gc >= 3) {
+                            hits++;
+                            totalG += gc;
+                        }
+                    }
+                    const score = hits * 100 + totalG;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestScale = Number(sc.toFixed(2));
+                        bestHits = hits;
+                    }
+                }
+                if (bestHits >= 2 && bestScore >= 208) {
+                    const bestSz = Math.round(221 * ratioH * bestScale);
+                    if (Math.abs(bestScale - mm.scale) >= 0.02 || bestSz !== mm.sizePx) {
+                        mm.scale = bestScale;
+                        mm.sizePx = bestSz;
+                        mm.offsetX = ox;
+                        mm.offsetY = oy;
+                        mm.detectedSource = 'live-video';
+                        renderMinimapRadar();
+                        pushMinimapToBridge();
+                    }
+                }
+            }
+
+            const sz = Math.max(80, Math.min(regionSize - 4, Math.round(221 * ratioH * (mm.scale || 1.0))));
+            mm.sizePx = sz;
+            mm.offsetX = ox;
+            mm.offsetY = oy;
+            const mxLocal = flipped ? ox : Math.max(0, regionSize - sz - ox);
+            const myLocal = Math.max(0, regionSize - sz - oy);
+
+            // Render live minimap preview inside #minimapRadarBox
+            const previewCanvas = document.getElementById('liveMinimapCanvas');
+            if (previewCanvas) {
+                const pCtx = previewCanvas.getContext('2d');
+                pCtx.drawImage(c, mxLocal, myLocal, sz, sz, 0, 0, previewCanvas.width, previewCanvas.height);
+                if (previewCanvas.classList.contains('hidden')) {
+                    previewCanvas.classList.remove('hidden');
+                    renderMinimapRadar();
+                }
+            }
+
+            // Watch 4 relic pixels directly from the live shared video frame
+            if (mm.autoWatchPixels && !mm.calibrateMode) {
+                for (let i = 0; i < state.relicTimers.length; i++) {
+                    const r = state.relicTimers[i];
+                    const cx = Math.round(mxLocal + r.nx * sz);
+                    const cy = Math.round(myLocal + r.ny * sz);
+                    const greenCount = countRelicGreenInCorner(imgData, regionSize, cx, cy);
+                    const isVisible = greenCount >= 3;
+
+                    if (!r.running) {
+                        if (isVisible) {
+                            r.visibleStreak = Math.min(10, (r.visibleStreak || 0) + 1);
+                            r.missingStreak = 0;
+                        } else if ((r.visibleStreak || 0) >= 2) {
+                            r.missingStreak = (r.missingStreak || 0) + 1;
+                            if (r.missingStreak >= 3) {
+                                r.visibleStreak = 0;
+                                r.missingStreak = 0;
+                                r.respawnStreak = 0;
+                                startRelicTimer(r.id);
+                            }
+                        }
+                    } else if (r.remaining <= Math.max(0, r.total - 5)) {
+                        if (isVisible) {
+                            r.respawnStreak = (r.respawnStreak || 0) + 1;
+                            if (r.respawnStreak >= 4) {
+                                r.respawnStreak = 0;
+                                r.missingStreak = 0;
+                                r.visibleStreak = 2;
+                                resetRelicTimer(r.id);
+                            }
+                        } else {
+                            r.respawnStreak = 0;
+                        }
+                    }
+                }
+            }
         }
 
         function pushMinimapToBridge() {
@@ -21677,8 +22151,9 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
 
         function updateMinimapScaleFromSlider(pctVal) {
             const scale = Math.max(0.5, Math.min(2.0, Number(pctVal) / 100));
+            state.manualMinimapScaleOverride = true;
             state.minimap.scale = Number(scale.toFixed(2));
-            state.minimap.autoDetect = true;
+            state.minimap.autoDetect = false;
             const ratioH = (state.minimap.gameHeight || 1080) / 1080;
             state.minimap.sizePx = Math.round(221 * ratioH * state.minimap.scale);
             state.minimap.offsetX = Math.max(2, Math.round(14 * ratioH));
@@ -21689,8 +22164,16 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
         }
 
         async function detectRiotMinimapConfig() {
+            state.manualMinimapScaleOverride = false;
             if (!state.isDesktopBridgeConnected) {
-                showToast('Tính năng đọc cấu hình LMHT cần chạy qua PassionMayhem.exe (hoặc server.mjs local).', 'info');
+                if (state.screenStream) {
+                    state.minimap.autoDetect = true;
+                    state.minimapWatchTick = 0;
+                    watchLiveStreamMinimap();
+                    showToast(`Đã tự động cân Minimap từ màn hình chia sẻ (${Math.round(state.minimap.scale * 100)}% • ${state.minimap.sizePx}px)!`, 'success');
+                } else {
+                    showToast('Hãy bấm "Bắt màn hình Game" hoặc chạy PassionMayhem.exe để tự nhận diện Scale Minimap!', 'info');
+                }
                 return;
             }
             try {
@@ -21904,29 +22387,22 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
         async function analyzeInGameCombatScreen(base64Data, mimeType) {
             if (state.isScanning) return;
             state.isScanning = true;
-            const overlay = document.getElementById('visionLoadingOverlay');
-            const loadText = document.getElementById('visionLoadingText');
-            if (overlay) overlay.classList.remove('hidden');
 
             try {
-                let res = null;
+                // Local-First (0ms): always apply instant tactical analysis immediately without blocking on external AI
+                const localRes = buildOfflineCombatAnalysis('');
+                applyCombatAnalysisResult(localRes);
+
                 if (getEffectiveApiKey()) {
-                    if (loadText) loadText.textContent = 'Gemini AI đang phân tích Bảng Tab & Kèo Đấu...';
-                    try {
-                        res = await callGeminiCombatVisionScan(base64Data, mimeType);
-                    } catch (err) {
-                        console.warn('Gemini Combat Vision fallback:', err);
-                    }
+                    callGeminiCombatVisionScan(base64Data, mimeType)
+                        .then(aiRes => {
+                            if (aiRes) applyCombatAnalysisResult(aiRes);
+                        })
+                        .catch(err => console.warn('Background Gemini Combat Vision fallback:', err));
                 }
-                if (!res) {
-                    if (loadText) loadText.textContent = 'Đang phân tích đội hình & đồ khắc chế...';
-                    res = buildOfflineCombatAnalysis('');
-                }
-                applyCombatAnalysisResult(res);
             } catch (err) {
                 showToast(`Lỗi quét trận: ${err.message}`, 'error');
             } finally {
-                if (overlay) overlay.classList.add('hidden');
                 state.isScanning = false;
             }
         }
@@ -22539,7 +23015,8 @@ Hãy trả lời rõ 4 ý ngắn gọn (dùng gạch đầu dòng):
                     state.lastRelicEventSeq = data.relicEventSeq;
                     const trig = data.lastRelicTrigger;
                     if (trig.id) {
-                        startRelicTimer(trig.id, trig.total);
+                        if (Number(trig.total) < 0) resetRelicTimer(trig.id);
+                        else startRelicTimer(trig.id, trig.total);
                     }
                 }
 

@@ -533,18 +533,32 @@ const server = http.createServer(async (req, res) => {
             }
             if (typeof body.triggerRelicIndex === 'number' && mayhemState.relicTimers[body.triggerRelicIndex]) {
                 const idx = body.triggerRelicIndex;
-                const cd = Number(body.total) || (mayhemState.mapMode === 'pirate_60' ? 60 : 90);
-                mayhemState.relicTimers[idx].total = cd;
-                mayhemState.relicTimers[idx].remaining = cd;
-                mayhemState.relicTimers[idx].running = true;
-                mayhemState.relicEventSeq += 1;
-                mayhemState.lastRelicTrigger = {
-                    seq: mayhemState.relicEventSeq,
-                    index: idx,
-                    id: mayhemState.relicTimers[idx].id,
-                    total: cd,
-                    ts: Date.now()
-                };
+                const reqTotal = Number(body.total);
+                if (reqTotal < 0) {
+                    mayhemState.relicTimers[idx].remaining = 0;
+                    mayhemState.relicTimers[idx].running = false;
+                    mayhemState.relicEventSeq += 1;
+                    mayhemState.lastRelicTrigger = {
+                        seq: mayhemState.relicEventSeq,
+                        index: idx,
+                        id: mayhemState.relicTimers[idx].id,
+                        total: -1,
+                        ts: Date.now()
+                    };
+                } else {
+                    const cd = reqTotal || (mayhemState.mapMode === 'pirate_60' ? 60 : 90);
+                    mayhemState.relicTimers[idx].total = cd;
+                    mayhemState.relicTimers[idx].remaining = cd;
+                    mayhemState.relicTimers[idx].running = true;
+                    mayhemState.relicEventSeq += 1;
+                    mayhemState.lastRelicTrigger = {
+                        seq: mayhemState.relicEventSeq,
+                        index: idx,
+                        id: mayhemState.relicTimers[idx].id,
+                        total: cd,
+                        ts: Date.now()
+                    };
+                }
             }
             if (Array.isArray(body.relicTimers)) {
                 mayhemState.relicTimers = body.relicTimers.map((rt, idx) => {

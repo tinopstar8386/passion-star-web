@@ -154,6 +154,7 @@ namespace PassionMayhemDesktop
         public bool running = false;
         public int visibleStreak = 0;
         public int missingStreak = 0;
+        public int respawnStreak = 0;
     }
 
     internal sealed class MinimapConfigModel
@@ -368,7 +369,7 @@ namespace PassionMayhemDesktop
             }
 
             // Proportional scaling for relic circles and fonts relative to inner minimap sizePx
-            float radius = Math.Max(8.0f, w * 0.040f);
+            float radius = Math.Max(9.5f, w * 0.042f);
             float fontSize = Math.Max(6.5f, w * 0.030f);
             using (Font timeFont = new Font("Consolas", fontSize, FontStyle.Bold))
             using (StringFormat sf = new StringFormat())
@@ -386,19 +387,21 @@ namespace PassionMayhemDesktop
                     Color ringColor = r.running
                         ? (isSoon ? Color.FromArgb(255, 250, 204, 21) : Color.FromArgb(255, 56, 189, 248))
                         : Color.FromArgb(255, 52, 211, 153);
-                    Color fillColor = r.running
-                        ? Color.FromArgb(215, 8, 15, 32)
-                        : Color.FromArgb(200, 6, 48, 36);
 
                     RectangleF circleRect = new RectangleF(cx - radius, cy - radius, radius * 2f, radius * 2f);
-                    using (SolidBrush fillBrush = new SolidBrush(fillColor))
+                    if (r.running || cfg.calibrateMode)
                     {
-                        g.FillEllipse(fillBrush, circleRect);
-                    }
-
-                    using (Pen bgRing = new Pen(Color.FromArgb(140, 30, 41, 59), 2.5f))
-                    {
-                        g.DrawEllipse(bgRing, circleRect);
+                        Color fillColor = r.running
+                            ? Color.FromArgb(215, 8, 15, 32)
+                            : Color.FromArgb(190, 6, 48, 36);
+                        using (SolidBrush fillBrush = new SolidBrush(fillColor))
+                        {
+                            g.FillEllipse(fillBrush, circleRect);
+                        }
+                        using (Pen bgRing = new Pen(Color.FromArgb(140, 30, 41, 59), 2.5f))
+                        {
+                            g.DrawEllipse(bgRing, circleRect);
+                        }
                     }
 
                     float sweep = 360f;
@@ -411,10 +414,13 @@ namespace PassionMayhemDesktop
                         g.DrawArc(arcPen, circleRect, -90f, sweep);
                     }
 
-                    string labelText = r.running ? r.remaining.ToString() : "OK";
-                    using (SolidBrush textBrush = new SolidBrush(ringColor))
+                    if (r.running || cfg.calibrateMode)
                     {
-                        g.DrawString(labelText, timeFont, textBrush, circleRect, sf);
+                        string labelText = r.running ? r.remaining.ToString() : "OK";
+                        using (SolidBrush textBrush = new SolidBrush(ringColor))
+                        {
+                            g.DrawString(labelText, timeFont, textBrush, circleRect, sf);
+                        }
                     }
                 }
             }
@@ -1311,7 +1317,7 @@ namespace PassionMayhemDesktop
             int sz = Math.Max(110, minimapCfg.sizePx);
             int mx = minimapCfg.flipped ? gameBounds.Left + minimapCfg.offsetX : gameBounds.Right - sz - minimapCfg.offsetX;
             int my = gameBounds.Bottom - sz - minimapCfg.offsetY;
-            int patch = Math.Max(6, (int)Math.Round(sz * 0.032));
+            int patch = 7;
 
             bool triggeredAny = false;
             lock (syncLock)
@@ -1319,13 +1325,6 @@ namespace PassionMayhemDesktop
                 for (int i = 0; i < relics.Count; i++)
                 {
                     RelicTimerModel r = relics[i];
-                    if (r.running)
-                    {
-                        r.visibleStreak = 0;
-                        r.missingStreak = 0;
-                        continue;
-                    }
-
                     int px = mx + (int)Math.Round(r.nx * sz) - patch / 2;
                     int py = my + (int)Math.Round(r.ny * sz) - patch / 2;
 
@@ -1341,28 +1340,58 @@ namespace PassionMayhemDesktop
                                 for (int y = 0; y < patch; y++)
                                 {
                                     Color c = bmp.GetPixel(x, y);
-                                    if (c.G > 145 && c.G > c.R + 20 && c.B < 175) brightGreenCount++;
+                                    // Olive-green ARAM/Pirate health relic cross detector (excludes translucent cyan/emerald overlay ring)
+                                    if (c.G >= 102 && c.G <= 185 && c.R >= 50 && c.R <= 172 && c.B <= 130 && (c.G - c.R) >= 9 && (c.G - c.R) <= 45 && (c.G - c.B) >= 28)
+                                    {
+                                        brightGreenCount++;
+                                    }
                                 }
                             }
-                            bool isVisible = brightGreenCount >= Math.Max(2, (patch * patch) / 8);
-                            if (isVisible)
+                            bool isVisible = brightGreenCount >= 3;
+                            if (!r.running)
                             {
-                                r.visibleStreak = Math.Min(10, r.visibleStreak + 1);
-                                r.missingStreak = 0;
-                            }
-                            else if (r.visibleStreak >= 2)
-                            {
-                                r.missingStreak++;
-                                if (r.missingStreak >= 2)
+                                if (isVisible)
                                 {
-                                    int cd = mapMode == "pirate_60" ? 60 : 90;
-                                    r.total = cd;
-                                    r.remaining = cd;
-                                    r.running = true;
-                                    r.visibleStreak = 0;
+                                    r.visibleStreak = Math.Min(10, r.visibleStreak + 1);
                                     r.missingStreak = 0;
-                                    triggeredAny = true;
-                                    PushRelicTriggerToServer(i, cd);
+                                    r.respawnStreak = 0;
+                                }
+                                else if (r.visibleStreak >= 2)
+                                {
+                                    r.missingStreak++;
+                                    if (r.missingStreak >= 3)
+                                    {
+                                        int cd = mapMode == "pirate_60" ? 60 : 90;
+                                        r.total = cd;
+                                        r.remaining = cd;
+                                        r.running = true;
+                                        r.visibleStreak = 0;
+                                        r.missingStreak = 0;
+                                        r.respawnStreak = 0;
+                                        triggeredAny = true;
+                                        PushRelicTriggerToServer(i, cd);
+                                    }
+                                }
+                            }
+                            else if (r.remaining <= Math.Max(0, r.total - 5))
+                            {
+                                if (isVisible)
+                                {
+                                    r.respawnStreak++;
+                                    if (r.respawnStreak >= 4)
+                                    {
+                                        r.running = false;
+                                        r.remaining = 0;
+                                        r.visibleStreak = 2;
+                                        r.missingStreak = 0;
+                                        r.respawnStreak = 0;
+                                        triggeredAny = true;
+                                        PushRelicTriggerToServer(i, -1);
+                                    }
+                                }
+                                else
+                                {
+                                    r.respawnStreak = 0;
                                 }
                             }
                         }
@@ -2383,20 +2412,35 @@ namespace PassionMayhemDesktop
                     int idx = Convert.ToInt32(body["triggerRelicIndex"]);
                     if (idx >= 0 && idx < relicTimers.Count)
                     {
-                        int cd = (body.ContainsKey("total") && body["total"] != null && Convert.ToInt32(body["total"]) != 0)
-                            ? Convert.ToInt32(body["total"])
-                            : (mapMode == "pirate_60" ? 60 : 90);
-                        relicTimers[idx]["total"] = cd;
-                        relicTimers[idx]["remaining"] = cd;
-                        relicTimers[idx]["running"] = true;
-                        relicEventSeq += 1;
-                        Dictionary<string, object> trig = new Dictionary<string, object>();
-                        trig["seq"] = relicEventSeq;
-                        trig["index"] = idx;
-                        trig["id"] = relicTimers[idx]["id"];
-                        trig["total"] = cd;
-                        trig["ts"] = NowMs();
-                        lastRelicTrigger = trig;
+                        int reqTotal = (body.ContainsKey("total") && body["total"] != null) ? Convert.ToInt32(body["total"]) : 0;
+                        if (reqTotal < 0)
+                        {
+                            relicTimers[idx]["remaining"] = 0;
+                            relicTimers[idx]["running"] = false;
+                            relicEventSeq += 1;
+                            Dictionary<string, object> trig = new Dictionary<string, object>();
+                            trig["seq"] = relicEventSeq;
+                            trig["index"] = idx;
+                            trig["id"] = relicTimers[idx]["id"];
+                            trig["total"] = -1;
+                            trig["ts"] = NowMs();
+                            lastRelicTrigger = trig;
+                        }
+                        else
+                        {
+                            int cd = reqTotal != 0 ? reqTotal : (mapMode == "pirate_60" ? 60 : 90);
+                            relicTimers[idx]["total"] = cd;
+                            relicTimers[idx]["remaining"] = cd;
+                            relicTimers[idx]["running"] = true;
+                            relicEventSeq += 1;
+                            Dictionary<string, object> trig = new Dictionary<string, object>();
+                            trig["seq"] = relicEventSeq;
+                            trig["index"] = idx;
+                            trig["id"] = relicTimers[idx]["id"];
+                            trig["total"] = cd;
+                            trig["ts"] = NowMs();
+                            lastRelicTrigger = trig;
+                        }
                     }
                 }
 
