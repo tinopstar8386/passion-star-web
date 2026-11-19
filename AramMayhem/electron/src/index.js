@@ -3,10 +3,10 @@ const fs = require("fs");
 const http = require("http");
 const { app, BrowserWindow, Menu, Tray, nativeImage, ipcMain, screen } = require("electron");
 
-app.setAppUserModelId("com.passionstar.mayhemblitz");
+app.setAppUserModelId("com.passionstar.arammayhem");
 
 try {
-  app.setPath("userData", path.join(app.getPath("appData"), "PassionMayhemBlitz"));
+  app.setPath("userData", path.join(app.getPath("appData"), "AramMayhem"));
 } catch (_) {}
 
 app.commandLine.appendSwitch("js-flags", "--expose_gc");
@@ -34,6 +34,8 @@ if (!singleInstanceLock) {
 
 let mainWindow = null;
 let tray = null;
+let lastFocusAppSeq = -1;
+let focusPollTimer = null;
 
 function resolveLaunchUrl() {
   const urlArg = process.argv.find((a) => a.startsWith("--url="));
@@ -42,7 +44,7 @@ function resolveLaunchUrl() {
     if (target) return target;
   }
   const port = process.env.PORT || "3225";
-  return `http://127.0.0.1:${port}/aram-mayhem.html?desktop=1&blitz=1`;
+  return `http://127.0.0.1:${port}/AramMayhem/index.html?desktop=1&app=1`;
 }
 
 function getWindowStatePayload() {
@@ -55,9 +57,48 @@ function getWindowStatePayload() {
   };
 }
 
+function restoreAndFocusMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  if (!mainWindow.isVisible()) mainWindow.show();
+  mainWindow.focus();
+  mainWindow.moveTop();
+}
+
+function startFocusPolling(targetUrl) {
+  let stateEndpoint = "";
+  try {
+    const u = new URL(targetUrl);
+    stateEndpoint = `${u.protocol}//${u.host}/api/mayhem/state`;
+  } catch (_) {
+    return;
+  }
+  if (focusPollTimer) clearInterval(focusPollTimer);
+  focusPollTimer = setInterval(() => {
+    const req = http.get(stateEndpoint, { timeout: 900 }, (res) => {
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => {
+        try {
+          const obj = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          const seq = Number(obj && obj.focusAppSeq) || 0;
+          if (lastFocusAppSeq < 0) {
+            lastFocusAppSeq = seq;
+          } else if (seq > lastFocusAppSeq) {
+            lastFocusAppSeq = seq;
+            restoreAndFocusMainWindow();
+          }
+        } catch (_) {}
+      });
+    });
+    req.on("error", () => {});
+    req.on("timeout", () => { try { req.destroy(); } catch (_) {} });
+  }, 350);
+}
+
 function createMainWindow() {
-  const iconPng = path.join(__dirname, "../assets/icons/256x256.png");
-  const iconIco = path.join(__dirname, "../assets/icons/icon.ico");
+  const iconPng = path.join(__dirname, "../assets/icon-256.png");
+  const iconIco = path.join(__dirname, "../assets/icon.ico");
   const windowIcon = fs.existsSync(iconPng) ? iconPng : iconIco;
 
   const display = screen.getPrimaryDisplay().workAreaSize;
@@ -69,11 +110,12 @@ function createMainWindow() {
     height,
     minWidth: 1020,
     minHeight: 680,
-    title: "Passion Mayhem Blitz",
+    title: "Aram Mayhem",
     icon: windowIcon,
     frame: false,
-    backgroundColor: "#0C0E13",
+    backgroundColor: "#0b0f17",
     titleBarStyle: "hidden",
+    skipTaskbar: false,
     show: false,
     webPreferences: {
       nodeIntegration: false,
@@ -85,17 +127,16 @@ function createMainWindow() {
   });
 
   mainWindow.once("ready-to-show", () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
-    }
+    restoreAndFocusMainWindow();
   });
 
-  mainWindow.on("close", (event) => {
-    if (!app.isQuitting && !process.argv.includes("--quit-on-close")) {
-      event.preventDefault();
-      mainWindow.hide();
+  mainWindow.on("close", () => {
+    if (focusPollTimer) {
+      clearInterval(focusPollTimer);
+      focusPollTimer = null;
     }
+    app.isQuitting = true;
+    app.quit();
   });
 
   const targetUrl = resolveLaunchUrl();
@@ -115,41 +156,31 @@ function createMainWindow() {
     }, 800);
   });
 
+  startFocusPolling(targetUrl);
+
   // Fallback reveal if ready-to-show took too long
   setTimeout(() => {
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
-      mainWindow.show();
+      restoreAndFocusMainWindow();
     }
-  }, 2000);
+  }, 1800);
 }
 
 function createStandaloneTray() {
   if (process.argv.includes("--no-tray")) return;
-  const trayPath = path.join(__dirname, "../assets/icons/tray32x32.png");
+  const trayPath = path.join(__dirname, "../assets/tray-32.png");
   if (!fs.existsSync(trayPath)) return;
 
   tray = new Tray(nativeImage.createFromPath(trayPath));
-  tray.setToolTip("Passion Mayhem Blitz");
+  tray.setToolTip("Aram Mayhem");
   tray.on("click", () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
-      mainWindow.hide();
-    } else {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
-      mainWindow.focus();
-    }
+    restoreAndFocusMainWindow();
   });
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: "Mở Passion Mayhem Blitz",
-        click: () => {
-          if (!mainWindow || mainWindow.isDestroyed()) return;
-          if (mainWindow.isMinimized()) mainWindow.restore();
-          mainWindow.show();
-          mainWindow.focus();
-        },
+        label: "Mở Aram Mayhem",
+        click: () => restoreAndFocusMainWindow(),
       },
       {
         label: "Tải lại giao diện",
@@ -159,7 +190,7 @@ function createStandaloneTray() {
       },
       { type: "separator" },
       {
-        label: "Thoát",
+        label: "Thoát Aram Mayhem",
         click: () => {
           app.isQuitting = true;
           app.quit();
@@ -169,20 +200,18 @@ function createStandaloneTray() {
   );
 }
 
-app.on("window-all-closed", (e) => {
-  e.preventDefault();
+app.on("window-all-closed", () => {
+  app.isQuitting = true;
+  app.quit();
 });
 
 app.on("second-instance", () => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (mainWindow.isMinimized()) mainWindow.restore();
-  mainWindow.show();
-  mainWindow.focus();
+  restoreAndFocusMainWindow();
 });
 
-ipcMain.handle("passion:get-window-state", () => getWindowStatePayload());
+ipcMain.handle("aram:get-window-state", () => getWindowStatePayload());
 
-ipcMain.handle("passion:window-control", (_event, action) => {
+ipcMain.handle("aram:window-control", (_event, action) => {
   if (!mainWindow || mainWindow.isDestroyed()) return getWindowStatePayload();
   if (action === "minimize") {
     mainWindow.minimize();
@@ -191,15 +220,15 @@ ipcMain.handle("passion:window-control", (_event, action) => {
     else mainWindow.maximize();
   } else if (action === "pin") {
     mainWindow.setAlwaysOnTop(!mainWindow.isAlwaysOnTop());
-  } else if (action === "close" || action === "hide") {
+  } else if (action === "tray") {
     mainWindow.hide();
+  } else if (action === "close" || action === "quit") {
+    app.isQuitting = true;
+    app.quit();
   } else if (action === "reload") {
     mainWindow.webContents.reload();
   } else if (action === "devtools") {
     mainWindow.webContents.toggleDevTools();
-  } else if (action === "quit") {
-    app.isQuitting = true;
-    app.quit();
   }
   return getWindowStatePayload();
 });

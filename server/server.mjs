@@ -113,9 +113,59 @@ const mayhemState = {
     recommendedItemPath: '',
     nativeOcrCards: ['', '', ''],
     nativeOcrSeq: 0,
+    focusAppSeq: 0,
     chromeTitlebarHeight: 33,
     updatedAt: Date.now()
 };
+
+const ttsAudioCache = new Map();
+function fetchVietnameseTtsAudio(text) {
+    const clean = String(text || '').trim().slice(0, 220);
+    if (!clean) return Promise.resolve(null);
+    if (ttsAudioCache.has(clean)) {
+        const hit = ttsAudioCache.get(clean);
+        ttsAudioCache.delete(clean);
+        ttsAudioCache.set(clean, hit);
+        return Promise.resolve(hit);
+    }
+    return new Promise((resolve) => {
+        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=vi&q=${encodeURIComponent(clean)}`;
+        const req = https.get(
+            ttsUrl,
+            {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+                    'Referer': 'https://translate.google.com/'
+                },
+                timeout: 4500
+            },
+            (resp) => {
+                if (resp.statusCode !== 200) {
+                    resp.resume();
+                    resolve(null);
+                    return;
+                }
+                const chunks = [];
+                resp.on('data', (c) => chunks.push(c));
+                resp.on('end', () => {
+                    const buf = Buffer.concat(chunks);
+                    if (buf.length < 128) {
+                        resolve(null);
+                        return;
+                    }
+                    if (ttsAudioCache.size >= 64) {
+                        const oldestKey = ttsAudioCache.keys().next().value;
+                        ttsAudioCache.delete(oldestKey);
+                    }
+                    ttsAudioCache.set(clean, buf);
+                    resolve(buf);
+                });
+            }
+        );
+        req.on('timeout', () => { try { req.destroy(); } catch (_) {} resolve(null); });
+        req.on('error', () => resolve(null));
+    });
+}
 
 function discoverLeagueConfigDirs() {
     const drives = ['C:', 'D:', 'E:', 'F:', 'G:'];
@@ -749,7 +799,25 @@ const server = http.createServer(async (req, res) => {
 
     // ================= API: ARAM MAYHEM BLITZ BRIDGE (/api/mayhem/*) =================
     if (pathname === '/api/mayhem/health' && req.method === 'GET') {
-        sendJson(res, 200, { status: 'ok', app: 'passion-mayhem-desktop', port: PORT });
+        sendJson(res, 200, { status: 'ok', app: 'passion-mayhem-desktop', apiVersion: 2, features: ['tts', 'focusApp', 'scanAugTitles'], port: PORT });
+        return;
+    }
+
+    if (pathname === '/api/mayhem/tts' && req.method === 'GET') {
+        const txt = parsedUrl.searchParams.get('text') || '';
+        const mp3Buf = await fetchVietnameseTtsAudio(txt);
+        if (!mp3Buf) {
+            res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' });
+            res.end();
+            return;
+        }
+        res.writeHead(200, {
+            'Content-Type': 'audio/mpeg',
+            'Content-Length': mp3Buf.length,
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=3600'
+        });
+        res.end(mp3Buf);
         return;
     }
 
@@ -798,6 +866,7 @@ const server = http.createServer(async (req, res) => {
             recommendedItemPath: mayhemState.recommendedItemPath,
             nativeOcrCards: mayhemState.nativeOcrCards,
             nativeOcrSeq: mayhemState.nativeOcrSeq,
+            focusAppSeq: mayhemState.focusAppSeq,
             chromeTitlebarHeight: mayhemState.chromeTitlebarHeight,
             updatedAt: mayhemState.updatedAt
         };
@@ -897,6 +966,9 @@ const server = http.createServer(async (req, res) => {
                 mayhemState.nativeOcrCards = body.nativeOcrCards.slice(0, 3).map(s => String(s || ''));
                 mayhemState.nativeOcrSeq += 1;
             }
+            if (body.triggerFocusApp === true) {
+                mayhemState.focusAppSeq += 1;
+            }
             if (body.lastCardClick && typeof body.lastCardClick.index === 'number') {
                 mayhemState.cardClickSeq += 1;
                 mayhemState.lastCardClick = {
@@ -915,6 +987,7 @@ const server = http.createServer(async (req, res) => {
                 modalOpen: mayhemState.modalOpen,
                 modalEventSeq: mayhemState.modalEventSeq,
                 nativeOcrSeq: mayhemState.nativeOcrSeq,
+                focusAppSeq: mayhemState.focusAppSeq,
                 minimapThumbSeq: mayhemState.minimapThumbSeq,
                 minimap: mayhemState.minimap
             });
@@ -998,7 +1071,7 @@ server.listen(PORT, () => {
     console.log(`\n=============================================================`);
     console.log(`✨ PASSION STAR LOCAL SERVER ĐÃ SẴN SÀNG! (PORT ${PORT})`);
     console.log(`🛡️  Passion 2FA Desktop: http://127.0.0.1:${PORT}/2fa.html?desktop=1`);
-    console.log(`⚔️  ARAM Mayhem Blitz:   http://127.0.0.1:${PORT}/aram-mayhem.html?desktop=1`);
+    console.log(`⚔️  Aram Mayhem Desktop: http://127.0.0.1:${PORT}/AramMayhem/index.html?desktop=1`);
     console.log(`🌐 Trình Kích Hoạt Mail: http://localhost:${PORT}/mail_activator.html`);
     console.log(`⚡ Proxy GAS API: http://127.0.0.1:${PORT}/api/proxy`);
     console.log(`=============================================================\n`);

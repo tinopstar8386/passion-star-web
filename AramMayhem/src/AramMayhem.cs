@@ -19,6 +19,13 @@ using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
+[assembly: AssemblyTitle("Aram Mayhem")]
+[assembly: AssemblyProduct("Aram Mayhem")]
+[assembly: AssemblyDescription("Aram Mayhem Desktop Assistant")]
+[assembly: AssemblyCompany("Passion Star")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
+
 namespace PassionMayhemDesktop
 {
     internal static class NativeMethods
@@ -165,6 +172,15 @@ namespace PassionMayhemDesktop
         [DllImport("user32.dll")]
         public static extern bool ReleaseCapture();
 
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr BeginUpdateResource(string pFileName, bool bDeleteExistingResources);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool UpdateResource(IntPtr hUpdate, IntPtr lpType, IntPtr lpName, ushort wLanguage, byte[] lpData, uint cbData);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool EndUpdateResource(IntPtr hUpdate, bool fDiscard);
+
         public const int GWL_STYLE = -16;
         public const int WS_CAPTION = 0x00C00000;
         public const int WS_THICKFRAME = 0x00040000;
@@ -178,6 +194,203 @@ namespace PassionMayhemDesktop
 
         public const uint SRCCOPY = 0x00CC0020;
         public const int COLORONCOLOR = 3;
+    }
+
+    internal static class PeBrandPatcher
+    {
+        private static void WriteAlignedWordString(MemoryStream ms, string s)
+        {
+            byte[] bytes = Encoding.Unicode.GetBytes((s ?? "") + "\0");
+            ms.Write(bytes, 0, bytes.Length);
+            while ((ms.Position % 4) != 0) ms.WriteByte(0);
+        }
+
+        private static byte[] BuildStringEntry(string key, string val)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
+                string valNull = (val ?? "") + "\0";
+                bw.Write((ushort)0); // placeholder wLength
+                bw.Write((ushort)valNull.Length); // wValueLength in WCHARs
+                bw.Write((ushort)1); // wType = 1 (text)
+                WriteAlignedWordString(ms, key);
+                byte[] vBytes = Encoding.Unicode.GetBytes(valNull);
+                ms.Write(vBytes, 0, vBytes.Length);
+                while ((ms.Position % 4) != 0) ms.WriteByte(0);
+                byte[] res = ms.ToArray();
+                BitConverter.GetBytes((ushort)res.Length).CopyTo(res, 0);
+                return res;
+            }
+        }
+
+        private static byte[] BuildStringTable(string langCodePage, Dictionary<string, string> entries)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
+                bw.Write((ushort)0);
+                bw.Write((ushort)0);
+                bw.Write((ushort)1);
+                WriteAlignedWordString(ms, langCodePage);
+                foreach (KeyValuePair<string, string> kv in entries)
+                {
+                    byte[] child = BuildStringEntry(kv.Key, kv.Value);
+                    ms.Write(child, 0, child.Length);
+                }
+                byte[] res = ms.ToArray();
+                BitConverter.GetBytes((ushort)res.Length).CopyTo(res, 0);
+                return res;
+            }
+        }
+
+        private static byte[] BuildStringFileInfo(Dictionary<string, string> entries)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
+                bw.Write((ushort)0);
+                bw.Write((ushort)0);
+                bw.Write((ushort)1);
+                WriteAlignedWordString(ms, "StringFileInfo");
+                byte[] tbl = BuildStringTable("040904b0", entries);
+                ms.Write(tbl, 0, tbl.Length);
+                byte[] res = ms.ToArray();
+                BitConverter.GetBytes((ushort)res.Length).CopyTo(res, 0);
+                return res;
+            }
+        }
+
+        private static byte[] BuildVarFileInfo()
+        {
+            using (MemoryStream ms = new MemoryStream())
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
+                bw.Write((ushort)0);
+                bw.Write((ushort)0);
+                bw.Write((ushort)1);
+                WriteAlignedWordString(ms, "VarFileInfo");
+
+                using (MemoryStream vms = new MemoryStream())
+                using (BinaryWriter vbw = new BinaryWriter(vms))
+                {
+                    vbw.Write((ushort)0);
+                    vbw.Write((ushort)4); // wValueLength = 4 bytes
+                    vbw.Write((ushort)0); // wType = 0 (binary)
+                    WriteAlignedWordString(vms, "Translation");
+                    vbw.Write((ushort)0x0409); // US English
+                    vbw.Write((ushort)0x04B0); // Unicode
+                    byte[] vChild = vms.ToArray();
+                    BitConverter.GetBytes((ushort)vChild.Length).CopyTo(vChild, 0);
+                    ms.Write(vChild, 0, vChild.Length);
+                }
+
+                byte[] res = ms.ToArray();
+                BitConverter.GetBytes((ushort)res.Length).CopyTo(res, 0);
+                return res;
+            }
+        }
+
+        private static byte[] BuildVersionResourceBytes(string productName, string fileDesc, string exeFileName)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            using (BinaryWriter bw = new BinaryWriter(ms))
+            {
+                bw.Write((ushort)0); // placeholder wLength
+                bw.Write((ushort)52); // sizeof(VS_FIXEDFILEINFO)
+                bw.Write((ushort)0); // wType = 0 (binary)
+                WriteAlignedWordString(ms, "VS_VERSION_INFO");
+
+                // VS_FIXEDFILEINFO (52 bytes)
+                bw.Write((uint)0xFEEF04BD); // dwSignature
+                bw.Write((uint)0x00010000); // dwStrucVersion
+                bw.Write((uint)0x00010000); // dwFileVersionMS
+                bw.Write((uint)0x00000000); // dwFileVersionLS
+                bw.Write((uint)0x00010000); // dwProductVersionMS
+                bw.Write((uint)0x00000000); // dwProductVersionLS
+                bw.Write((uint)0x0000003F); // dwFileFlagsMask
+                bw.Write((uint)0x00000000); // dwFileFlags
+                bw.Write((uint)0x00040004); // VOS_NT_WINDOWS32
+                bw.Write((uint)0x00000001); // VFT_APP
+                bw.Write((uint)0x00000000); // dwFileSubtype
+                bw.Write((uint)0x00000000); // dwFileDateMS
+                bw.Write((uint)0x00000000); // dwFileDateLS
+
+                Dictionary<string, string> fields = new Dictionary<string, string>();
+                fields["CompanyName"] = "Passion Star";
+                fields["FileDescription"] = fileDesc;
+                fields["FileVersion"] = "1.0.0.0";
+                fields["InternalName"] = "AramMayhem";
+                fields["LegalCopyright"] = "Passion Star";
+                fields["OriginalFilename"] = exeFileName;
+                fields["ProductName"] = productName;
+                fields["ProductVersion"] = "1.0.0.0";
+
+                byte[] sfi = BuildStringFileInfo(fields);
+                ms.Write(sfi, 0, sfi.Length);
+                byte[] vfi = BuildVarFileInfo();
+                ms.Write(vfi, 0, vfi.Length);
+
+                byte[] res = ms.ToArray();
+                BitConverter.GetBytes((ushort)res.Length).CopyTo(res, 0);
+                return res;
+            }
+        }
+
+        public static bool PatchExecutableBranding(string targetExePath, string icoPath, string productName, string fileDescription)
+        {
+            if (!File.Exists(targetExePath) || !File.Exists(icoPath)) return false;
+            try
+            {
+                byte[] icoData = File.ReadAllBytes(icoPath);
+                if (icoData.Length < 22) return false;
+                ushort count = BitConverter.ToUInt16(icoData, 4);
+                if (count == 0 || icoData.Length < 6 + count * 16) return false;
+
+                IntPtr hUpdate = NativeMethods.BeginUpdateResource(targetExePath, false);
+                if (hUpdate == IntPtr.Zero) return false;
+
+                bool commit = false;
+                try
+                {
+                    using (MemoryStream grpMs = new MemoryStream())
+                    using (BinaryWriter grpBw = new BinaryWriter(grpMs))
+                    {
+                        grpBw.Write(BitConverter.ToUInt16(icoData, 0)); // idReserved
+                        grpBw.Write(BitConverter.ToUInt16(icoData, 2)); // idType
+                        grpBw.Write(count); // idCount
+
+                        for (int i = 0; i < count; i++)
+                        {
+                            int entryOff = 6 + i * 16;
+                            uint imgSize = BitConverter.ToUInt32(icoData, entryOff + 8);
+                            uint imgOff = BitConverter.ToUInt32(icoData, entryOff + 12);
+                            if (imgOff + imgSize > icoData.Length) throw new Exception("Invalid ICO frame");
+
+                            byte[] frame = new byte[imgSize];
+                            Buffer.BlockCopy(icoData, (int)imgOff, frame, 0, (int)imgSize);
+                            NativeMethods.UpdateResource(hUpdate, new IntPtr(3), new IntPtr(i + 1), 1033, frame, imgSize);
+
+                            grpMs.Write(icoData, entryOff, 12);
+                            grpBw.Write((ushort)(i + 1)); // nID matches RT_ICON #1..#N
+                        }
+
+                        byte[] grpBytes = grpMs.ToArray();
+                        NativeMethods.UpdateResource(hUpdate, new IntPtr(14), new IntPtr(1), 1033, grpBytes, (uint)grpBytes.Length);
+                    }
+
+                    byte[] verBytes = BuildVersionResourceBytes(productName, fileDescription, Path.GetFileName(targetExePath));
+                    NativeMethods.UpdateResource(hUpdate, new IntPtr(16), new IntPtr(1), 1033, verBytes, (uint)verBytes.Length);
+                    commit = true;
+                }
+                finally
+                {
+                    NativeMethods.EndUpdateResource(hUpdate, !commit);
+                }
+                return commit;
+            }
+            catch { return false; }
+        }
     }
 
     internal sealed class MinimapConfigModel
@@ -382,7 +595,7 @@ namespace PassionMayhemDesktop
             TransparencyKey = KEY_COLOR;
             DoubleBuffered = true;
             Width = 1000;
-            Height = 42;
+            Height = 44;
         }
 
         protected override CreateParams CreateParams
@@ -401,9 +614,9 @@ namespace PassionMayhemDesktop
         {
             cards = list ?? new List<CandidateCardOverlayModel>();
             int ox = gameBounds.Left + (int)Math.Round(gameBounds.Width * 0.14);
-            int oy = gameBounds.Top + (int)Math.Round(gameBounds.Height * 0.135);
-            int ow = Math.Max(600, (int)Math.Round(gameBounds.Width * 0.72));
-            int oh = 42;
+            int oy = gameBounds.Top + (int)Math.Round(gameBounds.Height * 0.132);
+            int ow = Math.Max(640, (int)Math.Round(gameBounds.Width * 0.72));
+            int oh = 44;
             if (Left != ox || Top != oy || Width != ow || Height != oh)
             {
                 SetBounds(ox, oy, ow, oh);
@@ -420,14 +633,14 @@ namespace PassionMayhemDesktop
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            // Three compact Blitz pills centered right above the 3 augment cards
+            // Three compact pills right above the 3 augment cards, showing score + detected name
             double[] centers = new double[] { 0.180, 0.500, 0.820 };
-            int cardW = 186;
-            int cardH = 34;
+            int cardW = 228;
+            int cardH = 36;
 
-            using (Font fBadge = new Font("Segoe UI", 8.5f, FontStyle.Bold))
-            using (Font fTier = new Font("Segoe UI", 9.0f, FontStyle.Bold))
+            using (Font fBadge = new Font("Segoe UI", 8.2f, FontStyle.Bold))
             {
+                StringFormat sf = new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
                 for (int i = 0; i < cards.Count; i++)
                 {
                     CandidateCardOverlayModel c = cards[i];
@@ -435,10 +648,10 @@ namespace PassionMayhemDesktop
 
                     int cx = (int)Math.Round(Width * centers[c.slot]);
                     int rx = Math.Max(2, Math.Min(Width - cardW - 2, cx - cardW / 2));
-                    int ry = 3;
+                    int ry = 4;
 
-                    Color bgCol = c.isBest ? Color.FromArgb(242, 10, 28, 36) : Color.FromArgb(226, 12, 14, 19);
-                    Color borderCol = c.isBest ? Color.FromArgb(255, 36, 232, 204) : Color.FromArgb(190, 71, 85, 105);
+                    Color bgCol = c.isBest ? Color.FromArgb(242, 11, 24, 40) : Color.FromArgb(228, 11, 15, 23);
+                    Color borderCol = c.isBest ? Color.FromArgb(255, 56, 189, 248) : Color.FromArgb(195, 71, 85, 105);
 
                     using (SolidBrush bg = new SolidBrush(bgCol))
                     using (Pen pen = new Pen(borderCol, c.isBest ? 2.0f : 1.2f))
@@ -447,21 +660,13 @@ namespace PassionMayhemDesktop
                         g.DrawRectangle(pen, rx, ry, cardW - 1, cardH - 1);
                     }
 
-                    string topTag = c.isBest ? string.Format("★ NÊN CHỌN • {0}đ", c.score) : string.Format("#{0} • {1}đ", c.slot + 1, c.score);
-                    Color tagCol = c.isBest ? Color.FromArgb(255, 36, 232, 204) : Color.FromArgb(255, 203, 213, 225);
+                    string label = c.isBest
+                        ? string.Format("★ CHỌN • {0}đ • {1}", c.score, c.nameVi)
+                        : string.Format("#{0} • {1}đ • {2}", c.slot + 1, c.score, c.nameVi);
+                    Color tagCol = c.isBest ? Color.FromArgb(255, 56, 189, 248) : Color.FromArgb(255, 203, 213, 225);
                     using (SolidBrush bTag = new SolidBrush(tagCol))
                     {
-                        g.DrawString(topTag, fBadge, bTag, rx + 8, ry + 8);
-                    }
-
-                    string rawRank = !string.IsNullOrEmpty(c.metaRank) ? c.metaRank : c.tier;
-                    string rankText = "[" + rawRank + "]";
-                    Color tierCol = rawRank.StartsWith("S", StringComparison.OrdinalIgnoreCase)
-                        ? Color.FromArgb(255, 251, 191, 36)
-                        : Color.FromArgb(255, 56, 189, 248);
-                    using (SolidBrush bTier = new SolidBrush(tierCol))
-                    {
-                        g.DrawString(rankText, fTier, bTier, rx + cardW - 40, ry + 8);
+                        g.DrawString(label, fBadge, bTag, new RectangleF(rx + 8, ry + 10, cardW - 16, 18), sf);
                     }
                 }
             }
@@ -492,24 +697,24 @@ namespace PassionMayhemDesktop
             Width = 1420;
             Height = 860;
             MinimumSize = new Size(1080, 700);
-            BackColor = Color.FromArgb(12, 14, 19);
-            Text = "Passion Mayhem — Blitz Edition";
+            BackColor = Color.FromArgb(11, 15, 23);
+            Text = "Aram Mayhem";
             if (appIcon != null) Icon = appIcon;
 
             titleBar = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 34,
-                BackColor = Color.FromArgb(9, 11, 16)
+                BackColor = Color.FromArgb(9, 13, 21)
             };
 
             lblTitle = new Label
             {
-                Text = "  ⚡ PASSION MAYHEM • BLITZ NATIVE",
-                ForeColor = Color.FromArgb(36, 232, 204),
+                Text = "  ◆ ARAM MAYHEM",
+                ForeColor = Color.FromArgb(56, 189, 248),
                 Font = new Font("Segoe UI", 9.0f, FontStyle.Bold),
                 AutoSize = false,
-                Width = 280,
+                Width = 180,
                 Height = 34,
                 Left = 6,
                 Top = 0,
@@ -518,13 +723,13 @@ namespace PassionMayhemDesktop
 
             lblLiveStatus = new Label
             {
-                Text = "● Chờ kết nối Liên Minh Huyền Thoại...",
+                Text = "● Chờ Liên Minh Huyền Thoại...",
                 ForeColor = Color.FromArgb(148, 163, 184),
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 AutoSize = false,
-                Width = 340,
+                Width = 360,
                 Height = 34,
-                Left = 290,
+                Left = 190,
                 Top = 0,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -532,9 +737,9 @@ namespace PassionMayhemDesktop
             btnClose = MakeCaptionBtn("✕", 42, Color.FromArgb(248, 113, 113));
             btnMax = MakeCaptionBtn("□", 40, Color.FromArgb(203, 213, 225));
             btnMin = MakeCaptionBtn("—", 40, Color.FromArgb(203, 213, 225));
-            btnPinTop = MakeCaptionBtn("📌", 40, Color.FromArgb(148, 163, 184));
+            btnPinTop = MakeCaptionBtn("Ghim", 46, Color.FromArgb(148, 163, 184));
 
-            btnClose.Click += delegate { Hide(); };
+            btnClose.Click += delegate { Close(); };
             btnMax.Click += delegate
             {
                 WindowState = (WindowState == FormWindowState.Maximized) ? FormWindowState.Normal : FormWindowState.Maximized;
@@ -688,9 +893,9 @@ namespace PassionMayhemDesktop
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            BackColor = Color.FromArgb(12, 14, 19);
-            Opacity = 0.90;
-            Width = 246;
+            BackColor = Color.FromArgb(11, 15, 23);
+            Opacity = 0.92;
+            Width = 248;
             Height = 72;
             Left = 18;
             Top = 44;
@@ -744,7 +949,7 @@ namespace PassionMayhemDesktop
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            using (Pen borderPen = new Pen(Color.FromArgb(200, 36, 232, 204), 1.3f))
+            using (Pen borderPen = new Pen(Color.FromArgb(200, 56, 189, 248), 1.3f))
             {
                 g.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
             }
@@ -753,12 +958,12 @@ namespace PassionMayhemDesktop
             using (Font fCyan = new Font("Segoe UI", 8.2f, FontStyle.Bold))
             using (Font fBody = new Font("Segoe UI", 8.0f, FontStyle.Regular))
             using (SolidBrush brGold = new SolidBrush(Color.FromArgb(253, 230, 138)))
-            using (SolidBrush brCyan = new SolidBrush(Color.FromArgb(36, 232, 204)))
+            using (SolidBrush brCyan = new SolidBrush(Color.FromArgb(56, 189, 248)))
             using (SolidBrush brWhite = new SolidBrush(Color.FromArgb(226, 232, 240)))
             {
                 StringFormat sfEllipsis = new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
 
-                g.DrawString(string.Format("⚡ {0} • Hạng {1}", summary.champName, summary.champTier), fTitle, brGold, new RectangleF(9, 7, Width - 18, 18), sfEllipsis);
+                g.DrawString(string.Format("◆ {0} • Hạng {1}", summary.champName, summary.champTier), fTitle, brGold, new RectangleF(9, 7, Width - 18, 18), sfEllipsis);
 
                 string line2;
                 if (offerOpen && !string.IsNullOrEmpty(summary.bestAugment))
@@ -797,6 +1002,7 @@ namespace PassionMayhemDesktop
         private const string WAKE_EVENT_NAME = "Local\\PassionStar_Mayhem_Desktop_Wakeup_Event";
 
         private readonly string appDir;
+        private readonly string aramDir;
         private readonly string iconPath;
         private readonly int serverPort;
         private readonly string baseUrl;
@@ -811,7 +1017,7 @@ namespace PassionMayhemDesktop
         private bool isHiddenToTray = false;
         private bool isShuttingDown = false;
         private bool overlaysEnabled = true;
-        private bool usingClonedBlitzElectron = false;
+        private bool usingStandaloneElectron = false;
 
         private AdvisorSummaryModel advisorSummary = new AdvisorSummaryModel();
         private long lastHandledPendingActionSeq = 0;
@@ -823,6 +1029,8 @@ namespace PassionMayhemDesktop
         private byte[] lastCardTitleSample = null;
         private DateTime lastNativeAutoCaptureUtc = DateTime.MinValue;
         private int nativeCaptureCooldownTicks = 0;
+        private string cachedPreprocessedTitlesB64 = null;
+        private DateTime cachedPreprocessedTitlesUtc = DateTime.MinValue;
 
         private BlitzDesktopShellForm desktopShell;
         private AugmentCardsOverlayForm cardsOverlayForm;
@@ -845,8 +1053,9 @@ namespace PassionMayhemDesktop
 
         public MayhemControllerForm()
         {
-            appDir = ResolveAppDirectory();
-            iconPath = Path.Combine(appDir, "icon\\2fa.ico");
+            ResolveDirectories(out appDir, out aramDir);
+            string crystalIco = Path.Combine(aramDir, "electron\\assets\\icon.ico");
+            iconPath = File.Exists(crystalIco) ? crystalIco : Path.Combine(appDir, "icon\\2fa.ico");
 
             ShowInTaskbar = false;
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
@@ -856,7 +1065,7 @@ namespace PassionMayhemDesktop
             Height = 1;
             Left = -32000;
             Top = -32000;
-            Text = "Passion Mayhem Blitz Controller";
+            Text = "Aram Mayhem Controller";
 
             serverPort = PickOrReuseServerPort();
             baseUrl = "http://127.0.0.1:" + serverPort;
@@ -881,29 +1090,29 @@ namespace PassionMayhemDesktop
 
         public void NotifyShellClosing(CloseReason reason)
         {
-            if (reason == CloseReason.ApplicationExitCall || reason == CloseReason.TaskManagerClosing || reason == CloseReason.WindowsShutDown)
-            {
-                ShutdownAll(true);
-            }
-            else
-            {
-                isHiddenToTray = true;
-            }
+            ShutdownAll(true);
         }
 
-        private string ResolveAppDirectory()
+        private static void ResolveDirectories(out string repoRoot, out string aramFolder)
         {
             string exeDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
-            if (File.Exists(Path.Combine(exeDir, "aram-mayhem.html")) && File.Exists(Path.Combine(exeDir, "server\\server.mjs")))
+            DirectoryInfo parentInfo = Directory.GetParent(exeDir);
+            string parentDir = parentInfo != null ? parentInfo.FullName : exeDir;
+
+            if (File.Exists(Path.Combine(exeDir, "index.html")) && Directory.Exists(Path.Combine(exeDir, "electron")))
             {
-                return exeDir;
+                aramFolder = exeDir;
+                repoRoot = File.Exists(Path.Combine(parentDir, "server\\server.mjs")) ? parentDir : exeDir;
+                return;
             }
-            string parentDir = Directory.GetParent(exeDir) != null ? Directory.GetParent(exeDir).FullName : exeDir;
-            if (File.Exists(Path.Combine(parentDir, "aram-mayhem.html")) && File.Exists(Path.Combine(parentDir, "server\\server.mjs")))
+            if (Directory.Exists(Path.Combine(exeDir, "AramMayhem")) && File.Exists(Path.Combine(exeDir, "AramMayhem\\index.html")))
             {
-                return parentDir;
+                repoRoot = exeDir;
+                aramFolder = Path.Combine(exeDir, "AramMayhem");
+                return;
             }
-            return exeDir;
+            repoRoot = exeDir;
+            aramFolder = exeDir;
         }
 
         private void SetupTrayIcon()
@@ -929,9 +1138,12 @@ namespace PassionMayhemDesktop
 
             trayMenu = new ContextMenuStrip();
 
-            menuShowHide = new ToolStripMenuItem("Hiện / Ẩn Passion Mayhem Blitz (Alt+Shift+M)");
+            menuShowHide = new ToolStripMenuItem("Mở Aram Mayhem (Alt+Shift+M)");
             menuShowHide.Font = new Font(menuShowHide.Font, FontStyle.Bold);
-            menuShowHide.Click += delegate { ToggleShowHide(); };
+            menuShowHide.Click += delegate { ShowAppWindow(); };
+
+            ToolStripMenuItem menuHideTray = new ToolStripMenuItem("Ẩn xuống khay hệ thống");
+            menuHideTray.Click += delegate { HideToTray(); };
 
             menuToggleOverlay = new ToolStripMenuItem("Bật / Tắt Overlay 3 Lõi & HUD Trong Game (Alt+Shift+O)");
             menuToggleOverlay.Checked = true;
@@ -943,13 +1155,14 @@ namespace PassionMayhemDesktop
             ToolStripMenuItem menuScanTab = new ToolStripMenuItem("🔍 Chụp & Quét Bảng Tab / Trận (Alt+Shift+E)");
             menuScanTab.Click += delegate { CaptureAndUploadFrame("scan-combat"); };
 
-            ToolStripMenuItem menuShortcut = new ToolStripMenuItem("Tạo lối tắt ngoài Desktop");
+            ToolStripMenuItem menuShortcut = new ToolStripMenuItem("Tạo lối tắt Aram Mayhem ngoài Desktop");
             menuShortcut.Click += delegate { CreateDesktopShortcut(true); };
 
             ToolStripMenuItem menuExit = new ToolStripMenuItem("Thoát hoàn toàn");
             menuExit.Click += delegate { ShutdownAll(true); };
 
             trayMenu.Items.Add(menuShowHide);
+            trayMenu.Items.Add(menuHideTray);
             trayMenu.Items.Add(menuToggleOverlay);
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add(menuScanAug);
@@ -960,12 +1173,12 @@ namespace PassionMayhemDesktop
 
             trayIcon = new NotifyIcon();
             trayIcon.Icon = loadedTrayIcon;
-            trayIcon.Text = "Passion Mayhem Blitz Edition";
+            trayIcon.Text = "Aram Mayhem";
             trayIcon.ContextMenuStrip = trayMenu;
             trayIcon.Visible = true;
             trayIcon.MouseClick += delegate(object sender, MouseEventArgs e)
             {
-                if (e.Button == MouseButtons.Left) ToggleShowHide();
+                if (e.Button == MouseButtons.Left) ShowAppWindow();
             };
         }
 
@@ -1059,7 +1272,8 @@ namespace PassionMayhemDesktop
                 using (StreamReader sr = new StreamReader(resp.GetResponseStream()))
                 {
                     string body = sr.ReadToEnd();
-                    return body.IndexOf("passion-mayhem-desktop", StringComparison.OrdinalIgnoreCase) >= 0;
+                    return body.IndexOf("passion-mayhem-desktop", StringComparison.OrdinalIgnoreCase) >= 0
+                        && body.IndexOf("scanAugTitles", StringComparison.OrdinalIgnoreCase) >= 0;
                 }
             }
             catch { return false; }
@@ -1250,12 +1464,32 @@ namespace PassionMayhemDesktop
             }
         }
 
-        private string EnsureClonedBlitzRuntime()
+        private static void KillProcessesInPath(string targetExePath)
+        {
+            try
+            {
+                string procName = Path.GetFileNameWithoutExtension(targetExePath);
+                Process[] procs = Process.GetProcessesByName(procName);
+                for (int i = 0; i < procs.Length; i++)
+                {
+                    try
+                    {
+                        if (!procs[i].HasExited) procs[i].Kill();
+                        procs[i].WaitForExit(1500);
+                    }
+                    catch { }
+                    finally { try { procs[i].Dispose(); } catch { } }
+                }
+            }
+            catch { }
+        }
+
+        private string EnsureStandaloneElectronRuntime()
         {
             string blitzDir = FindBlitzInstallDir();
             if (string.IsNullOrEmpty(blitzDir)) return null;
 
-            string appSourceDir = Path.Combine(appDir, "desktop\\blitz-app");
+            string appSourceDir = Path.Combine(aramDir, "electron");
             if (!File.Exists(Path.Combine(appSourceDir, "package.json")) || !File.Exists(Path.Combine(appSourceDir, "src\\index.js")))
             {
                 return null;
@@ -1263,11 +1497,39 @@ namespace PassionMayhemDesktop
 
             try
             {
-                string runtimeDir = Path.Combine(appDir, ".blitz_runtime");
+                string runtimeDir = Path.Combine(aramDir, "runtime");
                 Directory.CreateDirectory(runtimeDir);
 
-                string targetExe = Path.Combine(runtimeDir, "PassionBlitz.exe");
-                CopyFileIfChanged(Path.Combine(blitzDir, "Blitz.exe"), targetExe);
+                string srcExe = Path.Combine(blitzDir, "Blitz.exe");
+                string targetExe = Path.Combine(runtimeDir, "AramMayhemApp.exe");
+
+                bool needPatch = false;
+                if (!File.Exists(targetExe))
+                {
+                    needPatch = true;
+                }
+                else
+                {
+                    FileInfo srcFi = new FileInfo(srcExe);
+                    FileInfo dstFi = new FileInfo(targetExe);
+                    if (dstFi.Length < srcFi.Length - 2000000L) needPatch = true;
+                    try
+                    {
+                        FileVersionInfo vi = FileVersionInfo.GetVersionInfo(targetExe);
+                        if (!string.Equals(vi.ProductName, "Aram Mayhem", StringComparison.Ordinal))
+                        {
+                            needPatch = true;
+                        }
+                    }
+                    catch { needPatch = true; }
+                }
+
+                if (needPatch)
+                {
+                    KillProcessesInPath(targetExe);
+                    File.Copy(srcExe, targetExe, true);
+                    PeBrandPatcher.PatchExecutableBranding(targetExe, iconPath, "Aram Mayhem", "Aram Mayhem");
+                }
 
                 string[] topFiles = Directory.GetFiles(blitzDir);
                 for (int i = 0; i < topFiles.Length; i++)
@@ -1294,22 +1556,22 @@ namespace PassionMayhemDesktop
             catch { return null; }
         }
 
-        private bool TryLaunchClonedBlitzElectron(string appUrl)
+        private bool TryLaunchStandaloneElectron(string appUrl)
         {
-            string blitzExe = EnsureClonedBlitzRuntime();
-            if (string.IsNullOrEmpty(blitzExe)) return false;
+            string appExe = EnsureStandaloneElectronRuntime();
+            if (string.IsNullOrEmpty(appExe)) return false;
 
             try
             {
                 ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = blitzExe;
-                psi.Arguments = string.Format("--url=\"{0}\" --no-tray --quit-on-close", appUrl);
-                psi.WorkingDirectory = Path.GetDirectoryName(blitzExe);
+                psi.FileName = appExe;
+                psi.Arguments = string.Format("--url=\"{0}\" --no-tray", appUrl);
+                psi.WorkingDirectory = Path.GetDirectoryName(appExe);
                 psi.UseShellExecute = false;
                 browserProcess = Process.Start(psi);
                 if (browserProcess != null)
                 {
-                    usingClonedBlitzElectron = true;
+                    usingStandaloneElectron = true;
                     return true;
                 }
             }
@@ -1321,19 +1583,23 @@ namespace PassionMayhemDesktop
         {
             if (!EnsureNodeServerRunning())
             {
-                MessageBox.Show("Không thể khởi động máy chủ nội bộ (Node.js) trên cổng " + serverPort, "Passion Mayhem Blitz", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Không thể khởi động máy chủ nội bộ (Node.js) trên cổng " + serverPort, "Aram Mayhem", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 ShutdownAll(true);
                 return;
             }
 
             launchTimeUtc = DateTime.UtcNow;
-            string blitzUrl = baseUrl + "/aram-mayhem.html?desktop=1&blitz=1";
-            if (!TryLaunchClonedBlitzElectron(blitzUrl))
+            string pageRel = appDir.Equals(aramDir, StringComparison.OrdinalIgnoreCase)
+                ? "/index.html?desktop=1&app=1"
+                : "/AramMayhem/index.html?desktop=1&app=1";
+            string targetUrl = baseUrl + pageRel;
+
+            if (!TryLaunchStandaloneElectron(targetUrl))
             {
                 string browserExe = FindBrowserExecutable();
                 if (string.IsNullOrEmpty(browserExe))
                 {
-                    MessageBox.Show("Không tìm thấy Blitz Desktop hoặc Microsoft Edge/Chrome.", "Passion Mayhem Blitz", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Không tìm thấy Microsoft Edge hoặc Google Chrome.", "Aram Mayhem", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     ShutdownAll(true);
                     return;
                 }
@@ -1341,16 +1607,15 @@ namespace PassionMayhemDesktop
                 desktopShell = new BlitzDesktopShellForm(this, loadedBigIcon);
                 desktopShell.Show();
 
-                string profileDir = Path.Combine(appDir, ".tmp_mayhem_desktop_profile");
+                string profileDir = Path.Combine(aramDir, ".tmp_aram_desktop_profile");
                 if (!Directory.Exists(profileDir))
                 {
                     try { Directory.CreateDirectory(profileDir); } catch { }
                 }
 
-                string appUrl = baseUrl + "/aram-mayhem.html?desktop=1";
                 string args = string.Format(
                     "--app=\"{0}\" --user-data-dir=\"{1}\" --window-size=1420,860 --no-first-run --no-default-browser-check --disable-features=msEdgeSidebarV2",
-                    appUrl,
+                    targetUrl,
                     profileDir
                 );
 
@@ -1366,7 +1631,7 @@ namespace PassionMayhemDesktop
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Không thể mở cửa sổ ứng dụng: " + ex.Message, "Passion Mayhem Blitz", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Không thể mở cửa sổ ứng dụng: " + ex.Message, "Aram Mayhem", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     ShutdownAll(true);
                     return;
                 }
@@ -1468,7 +1733,7 @@ namespace PassionMayhemDesktop
         {
             if (isShuttingDown) return;
 
-            if (usingClonedBlitzElectron && browserProcess != null && browserProcess.HasExited)
+            if (usingStandaloneElectron && browserProcess != null && browserProcess.HasExited)
             {
                 ShutdownAll(true);
                 return;
@@ -1487,7 +1752,7 @@ namespace PassionMayhemDesktop
                 {
                     appHwnd = found;
                     ApplyWindowIcons(appHwnd);
-                    if (!usingClonedBlitzElectron && desktopShell != null && !desktopShell.IsDisposed)
+                    if (!usingStandaloneElectron && desktopShell != null && !desktopShell.IsDisposed)
                     {
                         desktopShell.EmbedWindow(appHwnd);
                     }
@@ -1497,7 +1762,7 @@ namespace PassionMayhemDesktop
                     ShutdownAll(true);
                 }
             }
-            else if (usingClonedBlitzElectron)
+            else if (usingStandaloneElectron)
             {
                 isHiddenToTray = !NativeMethods.IsWindowVisible(appHwnd);
             }
@@ -1515,8 +1780,6 @@ namespace PassionMayhemDesktop
 
             NativeMethods.EnumWindows(delegate(IntPtr hWnd, IntPtr lParam)
             {
-                if (!NativeMethods.IsWindowVisible(hWnd)) return true;
-
                 StringBuilder cls = new StringBuilder(64);
                 NativeMethods.GetClassName(hWnd, cls, cls.Capacity);
                 if (!cls.ToString().StartsWith("Chrome_WidgetWin", StringComparison.Ordinal)) return true;
@@ -1531,15 +1794,20 @@ namespace PassionMayhemDesktop
 
                 if (targetPid > 0 && (int)pid == targetPid)
                 {
-                    pidMatched = hWnd;
-                    return false;
+                    if (NativeMethods.IsWindowVisible(hWnd) || NativeMethods.IsIconic(hWnd))
+                    {
+                        pidMatched = hWnd;
+                        return false;
+                    }
+                    return true;
                 }
 
-                if (titleStr.IndexOf("ARAM: Mayhem", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    titleStr.IndexOf("ARAM Mayhem", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    titleStr.IndexOf("Passion Mayhem", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    titleStr.IndexOf("Passion Star", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    titleStr.IndexOf("127.0.0.1:" + serverPort, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (usingStandaloneElectron) return true;
+
+                if (NativeMethods.IsWindowVisible(hWnd) &&
+                    (titleStr.IndexOf("ARAM: Mayhem", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     titleStr.IndexOf("Aram Mayhem", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     titleStr.IndexOf("127.0.0.1:" + serverPort, StringComparison.OrdinalIgnoreCase) >= 0))
                 {
                     titleMatched = hWnd;
                 }
@@ -1872,13 +2140,8 @@ namespace PassionMayhemDesktop
                             nativeModalOpen = true;
                             lastCardTitleSample = curSig;
                             PushModalOpenStateToServer(true);
+                            // Wait 1 settle tick (~220ms) on justOpened so card title animation finishes fading in cleanly
                             nativeCaptureCooldownTicks = rerolled ? 2 : 1;
-                            if (justOpened && (DateTime.UtcNow - lastNativeAutoCaptureUtc).TotalMilliseconds >= 650)
-                            {
-                                lastNativeAutoCaptureUtc = DateTime.UtcNow;
-                                nativeCaptureCooldownTicks = 0;
-                                RunInstantThreeCardOcrAsync(gameBounds);
-                            }
                         }
                         else if (nativeCaptureCooldownTicks > 0)
                         {
@@ -1906,6 +2169,11 @@ namespace PassionMayhemDesktop
                                     nativeModalCloseStreak = 0;
                                     nativeCaptureCooldownTicks = 0;
                                     lastCardTitleSample = null;
+                                    cachedPreprocessedTitlesB64 = null;
+                                    lock (syncLock)
+                                    {
+                                        advisorSummary.candidateCards = new List<CandidateCardOverlayModel>();
+                                    }
                                     PushModalOpenStateToServer(false);
                                 }
                             }
@@ -1924,36 +2192,91 @@ namespace PassionMayhemDesktop
             catch { }
         }
 
+        private static void PreprocessCardTitleForOcr(Bitmap bmp)
+        {
+            if (bmp == null) return;
+            BitmapData bd = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+            try
+            {
+                int stride = Math.Abs(bd.Stride);
+                int totalBytes = stride * bmp.Height;
+                byte[] buf = new byte[totalBytes];
+                Marshal.Copy(bd.Scan0, buf, 0, totalBytes);
+                int w = bmp.Width;
+                int h = bmp.Height;
+                for (int y = 0; y < h; y++)
+                {
+                    int rowBase = y * stride;
+                    for (int x = 0; x < w; x++)
+                    {
+                        int off = rowBase + x * 3;
+                        int lum = (buf[off + 2] * 3 + buf[off + 1] * 6 + buf[off]) / 10;
+                        byte v;
+                        if (lum <= 95) v = 255;
+                        else if (lum >= 175) v = 0;
+                        else v = (byte)(255 - ((lum - 95) * 255) / 80);
+                        buf[off] = v;
+                        buf[off + 1] = v;
+                        buf[off + 2] = v;
+                    }
+                }
+                Marshal.Copy(buf, 0, bd.Scan0, totalBytes);
+            }
+            finally
+            {
+                bmp.UnlockBits(bd);
+            }
+        }
+
+        private Bitmap CaptureStackedTitleBands(Rectangle gameBounds, out int outBandHeight)
+        {
+            const int bandW = 560;
+            const int bandH = 170;
+            outBandHeight = bandH;
+
+            int srcH = Math.Max(48, (int)Math.Round(gameBounds.Height * 0.135));
+            int srcW = Math.Max(120, (int)Math.Round(gameBounds.Width * 0.210));
+            int srcY = gameBounds.Top + (int)Math.Round(gameBounds.Height * 0.405);
+            double[] cardXFrac = new double[] { 0.165, 0.395, 0.625 };
+
+            Bitmap stacked = new Bitmap(bandW, bandH * 3, PixelFormat.Format24bppRgb);
+            using (Graphics gs = Graphics.FromImage(stacked))
+            {
+                gs.Clear(Color.White);
+                gs.InterpolationMode = InterpolationMode.HighQualityBicubic;
+
+                using (Bitmap rawCard = new Bitmap(srcW, srcH, PixelFormat.Format24bppRgb))
+                using (Graphics gr = Graphics.FromImage(rawCard))
+                using (Bitmap scaledBand = new Bitmap(bandW - 24, bandH - 16, PixelFormat.Format24bppRgb))
+                using (Graphics gb = Graphics.FromImage(scaledBand))
+                {
+                    gb.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        int sx = gameBounds.Left + (int)Math.Round(gameBounds.Width * cardXFrac[i]);
+                        gr.CopyFromScreen(sx, srcY, 0, 0, new Size(srcW, srcH), CopyPixelOperation.SourceCopy);
+                        gb.DrawImage(rawCard, 0, 0, scaledBand.Width, scaledBand.Height);
+                        PreprocessCardTitleForOcr(scaledBand);
+                        gs.DrawImageUnscaled(scaledBand, 12, i * bandH + 8);
+                    }
+                }
+            }
+            return stacked;
+        }
+
         private void RunInstantThreeCardOcrAsync(Rectangle gameBounds)
         {
             if (gameBounds.Width < 800 || gameBounds.Height < 600) return;
 
-            int srcH = Math.Max(80, (int)Math.Round(gameBounds.Height * 0.255));
-            int srcW = Math.Max(120, (int)Math.Round(gameBounds.Width * 0.195));
-            int srcY = gameBounds.Top + (int)Math.Round(gameBounds.Height * 0.375);
-            double[] cardXFrac = new double[] { 0.175, 0.405, 0.635 };
-
-            const int bandW = 420;
-            const int bandH = 180;
-
             try
             {
-                Bitmap stacked = new Bitmap(bandW, bandH * 3, PixelFormat.Format24bppRgb);
-                using (Graphics gs = Graphics.FromImage(stacked))
+                int bandH;
+                Bitmap stacked = CaptureStackedTitleBands(gameBounds, out bandH);
+                string titleJpgB64 = EncodeBitmapToJpegBase64(stacked, 86L);
+                lock (syncLock)
                 {
-                    gs.Clear(Color.FromArgb(14, 22, 38));
-                    gs.InterpolationMode = InterpolationMode.HighQualityBicubic;
-
-                    using (Bitmap rawCard = new Bitmap(srcW, srcH, PixelFormat.Format24bppRgb))
-                    using (Graphics gr = Graphics.FromImage(rawCard))
-                    {
-                        for (int i = 0; i < 3; i++)
-                        {
-                            int sx = gameBounds.Left + (int)Math.Round(gameBounds.Width * cardXFrac[i]);
-                            gr.CopyFromScreen(sx, srcY, 0, 0, new Size(srcW, srcH), CopyPixelOperation.SourceCopy);
-                            gs.DrawImage(rawCard, 12, i * bandH + 10, bandW - 24, bandH - 20);
-                        }
-                    }
+                    cachedPreprocessedTitlesB64 = titleJpgB64;
+                    cachedPreprocessedTitlesUtc = DateTime.UtcNow;
                 }
 
                 ThreadPool.QueueUserWorkItem(delegate
@@ -1981,16 +2304,30 @@ namespace PassionMayhemDesktop
                         }
                         else
                         {
-                            CaptureAndUploadFrame("scan-aug", true);
+                            UploadPreprocessedTitleFrame(titleJpgB64, "scan-aug-titles", true);
                         }
                     }
                     catch
                     {
-                        try { CaptureAndUploadFrame("scan-aug", true); } catch { }
+                        try { UploadPreprocessedTitleFrame(titleJpgB64, "scan-aug-titles", true); } catch { }
                     }
                 });
             }
             catch { }
+        }
+
+        private void UploadPreprocessedTitleFrame(string base64Jpg, string actionName, bool silent)
+        {
+            if (string.IsNullOrEmpty(base64Jpg)) return;
+            Dictionary<string, object> frameObj = new Dictionary<string, object>();
+            frameObj["base64"] = base64Jpg;
+            frameObj["mimeType"] = "image/jpeg";
+            frameObj["action"] = actionName;
+            frameObj["silent"] = silent;
+
+            Dictionary<string, object> body = new Dictionary<string, object>();
+            body["lastCapturedFrame"] = frameObj;
+            HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
         }
 
         private void StartStateSyncThread()
@@ -2128,6 +2465,42 @@ namespace PassionMayhemDesktop
             {
                 CaptureAndUploadFrame("scan-aug");
             }
+            else if (action == "scan-aug-titles")
+            {
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    try
+                    {
+                        string cached = null;
+                        lock (syncLock)
+                        {
+                            if (!string.IsNullOrEmpty(cachedPreprocessedTitlesB64) && (DateTime.UtcNow - cachedPreprocessedTitlesUtc).TotalMilliseconds <= 2500.0)
+                            {
+                                cached = cachedPreprocessedTitlesB64;
+                            }
+                        }
+                        if (string.IsNullOrEmpty(cached))
+                        {
+                            Rectangle gb;
+                            bool fg;
+                            IntPtr hwnd = FindLeagueGameWindow(out gb, out fg);
+                            if (hwnd != IntPtr.Zero && gb.Width >= 800 && gb.Height >= 600)
+                            {
+                                int bh;
+                                using (Bitmap st = CaptureStackedTitleBands(gb, out bh))
+                                {
+                                    cached = EncodeBitmapToJpegBase64(st, 86L);
+                                }
+                            }
+                        }
+                        if (!string.IsNullOrEmpty(cached))
+                        {
+                            UploadPreprocessedTitleFrame(cached, "scan-aug-titles", true);
+                        }
+                    }
+                    catch { }
+                });
+            }
             else if (action == "capture-combat" || action == "scan-combat")
             {
                 CaptureAndUploadFrame("scan-combat");
@@ -2173,7 +2546,7 @@ namespace PassionMayhemDesktop
 
                     if (!silentBalloon && trayIcon != null)
                     {
-                        trayIcon.ShowBalloonTip(1500, "Passion Mayhem Blitz", scanAction == "scan-combat" ? "Đã chụp bảng Tab / Trận đấu gửi AI phân tích..." : "Đã chụp 3 Lõi gửi AI chấm điểm...", ToolTipIcon.Info);
+                        trayIcon.ShowBalloonTip(1500, "Aram Mayhem", scanAction == "scan-combat" ? "Đã chụp bảng Tab / Trận đấu gửi AI phân tích..." : "Đã chụp 3 Lõi gửi AI chấm điểm...", ToolTipIcon.Info);
                     }
                 }
             }
@@ -2256,10 +2629,29 @@ namespace PassionMayhemDesktop
             if (appHwnd == IntPtr.Zero || !NativeMethods.IsWindow(appHwnd))
             {
                 appHwnd = FindMayhemWindowHandle();
-                if (appHwnd == IntPtr.Zero) return;
             }
-            NativeMethods.ShowWindow(appHwnd, NativeMethods.IsIconic(appHwnd) ? NativeMethods.SW_RESTORE : NativeMethods.SW_SHOW);
-            NativeMethods.SetForegroundWindow(appHwnd);
+            if (appHwnd != IntPtr.Zero && NativeMethods.IsWindow(appHwnd))
+            {
+                NativeMethods.ShowWindow(appHwnd, NativeMethods.IsIconic(appHwnd) ? NativeMethods.SW_RESTORE : NativeMethods.SW_SHOW);
+                uint fgThread = 0;
+                uint pidTmp;
+                IntPtr fgWnd = NativeMethods.GetForegroundWindow();
+                if (fgWnd != IntPtr.Zero) fgThread = NativeMethods.GetWindowThreadProcessId(fgWnd, out pidTmp);
+                uint curThread = NativeMethods.GetCurrentThreadId();
+                if (fgThread != 0 && fgThread != curThread) NativeMethods.AttachThreadInput(curThread, fgThread, true);
+                NativeMethods.SetForegroundWindow(appHwnd);
+                if (fgThread != 0 && fgThread != curThread) NativeMethods.AttachThreadInput(curThread, fgThread, false);
+            }
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                try
+                {
+                    Dictionary<string, object> body = new Dictionary<string, object>();
+                    body["triggerFocusApp"] = true;
+                    HttpPostJson(baseUrl + "/api/mayhem/state", json.Serialize(body));
+                }
+                catch { }
+            });
         }
 
         private void CreateDesktopShortcut(bool notifyUser)
@@ -2267,7 +2659,7 @@ namespace PassionMayhemDesktop
             try
             {
                 string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                string shortcutPath = Path.Combine(desktopPath, "ARAM Mayhem Blitz.lnk");
+                string shortcutPath = Path.Combine(desktopPath, "Aram Mayhem.lnk");
                 string exePath = Application.ExecutablePath;
 
                 Type shellType = Type.GetTypeFromProgID("WScript.Shell");
@@ -2276,19 +2668,19 @@ namespace PassionMayhemDesktop
                 Type shortcutType = shortcut.GetType();
 
                 shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { exePath });
-                shortcutType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { appDir });
-                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Passion Mayhem — Blitz Edition" });
+                shortcutType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { aramDir });
+                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Aram Mayhem Desktop Assistant" });
                 if (File.Exists(iconPath)) shortcutType.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut, new object[] { iconPath + ",0" });
                 shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
 
                 if (notifyUser && trayIcon != null)
                 {
-                    trayIcon.ShowBalloonTip(2500, "Passion Mayhem Blitz", "Đã tạo lối tắt ngoài Desktop!", ToolTipIcon.Info);
+                    trayIcon.ShowBalloonTip(2500, "Aram Mayhem", "Đã tạo lối tắt Aram Mayhem ngoài Desktop!", ToolTipIcon.Info);
                 }
             }
             catch (Exception ex)
             {
-                if (notifyUser) MessageBox.Show("Không thể tạo Shortcut: " + ex.Message, "Passion Mayhem Blitz", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                if (notifyUser) MessageBox.Show("Không thể tạo Shortcut: " + ex.Message, "Aram Mayhem", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -2436,8 +2828,11 @@ namespace PassionMayhemDesktop
         private string recommendedItemPath = "";
         private string[] nativeOcrCards = new string[] { "", "", "" };
         private long nativeOcrSeq = 0;
+        private long focusAppSeq = 0;
         private int chromeTitlebarHeight = 33;
         private long updatedAt = NowMs();
+        private readonly Dictionary<string, byte[]> ttsCache = new Dictionary<string, byte[]>();
+        private readonly Queue<string> ttsCacheOrder = new Queue<string>();
 
         public EmbeddedMayhemHttpServer(string appRootDir, int listenPort)
         {
@@ -2715,8 +3110,23 @@ namespace PassionMayhemDesktop
                         Dictionary<string, object> health = new Dictionary<string, object>();
                         health["status"] = "ok";
                         health["app"] = "passion-mayhem-desktop";
+                        health["apiVersion"] = 2;
+                        health["features"] = new string[] { "tts", "focusApp", "scanAugTitles" };
                         health["port"] = port;
                         SendJsonResponse(stream, 200, "OK", health);
+                        return;
+                    }
+
+                    if (req.Path == "/api/mayhem/tts" && req.Method == "GET")
+                    {
+                        string textParam = GetQueryParam(req.Query, "text") ?? "";
+                        byte[] mp3 = FetchVietnameseTtsAudio(textParam);
+                        if (mp3 == null || mp3.Length == 0)
+                        {
+                            WriteHttpResponse(stream, 204, "No Content", "text/plain; charset=UTF-8", new byte[0], true);
+                            return;
+                        }
+                        WriteHttpResponse(stream, 200, "OK", "audio/mpeg", mp3, false);
                         return;
                     }
 
@@ -2806,6 +3216,7 @@ namespace PassionMayhemDesktop
                 outObj["recommendedItemPath"] = recommendedItemPath;
                 outObj["nativeOcrCards"] = nativeOcrCards;
                 outObj["nativeOcrSeq"] = nativeOcrSeq;
+                outObj["focusAppSeq"] = focusAppSeq;
                 outObj["chromeTitlebarHeight"] = chromeTitlebarHeight;
                 outObj["updatedAt"] = updatedAt;
                 if (includeFrame && lastCapturedFrame != null)
@@ -2975,6 +3386,11 @@ namespace PassionMayhemDesktop
                     nativeOcrSeq += 1;
                 }
 
+                if (body.ContainsKey("triggerFocusApp") && body["triggerFocusApp"] != null && Convert.ToBoolean(body["triggerFocusApp"]))
+                {
+                    focusAppSeq += 1;
+                }
+
                 Dictionary<string, object> clk = body.ContainsKey("lastCardClick") ? body["lastCardClick"] as Dictionary<string, object> : null;
                 if (clk != null && clk.ContainsKey("index") && clk["index"] != null)
                 {
@@ -2995,10 +3411,62 @@ namespace PassionMayhemDesktop
                 resp["modalOpen"] = modalOpen;
                 resp["modalEventSeq"] = modalEventSeq;
                 resp["nativeOcrSeq"] = nativeOcrSeq;
+                resp["focusAppSeq"] = focusAppSeq;
                 resp["minimapThumbSeq"] = minimapThumbSeq;
                 resp["minimap"] = new Dictionary<string, object>(minimap);
                 return resp;
             }
+        }
+
+        private byte[] FetchVietnameseTtsAudio(string text)
+        {
+            string clean = (text ?? "").Trim();
+            if (clean.Length == 0) return null;
+            if (clean.Length > 220) clean = clean.Substring(0, 220);
+
+            lock (stateLock)
+            {
+                byte[] hit;
+                if (ttsCache.TryGetValue(clean, out hit)) return hit;
+            }
+
+            try
+            {
+                string url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=vi&q=" + Uri.EscapeDataString(clean);
+                HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
+                req.Method = "GET";
+                req.Proxy = null;
+                req.Timeout = 4500;
+                req.ReadWriteTimeout = 4500;
+                req.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+                req.Referer = "https://translate.google.com/";
+                using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                using (Stream rs = resp.GetResponseStream())
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    if ((int)resp.StatusCode != 200 || rs == null) return null;
+                    byte[] buffer = new byte[8192];
+                    int read;
+                    while ((read = rs.Read(buffer, 0, buffer.Length)) > 0) ms.Write(buffer, 0, read);
+                    byte[] data = ms.ToArray();
+                    if (data.Length < 128) return null;
+                    lock (stateLock)
+                    {
+                        if (!ttsCache.ContainsKey(clean))
+                        {
+                            if (ttsCacheOrder.Count >= 64)
+                            {
+                                string oldest = ttsCacheOrder.Dequeue();
+                                ttsCache.Remove(oldest);
+                            }
+                            ttsCache[clean] = data;
+                            ttsCacheOrder.Enqueue(clean);
+                        }
+                    }
+                    return data;
+                }
+            }
+            catch { return null; }
         }
 
         private List<string> DiscoverLeagueRootDirs()
